@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the asset graph &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/asset-graph';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: the index" href="index-schema.html" />
+    <link rel="prev" title="Design: references" href="references.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/asset-graph.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the asset graph</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-design-rules">Two design rules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#granularity-coarse-outside-fine-inside">Granularity: coarse outside, fine inside</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#identity-and-location">Identity and location</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#collisions">Collisions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reserving-a-future-global-namespace">Reserving a future global namespace</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#addressing-a-series-inside-a-dataframe">Addressing a series inside a dataframe</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pinning-and-isolation">Pinning and isolation</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#two-verbs">Two verbs</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store">The store</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-needs-two-indexes">The store needs two indexes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#links-not-copies">Links, not copies</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#garbage-collection-designed-in-rather-than-bolted-on">Garbage collection, designed in rather than bolted on</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-build-record-and-why-lineage-is-provable">The build record, and why lineage is provable</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#make-the-hashes-transitive">Make the hashes transitive</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#paths">Paths</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reachable-from-any-language">Reachable from any language</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-whole-surface">The whole surface</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#running-things">Running things</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-command-surface">The command surface</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-data-declares-a-dependency">Loading data declares a dependency</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relationship-to-orchestrators">Relationship to orchestrators</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing">Not doing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#seams-plugins-and-what-stays-singular">Seams, plugins, and what stays singular</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-art">Prior art</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-asset-graph">
+<h1>Design: the asset graph<a class="headerlink" href="#design-the-asset-graph" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, not a user guide. It records what the asset graph is, why each decision
+went the way it did, and — in the <a class="reference internal" href="#not-doing"><span class="std std-ref">Not doing</span></a> section — which additions will be declined.
+For how to use ChartBook today, start with <a class="reference internal" href="../getting-started.html"><span class="doc">Getting Started</span></a>.</p>
+<p>Status: design agreed. The groundwork is built (0.2.0): the reference grammar, local name
+resolution, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, and the reserved syntax. The graph itself —
+dependencies, the lockfile, the store, build records, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> — is not. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>
+says what is built and gives the order to build the rest. The <a class="reference internal" href="index-schema.html"><span class="doc">index schema</span></a>
+is the first deliverable, because everything else here reads or writes it.</p>
+<p>Revised 2026-10-12: the reference grammar moved to its own document, <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>, and
+gained asset kinds (<code class="docutils literal notranslate"><span class="pre">chart/…</span></code>, <code class="docutils literal notranslate"><span class="pre">model/…</span></code>). Models became assets (<a class="reference internal" href="models.html"><span class="doc">Design: models</span></a>). The registry
+rule, the scratch directory and the surface table below were brought in line with what was
+decided while building the groundwork. Each change is marked where it was made.</p>
+<p>Later the same day: the graph’s first step is built, in five parts. A pipeline can declare
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, by <code class="docutils literal notranslate"><span class="pre">path</span></code> or by <code class="docutils literal notranslate"><span class="pre">git</span></code>, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> says whether each can be found.
+The store exists. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> write <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> and fill the
+store. And a reference to another pipeline’s asset resolves through the lockfile to the pinned
+copy. Build records and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> are not built. The notes marked <em>(Built: …)</em> say
+exactly what, and <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a> (“3a, as built” to “3e, as built”) lists what was settled on
+the way, as <em>proposed</em>.</p>
+<p>2026-10-13: <code class="docutils literal notranslate"><span class="pre">[scripts]</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> are built. Two things below were decided
+otherwise by the maintainer first, and <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a> (“The snapshot model”, under step 4)
+is what holds where this page differs. <code class="docutils literal notranslate"><span class="pre">run</span></code> never moves a pin (“Two verbs”). And a pipeline
+never reads, hashes or builds in a folder it depends on, so <code class="docutils literal notranslate"><span class="pre">run</span></code> builds the pipeline it is
+run in and does not walk the graph (“Running things”, “Relationship to orchestrators”). What
+others read of a pipeline is a snapshot its owner makes on purpose, at a commit, with
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>; <code class="docutils literal notranslate"><span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">update</span></code> choose among snapshots and never read a folder.</p>
+</div>
+<section id="the-problem">
+<h2>The problem<a class="headerlink" href="#the-problem" title="Link to this heading">#</a></h2>
+<p>A pipeline today is self-contained: it declares its charts, dataframes and notebooks, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> renders them. What it cannot say is that it <em>depends on another pipeline</em> —
+so there is no way to build things in the right order, no way to know whether a downstream
+result is stale, and no record of what any output was actually made from.</p>
+<p>Four apparently separate wants turn out to be one mechanism:</p>
+<ul class="simple">
+<li><p>cross-project dependency management</p></li>
+<li><p>incremental builds that skip what is current</p></li>
+<li><p>several people (or several agents) working in parallel without recomputing or corrupting
+each other’s results</p></li>
+<li><p>a verifiable record of how any number was produced</p></li>
+</ul>
+<p>They all reduce to an <strong>asset graph</strong> whose nodes are addressable, whose edges are declared, and
+whose results are addressed by a hash of everything that went into making them.</p>
+</section>
+<section id="two-design-rules">
+<h2>Two design rules<a class="headerlink" href="#two-design-rules" title="Link to this heading">#</a></h2>
+<p>These decide arguments, so they come first.</p>
+<div class="important admonition">
+<p class="admonition-title">Rule 1 — scale to zero</p>
+<p>No capability may require a running service to be useful to a single user on one machine.</p>
+</div>
+<p>Every multi-user feature must degrade to a file-based form. A registry degrades to a git URL in a
+dependency entry. Scheduled builds degrade to <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> in cron. A shared cache degrades to
+the local store. Access control degrades to filesystem and git permissions.</p>
+<div class="important admonition">
+<p class="admonition-title">Rule 2 — no features for machines alone</p>
+<p>Every capability aimed at automated consumers must fall out of one that already earns its place
+for people.</p>
+</div>
+<p>Lineage lets a program prove its work and lets a person debug a bad number. Content-addressed
+caching lets parallel work share results and makes one person’s rebuild fast. A lockfile makes an
+automated change auditable and makes a paper reproducible. Nothing ships that serves only
+machines.</p>
+</section>
+<section id="granularity-coarse-outside-fine-inside">
+<h2>Granularity: coarse outside, fine inside<a class="headerlink" href="#granularity-coarse-outside-fine-inside" title="Link to this heading">#</a></h2>
+<p>The graph’s nodes are <strong>pipelines</strong>, not individual assets. This is permanent, not a staging post,
+because fine granularity already exists <em>inside</em> each node — provided by a tool better at it than
+ChartBook would be.</p>
+<p>A pipeline’s <code class="docutils literal notranslate"><span class="pre">build</span></code> script is typically <code class="docutils literal notranslate"><span class="pre">doit</span></code>, <code class="docutils literal notranslate"><span class="pre">snakemake</span></code> or <code class="docutils literal notranslate"><span class="pre">nextflow</span> <span class="pre">run</span></code>, each of which is
+itself a dependency graph that rebuilds only what is stale. The two layers compose: ChartBook owns
+the graph <em>between</em> pipelines, and whatever the project already uses owns the graph <em>within</em> one.
+ChartBook therefore never needs per-asset build recipes.</p>
+<p>This also answers the obvious objection. “Any upstream change rebuilds the whole downstream
+pipeline” sounds expensive, but running a pipeline means <em>invoking doit</em>, not recomputing from
+scratch — so a coarse edge firing costs one invocation of a tool that then skips everything already
+current. A three-hour data pull does not re-run because an unrelated dataframe moved upstream.</p>
+<p>And the pipeline boundary is a choice the author makes, not a constraint the tool imposes. Anyone
+wanting finer granularity splits one pipeline into several, paying in manifests to maintain.</p>
+<p><strong>One refinement: coarse recipes, fine hashes.</strong> The residual cost of coarse nodes is invalidation,
+not compute — if a pipeline’s whole output is hashed as one unit, any change marks every downstream
+consumer stale. The fix needs no per-asset recipes: hash <strong>per declared asset</strong>, since the manifest
+already lists each asset’s <code class="docutils literal notranslate"><span class="pre">path</span></code>. Execution stays whole-pipeline while staleness is computed per
+asset.</p>
+</section>
+<section id="identity-and-location">
+<h2>Identity and location<a class="headerlink" href="#identity-and-location" title="Link to this heading">#</a></h2>
+<p>The key is identity; the value is location. This one separation removes the need for a registry and
+makes a shipped pipeline self-resolving.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># crsp_treasury/chartbook.toml</span>
+<span class="k">[dependencies]</span>
+<span class="s2">"ftsfr/fed_yield_curve"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"https://gitlab.internal/ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"a1b2c3d"</span><span class="w"> </span><span class="p">}</span>
+<span class="s2">"ftsfr/crsp_compustat"</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"../crsp_compustat"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">scope/name</span></code> stays what you write in <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>, what keys the lockfile, and what labels lineage
+edges. The git URL and rev are only how the content is obtained. Consequences:</p>
+<ul class="simple">
+<li><p><strong>No registry required.</strong> Git is the distribution mechanism.</p></li>
+<li><p><strong>A shipped pipeline is self-resolving.</strong> Someone who clones the repository can build it with no
+catalog configured and no access to your filesystem.</p></li>
+<li><p><strong>A repository move costs one line.</strong> Every code reference, lockfile key and lineage edge still
+says <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code>. This is the trap Go modules fell into, and it stays avoided.</p></li>
+<li><p><strong>Any git host.</strong> GitLab hosted or self-managed, Bitbucket, Gitea, Forgejo, Codeberg, SourceHut,
+Azure DevOps, <code class="docutils literal notranslate"><span class="pre">ssh://</span></code>, or a bare repository on a shared drive. Git is the protocol; the host is a
+detail — and a requirement, since many research environments run an internal host behind a
+firewall.</p></li>
+</ul>
+<p><em>(Built: the loader reads and validates this table, <code class="docutils literal notranslate"><span class="pre">chartbook.manifest.validate_dependencies</span></code>.
+An entry has <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span></code>, and <code class="docutils literal notranslate"><span class="pre">rev</span></code> only with <code class="docutils literal notranslate"><span class="pre">git</span></code>. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> verifies that each
+<code class="docutils literal notranslate"><span class="pre">path</span></code> holds a pipeline. A <code class="docutils literal notranslate"><span class="pre">git</span></code> entry is cloned by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> into <code class="docutils literal notranslate"><span class="pre">~/.chartbook/git/</span></code>
+and pinned from the checkout (<code class="docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code>). <code class="docutils literal notranslate"><span class="pre">[resolve]</span> <span class="pre">default_host</span></code> below is not
+built, so an entry must name its <code class="docutils literal notranslate"><span class="pre">git</span></code>.</em></p>
+<p><em>One consequence of “Git is the distribution mechanism” that the list above does not draw.
+Git distributes what is committed. A clone of a pipeline has its code and its manifest, and
+for most pipelines none of its data, which is built and git-ignored. So a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency
+can be pinned only as far as its repository commits its outputs, and “someone who clones the
+repository can build it” is true of the code. Getting built data needs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> on the
+clone, or a store to download from. Until one of those exists, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> says “not
+built” and says why. Decided by the maintainer 2026-10-12: build it this way now.)</em></p>
+<p><em>(2026-10-13: the first of those exists. Decided by the maintainer: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> builds a
+<code class="docutils literal notranslate"><span class="pre">git</span></code> dependency, once for a commit. A checkout is read-only, so the build runs in a writable
+copy of it, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/git/work/…/&lt;commit&gt;/</span></code>, and the dependency is pinned from that copy.
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> alone still pins only what the repository commits.)</em></p>
+<p>Because scope is captured from the owner path at <code class="docutils literal notranslate"><span class="pre">init</span></code>, the URL is usually inferable from the ID.
+That shortcut is a <em>configurable</em> default host, never a hardcoded one:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[resolve]</span>
+<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"gitlab.internal.example.org"</span>
+</pre></div>
+</div>
+<p>The host never enters the identity.</p>
+<section id="collisions">
+<h3>Collisions<a class="headerlink" href="#collisions" title="Link to this heading">#</a></h3>
+<p>Nothing enforces that <code class="docutils literal notranslate"><span class="pre">acme/rates</span></code> means one thing globally, because no registry exists to enforce
+it. Two different locations claiming one ID <em>in the same build</em> is an error naming both, rather
+than a silent guess.</p>
+<p>This is acceptable because collisions only matter inside one resolution context. Two groups can
+both have <code class="docutils literal notranslate"><span class="pre">acme/rates</span></code> forever and never notice. And the escape hatch is simple: <strong>the key in
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> is a local name.</strong> It usually matches what upstream calls itself, but it need not.</p>
+<p><em>(Built, and narrower than the paragraph above: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> on a catalog reports a
+dependency whose key is one of the catalog’s pipeline IDs and whose <code class="docutils literal notranslate"><span class="pre">path</span></code> is a different
+directory. Inside one pipeline a key cannot be claimed twice, since it is a key of one TOML
+table. Because a key is a local name, a build translates it: a dependency that is one of the
+build’s own pipelines is written in the index by the build’s ID for it. Proposed 2026-10-12;
+see <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “3a, as built”.)</em></p>
+</section>
+<section id="reserving-a-future-global-namespace">
+<h3>Reserving a future global namespace<a class="headerlink" href="#reserving-a-future-global-namespace" title="Link to this heading">#</a></h3>
+<p>A future registry must not break anything written today, so the grammar reserves an <em>optional</em>
+registry prefix, Docker-style. The registry is the first of <strong>exactly three</strong> components, and
+only when it looks like a host: it contains <code class="docutils literal notranslate"><span class="pre">.</span></code> or <code class="docutils literal notranslate"><span class="pre">:</span></code>, or equals <code class="docutils literal notranslate"><span class="pre">localhost</span></code>.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>rates                                   # bare — local catalog, must be unambiguous
+acme/rates                              # scoped — what you write today
+charthub.example/acme/rates             # fully qualified
+registry.internal.bank.org/acme/rates   # another registry
+</pre></div>
+</div>
+<div class="note admonition">
+<p class="admonition-title">Why “exactly three” (revised 2026-10-12)</p>
+<p>This document first said that <em>any</em> leading component with a <code class="docutils literal notranslate"><span class="pre">.</span></code> was a registry. That
+contradicted the next sentence, because <code class="docutils literal notranslate"><span class="pre">my.group/rates</span></code> is a valid scoped ID today and would
+have changed meaning. With the three-component rule it stays a scope with a dot in it, and a
+registry-qualified ID always has all three parts. A registry therefore cannot be combined with a
+bare pipeline name. Implemented in <code class="docutils literal notranslate"><span class="pre">chartbook.identity.split_registry</span></code>.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">acme/rates</span></code> means the same thing before and after any registry exists. Five things keep that true:</p>
+<ol class="arabic simple">
+<li><p><strong>Parse three components now</strong>, rejecting the registry slot with “not yet supported” — the same
+treatment <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> gets. <em>(Built: <code class="docutils literal notranslate"><span class="pre">UnsupportedRegistryError</span></code>.)</em></p></li>
+<li><p><strong>One resolution chain, written down, with a hole in it</strong>: explicit location in
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, then the local catalog, then <em>(reserved)</em> configured registries, then an error
+listing candidates. Implement one, two and four in one place and step three is a drop-in.
+<em>(Built: <code class="docutils literal notranslate"><span class="pre">chartbook.resolve.locate_pipeline</span></code>. It answers “where is this pipeline?” and
+says which step answered. The rule further down, that loading from an undeclared pipeline
+fails, is for its callers to apply: a caller that requires a declared dependency refuses an
+answer that came from the catalog.)</em></p></li>
+<li><p><strong>Scope ownership is a registry concern, never a format concern.</strong> Anyone claims any scope
+locally, forever. A registry enforces ownership only for IDs qualified with its host, so existing
+users can never be squatted out of their own names.</p></li>
+<li><p><strong>The lockfile records the resolved location, not just the ID</strong>, or old lockfiles change meaning
+the day a registry starts resolving a name somewhere new.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">publish</span></code> is not overloaded.</strong> It already means “stage files to a directory”; pushing to a
+registry is a different verb. <em>(Built: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">push</span></code> exists only to say it is reserved.)</em></p></li>
+</ol>
+</section>
+<section id="addressing-a-series-inside-a-dataframe">
+<span id="series-addressing"></span><h3>Addressing a series inside a dataframe<a class="headerlink" href="#addressing-a-series-inside-a-dataframe" title="Link to this heading">#</a></h3>
+<p>A dataframe with a date column and several value columns contains several time series. A series does
+not need anywhere to <em>store</em> data — the dataframe already holds it. What it needs is an <strong>address</strong>,
+so that documentation, units, frequency and a source can be attached to one column.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.treasury_rates]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Treasury Rates"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"date"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/treasury_rates.md"</span>
+
+<span class="k">[dataframes.treasury_rates.series.dgs10]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span>
+<span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="w">              </span><span class="c1"># defaults to the key</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Percent"</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Daily"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/series/dgs10.md"</span>
+</pre></div>
+</div>
+<p>The reference grammar has an optional segment for this, separated by <code class="docutils literal notranslate"><span class="pre">#</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[registry/][scope/]pipeline:[kind/]name[#part][@rev]
+
+ftsfr/fed_yield_curve:treasury_rates#dgs10
+</pre></div>
+</div>
+<p>The full grammar is specified in <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>. There the segment is called a <strong>part</strong>: a
+series is the part of a dataframe, and a file is the part of a <a class="reference internal" href="models.html"><span class="doc">model</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">#</span></code> is chosen over <code class="docutils literal notranslate"><span class="pre">.</span></code>, <code class="docutils literal notranslate"><span class="pre">/</span></code> and <code class="docutils literal notranslate"><span class="pre">:</span></code> for three reasons. It maps directly onto the URL fragment of
+the generated page (<code class="docutils literal notranslate"><span class="pre">…/treasury_rates.html#dgs10</span></code>), which is the primary consumer. It is not legal
+inside an ID component, so the grammar stays unambiguous — whereas <code class="docutils literal notranslate"><span class="pre">.</span></code> is legal in a name and <code class="docutils literal notranslate"><span class="pre">/</span></code>
+already separates scope. And it costs only a pair of shell quotes, with nothing to escape in TOML
+strings or Python.</p>
+<p><em>(Built: the loader reads and validates these tables, and the <a class="reference internal" href="index-schema.html"><span class="doc">index</span></a> has a
+<code class="docutils literal notranslate"><span class="pre">Series</span></code> record for every column. A series address does not resolve yet, and pages do not show
+series yet.)</em></p>
+<p><em>(2026-10-13, decided by the maintainer: a series address will not resolve to data.
+“<code class="docutils literal notranslate"><span class="pre">…/treasury_rates.html#dgs10</span></code>, which is the primary consumer” turns out to be the whole of
+it: the address is for a page, for documentation and for the index. Loading one column is
+for polars or SQL, not for a reference. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, step 4, “4e”.)</em></p>
+<p>Two properties worth noting. An explicit <code class="docutils literal notranslate"><span class="pre">column</span></code> means the <strong>address survives a column rename</strong> —
+change one line and every reference still resolves. And because the index records each dataframe’s
+column list from the parquet schema anyway, <em>which</em> series exist is known without any declaration;
+a <code class="docutils literal notranslate"><span class="pre">[…series.x]</span></code> table only adds documentation to one. Declaring is how you document, not how you
+exist.</p>
+</section>
+</section>
+<section id="pinning-and-isolation">
+<h2>Pinning and isolation<a class="headerlink" href="#pinning-and-isolation" title="Link to this heading">#</a></h2>
+<div class="tip admonition">
+<p class="admonition-title">The resolution rule</p>
+<p>A <strong>local</strong> reference resolves live. A <strong>cross-pipeline</strong> reference resolves through the lockfile
+into the store.</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">data.path(&quot;merged_rates&quot;)</span></code> names a file in this project, which you are editing, so it points at
+<code class="docutils literal notranslate"><span class="pre">_data/merged_rates.parquet</span></code>. <code class="docutils literal notranslate"><span class="pre">data.path(&quot;fed_yield_curve:treasury_rates&quot;)</span></code> names another
+pipeline’s asset, so it points at the store object for the hash <em>this project’s lockfile pins</em> —
+not at the upstream’s working directory.</p>
+<p>So a downstream project reads a frozen snapshot while its upstream is mid-surgery, and concurrent
+work cannot race.</p>
+<p>This also simplifies <code class="docutils literal notranslate"><span class="pre">path</span></code> versus <code class="docutils literal notranslate"><span class="pre">rev</span></code>: <strong>both are pinned</strong>. The difference is only where a
+refresh gets its content from — a local directory, or a git fetch.</p>
+<p><em>(Built, with one more difference that turned out to matter: a directory has the pipeline’s
+built files, and a git fetch has only the committed ones. See the note under “Identity and
+location”.)</em></p>
+<section id="two-verbs">
+<h3>Two verbs<a class="headerlink" href="#two-verbs" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code></strong> — capture the current state of upstream dependencies into the lockfile and
+store. The verb for “freeze my upstreams, I am about to spend a week in here.” Distinct from
+building: it snapshots and records without necessarily running anything.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code></strong> — move pins forward to current upstream state, and rebuild what that
+invalidates.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> pins anything not yet pinned, so neither verb is needed to get started. By default
+it also refreshes <code class="docutils literal notranslate"><span class="pre">path</span></code> pins, because the common case is “pick up a colleague’s latest.”
+<code class="docutils literal notranslate"><span class="pre">--frozen</span></code> refuses to move any pin and fails if the lockfile is out of date, which is what CI and
+parallel automated work should use. This is the <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">ci</span></code> / <code class="docutils literal notranslate"><span class="pre">cargo</span> <span class="pre">build</span> <span class="pre">--locked</span></code> pair.</p>
+<p><em>(Built: both verbs, in <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>. Decided by the maintainer 2026-10-12: <code class="docutils literal notranslate"><span class="pre">pin</span></code> never moves
+a pin that exists; it pins what has none, and puts back in the store what the lockfile names
+and the store has lost. <code class="docutils literal notranslate"><span class="pre">update</span></code> is the one thing that moves a pin. There is no <code class="docutils literal notranslate"><span class="pre">run</span></code> yet, so
+<code class="docutils literal notranslate"><span class="pre">pin</span></code> is how to get started, and <code class="docutils literal notranslate"><span class="pre">update</span></code> rebuilds nothing. <code class="docutils literal notranslate"><span class="pre">--frozen</span></code> is not built.</em></p>
+<p><em>Added 2026-10-13, with <code class="docutils literal notranslate"><span class="pre">run</span></code> built. Decided by the maintainer before it was: <strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> never moves a pin.</strong> The second sentence of the paragraph above (“By default it also
+refreshes <code class="docutils literal notranslate"><span class="pre">path</span></code> pins”) is not how it works. <code class="docutils literal notranslate"><span class="pre">run</span></code> pins what has no pin, before the
+pipeline’s <code class="docutils literal notranslate"><span class="pre">build</span></code>, so neither verb is needed to get started; and it leaves every pin that
+exists where it is, saying which have changed upstream. <code class="docutils literal notranslate"><span class="pre">update</span></code> is still the one thing that
+moves a pin, and still rebuilds nothing, so picking up a colleague’s latest is <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> and then <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>. That leaves <code class="docutils literal notranslate"><span class="pre">--frozen</span></code> with less to do than this section
+gives it: there is no pin for it to refuse to move. What is left is failing when the lockfile
+is incomplete, which is not built.</em></p>
+<p><em>Decided the same day, and larger: where a pin’s bytes come from. As built in step 3, <code class="docutils literal notranslate"><span class="pre">pin</span></code>
+and <code class="docutils literal notranslate"><span class="pre">update</span></code> copy what is in a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency’s folder at that moment. The maintainer’s
+model is that they choose among <strong>snapshots</strong>, which a pipeline’s owner makes on purpose at a
+commit, and never look in the folder. See <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “The snapshot model”. Built the
+same day: <code class="docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code>, and <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4b, as built”.</em></p>
+<p><em>The resolution rule at the top of this section is built: <code class="docutils literal notranslate"><span class="pre">chartbook.resolve._resolve_pinned</span></code>.
+A reference to another pipeline’s asset goes to <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> for the pipeline, to
+<code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> for the asset’s hash, and to the store for the bytes. Decided by the
+maintainer 2026-10-12: a pin is stored as a reflink or a copy and never as a hard link or a
+symlink, so “reads a frozen snapshot while its upstream is mid-surgery” holds on every disk.)</em></p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>A cache and a pin are not the same thing, even sharing storage. A cache is an optimization: delete
+it and behavior is unchanged, only slower. A pin is a commitment: delete it and the project reads
+different data. They must stay separate concepts with separate garbage-collection rules — a pinned
+object is reachable and must never be collected, while an unreferenced build result may be.</p>
+</div>
+</section>
+</section>
+<section id="the-store">
+<h2>The store<a class="headerlink" href="#the-store" title="Link to this heading">#</a></h2>
+<p>Results are kept in a store addressed by a hash of everything that went into producing them.</p>
+<ul class="simple">
+<li><p><strong>Content-addressed</strong> means the name of a thing is the hash of <em>the thing itself</em>. Computable
+only <em>after</em> you have the content.</p></li>
+<li><p><strong>Input-addressed</strong> means the name is the hash of everything that goes into making it — recipe,
+parameters, each input’s hash, tool versions. Computable <em>before building anything</em>.</p></li>
+</ul>
+<p>That “before” is the whole trick: it lets you ask whether anyone already has the result and skip the
+work.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>hash = sha256(recipe + params + hash of each declared input + tool versions)
+     → store/7f3a9c…-crsp_treasury-treasury_rates.parquet
+
+1. in the local store?   use it
+2. in a remote store?    download it          ← a "substituter"
+3. otherwise             build it, store it
+</pre></div>
+</div>
+<p>Step two is borrowed from Nix, which calls a remote cache a <em>substituter</em> because it substitutes a
+download for a build. It is safe because an identical input hash means identical inputs. Snakemake’s
+between-workflow cache, Bazel’s remote cache and Nextflow’s <code class="docutils literal notranslate"><span class="pre">work/</span></code> directory with <code class="docutils literal notranslate"><span class="pre">-resume</span></code> are the
+same idea.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Keep the boring files. <code class="docutils literal notranslate"><span class="pre">path</span></code> stays the real location where a parquet file lives, and the store is a
+<em>cache</em> that links into it. Someone who never enables caching just sees ordinary files where they
+expect them.</p>
+</div>
+<section id="the-store-needs-two-indexes">
+<h3>The store needs two indexes<a class="headerlink" href="#the-store-needs-two-indexes" title="Link to this heading">#</a></h3>
+<p>Input-addressing earns its keep for <em>lookup</em>; content-addressing earns its keep for <em>storage</em>. So
+the build record maps input hash → output hash, and objects are held by output hash. Ten pins of a
+byte-identical file become one object with ten references. Building only one index and adding the
+other later is a migration, so both exist from the start.</p>
+<p><em>(Built: objects, held by content hash, in <code class="docutils literal notranslate"><span class="pre">chartbook.store</span></code>. The layout the maintainer decided
+on 2026-10-12 is one directory per asset, <code class="docutils literal notranslate"><span class="pre">objects/sha256/7f/3a9c…/</span></code>, holding the asset’s files
+under their own names; the single file <code class="docutils literal notranslate"><span class="pre">store/7f3a9c…-crsp_treasury-treasury_rates.parquet</span></code>
+sketched above is not how it is laid out. The other index is <code class="docutils literal notranslate"><span class="pre">builds/</span></code> in the same store: the
+name is kept free, and nothing writes to it until build records exist.)</em></p>
+<p><em>(2026-10-13: the second index that was built is <code class="docutils literal notranslate"><span class="pre">snapshots/</span></code>, and it is not keyed by an input
+hash. It maps a commit of a pipeline to the hashes of what that commit built, with the bytes
+kept as objects. The commit is the input a person can name and check out. Nothing looks an
+input hash up, and <code class="docutils literal notranslate"><span class="pre">builds/</span></code> is still empty. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4b, as built”.)</em></p>
+</section>
+<section id="links-not-copies">
+<h3>Links, not copies<a class="headerlink" href="#links-not-copies" title="Link to this heading">#</a></h3>
+<p>A <strong>hardlink</strong> is a second directory entry pointing at the same inode — the same bytes under two
+names, each equally real, with the data freed only when the last name is removed. It costs a
+directory entry rather than a copy of the file. Four strategies, tried in order:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>Cost</p></th>
+<th class="head"><p>Safe against in-place writes</p></th>
+<th class="head"><p>Crosses filesystems</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>reflink (copy-on-write clone)</p></td>
+<td><p>~free</p></td>
+<td><p>yes</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-odd"><td><p>hardlink</p></td>
+<td><p>~free</p></td>
+<td><p>no — make the store side read-only</p></td>
+<td><p>no</p></td>
+</tr>
+<tr class="row-even"><td><p>symlink</p></td>
+<td><p>~free</p></td>
+<td><p>n/a</p></td>
+<td><p>yes, but dangles if the target moves</p></td>
+</tr>
+<tr class="row-odd"><td><p>copy</p></td>
+<td><p>full size</p></td>
+<td><p>yes</p></td>
+<td><p>yes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This ladder is DVC’s, and the copy rung will be exercised rather than theoretical: a shared network
+mount is a different filesystem, so neither reflinks nor hardlinks reach it. On Windows, NTFS
+supports hardlinks while symlinks have historically needed elevated privileges.</p>
+<p><em>(Built: <code class="docutils literal notranslate"><span class="pre">chartbook.store.Store.put()</span></code> tries the four in this order. The maintainer confirmed
+the order on 2026-10-12, when asked whether to drop the two middle rungs. Two things in this
+section are not what a disk does, and are corrected here as built; proposed 2026-10-12.</em></p>
+<p><em>First, “make the store side read-only”. A hard link has no store side: both names are one file
+with one set of permissions. Making it read-only would make the upstream pipeline’s own file
+read-only, and its next build would fail. So a hard-linked object is left as it is. A reflink
+and a copy are the store’s own bytes, and those are made read-only.</em></p>
+<p><em>Second, the copy rung is rarely reached. A symlink comes before it and does cross filesystems,
+so on a shared network mount an object is a symlink to the original, not a copy.</em></p>
+<p><em>What follows from both: an object held by hardlink changes if the original is rewritten in
+place, and one held by symlink changes whenever the original does. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">verify</span></code>
+hashes every object again and reports the ones that have. The step’s promise that a downstream
+reads a frozen copy holds without it only on a filesystem with reflinks.)</em></p>
+</section>
+<section id="garbage-collection-designed-in-rather-than-bolted-on">
+<h3>Garbage collection, designed in rather than bolted on<a class="headerlink" href="#garbage-collection-designed-in-rather-than-bolted-on" title="Link to this heading">#</a></h3>
+<p>An object is reachable if some lockfile references it; everything else is collectible. This is Nix’s
+GC-roots model, and it is the discipline Nextflow omitted — which is why long-lived <code class="docutils literal notranslate"><span class="pre">work/</span></code>
+directories reach terabytes. Pinning makes the store grow faster than building alone would, so this
+is not optional.</p>
+<p><em>(Built: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code>. One thing the paragraph above leaves out: with one store for
+all of a user’s projects, the store has to be told which lockfiles there are. Each <code class="docutils literal notranslate"><span class="pre">pin</span></code> and
+<code class="docutils literal notranslate"><span class="pre">update</span></code> leaves a note of its lockfile in the store, and those are the roots. Decided by the
+maintainer 2026-10-12: a lockfile that cannot be found still keeps its pins, and <code class="docutils literal notranslate"><span class="pre">gc</span></code> asks
+before it removes anything.)</em></p>
+</section>
+</section>
+<section id="the-build-record-and-why-lineage-is-provable">
+<h2>The build record, and why lineage is provable<a class="headerlink" href="#the-build-record-and-why-lineage-is-provable" title="Link to this heading">#</a></h2>
+<p>Before building, a complete description of the build is written down, and the store path is the hash
+of that description — so one object is the build plan, the cache key and the provenance record.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/crsp_treasury:treasury_rates"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"recipe_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"ftsfr/fed_yield_curve:curve"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rev"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/…@a1b2c3d"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"output_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"built_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"impure"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"wrds_fetch"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Two fields earn special mention. <code class="docutils literal notranslate"><span class="pre">impure</span></code> is honest accounting for steps that cannot be reproduced
+from their inputs — a pipeline that fetches from a subscription service is not hermetic, and 90%
+reproducible with a truthful record beats 100% reproducible and unusable. <code class="docutils literal notranslate"><span class="pre">via</span></code> records whether each
+input came from a pinned <code class="docutils literal notranslate"><span class="pre">rev</span></code> or a live <code class="docutils literal notranslate"><span class="pre">path</span></code>, so “was this built against a stable upstream?” stays
+answerable at a glance.</p>
+<section id="make-the-hashes-transitive">
+<h3>Make the hashes transitive<a class="headerlink" href="#make-the-hashes-transitive" title="Link to this heading">#</a></h3>
+<p>One deliberate choice turns these records from a log into a proof: hash each input’s <strong>hash</strong>, not
+its path or name. Because those input hashes were computed the same way, an asset’s hash transitively
+covers its entire upstream history. That structure is a Merkle DAG — the same thing that makes a git
+commit hash a complete statement about a whole repository and its history.</p>
+<p>The implementation difference is small. What it buys is not:</p>
+<ul class="simple">
+<li><p><strong>“Up to date” becomes a check rather than a belief.</strong> Recompute an asset’s expected hash from its
+current inputs: a match means nothing upstream moved, a mismatch means something did and you walk
+down the graph to find exactly which input.</p></li>
+<li><p><strong>Lineage becomes verifiable rather than merely recorded.</strong> A log says “I built this from X” and
+you trust whoever wrote the log. A hash chain says “this output’s identity mathematically depends
+on X’s content,” and anyone can re-derive it.</p></li>
+<li><p><strong>Compact proofs.</strong> “This chart came from that extract” can be shown as a short chain of hashes
+without reproducing the pipeline.</p></li>
+<li><p><strong>A safe shared cache.</strong> A hash that covers every input transitively cannot hand you someone
+else’s similarly-named result.</p></li>
+</ul>
+<p>Two limits, stated rather than discovered later. <strong>Impure steps break the chain by design</strong>, so
+verifiability reaches back to the last impure boundary and a digest of what arrived is recorded
+there. And <strong>it proves integrity, not correctness</strong>: the chain shows this output came from those
+inputs via that code, and says nothing about whether the code was right. Code review does not go
+away. If “prove <em>who</em> built this and that the record was not altered” ever becomes a requirement,
+that is signatures layered on top — in-toto and SLSA are the existing vocabulary.</p>
+</section>
+</section>
+<section id="paths">
+<h2>Paths<a class="headerlink" href="#paths" title="Link to this heading">#</a></h2>
+<p>ChartBook hands out paths, so the manifest is the single source of truth and no path is written
+twice.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># dodo.py — declaring the graph</span>
+<span class="s2">"file_dep"</span><span class="p">:</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"fed_yield_curve:treasury_rates"</span><span class="p">)],</span>
+<span class="s2">"targets"</span><span class="p">:</span>  <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">)],</span>
+<span class="s2">"actions"</span><span class="p">:</span>  <span class="p">[</span><span class="s2">"python src/merge.py"</span><span class="p">],</span>
+
+<span class="c1"># src/merge.py — doing the work</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">))</span>           <span class="c1"># declared, indexed, hashed</span>
+<span class="n">tmp</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">scratch</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"intermediate.parquet"</span>      <span class="c1"># throwaway</span>
+</pre></div>
+</div>
+<p>One function resolves a reference to a file path; the build tool’s own syntax says which direction it
+points. <code class="docutils literal notranslate"><span class="pre">file_dep</span></code> means “I read this” and <code class="docutils literal notranslate"><span class="pre">targets</span></code> means “I write this,” so a separate pair of
+functions would only repeat what their position already says.</p>
+<ul class="simple">
+<li><p><strong>Bare names mean the current pipeline.</strong> ChartBook finds the enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> by walking
+up from the caller, as git and cargo find their roots. The grammar then layers consistently:
+<code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code> is local, <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code> is another pipeline,
+<code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:treasury_rates</span></code> is fully scoped.</p></li>
+<li><p><strong>A bare name is a dataframe.</strong> Anything else says its kind: <code class="docutils literal notranslate"><span class="pre">chart/curve_today</span></code>,
+<code class="docutils literal notranslate"><span class="pre">notebook/analysis</span></code>, <code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code>. Each kind has its own names. See <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">scratch()</span></code> is for throwaway files</strong> — not indexed, not hashed, not published, safe to delete, and
+<em>worktree-local</em> so parallel work in separate worktrees cannot collide. Scratch is private; the
+store is shared. <em>(Built: it is <code class="docutils literal notranslate"><span class="pre">_data/_scratch/</span></code> inside the pipeline, which ignores itself in
+git. Being inside the project is what makes it worktree-local.)</em></p></li>
+<li><p><strong>Writing to an unregistered name fails immediately</strong>, naming the table to add, rather than
+surfacing as a missing file during a build an hour later.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">path()</span></code> must be cheap and offline, and must fail only for a reason in the manifest.</strong> A
+<code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> is evaluated at the start of every run. So <code class="docutils literal notranslate"><span class="pre">path()</span></code> reads the raw <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and
+nothing else: it opens no data file, touches no network, does not validate the rest of the
+manifest, and does not care whether the asset has been built. It raises only when the name is not
+declared or its entry has no <code class="docutils literal notranslate"><span class="pre">path</span></code>. <em>(This sentence used to say “incapable of failing”, which
+contradicted the bullet above it.)</em></p></li>
+</ul>
+<section id="reachable-from-any-language">
+<h3>Reachable from any language<a class="headerlink" href="#reachable-from-any-language" title="Link to this heading">#</a></h3>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The helper is a convenience, never a requirement. A pipeline that writes straight to
+<code class="docutils literal notranslate"><span class="pre">_data/treasury_rates.parquet</span></code> keeps working, with ChartBook verifying the declared path and hashing
+whatever it finds. The manifest stays the contract.</p>
+</div>
+<p>This matters beyond taste. Knowing what a build produced is a property of the <strong>manifest</strong> — after
+<code class="docutils literal notranslate"><span class="pre">build</span></code> runs, every declared asset’s <code class="docutils literal notranslate"><span class="pre">path</span></code> is hashed, whether the file came from Python, R, Stata, a
+shell script or a spreadsheet. And the path-resolution convenience reaches every language through the
+CLI:</p>
+<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">TREASURY</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>chartbook<span class="w"> </span>path<span class="w"> </span>fed_yield_curve:treasury_rates<span class="k">)</span>
+<span class="nv">MERGED</span><span class="w">   </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>chartbook<span class="w"> </span>path<span class="w"> </span>merged_rates<span class="k">)</span>
+
+<span class="nf">$(MERGED)</span><span class="o">:</span><span class="w"> </span><span class="k">$(</span><span class="nv">TREASURY</span><span class="k">)</span>
+<span class="w">	</span>Rscript<span class="w"> </span>src/merge.R
+</pre></div>
+</div>
+<p>One resolution rule, reachable from Python, a shell, R or Stata via a system call, and any build tool
+that can capture command output.</p>
+</section>
+<section id="the-whole-surface">
+<h3>The whole surface<a class="headerlink" href="#the-whole-surface" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Call</p></th>
+<th class="head"><p>Gives you</p></th>
+<th class="head"><p>Used by</p></th>
+<th class="head"><p>Today</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">assets.path(ref)</span></code></p></td>
+<td><p>The file path of any declared asset</p></td>
+<td><p>Build definitions; code that reads or writes</p></td>
+<td><p>Built: local, and another pipeline’s as pinned</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data.path(ref)</span></code></p></td>
+<td><p>The same, for dataframes only</p></td>
+<td><p>The common case</p></td>
+<td><p>Built</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data.load(ref)</span></code></p></td>
+<td><p>The data itself</p></td>
+<td><p>Code doing analysis</p></td>
+<td><p>Built, beside the older <code class="docutils literal notranslate"><span class="pre">load(pipeline=,</span> <span class="pre">dataframe=)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data.scratch()</span></code></p></td>
+<td><p>A throwaway directory — unindexed, worktree-local</p></td>
+<td><p>Intermediates nothing depends on</p></td>
+<td><p>Built</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">&lt;ref&gt;</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">assets.path()</span></code> gives, on stdout</p></td>
+<td><p>Make, shell, R, Stata</p></td>
+<td><p>Built</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Five calls, one reference grammar. <code class="docutils literal notranslate"><span class="pre">path</span></code> matches the manifest field it reads, and it supersedes
+<code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code> rather than sitting beside it.</p>
+<p><em>(Revised 2026-10-12. This table used to have <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> hand out every kind of asset. The
+general call is now <code class="docutils literal notranslate"><span class="pre">chartbook.assets.path()</span></code>, and <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> is the front door for
+dataframes alone: <code class="docutils literal notranslate"><span class="pre">data.path(x)</span></code> is <code class="docutils literal notranslate"><span class="pre">assets.path(x,</span> <span class="pre">kind=&quot;dataframe&quot;)</span></code>. A <code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code>
+module will follow the same pattern. The reasons are in <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>.)</em></p>
+<p><code class="docutils literal notranslate"><span class="pre">data.load(ref)</span></code> taking a single reference is the destination. Until cross-pipeline references
+resolve, <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;fed_yield_curve&quot;,</span> <span class="pre">dataframe=&quot;treasury_rates&quot;)</span></code> through a catalog
+remains the way to load another pipeline’s data, and <code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code> the way to find it.</p>
+<p><em>(Reached 2026-10-12. <code class="docutils literal notranslate"><span class="pre">data.load(&quot;fed_yield_curve:treasury_rates&quot;)</span></code> loads the pinned copy, and
+the two-argument form stays for loading through a catalog from outside any pipeline. Two
+sentences further up need a qualifier now that another pipeline’s asset resolves. “<code class="docutils literal notranslate"><span class="pre">path()</span></code>
+reads the raw <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and nothing else” is true of a local reference; for another
+pipeline’s it also reads <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> and looks in the store, and can fail for a reason in
+either. And the <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> that opens this section works only once the dependency is pinned,
+because a <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> is run in full before any of its tasks: see <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “3d, as
+built”.)</em></p>
+</section>
+</section>
+<section id="running-things">
+<h2>Running things<a class="headerlink" href="#running-things" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">build</span></code> field generalizes into a table of named commands, as <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">just</span></code> and Hatch’s script
+tables work:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[scripts]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"doit"</span>
+<span class="n">test</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"pytest"</span>
+<span class="n">fetch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"""</span>
+<span class="s2">module load python/3.12</span>
+<span class="s2">python src/pull_wrds.py</span>
+<span class="s2">"""</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">build</span></code> is the one reserved name: it means “make this pipeline’s assets current,” and it is what the
+dependency graph invokes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Named scripts are not a task runner. One string per name, executed — no graph of its own, no
+inter-script dependencies, no retries, no scheduling, no run history. The only graph is over
+pipelines. Letting scripts depend on each other would make ChartBook the orchestrator it is
+deliberately not.</p>
+</div>
+<p><em>(Built 2026-10-13: <code class="docutils literal notranslate"><span class="pre">chartbook.manifest.read_scripts</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook.run</span></code>. <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">build</span></code>
+is read as the same thing as <code class="docutils literal notranslate"><span class="pre">[scripts]</span> <span class="pre">build</span></code>, and a script is run in its pipeline’s own
+directory with <code class="docutils literal notranslate"><span class="pre">bash</span> <span class="pre">-e</span></code>.</em></p>
+<p><em>“It is what the dependency graph invokes” is not how it was built. Decided by the
+maintainer: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> builds the pipeline it is run in, and never builds in a folder
+that pipeline depends on. That folder is somebody’s work, and the pipeline reads what is
+pinned, not what is there. A first version did walk the graph and run <code class="docutils literal notranslate"><span class="pre">build</span></code> in each
+pipeline’s folder; it was taken out before it was merged. Two things are left of the graph.
+A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is built, once for a commit, in a writable copy of its checkout, which is
+how its built data comes to be pinned; <code class="docutils literal notranslate"><span class="pre">--force</span></code> builds it again. And in a catalog, the
+script is run in each of the catalog’s pipelines, one that another depends on first.
+<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “The snapshot model” and “4a, as built”.)</em></p>
+<section id="the-command-surface">
+<h3>The command surface<a class="headerlink" href="#the-command-surface" title="Link to this heading">#</a></h3>
+<p>Flat for what you type daily, grouped for what you type occasionally.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>chartbook build              # make everything current: data, then site
+chartbook run [script]       # execute a named script across the graph (default: build)
+chartbook docs               # render the site only
+chartbook browse             # open it
+chartbook check              # the CI gate
+chartbook pin                # freeze upstream state
+chartbook update             # move pins forward, rebuild what that invalidates
+chartbook path &lt;ref&gt;         # print an asset's path
+chartbook ls                 # list pipelines, dataframes, charts
+
+chartbook catalog ...        # add, build, browse, disable, enable
+chartbook store ...          # gc, verify
+chartbook install ...        # skill
+</pre></div>
+</div>
+<p>This resolves an overload: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> currently means “render the website,” while <code class="docutils literal notranslate"><span class="pre">build</span></code> in a
+manifest means “make this pipeline’s data.” Under the surface above, each word means the obvious
+thing — <code class="docutils literal notranslate"><span class="pre">run</span></code> runs a script, <code class="docutils literal notranslate"><span class="pre">docs</span></code> builds docs, <code class="docutils literal notranslate"><span class="pre">build</span></code> builds everything.</p>
+<p>Of these, <code class="docutils literal notranslate"><span class="pre">check</span></code>, <code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">browse</span></code>, <code class="docutils literal notranslate"><span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">catalog</span></code> and <code class="docutils literal notranslate"><span class="pre">install</span></code> exist. <code class="docutils literal notranslate"><span class="pre">build</span></code> still means
+“render the website” and keeps doing so until <code class="docutils literal notranslate"><span class="pre">run</span></code> exists; the rename is one breaking change,
+made once, in the same release as <code class="docutils literal notranslate"><span class="pre">run</span></code>. <code class="docutils literal notranslate"><span class="pre">docs</span></code> and <code class="docutils literal notranslate"><span class="pre">run</span></code> do not exist yet. <em>(<code class="docutils literal notranslate"><span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">update</span></code>,
+<code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">verify</span></code> and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> were added 2026-10-12. <code class="docutils literal notranslate"><span class="pre">run</span></code> and <code class="docutils literal notranslate"><span class="pre">snapshot</span></code> were added
+2026-10-13, and the rename was made the same day: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code> renders the website, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> runs the build script and then renders. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4c, as built”.)</em></p>
+<p><code class="docutils literal notranslate"><span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">update</span></code> stay top-level rather than sitting under <code class="docutils literal notranslate"><span class="pre">build</span></code>, because they change the
+project’s dependency state rather than performing a build step — the same level as <code class="docutils literal notranslate"><span class="pre">cargo</span> <span class="pre">update</span></code> or
+<code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">install</span></code>.</p>
+</section>
+</section>
+<section id="loading-data-declares-a-dependency">
+<h2>Loading data declares a dependency<a class="headerlink" href="#loading-data-declares-a-dependency" title="Link to this heading">#</a></h2>
+<p>Loading from an undeclared pipeline fails, with a message saying to declare it. The same friction as
+an import needing an installed package, for the same reason: the graph becomes derivable from the
+manifest without running anything, and every load is auditable.</p>
+<p><em>(Built 2026-10-12. A reference to an asset of a pipeline that <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not
+declare raises <code class="docutils literal notranslate"><span class="pre">DependencyNotDeclaredError</span></code>, which shows the line to add, and a <code class="docutils literal notranslate"><span class="pre">trained_on</span></code>
+that names one stops the manifest loading. The catalog is asked where the pipeline is, for
+the message only. And the second paragraph holds: <code class="docutils literal notranslate"><span class="pre">examples/rate_forecast</span></code> loads another
+pipeline’s data with no catalog configured.)</em></p>
+<p>The second-order win is larger. With dependencies declared, <strong>the catalog is no longer needed at load
+time</strong> — the locations are in the manifest. A pipeline becomes self-contained and reproducible, and
+the catalog reverts to what it is good at: discovery, browsing, and finding things you have not
+declared yet.</p>
+</section>
+<section id="relationship-to-orchestrators">
+<h2>Relationship to orchestrators<a class="headerlink" href="#relationship-to-orchestrators" title="Link to this heading">#</a></h2>
+<p>ChartBook’s runner is topological order, a process pool, an input-addressed cache and a per-asset
+lock. No daemon, no queue, no retry policy, no backfill logic, no run database, no UI.</p>
+<p><em>(2026-10-13: it is less than that. Decided by the maintainer: a pipeline is not built from
+another pipeline’s run, so there is no order to work out except among a catalog’s own
+pipelines, and no pool. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “The snapshot model”. The rest of this section, on
+exporting the graph, stands.)</em></p>
+<p>Every one of those omissions is available by <strong>exporting the graph</strong> rather than reimplementing it.
+There are three ways to relate to an orchestrator and only one is right: depending on one kills rule
+1; replacing one means losing slowly to a better-resourced project; emitting to one is what dbt did,
+and it is why every orchestrator has a dbt integration dbt did not write.</p>
+<div class="tip admonition">
+<p class="admonition-title">Acceptance test for the boundary</p>
+<p>A team should be able to adopt Dagster without editing a single <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>. The same test
+applies downward: moving parquet files to a warehouse should require replacing <code class="docutils literal notranslate"><span class="pre">path</span></code> with <code class="docutils literal notranslate"><span class="pre">source</span></code>
+and <code class="docutils literal notranslate"><span class="pre">table</span></code> in the manifest, with <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> unchanged. See <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a>.</p>
+</div>
+<p>Dagster is the natural target, because its software-defined asset and a <code class="docutils literal notranslate"><span class="pre">[dataframes.x]</span></code> entry are
+the same object — a declaration that something should exist, plus what it depends on. Airflow’s unit
+is a task, so an export flattens assets and loses lineage. Prefect’s unit is a function, so an export
+is trivial and gains the least. Both are worth supporting as acknowledged lossy exports; neither
+should shape the model.</p>
+</section>
+<section id="not-doing">
+<span id="id1"></span><h2>Not doing<a class="headerlink" href="#not-doing" title="Link to this heading">#</a></h2>
+<p>The restraint is the design, so it belongs in one list. Each of these is something a reasonable
+contributor might otherwise add, and each would cost something named above.</p>
+<ul class="simple">
+<li><p><strong>No scheduler and no calendar.</strong> Something else decides when a run starts — cron, CI, or a hosted
+platform. ChartBook decides what order things build in, once asked.</p></li>
+<li><p><strong>No retries, backfills, run history or run UI.</strong> This is where a small runner becomes a worse
+Dagster. Export the graph instead.</p></li>
+<li><p><strong>No distributed execution.</strong> A process pool on one machine. Crossing a machine boundary is where
+you hand off to a real orchestrator.</p></li>
+<li><p><strong>No dependencies between named scripts.</strong> The only graph is over pipelines.</p></li>
+<li><p><strong>No per-asset build recipes.</strong> The pipeline’s own tool already has them.</p></li>
+<li><p><strong>No moving data files into the store.</strong> <code class="docutils literal notranslate"><span class="pre">path</span></code> stays the real location; the store links into it.</p></li>
+<li><p><strong>No hermeticity.</strong> Hash what you can, honestly record what you cannot.</p></li>
+<li><p><strong>No metadata ingestion connectors.</strong> “Ingest from 200 systems” is the road every dead catalog
+took. This catalog earns its keep by being how you load data.</p></li>
+<li><p><strong>No required service, anywhere.</strong> Rule 1.</p></li>
+<li><p><strong>No letting Airflow shape the model.</strong> Its unit is a task; ours is an asset.</p></li>
+<li><p><strong>No Node or npm in the install path.</strong> Any JavaScript surface ships pre-built inside the Python
+package.</p></li>
+<li><p><strong>No features for machines alone.</strong> Rule 2.</p></li>
+<li><p><strong>No plugin system before a second implementation exists.</strong> A contract designed from one example
+gets the abstraction wrong. Leave a seam, write the second implementation, then extract.</p></li>
+<li><p><strong>No swappable hashing, name resolution, or index schema.</strong> These three are what make assets
+comparable, dependencies portable, and the index a contract.</p></li>
+<li><p><strong>No experiment tracking, model serving or model loading.</strong> A <a class="reference internal" href="models.html"><span class="doc">model</span></a> is a declared
+asset with versions. Logging every training run is an experiment tracker’s job; ChartBook records
+the models a pipeline chooses to keep, and hands out their paths. <em>(Added 2026-10-12.)</em></p></li>
+</ul>
+</section>
+<section id="seams-plugins-and-what-stays-singular">
+<h2>Seams, plugins, and what stays singular<a class="headerlink" href="#seams-plugins-and-what-stays-singular" title="Link to this heading">#</a></h2>
+<p>Three different things get called “making it pluggable,” costing wildly different amounts. A <strong>plugin
+system</strong> — discovery, entry points, third-party registration, a versioned contract — is expensive and
+only worth it once outsiders want to write implementations; the plotting backends earned theirs. A
+<strong>seam</strong> — one internal interface everything funnels through — is nearly free and is simply good
+structure. And some things are <strong>singular by design</strong>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Concern</p></th>
+<th class="head"><p>Treatment</p></th>
+<th class="head"><p>Why</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Where cached bytes live</p></td>
+<td><p>seam</p></td>
+<td><p>Four operations: has, get, put, delete. Local now; shared or hosted later</p></td>
+</tr>
+<tr class="row-odd"><td><p>Export formats</p></td>
+<td><p>seam → plugin</p></td>
+<td><p>An exporter is a pure function from index to bytes</p></td>
+</tr>
+<tr class="row-even"><td><p>Site renderers</p></td>
+<td><p>seam</p></td>
+<td><p>Publishing the index is what lets something else render it</p></td>
+</tr>
+<tr class="row-odd"><td><p>Storage backends behind <code class="docutils literal notranslate"><span class="pre">data.load()</span></code></p></td>
+<td><p>seam</p></td>
+<td><p>Parquet now; DuckDB, warehouse tables later. See <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Hash computation</p></td>
+<td><p><strong>singular</strong></p></td>
+<td><p>Two implementations hashing differently makes nothing comparable</p></td>
+</tr>
+<tr class="row-odd"><td><p>Name resolution</p></td>
+<td><p><strong>singular</strong></p></td>
+<td><p>Projects disagreeing about a name makes dependencies unportable. One parser (<code class="docutils literal notranslate"><span class="pre">chartbook.refs</span></code>), one resolver (<code class="docutils literal notranslate"><span class="pre">chartbook.resolve</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>The index schema</p></td>
+<td><p><strong>singular</strong></p></td>
+<td><p>It is the contract. A pluggable contract is no contract</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="prior-art">
+<h2>Prior art<a class="headerlink" href="#prior-art" title="Link to this heading">#</a></h2>
+<p>Each of these solved a piece of this already, and the design borrows deliberately.</p>
+<ul class="simple">
+<li><p><strong>Nix</strong> — input-addressed store paths, substituters, the derivation as build plan and cache key and
+provenance record in one object, and GC roots. Not its hermeticity, which is why Nix is hard.</p></li>
+<li><p><strong>Nextflow</strong> — a content-addressed work directory with <code class="docutils literal notranslate"><span class="pre">-resume</span></code>, and native data lineage
+(25.04) with a versioned record schema worth reading before finalizing
+<a class="reference internal" href="index-schema.html"><span class="doc">ours</span></a>. Its unbounded <code class="docutils literal notranslate"><span class="pre">work/</span></code> growth is the cautionary half.</p></li>
+<li><p><strong>Snakemake</strong> — between-workflow caching that hashes steps, parameters, software stack and inputs
+via a Merkle tree before consulting a central cache.</p></li>
+<li><p><strong>DVC</strong> — the cache-link ladder and garbage collection. Content-addressed rather than
+input-addressed, which is why this builds a store rather than adopting theirs.</p></li>
+<li><p><strong>Cargo</strong> — <code class="docutils literal notranslate"><span class="pre">path</span></code> versus git-and-rev dependencies, a lockfile recording what was actually used,
+and <code class="docutils literal notranslate"><span class="pre">update</span></code> as a deliberate act.</p></li>
+<li><p><strong>Docker</strong> — an optional registry prefix with defined resolution, so short names work and
+fully-qualified ones remain available.</p></li>
+<li><p><strong>dbt</strong> — a manifest as a build product that the surrounding ecosystem consumes.</p></li>
+<li><p><strong>Bazel and Turborepo</strong> — remote caching as something a team buys rather than builds.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="references.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: references</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="index-schema.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: the index</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-design-rules">Two design rules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#granularity-coarse-outside-fine-inside">Granularity: coarse outside, fine inside</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#identity-and-location">Identity and location</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#collisions">Collisions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reserving-a-future-global-namespace">Reserving a future global namespace</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#addressing-a-series-inside-a-dataframe">Addressing a series inside a dataframe</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pinning-and-isolation">Pinning and isolation</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#two-verbs">Two verbs</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store">The store</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-needs-two-indexes">The store needs two indexes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#links-not-copies">Links, not copies</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#garbage-collection-designed-in-rather-than-bolted-on">Garbage collection, designed in rather than bolted on</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-build-record-and-why-lineage-is-provable">The build record, and why lineage is provable</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#make-the-hashes-transitive">Make the hashes transitive</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#paths">Paths</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reachable-from-any-language">Reachable from any language</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-whole-surface">The whole surface</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#running-things">Running things</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-command-surface">The command surface</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-data-declares-a-dependency">Loading data declares a dependency</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#relationship-to-orchestrators">Relationship to orchestrators</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing">Not doing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#seams-plugins-and-what-stays-singular">Seams, plugins, and what stays singular</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-art">Prior art</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

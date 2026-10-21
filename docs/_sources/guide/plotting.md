@@ -21,6 +21,8 @@ When saving, the module generates **5 output files** for each chart:
 | `{chart_id}.pdf` | PDF (8×6") | Publication (LaTeX) |
 | `{chart_id}_wide.pdf` | PDF (12×6") | Publication wide |
 
+`chart_id` names those files, so a few characters and names are refused: none of `/ \ : < > " | ? *`, not `.` or `..`, and not starting with `-` or `.` (which would make a file read as an option, or hidden). `.save()` refuses one that breaks a rule and says which; `gdp_growth`, `curve-today` and `q1.2024` are all fine.
+
 ## Quick Start
 
 ```python
@@ -50,6 +52,19 @@ print(result.paths)
 # {'html': Path('_output/gdp_growth.html'),
 #  'png': Path('_output/gdp_growth.png'), ...}
 ```
+
+### Data from `data.load()`
+
+Every chart function takes a pandas DataFrame, a polars DataFrame, or a polars LazyFrame. `data.load()` returns a LazyFrame, so you can pass what it gives you straight in; a LazyFrame is collected, and polars data is converted to pandas inside the function, since the plotting backends draw from pandas:
+
+```python
+from chartbook import data
+
+rates = data.load("treasury_rates")
+chartbook.plotting.line(rates, x="date", y="rate", title="Rates").save("rates_chart")
+```
+
+The whole frame is collected, so filter or select in polars first if it is large. A polars category or enum column is drawn as text, and a decimal column as a float.
 
 ## ChartResult Object
 
@@ -377,17 +392,17 @@ docs = "Quarterly real GDP growth, seasonally adjusted."
 
 See {doc}`documenting-a-pipeline` for the manifest side.
 
-## Plugin System
+## Custom backends
 
-The plotting module uses [pluggy](https://pluggy.readthedocs.io/) for extensibility. Third-party packages can provide custom backends:
+The two libraries above are **backends**, and a third-party package can register more — for Altair, Bokeh, or a house plotting library — through the `chartbook_plotting` entry-point group:
 
 ```toml
-# In third-party package's pyproject.toml
+# In the third-party package's pyproject.toml
 [project.entry-points.chartbook_plotting]
 altair = "mypackage.backend:AltairBackend"
 ```
 
-See the API reference for details on implementing custom backends.
+{doc}`plotting-backends` is the full interface: the methods a backend implements, what it is handed, a complete working example, and what a registered backend is and is not used for today.
 
 ## Dependencies
 
@@ -396,7 +411,7 @@ Everything the plotting module needs ships with `pip install chartbook`:
 - `matplotlib` — Static chart generation
 - `plotly` — Interactive chart generation
 - `kaleido` — Plotly static export
-- `pluggy` — Plugin system
+- `pluggy` — Backend registry ({doc}`plotting-backends`)
 - `pandas-datareader` — NBER recession data from FRED
 - `fredapi` — FRED API client, available for pipeline code
 

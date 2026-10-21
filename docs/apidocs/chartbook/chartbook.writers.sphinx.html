@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>chartbook.writers.sphinx &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.writers.sphinx';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="chartbook.hashing" href="chartbook.hashing.html" />
+    <link rel="prev" title="chartbook.writers.mkdocs" href="chartbook.writers.mkdocs.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/apidocs/chartbook/chartbook.writers.sphinx.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>chartbook.writers.sphinx</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES"><code class="docutils literal notranslate"><span class="pre">OVERRIDABLE_TEMPLATES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter"><code class="docutils literal notranslate"><span class="pre">SphinxWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_FILE"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_FILE</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_SECTIONS</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_VERSIONS"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_VERSIONS</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.CATALOG_PAGES</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.THEME_TEMPLATES_IN_SITE"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.THEME_TEMPLATES_IN_SITE</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.assistant_file"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.assistant_file()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.catalog_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page_paths"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.catalog_page_paths()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.chart_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.chart_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.chart_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.chart_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.dataframe_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.dataframe_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.docs_src_dir"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.docs_src_dir</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.enable_data_download"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.enable_data_download</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.from_the_store_assets"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.from_the_store_assets()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.index"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.index</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.link_to_dataframe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.model_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.model_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.model_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.model_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.own_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.own_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.own_page_paths"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.own_page_paths()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_link"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page_link()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.records"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.records</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.size_threshold"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.size_threshold</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.theme"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.theme</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.check_front_matter"><code class="docutils literal notranslate"><span class="pre">check_front_matter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.freshness_fact"><code class="docutils literal notranslate"><span class="pre">freshness_fact()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.yaml_escape"><code class="docutils literal notranslate"><span class="pre">yaml_escape()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.writers.sphinx">
+<span id="chartbook-writers-sphinx"></span><h1><a class="reference internal" href="#module-chartbook.writers.sphinx" title="chartbook.writers.sphinx"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a><a class="headerlink" href="#module-chartbook.writers.sphinx" title="Link to this heading">#</a></h1>
+<p>The Sphinx writer: pages for Sphinx, from the index and the files it names.</p>
+<p>The slices so far are the dataframe, chart, model and pipeline pages. Each
+renders today’s templates with a context built from the record, its
+pipeline’s record, the records of its inputs or assets and the files the
+records name, and writes the same page the generator writes, which a
+golden test holds it to. The “manifests” the templates read are made here
+from the records; the templates are unchanged until the generator is gone,
+so that the two can be compared.</p>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.writers.sphinx.SphinxWriter" title="chartbook.writers.sphinx.SphinxWriter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SphinxWriter</span></code></a></p></td>
+<td><p>Pages for Sphinx, from one index.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.writers.sphinx.check_front_matter" title="chartbook.writers.sphinx.check_front_matter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_front_matter</span></code></a></p></td>
+<td><p>Refuse a chart page whose YAML front matter does not parse: Sphinx would silently misfile it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.writers.sphinx.freshness_fact" title="chartbook.writers.sphinx.freshness_fact"><code class="xref py py-obj docutils literal notranslate"><span class="pre">freshness_fact</span></code></a></p></td>
+<td><p>One “<label> <when>” fact for a page’s freshness line.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.writers.sphinx.yaml_escape" title="chartbook.writers.sphinx.yaml_escape"><code class="xref py py-obj docutils literal notranslate"><span class="pre">yaml_escape</span></code></a></p></td>
+<td><p>Escape a value for a YAML double-quoted scalar (the front matter of a chart page).</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES" title="chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OVERRIDABLE_TEMPLATES</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES">
+<span class="sig-prename descclassname"><span class="pre">chartbook.writers.sphinx.</span></span><span class="sig-name descname"><span class="pre">OVERRIDABLE_TEMPLATES</span></span><a class="headerlink" href="#chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES" title="Link to this definition">#</a></dt>
+<dd><p>‘frozenset(…)’</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.writers.sphinx.</span></span><span class="sig-name descname"><span class="pre">SphinxWriter</span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter" title="Link to this definition">#</a></dt>
+<dd><p>Pages for Sphinx, from one index.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index</strong> – The full index of the site, as the build made it: with
+<code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> on locations, since the writer reads the files
+the index names.</p></li>
+<li><p><strong>theme</strong> – <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> or <code class="docutils literal notranslate"><span class="pre">catalog</span></code>: which theme’s templates and link
+scheme.</p></li>
+<li><p><strong>docs_src_dir</strong> – The site’s own <code class="docutils literal notranslate"><span class="pre">docs_src</span></code>, where a project may
+override a template.</p></li>
+<li><p><strong>size_threshold</strong> – Files over this many megabytes get no date
+range. The glimpse reads only the first rows, at any size.</p></li>
+<li><p><strong>enable_data_download</strong> – Whether pages link to downloads.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.ASSISTANT_FILE">
+<span class="sig-name descname"><span class="pre">ASSISTANT_FILE</span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_FILE" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS">
+<span class="sig-name descname"><span class="pre">ASSISTANT_SECTIONS</span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS" title="Link to this definition">#</a></dt>
+<dd><p>((‘Pipeline’, ‘Pipelines’), (‘Dataframe’, ‘Dataframes’), (‘Chart’, ‘Charts’), (‘Model’, ‘Models’))</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.ASSISTANT_VERSIONS">
+<span class="sig-name descname"><span class="pre">ASSISTANT_VERSIONS</span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_VERSIONS" title="Link to this definition">#</a></dt>
+<dd><p>10</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES">
+<span class="sig-name descname"><span class="pre">CATALOG_PAGES</span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES" title="Link to this definition">#</a></dt>
+<dd><p>(‘<a class="reference external" href="http://index.md">index.md</a>’, ‘cb/dataframes.md’, ‘cb/models.md’, ‘cb/pipelines.md’, ‘cb/diagnostics.md’, ‘cb/version…</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.THEME_TEMPLATES_IN_SITE">
+<span class="sig-name descname"><span class="pre">THEME_TEMPLATES_IN_SITE</span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.THEME_TEMPLATES_IN_SITE" title="Link to this definition">#</a></dt>
+<dd><p>True</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.assistant_file">
+<span class="sig-name descname"><span class="pre">assistant_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.assistant_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.assistant_file" title="Link to this definition">#</a></dt>
+<dd><p>The site as an assistant reads it: one line per pipeline, dataframe, chart and model, with where its page is.</p>
+<p>In the llms.txt form: the site’s name as the title, what it is as the
+summary, then a list per kind, each line <code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">[name](page):</span> <span class="pre">`ID`.</span> <span class="pre">“Description”</span></code>, every link relative to the site’s root, where the
+file is. In a catalog, each pipeline’s line has its newest versions
+under it, each linking the version site’s own assistant file. The
+records in full are in <code class="docutils literal notranslate"><span class="pre">index.json</span></code> beside it.</p>
+<p>What a record’s owner wrote (a name, a description) is one line,
+with what would start a link, an autolink or code escaped, and a
+description is always in quotation marks after words of the file’s
+own, so that it never starts a line: it can make no heading, list
+or link of its own, and reads as the owner’s words. The summary is
+the file’s own words only.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.catalog_page">
+<span class="sig-name descname"><span class="pre">catalog_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">page_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.catalog_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page" title="Link to this definition">#</a></dt>
+<dd><p>One of the catalog’s own pages, from the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record and the records of the site.</p>
+<p>The landing page and the lists are renderings of the records; the
+diagnostics page is a comparison the writer makes, of each record’s
+declared fields against the policy the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record carries (the
+build also writes the same comparison as a CSV file, which the page
+links to).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.catalog_page_paths">
+<span class="sig-name descname"><span class="pre">catalog_page_paths</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.catalog_page_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page_paths" title="Link to this definition">#</a></dt>
+<dd><p>The catalog pages this index has: <code class="docutils literal notranslate"><span class="pre">cb/models.md</span></code> only when some pipeline declares a model,
+<code class="docutils literal notranslate"><span class="pre">cb/versions.md</span></code> only when some pipeline has a snapshot in the store.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.chart_page">
+<span class="sig-name descname"><span class="pre">chart_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.chart_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.chart_page" title="Link to this definition">#</a></dt>
+<dd><p>The Markdown page of one chart, from its record, its dataframe’s record and the write-up.</p>
+<p>The chart’s HTML is not read: the page embeds it by its path under
+the site, and the build copies the file there. “Chart updated” is
+the chart file’s <code class="docutils literal notranslate"><span class="pre">modified_at</span></code>; “Data updated” is its dataframe’s,
+which for a table or query is the engine file’s.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.chart_page_path">
+<span class="sig-name descname"><span class="pre">chart_page_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.chart_page_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.chart_page_path" title="Link to this definition">#</a></dt>
+<dd><p>Where a chart’s page is, under the pages folder.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.dataframe_page">
+<span class="sig-name descname"><span class="pre">dataframe_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.dataframe_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page" title="Link to this definition">#</a></dt>
+<dd><p>The Markdown page of one dataframe, from its record and the files it names.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.dataframe_page_path">
+<span class="sig-name descname"><span class="pre">dataframe_page_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.dataframe_page_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page_path" title="Link to this definition">#</a></dt>
+<dd><p>Where a dataframe’s page is, under the pages folder.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.docs_src_dir">
+<span class="sig-name descname"><span class="pre">docs_src_dir</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.docs_src_dir" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.enable_data_download">
+<span class="sig-name descname"><span class="pre">enable_data_download</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.enable_data_download" title="Link to this definition">#</a></dt>
+<dd><p>False</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.from_the_store_assets">
+<span class="sig-name descname"><span class="pre">from_the_store_assets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kinds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.from_the_store_assets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.from_the_store_assets" title="Link to this definition">#</a></dt>
+<dd><p>The assets of the pipelines shown from the store alone, as each one’s newest snapshot lists them.</p>
+<p>Each is linked to its page in that snapshot’s site, relative to the
+page at <em>from_path</em>, or to the page there that says why the site
+could not be built; one of a kind with no page (a notebook, a note)
+is left out. The title is the asset’s name as text
+(:func:<code class="docutils literal notranslate"><span class="pre">_as_text</span></code>), else its name in its pipeline. At most</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Data<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.snapshot.STORED_ASSETS_SHOWN</span></code> of each pipeline’s are
+listed, since anyone who can write to the store chose how many there
+are; then one entry with <code class="docutils literal notranslate"><span class="pre">more</span></code>, how many are not, linked to the
+snapshot’s site.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>kinds</strong> – The kinds to list, as a reference names them: <code class="docutils literal notranslate"><span class="pre">dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">chart</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>.</p></li>
+<li><p><strong>pipeline_id</strong> – Only this pipeline’s; every one’s by default.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Each as <code class="docutils literal notranslate"><span class="pre">{&quot;kind&quot;,</span> <span class="pre">&quot;id&quot;,</span> <span class="pre">&quot;title&quot;,</span> <span class="pre">&quot;pipeline&quot;,</span> <span class="pre">&quot;link&quot;}</span></code>, by pipeline, then kind, then name.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.index" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.link_to_dataframe">
+<span class="sig-name descname"><span class="pre">link_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Dataframe'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.link_to_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe" title="Link to this definition">#</a></dt>
+<dd><p>The link to a dataframe’s page from a page of the given kind, relative to that page.</p>
+<p>A dataframe page is at <code class="docutils literal notranslate"><span class="pre">cb/dataframes/&lt;pipeline&gt;/&lt;name&gt;.md</span></code>, a chart
+page at <code class="docutils literal notranslate"><span class="pre">cb/charts/&lt;pipeline&gt;.&lt;name&gt;.md</span></code>, a model page at
+<code class="docutils literal notranslate"><span class="pre">cb/models/&lt;pipeline&gt;/&lt;name&gt;.md</span></code>; the same in both themes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.model_page">
+<span class="sig-name descname"><span class="pre">model_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.model_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.model_page" title="Link to this definition">#</a></dt>
+<dd><p>The Markdown page of one model, from its record, its inputs’ records and the write-up.</p>
+<p>Everything on the page is in the record: scores, versions, files,
+what it was trained on (its <code class="docutils literal notranslate"><span class="pre">inputs</span></code>), and whether it is out of
+date (<code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code>). The notice’s “now” hashes are the inputs’
+own facts: a local dataframe’s <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>, another pipeline’s
+pin in <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>. The model’s bytes are never read.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.model_page_path">
+<span class="sig-name descname"><span class="pre">model_page_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.model_page_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.model_page_path" title="Link to this definition">#</a></dt>
+<dd><p>Where a model’s page is, under the pages folder.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.own_page">
+<span class="sig-name descname"><span class="pre">own_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">page_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.own_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.own_page" title="Link to this definition">#</a></dt>
+<dd><p>One of :meth:<code class="docutils literal notranslate"><span class="pre">own_page_paths</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.own_page_paths">
+<span class="sig-name descname"><span class="pre">own_page_paths</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.own_page_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.own_page_paths" title="Link to this definition">#</a></dt>
+<dd><p>The site’s own pages this writer renders besides the records’: a catalog’s pages; none for a pipeline site.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.page">
+<span class="sig-name descname"><span class="pre">page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.page" title="Link to this definition">#</a></dt>
+<dd><p>The page of any record that has one: dataframe, chart, model or pipeline.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.page_path">
+<span class="sig-name descname"><span class="pre">page_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.page_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.page_path" title="Link to this definition">#</a></dt>
+<dd><p>Where a record’s page is, under the pages folder.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.pipeline_page">
+<span class="sig-name descname"><span class="pre">pipeline_page</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.pipeline_page"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page" title="Link to this definition">#</a></dt>
+<dd><p>The Markdown page of one pipeline, from its record, its assets’ records and the files they name.</p>
+<p>In the pipeline theme this is the site’s front page: the README’s
+text under the theme’s <code class="docutils literal notranslate"><span class="pre">index.md</span></code>, with the tables of contents made
+from the records (notebooks, notes, dataframes, models, by name) and
+from the pipeline’s own site pages (<code class="docutils literal notranslate"><span class="pre">site_pages</span></code>; <code class="docutils literal notranslate"><span class="pre">index_toc.md</span></code>
+among them is read and merged in). In a catalog it is the pipeline’s
+README page, with its repository and site named above the text.
+Either way it lists the pipelines it depends on, with what each is
+pinned to (:meth:<code class="docutils literal notranslate"><span class="pre">_dependencies</span></code>).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.pipeline_page_link">
+<span class="sig-name descname"><span class="pre">pipeline_page_link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.pipeline_page_link"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_link" title="Link to this definition">#</a></dt>
+<dd><p>The link from an asset’s page to its pipeline’s page.</p>
+<p>Relative to the page: in the pipeline theme up to the site’s root,
+in a catalog up to <code class="docutils literal notranslate"><span class="pre">cb/</span></code> and into <code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.pipeline_page_path">
+<span class="sig-name descname"><span class="pre">pipeline_page_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">record</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#SphinxWriter.pipeline_page_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_path" title="Link to this definition">#</a></dt>
+<dd><p>Where a pipeline’s page is: the site’s front page in the pipeline theme, a README page in a catalog.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.records">
+<span class="sig-name descname"><span class="pre">records</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.records" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.size_threshold">
+<span class="sig-name descname"><span class="pre">size_threshold</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.size_threshold" title="Link to this definition">#</a></dt>
+<dd><p>50</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.SphinxWriter.theme">
+<span class="sig-name descname"><span class="pre">theme</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.writers.sphinx.SphinxWriter.theme" title="Link to this definition">#</a></dt>
+<dd><p>‘pipeline’</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.check_front_matter">
+<span class="sig-prename descclassname"><span class="pre">chartbook.writers.sphinx.</span></span><span class="sig-name descname"><span class="pre">check_front_matter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">page</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">chart_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#check_front_matter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.check_front_matter" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a chart page whose YAML front matter does not parse: Sphinx would silently misfile it.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#SystemExit" title="(in Python v3.15)"><strong>SystemExit</strong></a> – Through :class:<code class="docutils literal notranslate"><span class="pre">ChartBookError</span></code>, with the field to look at.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.freshness_fact">
+<span class="sig-prename descclassname"><span class="pre">chartbook.writers.sphinx.</span></span><span class="sig-name descname"><span class="pre">freshness_fact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">moment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.15)"><span class="pre">datetime.datetime</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#freshness_fact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.freshness_fact" title="Link to this definition">#</a></dt>
+<dd><p>One “<label> <when>” fact for a page’s freshness line.</p>
+<p>The page says <em>when</em>, not <em>how long ago</em>: a generated page is static, so
+“2 days ago” worked out at build time would be wrong the next day, and
+would make every page differ from one build to the next. The timestamp
+goes into a <code class="docutils literal notranslate"><span class="pre">&lt;time&gt;</span></code> element and <code class="docutils literal notranslate"><span class="pre">chartbook-freshness.js</span></code> turns it
+into relative wording when the page is read.</p>
+<p>Every time on the site is in UTC and says so, whatever the zone of the
+machine that built it: a naive <em>moment</em> is taken as that machine’s
+local time and converted.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">label</span></code>, <code class="docutils literal notranslate"><span class="pre">iso</span></code> (ISO 8601 with offset), <code class="docutils literal notranslate"><span class="pre">title</span></code> (hover
+text) and <code class="docutils literal notranslate"><span class="pre">date</span></code> (fallback text); None when <em>moment</em> is None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.writers.sphinx.yaml_escape">
+<span class="sig-prename descclassname"><span class="pre">chartbook.writers.sphinx.</span></span><span class="sig-name descname"><span class="pre">yaml_escape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/writers/sphinx.html#yaml_escape"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.writers.sphinx.yaml_escape" title="Link to this definition">#</a></dt>
+<dd><p>Escape a value for a YAML double-quoted scalar (the front matter of a chart page).</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chartbook.writers.mkdocs.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="chartbook.hashing.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES"><code class="docutils literal notranslate"><span class="pre">OVERRIDABLE_TEMPLATES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter"><code class="docutils literal notranslate"><span class="pre">SphinxWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_FILE"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_FILE</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_SECTIONS</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.ASSISTANT_VERSIONS"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.ASSISTANT_VERSIONS</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.CATALOG_PAGES</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.THEME_TEMPLATES_IN_SITE"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.THEME_TEMPLATES_IN_SITE</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.assistant_file"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.assistant_file()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.catalog_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.catalog_page_paths"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.catalog_page_paths()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.chart_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.chart_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.chart_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.chart_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.dataframe_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.dataframe_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.dataframe_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.docs_src_dir"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.docs_src_dir</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.enable_data_download"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.enable_data_download</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.from_the_store_assets"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.from_the_store_assets()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.index"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.index</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.link_to_dataframe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.model_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.model_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.model_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.model_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.own_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.own_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.own_page_paths"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.own_page_paths()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_link"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page_link()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.pipeline_page_path"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page_path()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.records"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.records</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.size_threshold"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.size_threshold</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.SphinxWriter.theme"><code class="docutils literal notranslate"><span class="pre">SphinxWriter.theme</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.check_front_matter"><code class="docutils literal notranslate"><span class="pre">check_front_matter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.freshness_fact"><code class="docutils literal notranslate"><span class="pre">freshness_fact()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.writers.sphinx.yaml_escape"><code class="docutils literal notranslate"><span class="pre">yaml_escape()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

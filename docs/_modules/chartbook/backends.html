@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.backends &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/backends';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.backends</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Backends: the engines behind a pipeline's ``[sources]``.</span>
+
+<span class="sd">A dataframe is a file, or it is a table or a query in a **source**: a named,</span>
+<span class="sd">configured instance of a backend, declared in the manifest::</span>
+
+<span class="sd">    [sources.local]</span>
+<span class="sd">    backend = "duckdb"</span>
+<span class="sd">    url = "duckdb:///./_data/local.duckdb"</span>
+
+<span class="sd">    [dataframes.slopes]</span>
+<span class="sd">    source = "local"</span>
+<span class="sd">    query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"</span>
+
+<span class="sd">The rule, from ``docs_src/design/data-access.md``: **a name resolves to a</span>
+<span class="sd">location; the backend runs the query; Arrow comes back; Polars wraps it.**</span>
+<span class="sd">ChartBook never parses, plans or rewrites SQL. It knows where a name lives</span>
+<span class="sd">and which dialect lives there, and it substitutes identifiers. The SQL is</span>
+<span class="sd">the user's (:func:`chartbook.data.sql`).</span>
+
+<span class="sd">Three backends are built. ``parquet`` is what a file-backed dataframe has</span>
+<span class="sd">always been: it reads the file, and in SQL it is ``read_parquet('…')``.</span>
+<span class="sd">``duckdb`` is the local engine: a file, or ``:memory:``, that holds tables</span>
+<span class="sd">and runs any SQL that mentions them, and reads parquet files too, so a</span>
+<span class="sd">query can join a table of one source with a file of this pipeline.</span>
+<span class="sd">``databricks`` is a SQL warehouse (:mod:`chartbook.backends.databricks`),</span>
+<span class="sd">whose driver ``pip install chartbook[databricks]`` installs. A source's</span>
+<span class="sd">backend is found by its name: ``duckdb`` here, any other in the entry-point</span>
+<span class="sd">group ``chartbook.backends``, as a kind of store is in ``chartbook.stores``.</span>
+<span class="sd">What a backend does for ChartBook is :class:`Backend`. A manifest that</span>
+<span class="sd">names a backend nothing provides is refused, so that the message can say so.</span>
+
+<span class="sd">**Credentials never enter a manifest.** A source's ``url`` is the public</span>
+<span class="sd">part. The machine supplies the rest (:func:`source_url`): an environment</span>
+<span class="sd">variable ``CHARTBOOK_SOURCE_&lt;NAME&gt;_URL`` holding a complete URL, then a</span>
+<span class="sd">``url`` for the source in ``~/.chartbook/sources.toml``, then the manifest's</span>
+<span class="sd">URL alone, which is all a DuckDB file needs. A manifest URL that carries a</span>
+<span class="sd">user name or a password is refused when the manifest loads, and so is a</span>
+<span class="sd">machine URL for a different engine than the manifest's backend. A</span>
+<span class="sd">warehouse's backend may take its credentials from the engine's own</span>
+<span class="sd">environment variables too, and sends them only to a host the machine names.</span>
+
+<span class="sd">**No writes.** A connection to a DuckDB file is opened read-only.</span>
+<span class="sd">ChartBook never creates, loads or alters a table; ``table`` and ``query``</span>
+<span class="sd">describe what the pipeline's own tools have already made. A ``:memory:``</span>
+<span class="sd">source is the exception by nature: it holds nothing until something is put</span>
+<span class="sd">in it through :func:`chartbook.data.connect`, so it is one writable</span>
+<span class="sd">connection for the life of the process.</span>
+
+<span class="sd">**Connections are not kept.** A DuckDB file is opened afresh for each</span>
+<span class="sd">load, so a rebuilt file is seen on the next call. A lazy frame handed out</span>
+<span class="sd">keeps its own connection alive for as long as it lives, and DuckDB locks</span>
+<span class="sd">the file against writers for that long; drop the frame before rebuilding</span>
+<span class="sd">the file in the same process.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlsplit</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">tomli</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_config_dir</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">strip_url_credentials</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileLocation</span><span class="p">,</span> <span class="n">Location</span>
+
+<span class="c1">#: The entry-point group a backend is found in by its name: an entry named</span>
+<span class="c1">#: as ``[sources.x] backend`` says, whose value is a :class:`Backend` class.</span>
+<span class="n">BACKEND_PLUGIN_GROUP</span> <span class="o">=</span> <span class="s2">"chartbook.backends"</span>
+
+<span class="c1">#: What installs the driver of each backend ChartBook brings, for a message.</span>
+<span class="n">EXTRAS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"databricks"</span><span class="p">:</span> <span class="s2">"pip install chartbook[databricks]"</span><span class="p">}</span>
+
+<span class="c1">#: Where a machine keeps what a manifest may not: ``[&lt;source&gt;] url = "…"``.</span>
+<span class="n">SOURCES_FILE</span> <span class="o">=</span> <span class="s2">"sources.toml"</span>
+
+<span class="c1">#: The environment variable that gives a source its complete URL:</span>
+<span class="c1">#: ``CHARTBOOK_SOURCE_WAREHOUSE_URL`` for a source called ``warehouse``.</span>
+<span class="n">SOURCE_ENV_PREFIX</span> <span class="o">=</span> <span class="s2">"CHARTBOOK_SOURCE_"</span>
+
+<span class="c1">#: The in-memory DuckDB URL, as a manifest and the resolver spell it.</span>
+<span class="n">MEMORY_URL</span> <span class="o">=</span> <span class="s2">"duckdb:///:memory:"</span>
+
+
+<div class="viewcode-block" id="BackendError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.BackendError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BackendError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a source cannot be opened or a query cannot be run."""</span></div>
+
+
+
+<div class="viewcode-block" id="source_env_var">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.source_env_var">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">source_env_var</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The environment variable that may hold a source's URL."""</span>
+    <span class="k">return</span> <span class="n">SOURCE_ENV_PREFIX</span> <span class="o">+</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^A-Za-z0-9]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="s2">"_URL"</span></div>
+
+
+
+<div class="viewcode-block" id="machine_source_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.machine_source_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">machine_source_url</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The URL this machine gives a source, credentials and all; None if it gives none.</span>
+
+<span class="sd">    The environment variable :func:`source_env_var` names, then ``url``</span>
+<span class="sd">    under ``[&lt;name&gt;]`` in ``~/.chartbook/sources.toml``.</span>
+
+<span class="sd">    In a build of files from a store, none: such a build reaches no engine,</span>
+<span class="sd">    and has no use for this machine's credentials.</span>
+
+<span class="sd">    :param name: The source's name in ``[sources]``.</span>
+<span class="sd">    :raises chartbook.backends.BackendError: If ``sources.toml`` is there and cannot be read.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">untrusted_source</span>
+
+    <span class="k">if</span> <span class="n">untrusted_source</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">from_environment</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">source_env_var</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">from_environment</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">from_environment</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">get_global_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="n">SOURCES_FILE</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot read </span><span class="si">{</span><span class="n">settings</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">table</span><span class="p">[</span><span class="s2">"url"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="source_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.source_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">source_url</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manifest_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The URL a source is opened with, credentials and all.</span>
+
+<span class="sd">    In order: the environment variable :func:`source_env_var` gives;</span>
+<span class="sd">    ``url`` under ``[&lt;name&gt;]`` in ``~/.chartbook/sources.toml``; the</span>
+<span class="sd">    manifest's own URL, which is enough for a DuckDB file.</span>
+
+<span class="sd">    :param name: The source's name in ``[sources]``.</span>
+<span class="sd">    :param manifest_url: Its ``url`` as the manifest has it.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">machine_source_url</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="n">manifest_url</span></div>
+
+
+
+<div class="viewcode-block" id="backend_names">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.backend_names">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">backend_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Every backend a source may name here: ``duckdb``, and each one a plugin provides."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">entry_points</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">({</span><span class="s2">"duckdb"</span><span class="p">}</span> <span class="o">|</span> <span class="p">{</span><span class="n">entry</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_points</span><span class="p">(</span><span class="n">group</span><span class="o">=</span><span class="n">BACKEND_PLUGIN_GROUP</span><span class="p">)})</span></div>
+
+
+
+<div class="viewcode-block" id="backend_class">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.backend_class">[docs]</a>
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">backend_class</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">type</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The :class:`Backend` class a source's ``backend`` names; None if nothing provides it.</span>
+
+<span class="sd">    ``duckdb`` is built in. Another name is looked up once per process in the</span>
+<span class="sd">    entry-point group ``chartbook.backends``; the first entry with the name</span>
+<span class="sd">    wins. A plugin whose driver is not installed still loads: the driver is</span>
+<span class="sd">    imported when the backend connects, and the message then names the extra.</span>
+
+<span class="sd">    :raises ValueError: If the plugin is there and cannot be loaded, naming it.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">entry_points</span>
+
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"duckdb"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DuckDBBackend</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_points</span><span class="p">(</span><span class="n">group</span><span class="o">=</span><span class="n">BACKEND_PLUGIN_GROUP</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">entry</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - whatever the plugin's import raised</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The backend plugin </span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> for </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> cannot be loaded: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="check_backend">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.check_backend">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_backend</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a backend nothing provides, and say which there are.</span>
+
+<span class="sd">    :param where: The manifest table, for the message.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">backend_class</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: backend </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is not one ChartBook knows. The backends are: "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backend_names</span><span class="p">())</span><span class="si">}</span><span class="s2">. Another engine is a plugin, a package with "</span>
+            <span class="sa">f</span><span class="s2">"a </span><span class="si">{</span><span class="n">BACKEND_PLUGIN_GROUP</span><span class="si">!r}</span><span class="s2"> entry point named for it; a manifest that names "</span>
+            <span class="sa">f</span><span class="s2">"one nothing provides is refused, so that nothing guesses.</span><span class="si">{</span><span class="n">_reinstall</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_reinstall</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""For a backend ChartBook brings and this install does not list: an install made before it did."""</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">EXTRAS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">" ChartBook brings </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: an install made before it did lacks its entry point, and "</span>
+        <span class="sa">f</span><span class="s2">"reinstalling ChartBook (</span><span class="si">{</span><span class="n">EXTRAS</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="si">}</span><span class="s2">) adds it."</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="scheme_of">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.scheme_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">scheme_of</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The scheme of a URL, lower-cased; empty when it has none."""</span>
+    <span class="k">return</span> <span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"://"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">url</span> <span class="k">else</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="check_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.check_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a source URL that carries credentials or the wrong scheme.</span>
+
+<span class="sd">    Then what the backend itself refuses (:meth:`Backend.check_url`): for a</span>
+<span class="sd">    DuckDB URL, one with a host, a user, connection options or a fragment,</span>
+<span class="sd">    ``duckdb:///&lt;file&gt;`` and nothing else.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">!=</span> <span class="n">url</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: the url carries a user name or a password. A manifest is "</span>
+            <span class="sa">f</span><span class="s2">"committed, so it holds the public part only; the machine supplies "</span>
+            <span class="sa">f</span><span class="s2">"the rest in </span><span class="si">{</span><span class="n">SOURCE_ENV_PREFIX</span><span class="si">}</span><span class="s2">&lt;NAME&gt;_URL or ~/.chartbook/</span><span class="si">{</span><span class="n">SOURCES_FILE</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">scheme_of</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">!=</span> <span class="n">backend</span><span class="p">:</span>
+        <span class="c1"># The url is not repeated: what is written where a scheme should be may be a credential</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: the url does not begin with </span><span class="si">{</span><span class="n">backend</span><span class="si">}</span><span class="s2">://, which is "</span>
+            <span class="sa">f</span><span class="s2">"what a </span><span class="si">{</span><span class="n">backend</span><span class="si">}</span><span class="s2"> source takes."</span>
+        <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">backend_class</span><span class="p">(</span><span class="n">backend</span><span class="p">)</span><span class="o">.</span><span class="n">check_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="duckdb_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.duckdb_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">duckdb_path</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manifest_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The file a ``duckdb://`` URL names, absolute; or ``:memory:``.</span>
+
+<span class="sd">    Follows the SQLAlchemy convention: ``duckdb:///relative.db`` is relative</span>
+<span class="sd">    to the pipeline's directory, ``duckdb:////abs/path.db`` is absolute, and</span>
+<span class="sd">    ``duckdb:///:memory:`` is nothing on disk.</span>
+
+<span class="sd">    :raises ValueError: If the URL has a host or a user (``duckdb://x/f``),</span>
+<span class="sd">        connection options (``?access_mode=…``) or a fragment. ChartBook</span>
+<span class="sd">        passes none of those to the engine, so it refuses to look as if it</span>
+<span class="sd">        did.</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parts</span><span class="o">.</span><span class="n">netloc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the url has a host or a user, and a "</span>
+            <span class="sa">f</span><span class="s2">"DuckDB file has neither. Write duckdb:///./file.duckdb, with "</span>
+            <span class="sa">f</span><span class="s2">"three slashes, for a file beside the manifest."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">parts</span><span class="o">.</span><span class="n">query</span> <span class="ow">or</span> <span class="n">parts</span><span class="o">.</span><span class="n">fragment</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"the url has connection options after the file. ChartBook "</span>
+            <span class="sa">f</span><span class="s2">"passes none to the engine: a DuckDB file is opened read-only, "</span>
+            <span class="sa">f</span><span class="s2">"and that is all. Name the file alone."</span>
+        <span class="p">)</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">path</span>
+    <span class="k">if</span> <span class="n">rest</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/"</span><span class="p">):</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">rest</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="k">if</span> <span class="n">rest</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">":memory:"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">":memory:"</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">manifest_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">rest</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">rest</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="k">else</span> <span class="n">rest</span></div>
+
+
+
+<div class="viewcode-block" id="quote_identifier">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.quote_identifier">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">quote_identifier</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">quote</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'"'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Quote a one-to-three-part identifier for DuckDB: ``"a"."b"."c"``.</span>
+
+<span class="sd">    With a backtick for *quote*, as Databricks quotes one, each part is</span>
+<span class="sd">    between backticks instead, and a backtick inside it is doubled.</span>
+
+<span class="sd">    A part is quoted with double quotes, and a double quote inside it is</span>
+<span class="sd">    doubled. What is between the dots is the user's; nothing is guessed.</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">identifier</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"."</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">quote</span> <span class="o">+</span> <span class="n">part</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">quote</span><span class="p">,</span> <span class="n">quote</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">quote</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="quote_literal">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.quote_literal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">quote_literal</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Quote a string for SQL: ``'…'`` with a quote inside doubled."""</span>
+    <span class="k">return</span> <span class="s2">"'"</span> <span class="o">+</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="s2">"''"</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"'"</span></div>
+
+
+
+<span class="c1">#: A string quoted in dollars opens with ``$$`` or ``$tag$``, and closes with the same.</span>
+<span class="n">_DOLLAR_QUOTE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\$([A-Za-z_][A-Za-z0-9_]*)?\$"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ends_in</span><span class="p">(</span><span class="n">sql</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What the end of some SQL is inside of, and where a line comment there began.</span>
+
+<span class="sd">    The text is read once, as DuckDB and Databricks read it: ``'…'`` is a</span>
+<span class="sd">    string, in which a backslash is literal (DuckDB's rule; Databricks</span>
+<span class="sd">    escapes with one, which at worst leaves the end inside a string here);</span>
+<span class="sd">    ``E'…'`` a string with backslash escapes; ``$$…$$`` or ``$tag$…$tag$``</span>
+<span class="sd">    a string quoted in dollars; ``"…"`` or `` `…` `` a quoted identifier;</span>
+<span class="sd">    ``--`` a comment to the end of its line; ``/* … */`` a comment to its</span>
+<span class="sd">    close. A ``;`` or a ``--`` inside any of them is part of it.</span>
+
+<span class="sd">    :returns: ``"code"``, ``"string"``, ``"identifier"``, ``"line_comment"``</span>
+<span class="sd">        or ``"block_comment"``; and, for a line comment, the index of its</span>
+<span class="sd">        ``--`` (None otherwise).</span>
+<span class="sd">    """</span>
+    <span class="n">state</span><span class="p">,</span> <span class="n">began</span><span class="p">,</span> <span class="n">closer</span><span class="p">,</span> <span class="n">escapes</span> <span class="o">=</span> <span class="s2">"code"</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="kc">False</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">sql</span><span class="p">):</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">sql</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">"code"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">"'"</span><span class="p">:</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">closer</span><span class="p">,</span> <span class="n">escapes</span> <span class="o">=</span> <span class="s2">"string"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">,</span> <span class="kc">False</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="ow">in</span> <span class="s2">"eE"</span> <span class="ow">and</span> <span class="n">sql</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"'"</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">i</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sql</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isalnum</span><span class="p">()</span> <span class="ow">or</span> <span class="n">sql</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"_"</span><span class="p">)):</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">closer</span><span class="p">,</span> <span class="n">escapes</span> <span class="o">=</span> <span class="s2">"string"</span><span class="p">,</span> <span class="s2">"'"</span><span class="p">,</span> <span class="kc">True</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># onto the opening quote</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">"$"</span> <span class="ow">and</span> <span class="n">_DOLLAR_QUOTE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">closer</span><span class="p">,</span> <span class="n">escapes</span> <span class="o">=</span> <span class="s2">"string"</span><span class="p">,</span> <span class="n">_DOLLAR_QUOTE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="kc">False</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">closer</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">c</span> <span class="ow">in</span> <span class="s2">"</span><span class="se">\"</span><span class="s2">`"</span><span class="p">:</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">closer</span><span class="p">,</span> <span class="n">escapes</span> <span class="o">=</span> <span class="s2">"identifier"</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="kc">False</span>
+            <span class="k">elif</span> <span class="n">sql</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"--"</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">began</span> <span class="o">=</span> <span class="s2">"line_comment"</span><span class="p">,</span> <span class="n">i</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">sql</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/*"</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="s2">"block_comment"</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">state</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"string"</span><span class="p">,</span> <span class="s2">"identifier"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">escapes</span> <span class="ow">and</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">:</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># the character it escapes, whatever it is</span>
+            <span class="k">elif</span> <span class="n">sql</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">closer</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="s2">"code"</span>  <span class="c1"># a doubled quote closes and reopens, which comes to the same</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">closer</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">"line_comment"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">:</span>
+                <span class="n">state</span><span class="p">,</span> <span class="n">began</span> <span class="o">=</span> <span class="s2">"code"</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">"block_comment"</span> <span class="ow">and</span> <span class="n">sql</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"*/"</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="s2">"code"</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">state</span><span class="p">,</span> <span class="n">began</span>
+
+
+<div class="viewcode-block" id="subselect">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.subselect">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">subselect</span><span class="p">(</span><span class="n">sql</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A query as a table expression: ``(…)`` on its own lines.</span>
+
+<span class="sd">    Two things are dropped from the end of the text, each as many times as</span>
+<span class="sd">    one is left there, so that a query that ends with ``;``, with a ``--``</span>
+<span class="sd">    comment, or with both (``select … from t; -- note``) still stands where</span>
+<span class="sd">    a table would: a semicolon that is the last character; and a ``--``</span>
+<span class="sd">    comment that runs to the end, when its ``--`` is outside every string</span>
+<span class="sd">    (``'…'``, ``E'…'``, ``$$…$$``), quoted identifier (``"…"``, `` `…` ``)</span>
+<span class="sd">    and block comment, as :func:`_ends_in` reads them. Nothing else</span>
+<span class="sd">    changes: a ``;`` or a ``--`` inside quotes stays, and a comment after a</span>
+<span class="sd">    quote the scanner takes as left open stays too, which the engine reads</span>
+<span class="sd">    as the comment it is. The parenthesis closes on a new line.</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">sql</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">";"</span><span class="p">):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">began</span> <span class="o">=</span> <span class="n">_ends_in</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">!=</span> <span class="s2">"line_comment"</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">began</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="se">\n</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="se">\n</span><span class="s2">)"</span></div>
+
+
+
+<div class="viewcode-block" id="refuse_in_an_untrusted_build">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.refuse_in_an_untrusted_build">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">refuse_in_an_untrusted_build</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse to reach an engine in a build of files from a store.</span>
+
+<span class="sd">    Anyone who can write the store may have written its manifest: a query</span>
+<span class="sd">    can read any file of the machine, and a warehouse's URL could send this</span>
+<span class="sd">    machine's credentials elsewhere.</span>
+
+<span class="sd">    :raises chartbook.backends.BackendError: In such a build.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">untrusted_source</span>
+
+    <span class="k">if</span> <span class="n">untrusted_source</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="s2">"A table or a query is not read in a build of files from a store, nor of a folder you have "</span>
+            <span class="s2">"not trusted: a version's snapshot holds its rows as parquet, and `chartbook trust` in a "</span>
+            <span class="s2">"folder trusts the pipeline there."</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Backend">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Backend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""An engine behind a source: what ChartBook asks of one.</span>
+
+<span class="sd">    ``name`` is what ``[sources.x] backend`` says. A backend is made from a</span>
+<span class="sd">    source's public URL, as its location carries it, and the source's name,</span>
+<span class="sd">    by which the machine's own URL and credentials are found; it connects</span>
+<span class="sd">    only when asked. Every call that reaches the engine raises</span>
+<span class="sd">    :class:`BackendError` with the engine's own message when it fails; an</span>
+<span class="sd">    error found only when a lazy frame is collected comes as Polars'</span>
+<span class="sd">    ``ComputeError`` with the engine's message in it, or as the</span>
+<span class="sd">    :class:`BackendError` itself, by Polars version.</span>
+
+<span class="sd">    ``reads_files`` says whether SQL run in it may name a file of this</span>
+<span class="sd">    machine as :class:`ParquetBackend` writes one, ``read_parquet('…')``:</span>
+<span class="sd">    so whether :func:`chartbook.data.sql` may join this engine's tables</span>
+<span class="sd">    with a pipeline's files in one query.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">reads_files</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
+
+<div class="viewcode-block" id="Backend.check_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.check_url">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Refuse a manifest URL this backend cannot open, with what to write instead.</span>
+
+<span class="sd">        Credentials and the scheme are checked before this (:func:`check_url`).</span>
+
+<span class="sd">        :raises ValueError: Saying what is wrong with it.</span>
+<span class="sd">        """</span></div>
+
+
+<div class="viewcode-block" id="Backend.connect">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The engine's own connection, for :func:`chartbook.data.connect`."""</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="Backend.engine">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.engine">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">engine</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""What tells one engine from another: two locations with the same run in one query.</span>
+
+<span class="sd">        By default the backend, its URL and the source's name, since the</span>
+<span class="sd">        machine may give each source its own place to connect to.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Backend.ref">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.ref">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ref</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here."""</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="Backend.sql">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.sql">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sql</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run SQL in this engine and return a Polars LazyFrame.</span>
+
+<span class="sd">        The engine binds the query here, so a name it does not know is</span>
+<span class="sd">        refused at once; collecting the frame runs it.</span>
+<span class="sd">        """</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="Backend.scan">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.scan">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""A table or a query, as a Polars LazyFrame."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select * from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Backend.describe">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.describe">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""A dataframe's columns, with the engine's type names, and its row count."""</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="Backend.span">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.span">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The first and last date in one column, read as timestamps; a value that is not one is left out."""</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ParquetBackend">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.ParquetBackend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ParquetBackend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a file-backed dataframe has always been.</span>
+
+<span class="sd">    In SQL a file is ``read_parquet('…')``, which DuckDB reads as a table,</span>
+<span class="sd">    partitions and all.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"parquet"</span>
+
+<div class="viewcode-block" id="ParquetBackend.ref">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.ParquetBackend.ref">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ref</span><span class="p">(</span><span class="n">location</span><span class="p">:</span> <span class="s2">"FileLocation"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The file as a DuckDB table expression."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">nothing_to_read</span>
+
+        <span class="n">said</span> <span class="o">=</span> <span class="n">nothing_to_read</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">said</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="c1"># A directory pinned from another pipeline: the files its record lists</span>
+            <span class="n">listed</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">quote_literal</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">))</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"read_parquet([</span><span class="si">{</span><span class="n">listed</span><span class="si">}</span><span class="s2">], hive_partitioning = true)"</span>
+        <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"read_parquet(</span><span class="si">{</span><span class="n">quote_literal</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2">, hive_partitioning = true)"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"read_parquet(</span><span class="si">{</span><span class="n">quote_literal</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span></div>
+
+
+<div class="viewcode-block" id="ParquetBackend.scan">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.ParquetBackend.scan">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">scan</span><span class="p">(</span><span class="n">location</span><span class="p">:</span> <span class="s2">"FileLocation"</span><span class="p">):</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">nothing_to_read</span>
+
+        <span class="n">said</span> <span class="o">=</span> <span class="n">nothing_to_read</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">said</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">]</span> <span class="ow">or</span> <span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DuckDBBackend">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DuckDBBackend</span><span class="p">(</span><span class="n">Backend</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A DuckDB file, opened read-only for each use, or an in-memory engine.</span>
+
+<span class="sd">    A file is opened afresh by every :meth:`connect`, so nothing in the</span>
+<span class="sd">    process keeps a stale handle: a frame handed out keeps its own</span>
+<span class="sd">    connection for as long as it lives, and no longer. The in-memory engine</span>
+<span class="sd">    of a ``:memory:`` source is one connection for the life of the process,</span>
+<span class="sd">    since what is put in it through ``data.connect()`` is all it holds.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"duckdb"</span>
+    <span class="n">reads_files</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">_memory</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span> <span class="o">=</span> <span class="n">connection</span>
+
+<div class="viewcode-block" id="DuckDBBackend.check_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.check_url">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">duckdb_path</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="s2">"."</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.engine">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.engine">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">engine</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+        <span class="c1"># A DuckDB file is its URL, whatever source names it</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.scratch">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.scratch">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">scratch</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"DuckDBBackend"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A fresh in-memory engine of its own, for SQL over files alone.</span>
+
+<span class="sd">        Nothing put into any source's connection is visible in it.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">MEMORY_URL</span><span class="p">,</span> <span class="n">connection</span><span class="o">=</span><span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">":memory:"</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.connect">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The raw ``duckdb`` connection.</span>
+
+<span class="sd">        :raises chartbook.backends.BackendError: If the file is not there, or cannot be opened;</span>
+<span class="sd">            or if this is a build of files from a store, whose manifest</span>
+<span class="sd">            anyone who can write the store may have written: such a build</span>
+<span class="sd">            runs no table and no query (a query can read any file of the</span>
+<span class="sd">            machine), and says so on the page.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+
+        <span class="n">refuse_in_an_untrusted_build</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connection</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">duckdb_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="o">==</span> <span class="s2">":memory:"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_memory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">]</span> <span class="o">=</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">":memory:"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_memory</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The DuckDB file </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not there. The pipeline builds it; "</span>
+                <span class="sa">f</span><span class="s2">"run its build first."</span>
+            <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot open </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.ref">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.ref">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ref</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A table as a quoted identifier; a query as a sub-select."""</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"table"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">quote_identifier</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"query"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">subselect</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">sql</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ParquetBackend</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.sql">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.sql">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sql</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run SQL in this engine and return a Polars LazyFrame.</span>
+
+<span class="sd">        The engine binds the query here, so a name it does not know or SQL</span>
+<span class="sd">        it cannot parse is refused at once. Collecting the frame runs it;</span>
+<span class="sd">        an error that only running can find, such as a cast that fails on</span>
+<span class="sd">        a value, is raised then with DuckDB's message: as Polars'</span>
+<span class="sd">        ``ComputeError`` or as DuckDB's own exception, by Polars version.</span>
+
+<span class="sd">        :raises chartbook.backends.BackendError: If DuckDB refuses the query. The message is</span>
+<span class="sd">            DuckDB's own; the SQL is the user's.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">pl</span><span class="p">(</span><span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.describe">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.describe">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""A dataframe's columns, with DuckDB's type names, and its row count."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+            <span class="n">described</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="sa">f</span><span class="s2">"describe select * from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="p">(</span><span class="n">rows</span><span class="p">,)</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select count(*) from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">return</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"dtype"</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]}</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">described</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DuckDBBackend.span">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.span">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The first and last date in one column, read as timestamps.</span>
+
+<span class="sd">        ``try_cast(col as timestamp)``: a date or timestamp column is itself,</span>
+<span class="sd">        a text column is parsed where it can be, and anything else is null.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">duckdb</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="s1">'"'</span> <span class="o">+</span> <span class="n">column</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'"'</span><span class="p">,</span> <span class="s1">'""'</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'"'</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"select min(try_cast(</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> as timestamp)), max(try_cast(</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> as timestamp)) "</span>
+                <span class="sa">f</span><span class="s2">"from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">duckdb</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="backend_for">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.backend_for">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The backend that reads a location: parquet for a file, else the source's.</span>
+
+<span class="sd">    :raises NotImplementedError: For a kind of location nothing here reads.</span>
+<span class="sd">    :raises chartbook.backends.BackendError: For a source whose backend nothing provides here,</span>
+<span class="sd">        as a location read from another pipeline's record may name.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ParquetBackend</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"table"</span><span class="p">,</span> <span class="s2">"query"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">open_backend</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"A </span><span class="si">{</span><span class="n">location</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">-backed dataframe cannot be read: no backend reads "</span>
+        <span class="sa">f</span><span class="s2">"that kind of location."</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="open_backend">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.backends.html#chartbook.backends.open_backend">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">open_backend</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Backend</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The backend a source names, made from its public URL and its name.</span>
+
+<span class="sd">    :raises chartbook.backends.BackendError: If nothing here provides it: a record from</span>
+<span class="sd">        another machine may name a backend this one has no plugin for.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">backend_class</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> is in a </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, and nothing here provides one. "</span>
+            <span class="sa">f</span><span class="s2">"The backends are: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">backend_names</span><span class="p">())</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">_reinstall</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">found</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

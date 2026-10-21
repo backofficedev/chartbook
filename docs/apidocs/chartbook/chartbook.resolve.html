@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>chartbook.resolve &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.resolve';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="chartbook.scaffold" href="chartbook.scaffold.html" />
+    <link rel="prev" title="chartbook.refs" href="chartbook.refs.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/apidocs/chartbook/chartbook.resolve.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>chartbook.resolve</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.ASSET_TABLES"><code class="docutils literal notranslate"><span class="pre">ASSET_TABLES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.BATCH_ENV_VAR"><code class="docutils literal notranslate"><span class="pre">BATCH_ENV_VAR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation"><code class="docutils literal notranslate"><span class="pre">FileLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.files"><code class="docutils literal notranslate"><span class="pre">FileLocation.files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.kind"><code class="docutils literal notranslate"><span class="pre">FileLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.listed"><code class="docutils literal notranslate"><span class="pre">FileLocation.listed</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.path"><code class="docutils literal notranslate"><span class="pre">FileLocation.path</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.Location"><code class="docutils literal notranslate"><span class="pre">Location</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.Location.kind"><code class="docutils literal notranslate"><span class="pre">Location.kind</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.MANIFEST_NAME"><code class="docutils literal notranslate"><span class="pre">MANIFEST_NAME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.NOT_TABLES"><code class="docutils literal notranslate"><span class="pre">NOT_TABLES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation"><code class="docutils literal notranslate"><span class="pre">PipelineLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.found_in"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.found_in</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.id"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.id</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.kind"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.path"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.path</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.pipeline"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.pipeline</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.rev"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.rev</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.url"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineNotFoundError"><code class="docutils literal notranslate"><span class="pre">PipelineNotFoundError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation"><code class="docutils literal notranslate"><span class="pre">QueryLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.backend"><code class="docutils literal notranslate"><span class="pre">QueryLocation.backend</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.kind"><code class="docutils literal notranslate"><span class="pre">QueryLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.source"><code class="docutils literal notranslate"><span class="pre">QueryLocation.source</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.sql"><code class="docutils literal notranslate"><span class="pre">QueryLocation.sql</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.url"><code class="docutils literal notranslate"><span class="pre">QueryLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.RESOLVABLE_KINDS"><code class="docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation"><code class="docutils literal notranslate"><span class="pre">TableLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.backend"><code class="docutils literal notranslate"><span class="pre">TableLocation.backend</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.identifier"><code class="docutils literal notranslate"><span class="pre">TableLocation.identifier</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.kind"><code class="docutils literal notranslate"><span class="pre">TableLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.source"><code class="docutils literal notranslate"><span class="pre">TableLocation.source</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.url"><code class="docutils literal notranslate"><span class="pre">TableLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.UnrecordedReadWarning"><code class="docutils literal notranslate"><span class="pre">UnrecordedReadWarning</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.UnsupportedReferenceError"><code class="docutils literal notranslate"><span class="pre">UnsupportedReferenceError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.WorkingVersionWarning"><code class="docutils literal notranslate"><span class="pre">WorkingVersionWarning</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.batch"><code class="docutils literal notranslate"><span class="pre">batch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.caller_start_dirs"><code class="docutils literal notranslate"><span class="pre">caller_start_dirs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_assets"><code class="docutils literal notranslate"><span class="pre">declared_assets()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_files"><code class="docutils literal notranslate"><span class="pre">declared_files()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_in_source"><code class="docutils literal notranslate"><span class="pre">declared_in_source()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.find_manifest_dir"><code class="docutils literal notranslate"><span class="pre">find_manifest_dir()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.known_as"><code class="docutils literal notranslate"><span class="pre">known_as()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.locate_in_catalog"><code class="docutils literal notranslate"><span class="pre">locate_in_catalog()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.locate_pipeline"><code class="docutils literal notranslate"><span class="pre">locate_pipeline()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.nothing_to_read"><code class="docutils literal notranslate"><span class="pre">nothing_to_read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.parse_declared_ref"><code class="docutils literal notranslate"><span class="pre">parse_declared_ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.require_file"><code class="docutils literal notranslate"><span class="pre">require_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.resolve_catalog_path"><code class="docutils literal notranslate"><span class="pre">resolve_catalog_path()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.resolve">
+<span id="chartbook-resolve"></span><h1><a class="reference internal" href="#module-chartbook.resolve" title="chartbook.resolve"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a><a class="headerlink" href="#module-chartbook.resolve" title="Link to this heading">#</a></h1>
+<p>Name resolution: turn a reference into a typed location.</p>
+<p>Everything that maps a name to a place — <code class="docutils literal notranslate"><span class="pre">assets.path()</span></code>, <code class="docutils literal notranslate"><span class="pre">data.path()</span></code>,
+<code class="docutils literal notranslate"><span class="pre">data.load()</span></code>, <code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code> — calls</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">resolve</span></code> and gets back a :class:<code class="docutils literal notranslate"><span class="pre">Location</span></code>. What to do with a
+location is the caller’s business; looking the name up is not, so there is
+exactly one place where names are resolved.</p>
+</dd>
+</dl>
+<p>A reference is parsed by :mod:<code class="docutils literal notranslate"><span class="pre">chartbook.refs</span></code>, which accepts the whole
+grammar. This module decides which references can be <em>resolved</em> yet, and
+refuses the rest as reserved, not invalid.</p>
+<p>Today a location is always a :class:<code class="docutils literal notranslate"><span class="pre">FileLocation</span></code>. The data-access design
+(<code class="docutils literal notranslate"><span class="pre">docs_src/design/data-access.md</span></code>) adds table- and query-backed
+dataframes as further kinds, which is why <code class="docutils literal notranslate"><span class="pre">load()</span></code> and <code class="docutils literal notranslate"><span class="pre">path()</span></code> each
+call the resolver rather than one calling the other: a table has no path,
+but it can still be loaded.</p>
+<p>Three forms of reference resolve today:</p>
+<ul class="simple">
+<li><p>a <strong>local</strong> reference — <code class="docutils literal notranslate"><span class="pre">name</span></code> or <code class="docutils literal notranslate"><span class="pre">kind/name</span></code> — against the
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> enclosing the caller. It resolves <em>live</em>: to the
+<code class="docutils literal notranslate"><span class="pre">path</span></code> the manifest declares, which is the file you are working on.
+The raw file is read and nothing else, so this is cheap, offline, and
+does not care whether the asset has been built yet;</p></li>
+<li><p>a <strong>cross-pipeline</strong> reference — <code class="docutils literal notranslate"><span class="pre">pipeline:name</span></code> — to an asset of a
+pipeline that <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> declares. It resolves <em>pinned</em>: through
+<code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> to the copy in the store. So what a pipeline reads
+from another one does not change until it runs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>.
+Before a pin, interactively, a read pins on first use, reads the newest
+snapshot of a pipeline not declared, or reads a working folder when there
+is no snapshot, each with what it did said; a batch run refuses all but
+the pin, and a script in no pipeline reads the newest snapshot quietly
+(see :func:<code class="docutils literal notranslate"><span class="pre">_read_in_a_pipeline</span></code>);</p></li>
+<li><p>a <strong>catalog</strong> reference — a pipeline plus a dataframe name — read by the
+same rules, with the catalog’s folder as the working version.</p></li>
+</ul>
+<p>The rest of the grammar (<code class="docutils literal notranslate"><span class="pre">#part</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>, a registry prefix) is
+recognized and refused as not yet supported. See
+<code class="docutils literal notranslate"><span class="pre">docs_src/design/references.md</span></code>.</p>
+<p>Finding <em>a pipeline</em> by name is here too, in :func:<code class="docutils literal notranslate"><span class="pre">locate_pipeline</span></code>: the
+one resolution chain, which asks the <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> of the pipeline
+that wants to know, then the catalog. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, the index, the
+catalog lookups and cross-pipeline references all go through it.</p>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.FileLocation" title="chartbook.resolve.FileLocation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FileLocation</span></code></a></p></td>
+<td><p>An asset stored as a file, or as a glob of files.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Location</span></code></a></p></td>
+<td><p>Where a declared asset lives. Each subclass is one <code class="docutils literal notranslate"><span class="pre">kind</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.PipelineLocation" title="chartbook.resolve.PipelineLocation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineLocation</span></code></a></p></td>
+<td><p>Where a pipeline’s source is, and which step of the chain said so.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.QueryLocation" title="chartbook.resolve.QueryLocation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QueryLocation</span></code></a></p></td>
+<td><p>A dataframe that is a query run in a source: a view ChartBook names.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.TableLocation" title="chartbook.resolve.TableLocation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TableLocation</span></code></a></p></td>
+<td><p>A dataframe that is a table or view in a source.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.batch" title="chartbook.resolve.batch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch</span></code></a></p></td>
+<td><p>Whether this is a batch run, where every read of another pipeline must be one the lockfile records.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.caller_start_dirs" title="chartbook.resolve.caller_start_dirs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">caller_start_dirs</span></code></a></p></td>
+<td><p>Where to start looking for the pipeline a call belongs to.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.declared_assets" title="chartbook.resolve.declared_assets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared_assets</span></code></a></p></td>
+<td><p>The names of the assets a pipeline declares, by manifest table.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.declared_files" title="chartbook.resolve.declared_files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared_files</span></code></a></p></td>
+<td><p>Every asset a pipeline declares with a <code class="docutils literal notranslate"><span class="pre">path</span></code>, and where that is.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.declared_in_source" title="chartbook.resolve.declared_in_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared_in_source</span></code></a></p></td>
+<td><p>Every dataframe a pipeline declares as a table or a query in a source.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.find_manifest_dir" title="chartbook.resolve.find_manifest_dir"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_manifest_dir</span></code></a></p></td>
+<td><p>Find the directory of the enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.known_as" title="chartbook.resolve.known_as"><code class="xref py py-obj docutils literal notranslate"><span class="pre">known_as</span></code></a></p></td>
+<td><p>The ID a located pipeline has among the pipelines of one build.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.locate_in_catalog" title="chartbook.resolve.locate_in_catalog"><code class="xref py py-obj docutils literal notranslate"><span class="pre">locate_in_catalog</span></code></a></p></td>
+<td><p>Find a pipeline in a loaded catalog, and return its key there.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.locate_pipeline" title="chartbook.resolve.locate_pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">locate_pipeline</span></code></a></p></td>
+<td><p>Find where a pipeline is. This is the one resolution chain.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.nothing_to_read" title="chartbook.resolve.nothing_to_read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nothing_to_read</span></code></a></p></td>
+<td><p>Why a parquet read of <em>location</em> has nothing to open, or None.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.parse_declared_ref" title="chartbook.resolve.parse_declared_ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_declared_ref</span></code></a></p></td>
+<td><p>Parse a reference of a form that is supported today.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.require_file" title="chartbook.resolve.require_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_file</span></code></a></p></td>
+<td><p>Return a file location’s path; no other kind of location has one.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.resolve" title="chartbook.resolve.resolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve</span></code></a></p></td>
+<td><p>Resolve a reference to the location of the asset it names.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.resolve_catalog_path" title="chartbook.resolve.resolve_catalog_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_catalog_path</span></code></a></p></td>
+<td><p>Resolve the catalog path from an explicit argument or global settings.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.ASSET_TABLES" title="chartbook.resolve.ASSET_TABLES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ASSET_TABLES</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.BATCH_ENV_VAR" title="chartbook.resolve.BATCH_ENV_VAR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BATCH_ENV_VAR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.MANIFEST_NAME" title="chartbook.resolve.MANIFEST_NAME"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MANIFEST_NAME</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.resolve.NOT_TABLES" title="chartbook.resolve.NOT_TABLES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NOT_TABLES</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.resolve.RESOLVABLE_KINDS" title="chartbook.resolve.RESOLVABLE_KINDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.resolve.ASSET_TABLES">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">ASSET_TABLES</span></span><a class="headerlink" href="#chartbook.resolve.ASSET_TABLES" title="Link to this definition">#</a></dt>
+<dd><p>‘tuple(…)’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.resolve.BATCH_ENV_VAR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">BATCH_ENV_VAR</span></span><a class="headerlink" href="#chartbook.resolve.BATCH_ENV_VAR" title="Link to this definition">#</a></dt>
+<dd><p>‘CHARTBOOK_BATCH’</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.resolve.FileLocation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">FileLocation</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#FileLocation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.FileLocation" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><code class="xref py py-obj docutils literal notranslate"><span class="pre">chartbook.resolve.Location</span></code></a></p>
+<p>An asset stored as a file, or as a glob of files.</p>
+<p>Attributes:
+path: Absolute path. For partitioned data it contains glob
+characters. The file need not exist: a path can be asked for
+before anything has written to it.
+files: For a directory pinned from another pipeline, its parquet
+files its record lists, under <em>path</em>: each named <code class="docutils literal notranslate"><span class="pre">.parquet</span></code>,
+and each named otherwise that begins or ends as parquet does (Hive’s
+<code class="docutils literal notranslate"><span class="pre">000000_0</span></code>), but none that is plainly not a table (a
+<code class="docutils literal notranslate"><span class="pre">README.txt</span></code>; :data:<code class="docutils literal notranslate"><span class="pre">NOT_TABLES</span></code>) or named as an engine’s
+scan passes over (<code class="docutils literal notranslate"><span class="pre">.</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code>). What a reader reads, and
+nothing else the folder may hold (a Finder <code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code>, a
+sync service’s copy). Empty otherwise.
+listed: The files the record lists, by their path in the object,
+whether or not they are read. Empty when the record lists none
+(a file, a glob, a directory pinned before records listed files).
+A directory whose listed files are all passed over (a folder of
+CSVs) has <em>listed</em> and no <em>files</em>: <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> gives the
+folder, and a read of it as parquet is refused
+(:func:<code class="docutils literal notranslate"><span class="pre">nothing_to_read</span></code>).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.FileLocation.files">
+<span class="sig-name descname"><span class="pre">files</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span><a class="headerlink" href="#chartbook.resolve.FileLocation.files" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.FileLocation.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.FileLocation.kind" title="Link to this definition">#</a></dt>
+<dd><p>‘file’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.FileLocation.listed">
+<span class="sig-name descname"><span class="pre">listed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span><a class="headerlink" href="#chartbook.resolve.FileLocation.listed" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.FileLocation.path">
+<span class="sig-name descname"><span class="pre">path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.resolve.FileLocation.path" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.resolve.Location">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">Location</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#Location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.Location" title="Link to this definition">#</a></dt>
+<dd><p>Where a declared asset lives. Each subclass is one <code class="docutils literal notranslate"><span class="pre">kind</span></code>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.Location.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.Location.kind" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.resolve.MANIFEST_NAME">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">MANIFEST_NAME</span></span><a class="headerlink" href="#chartbook.resolve.MANIFEST_NAME" title="Link to this definition">#</a></dt>
+<dd><p>‘chartbook.toml’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.resolve.NOT_TABLES">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">NOT_TABLES</span></span><a class="headerlink" href="#chartbook.resolve.NOT_TABLES" title="Link to this definition">#</a></dt>
+<dd><p>(‘.txt’, ‘.md’, ‘.rst’, ‘.json’, ‘.yaml’, ‘.yml’, ‘.csv’, ‘.tsv’, ‘.xml’, ‘.html’, ‘.log’, ‘.crc’)</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">PipelineLocation</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#PipelineLocation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.PipelineLocation" title="Link to this definition">#</a></dt>
+<dd><p>Where a pipeline’s source is, and which step of the chain said so.</p>
+<p>Attributes:
+id: The name the pipeline goes by where it was found: its key in
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, or its key in the catalog.
+found_in: <code class="docutils literal notranslate"><span class="pre">&quot;dependencies&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code>.
+kind: <code class="docutils literal notranslate"><span class="pre">&quot;path&quot;</span></code>, a directory on this machine, <code class="docutils literal notranslate"><span class="pre">&quot;git&quot;</span></code>, a
+repository that has to be fetched, or <code class="docutils literal notranslate"><span class="pre">&quot;store&quot;</span></code>, a pipeline
+named by its ID alone, whose snapshots are in the store.
+path: The pipeline’s directory, when <em>kind</em> is <code class="docutils literal notranslate"><span class="pre">&quot;path&quot;</span></code>. Absolute;
+nothing has checked that it exists.
+url: The repository, when <em>kind</em> is <code class="docutils literal notranslate"><span class="pre">&quot;git&quot;</span></code>.
+rev: The revision of it to fetch, if the manifest names one.
+pipeline: The pipeline’s own ID, when <em>kind</em> is <code class="docutils literal notranslate"><span class="pre">&quot;store&quot;</span></code>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.found_in">
+<span class="sig-name descname"><span class="pre">found_in</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.found_in" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.id">
+<span class="sig-name descname"><span class="pre">id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.id" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.kind" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.path">
+<span class="sig-name descname"><span class="pre">path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.path" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.pipeline">
+<span class="sig-name descname"><span class="pre">pipeline</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.pipeline" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.rev">
+<span class="sig-name descname"><span class="pre">rev</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.rev" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineLocation.url">
+<span class="sig-name descname"><span class="pre">url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.PipelineLocation.url" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.resolve.PipelineNotFoundError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">PipelineNotFoundError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">candidates</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/resolve.html#PipelineNotFoundError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.PipelineNotFoundError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">KeyError</span></code></a></p>
+<p>Raised when no step of the resolution chain knows a pipeline.</p>
+<p>Attributes:
+pipeline: The reference that was looked up.
+candidates: The pipelines each step that was asked does know, by
+step: <code class="docutils literal notranslate"><span class="pre">&quot;dependencies&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code>. A step the caller
+had nothing for is not in it.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">QueryLocation</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#QueryLocation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.QueryLocation" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><code class="xref py py-obj docutils literal notranslate"><span class="pre">chartbook.resolve.Location</span></code></a></p>
+<p>A dataframe that is a query run in a source: a view ChartBook names.</p>
+<p>Attributes:
+source, backend, url: As for :class:<code class="docutils literal notranslate"><span class="pre">TableLocation</span></code>.
+sql: The query, in the source’s dialect, as declared.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation.backend">
+<span class="sig-name descname"><span class="pre">backend</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.QueryLocation.backend" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.QueryLocation.kind" title="Link to this definition">#</a></dt>
+<dd><p>‘query’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation.source">
+<span class="sig-name descname"><span class="pre">source</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.QueryLocation.source" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation.sql">
+<span class="sig-name descname"><span class="pre">sql</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.QueryLocation.sql" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.QueryLocation.url">
+<span class="sig-name descname"><span class="pre">url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.QueryLocation.url" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.resolve.RESOLVABLE_KINDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">RESOLVABLE_KINDS</span></span><a class="headerlink" href="#chartbook.resolve.RESOLVABLE_KINDS" title="Link to this definition">#</a></dt>
+<dd><p>(‘dataframe’, ‘chart’, ‘notebook’, ‘note’, ‘model’)</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">TableLocation</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#TableLocation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.TableLocation" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><code class="xref py py-obj docutils literal notranslate"><span class="pre">chartbook.resolve.Location</span></code></a></p>
+<p>A dataframe that is a table or view in a source.</p>
+<p>Attributes:
+source: The source’s name in <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.
+backend: The source’s backend, <code class="docutils literal notranslate"><span class="pre">duckdb</span></code>.
+url: The source’s URL, public part only, with a relative DuckDB
+file made absolute.
+identifier: The table, as declared: one to three dot-separated parts.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation.backend">
+<span class="sig-name descname"><span class="pre">backend</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.TableLocation.backend" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation.identifier">
+<span class="sig-name descname"><span class="pre">identifier</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.TableLocation.identifier" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.resolve.TableLocation.kind" title="Link to this definition">#</a></dt>
+<dd><p>‘table’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation.source">
+<span class="sig-name descname"><span class="pre">source</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.TableLocation.source" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.resolve.TableLocation.url">
+<span class="sig-name descname"><span class="pre">url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.resolve.TableLocation.url" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.resolve.UnrecordedReadWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">UnrecordedReadWarning</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#UnrecordedReadWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.UnrecordedReadWarning" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UserWarning</span></code></a></p>
+<p>A read of another pipeline that nothing records: it is not in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.resolve.UnsupportedReferenceError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">UnsupportedReferenceError</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#UnsupportedReferenceError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.UnsupportedReferenceError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised for reference syntax that is reserved but not yet supported.</p>
+<p>Cross-pipeline references (<code class="docutils literal notranslate"><span class="pre">pipeline:asset</span></code>) and parts
+(<code class="docutils literal notranslate"><span class="pre">asset#part</span></code>) are part of the reference grammar and will resolve
+once the asset graph is implemented.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.resolve.WorkingVersionWarning">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">WorkingVersionWarning</span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#WorkingVersionWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.WorkingVersionWarning" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#UserWarning" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">UserWarning</span></code></a></p>
+<p>A read of another pipeline’s working folder, as it is now, and not of a snapshot.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.batch">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">batch</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#batch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.batch" title="Link to this definition">#</a></dt>
+<dd><p>Whether this is a batch run, where every read of another pipeline must be one the lockfile records.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.caller_start_dirs">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">caller_start_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">caller_frame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#caller_start_dirs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.caller_start_dirs" title="Link to this definition">#</a></dt>
+<dd><p>Where to start looking for the pipeline a call belongs to.</p>
+<p>“Walking up from the caller”: the calling file first, so a script run
+from another directory still finds its own pipeline, then the working
+directory for callers with no file (a notebook, a REPL, <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-c</span></code>).
+An explicit <em>project_dir</em> replaces both.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_dir</strong> – The directory the caller named, if any.</p></li>
+<li><p><strong>caller_frame</strong> – The stack frame of the code that made the call,
+i.e. <code class="docutils literal notranslate"><span class="pre">sys._getframe(1)</span></code> in the public function.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.declared_assets">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">declared_assets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#declared_assets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.declared_assets" title="Link to this definition">#</a></dt>
+<dd><p>The names of the assets a pipeline declares, by manifest table.</p>
+<p>Read from the raw <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and nothing else, as a local
+reference is resolved.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>manifest_dir</strong> – The pipeline’s directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The keys of each table in :data:<code class="docutils literal notranslate"><span class="pre">ASSET_TABLES</span></code>, sorted.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#OSError" title="(in Python v3.15)"><strong>OSError</strong></a> – If there is no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> there to read.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If it is not valid TOML.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.declared_files">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">declared_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#declared_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.declared_files" title="Link to this definition">#</a></dt>
+<dd><p>Every asset a pipeline declares with a <code class="docutils literal notranslate"><span class="pre">path</span></code>, and where that is.</p>
+<p>Read from the raw <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and nothing else. An entry with no
+<code class="docutils literal notranslate"><span class="pre">path</span></code>, or whose key cannot be written in a reference, is left out.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>manifest_dir</strong> – The pipeline’s directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>For each asset, in the order of :data:<code class="docutils literal notranslate"><span class="pre">ASSET_TABLES</span></code> and then
+by name: its local reference, its <code class="docutils literal notranslate"><span class="pre">path</span></code> as declared, and that
+path made absolute.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#OSError" title="(in Python v3.15)"><strong>OSError</strong></a> – If there is no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> there to read.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If it is not valid TOML.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.declared_in_source">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">declared_in_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#declared_in_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.declared_in_source" title="Link to this definition">#</a></dt>
+<dd><p>Every dataframe a pipeline declares as a table or a query in a source.</p>
+<p>Read from the raw <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and nothing else, as</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">declared_files</span></code> is; a key that cannot be written in a reference
+is left out.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.find_manifest_dir">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">find_manifest_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">starts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#find_manifest_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.find_manifest_dir" title="Link to this definition">#</a></dt>
+<dd><p>Find the directory of the enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p>
+<p>Walks up from each starting directory in turn, the way git and cargo
+find their roots, and returns the first directory that holds a
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>starts</strong> – Directories to walk up from, in order of preference.
+Defaults to the current working directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The absolute directory containing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.ManifestNotFoundError" title="chartbook.errors.ManifestNotFoundError"><strong>ManifestNotFoundError</strong></a> – If no starting point is enclosed by one.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.known_as">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">known_as</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.resolve.PipelineLocation" title="chartbook.resolve.PipelineLocation"><span class="pre">chartbook.resolve.PipelineLocation</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipelines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#known_as"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.known_as" title="Link to this definition">#</a></dt>
+<dd><p>The ID a located pipeline has among the pipelines of one build.</p>
+<p>A dependency’s key is a local name: one pipeline may call
+<code class="docutils literal notranslate"><span class="pre">../fed_yield_curve</span></code> <code class="docutils literal notranslate"><span class="pre">yield_curve</span></code> while the catalog it is built in
+calls the same directory <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code>. Within a build the
+catalog’s name is the one every record uses, so a located pipeline that
+is one of the build’s own is known by the build’s ID for it. One that is
+not keeps the name it was found under.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>location</strong> – A pipeline, from :func:<code class="docutils literal notranslate"><span class="pre">locate_pipeline</span></code>.</p></li>
+<li><p><strong>pipelines</strong> – The pipelines of the build: each ID and its directory.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.locate_in_catalog">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">locate_in_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">catalog_manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#locate_in_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.locate_in_catalog" title="Link to this definition">#</a></dt>
+<dd><p>Find a pipeline in a loaded catalog, and return its key there.</p>
+<p>For callers that name a catalog outright, as <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...,</span> <span class="pre">dataframe=...)</span></code> does. They enter the chain at its second step: there
+is no asking pipeline, so no <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> to look in first.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>catalog_manifest</strong> – <p>A catalog, from</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.manifest.load_manifest</span></code>.</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>pipeline</strong> – A reference to a pipeline: bare name, scoped ID or URL.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the catalog has no such pipeline, or a bare name
+is ambiguous in it.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.locate_pipeline">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">locate_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">dependencies</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.resolve.PipelineLocation" title="chartbook.resolve.PipelineLocation"><span class="pre">chartbook.resolve.PipelineLocation</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#locate_pipeline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.locate_pipeline" title="Link to this definition">#</a></dt>
+<dd><p>Find where a pipeline is. This is the one resolution chain.</p>
+<p>Each place a pipeline’s location can come from is asked in turn, and
+the first that knows the name answers:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> of the pipeline that is asking: an explicit
+location, written down by the project that needs it.</p></li>
+<li><p>The local catalog.</p></li>
+<li><p><em>(Reserved)</em> configured registries. Nothing is asked today.</p></li>
+<li><p>Otherwise an error that lists what steps 1 and 2 do know.</p></li>
+</ol>
+<p>At each step the name is matched as a catalog matches one
+(:func:<code class="docutils literal notranslate"><span class="pre">chartbook.identity.match_pipeline_ref</span></code>): a scoped ID exactly,
+a bare name if exactly one entry has it, a URL by the ID it reduces to.
+A bare name that fits two entries of one step is an error there; it
+does not fall through to the next step to be guessed at.</p>
+<p>Nothing on disk is looked at. The caller gathers the two tables, and
+what comes back is where the pipeline is said to be, whether or not it
+is there.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> – A reference to a pipeline: bare name, scoped ID or URL.</p></li>
+<li><p><strong>dependencies</strong> – <p>The asking pipeline’s <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, as</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.manifest.validate_dependencies</span></code> returns it.</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>catalog</strong> – The catalog’s pipelines: each key and its directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Where the pipeline is.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#chartbook.resolve.PipelineNotFoundError" title="chartbook.resolve.PipelineNotFoundError"><strong>PipelineNotFoundError</strong></a> – If no step knows it. A <code class="docutils literal notranslate"><span class="pre">KeyError</span></code>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If a bare name is ambiguous within one step.</p></li>
+<li><p><a class="reference internal" href="chartbook.identity.html#chartbook.identity.UnsupportedRevisionError" title="chartbook.identity.UnsupportedRevisionError"><strong>UnsupportedRevisionError</strong></a> – If the reference carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>.</p></li>
+<li><p><a class="reference internal" href="chartbook.identity.html#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If it carries a registry prefix.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.nothing_to_read">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">nothing_to_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#nothing_to_read"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.nothing_to_read" title="Link to this definition">#</a></dt>
+<dd><p>Why a parquet read of <em>location</em> has nothing to open, or None.</p>
+<p>A directory pinned from another pipeline is read as the tables its
+record lists (:class:<code class="docutils literal notranslate"><span class="pre">FileLocation</span></code>); when it lists files and none is
+a table a read takes, the folder is not handed to the engine, which
+would read whatever it holds (a half-written <code class="docutils literal notranslate"><span class="pre">_tmp/part.parquet</span></code>).
+<code class="docutils literal notranslate"><span class="pre">data.path()</span></code> still gives the folder, for a reader of what it holds.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.parse_declared_ref">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">parse_declared_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolving</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#parse_declared_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.parse_declared_ref" title="Link to this definition">#</a></dt>
+<dd><p>Parse a reference of a form that is supported today.</p>
+<p>That is an asset of this pipeline or of another one: <code class="docutils literal notranslate"><span class="pre">name</span></code>,
+<code class="docutils literal notranslate"><span class="pre">kind/name</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline:name</span></code> or <code class="docutils literal notranslate"><span class="pre">scope/pipeline:name</span></code>. It is what
+a manifest may state and what :func:<code class="docutils literal notranslate"><span class="pre">resolve</span></code> resolves, and the two
+differ in what else they take.</p>
+<p>A registry is refused as reserved either way, so the message can say
+“not yet” where the syntax is right.</p>
+<p>A revision resolves for a model: a version of one of this pipeline’s
+own, <code class="docutils literal notranslate"><span class="pre">model/x&#64;7f3a9c2e41b0</span></code> or <code class="docutils literal notranslate"><span class="pre">model/x&#64;champion</span></code>, or of a
+dependency’s, <code class="docutils literal notranslate"><span class="pre">other:model/x&#64;champion</span></code>, which the lockfile pins. A
+manifest does not state one.</p>
+<p>A part, <code class="docutils literal notranslate"><span class="pre">dataframe#series</span></code>, is the address of one column. In a
+manifest it would say which column something was made from, and that
+is refused as not yet supported. When <em>resolving</em>, it is refused for
+good: the address is for documenting the column, it has no file of its
+own, and ChartBook does not select columns (decided by the maintainer,
+2026-10-13; <code class="docutils literal notranslate"><span class="pre">docs_src/design/overview.md</span></code>, step 4).</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> – The reference.</p></li>
+<li><p><strong>kind</strong> – <p>The kind the caller expects; see</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.refs.parse_asset_ref</span></code>.</p>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>resolving</strong> – Whether the reference is being resolved to where
+an asset is, as :func:<code class="docutils literal notranslate"><span class="pre">resolve</span></code> does, and not stated in a manifest.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The parsed reference.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.identity.html#chartbook.identity.UnsupportedRevisionError" title="chartbook.identity.UnsupportedRevisionError"><strong>UnsupportedRevisionError</strong></a> – If the reference carries an <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>
+that does not resolve.</p></li>
+<li><p><a class="reference internal" href="chartbook.identity.html#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If it carries a registry prefix.</p></li>
+<li><p><a class="reference internal" href="#chartbook.resolve.UnsupportedReferenceError" title="chartbook.resolve.UnsupportedReferenceError"><strong>UnsupportedReferenceError</strong></a> – If it names a part.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If it does not follow the grammar, or names a kind
+other than <em>kind</em>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.require_file">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">require_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">what</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#require_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.require_file" title="Link to this definition">#</a></dt>
+<dd><p>Return a file location’s path; no other kind of location has one.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>location</strong> – A resolved location.</p></li>
+<li><p><strong>what</strong> – What it is the location of, to begin the error message.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If the location is not a file.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.resolve">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dirs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#resolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.resolve" title="Link to this definition">#</a></dt>
+<dd><p>Resolve a reference to the location of the asset it names.</p>
+<p>This is the one resolver. With <em>pipeline</em> unset, <em>ref</em> is a reference
+in the grammar and resolves against the enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:
+live if it is local, and to the pinned copy if it names another
+pipeline. With <em>pipeline</em> set, <em>ref</em> is a dataframe of that pipeline
+and resolves through a catalog.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> – A reference, <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">kind/name</span></code> or <code class="docutils literal notranslate"><span class="pre">pipeline:name</span></code>;
+or, with <em>pipeline</em>, a dataframe’s name.</p></li>
+<li><p><strong>kind</strong> – The kind of asset the caller expects. A reference that
+names no kind takes it; one that names another kind is an error.
+By default a reference that names no kind is a dataframe.</p></li>
+<li><p><strong>pipeline</strong> – A pipeline reference — bare name, scoped ID, or URL —
+to resolve <em>ref</em> within, through a catalog.</p></li>
+<li><p><strong>catalog_path</strong> – The catalog to use when <em>pipeline</em> is given;
+defaults to the globally configured one.</p></li>
+<li><p><strong>start_dirs</strong> – Directories to walk up from when looking for the
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> of the pipeline the caller is in, in order of
+preference: what a local reference resolves against, and what
+decides how another pipeline’s asset is read (its pin, in a
+pipeline that declares it), by reference and through a catalog
+alike. Defaults to the current working directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The asset’s location.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.ManifestNotFoundError" title="chartbook.errors.ManifestNotFoundError"><strong>ManifestNotFoundError</strong></a> – If a local reference has no enclosing
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – If a local reference names nothing the
+manifest declares, of that kind.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.DependencyNotDeclaredError" title="chartbook.errors.DependencyNotDeclaredError"><strong>DependencyNotDeclaredError</strong></a> – If a reference names a pipeline
+that <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not declare.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotPinnedError" title="chartbook.errors.AssetNotPinnedError"><strong>AssetNotPinnedError</strong></a> – If another pipeline’s asset has no pinned
+copy: there is no pin, or the store does not have its bytes.</p></li>
+<li><p><a class="reference internal" href="#chartbook.resolve.UnsupportedReferenceError" title="chartbook.resolve.UnsupportedReferenceError"><strong>UnsupportedReferenceError</strong></a> – For reserved reference syntax.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If a catalog is needed and none is
+configured.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not in the catalog.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.resolve.resolve_catalog_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.resolve.</span></span><span class="sig-name descname"><span class="pre">resolve_catalog_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/resolve.html#resolve_catalog_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.resolve.resolve_catalog_path" title="Link to this definition">#</a></dt>
+<dd><p>Resolve the catalog path from an explicit argument or global settings.</p>
+<p>Priority:</p>
+<ol class="arabic simple">
+<li><p>Explicit <em>catalog_path</em> argument</p></li>
+<li><p>Global settings (<code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>)</p></li>
+<li><p>Raise :class:<code class="docutils literal notranslate"><span class="pre">CatalogNotConfiguredError</span></code></p></li>
+</ol>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Explicit path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Resolved path to the catalog’s <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chartbook.refs.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="chartbook.scaffold.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.ASSET_TABLES"><code class="docutils literal notranslate"><span class="pre">ASSET_TABLES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.BATCH_ENV_VAR"><code class="docutils literal notranslate"><span class="pre">BATCH_ENV_VAR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation"><code class="docutils literal notranslate"><span class="pre">FileLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.files"><code class="docutils literal notranslate"><span class="pre">FileLocation.files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.kind"><code class="docutils literal notranslate"><span class="pre">FileLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.listed"><code class="docutils literal notranslate"><span class="pre">FileLocation.listed</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.FileLocation.path"><code class="docutils literal notranslate"><span class="pre">FileLocation.path</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.Location"><code class="docutils literal notranslate"><span class="pre">Location</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.Location.kind"><code class="docutils literal notranslate"><span class="pre">Location.kind</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.MANIFEST_NAME"><code class="docutils literal notranslate"><span class="pre">MANIFEST_NAME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.NOT_TABLES"><code class="docutils literal notranslate"><span class="pre">NOT_TABLES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation"><code class="docutils literal notranslate"><span class="pre">PipelineLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.found_in"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.found_in</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.id"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.id</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.kind"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.path"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.path</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.pipeline"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.pipeline</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.rev"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.rev</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineLocation.url"><code class="docutils literal notranslate"><span class="pre">PipelineLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.PipelineNotFoundError"><code class="docutils literal notranslate"><span class="pre">PipelineNotFoundError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation"><code class="docutils literal notranslate"><span class="pre">QueryLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.backend"><code class="docutils literal notranslate"><span class="pre">QueryLocation.backend</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.kind"><code class="docutils literal notranslate"><span class="pre">QueryLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.source"><code class="docutils literal notranslate"><span class="pre">QueryLocation.source</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.sql"><code class="docutils literal notranslate"><span class="pre">QueryLocation.sql</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.QueryLocation.url"><code class="docutils literal notranslate"><span class="pre">QueryLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.RESOLVABLE_KINDS"><code class="docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation"><code class="docutils literal notranslate"><span class="pre">TableLocation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.backend"><code class="docutils literal notranslate"><span class="pre">TableLocation.backend</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.identifier"><code class="docutils literal notranslate"><span class="pre">TableLocation.identifier</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.kind"><code class="docutils literal notranslate"><span class="pre">TableLocation.kind</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.source"><code class="docutils literal notranslate"><span class="pre">TableLocation.source</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.TableLocation.url"><code class="docutils literal notranslate"><span class="pre">TableLocation.url</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.UnrecordedReadWarning"><code class="docutils literal notranslate"><span class="pre">UnrecordedReadWarning</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.UnsupportedReferenceError"><code class="docutils literal notranslate"><span class="pre">UnsupportedReferenceError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.WorkingVersionWarning"><code class="docutils literal notranslate"><span class="pre">WorkingVersionWarning</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.batch"><code class="docutils literal notranslate"><span class="pre">batch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.caller_start_dirs"><code class="docutils literal notranslate"><span class="pre">caller_start_dirs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_assets"><code class="docutils literal notranslate"><span class="pre">declared_assets()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_files"><code class="docutils literal notranslate"><span class="pre">declared_files()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.declared_in_source"><code class="docutils literal notranslate"><span class="pre">declared_in_source()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.find_manifest_dir"><code class="docutils literal notranslate"><span class="pre">find_manifest_dir()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.known_as"><code class="docutils literal notranslate"><span class="pre">known_as()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.locate_in_catalog"><code class="docutils literal notranslate"><span class="pre">locate_in_catalog()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.locate_pipeline"><code class="docutils literal notranslate"><span class="pre">locate_pipeline()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.nothing_to_read"><code class="docutils literal notranslate"><span class="pre">nothing_to_read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.parse_declared_ref"><code class="docutils literal notranslate"><span class="pre">parse_declared_ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.require_file"><code class="docutils literal notranslate"><span class="pre">require_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.resolve"><code class="docutils literal notranslate"><span class="pre">resolve()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.resolve.resolve_catalog_path"><code class="docutils literal notranslate"><span class="pre">resolve_catalog_path()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

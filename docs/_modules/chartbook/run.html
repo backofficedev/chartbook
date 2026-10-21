@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.run &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/run';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.run</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Running a script in a pipeline.</span>
+
+<span class="sd">A pipeline names its commands in ``[scripts]``. ``build`` is the one that</span>
+<span class="sd">makes its assets current, and it is usually one word: ``doit``, ``make``,</span>
+<span class="sd">``snakemake``. That tool decides what inside the pipeline is out of date::</span>
+
+<span class="sd">    $ chartbook run</span>
+<span class="sd">    ftsfr/rate_forecast: pinning what it depends on</span>
+<span class="sd">    ftsfr/fed_yield_curve: 3 pinned</span>
+<span class="sd">    Wrote chartbook.lock.</span>
+<span class="sd">    ftsfr/rate_forecast: build</span>
+
+<span class="sd">``chartbook run`` builds the pipeline it is run in. First it sees that</span>
+<span class="sd">what the pipeline depends on can be read, and it does that without ever</span>
+<span class="sd">touching another pipeline's working directory:</span>
+
+<span class="sd">- **It never builds in a folder the pipeline depends on.** A ``path``</span>
+<span class="sd">  dependency is a directory somebody works in. They may be half-way</span>
+<span class="sd">  through a change. This pipeline reads what is pinned, not what is there,</span>
+<span class="sd">  so running that folder's build would disturb its owner and change</span>
+<span class="sd">  nothing this pipeline reads. It is its owner's to build.</span>
+<span class="sd">- **A git dependency is built once, in a clean copy.** Nobody works in</span>
+<span class="sd">  ChartBook's own copy of a commit, so there is nothing to disturb. The</span>
+<span class="sd">  build runs in a writable copy of the checkout</span>
+<span class="sd">  (:meth:`chartbook.gitcache.GitCache.work_copy`), which is how data that a</span>
+<span class="sd">  repository builds and does not commit comes to be there to pin. It is</span>
+<span class="sd">  built once for a commit. ``force`` builds it again, which is how data</span>
+<span class="sd">  that is pulled from outside is refreshed on purpose.</span>
+<span class="sd">- **What has no pin yet is pinned**, just before the build, so the</span>
+<span class="sd">  pipeline's code can read it. **A pin that exists is never moved.**</span>
+<span class="sd">  ``chartbook update`` is the only thing that moves one.</span>
+
+<span class="sd">In a catalog, the script is run in each of the catalog's pipelines, one</span>
+<span class="sd">that another of them depends on first.</span>
+
+<span class="sd">This is not a task runner. There is one string per script name, no</span>
+<span class="sd">dependencies between scripts, no retries, no schedule and no history. See</span>
+<span class="sd">"Running things" and "Not doing" in ``docs_src/design/asset-graph.md``, and</span>
+<span class="sd">"The snapshot model" in ``docs_src/design/overview.md`` for why a pipeline</span>
+<span class="sd">is never built from the outside in.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lock</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot</span> <span class="k">as</span> <span class="n">snapshots</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">GitCache</span><span class="p">,</span>
+    <span class="n">GitError</span><span class="p">,</span>
+    <span class="n">default_git_cache</span><span class="p">,</span>
+    <span class="n">forget_built</span><span class="p">,</span>
+    <span class="n">is_built</span><span class="p">,</span>
+    <span class="n">local_url</span><span class="p">,</span>
+    <span class="n">mark_built</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">derive_pipeline_id</span><span class="p">,</span> <span class="n">strip_url_credentials</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BUILD_SCRIPT</span><span class="p">,</span>
+    <span class="n">RequiresChartbookError</span><span class="p">,</span>
+    <span class="n">_read_manifest_file</span><span class="p">,</span>
+    <span class="n">get_pipeline_dirs</span><span class="p">,</span>
+    <span class="n">load_manifest</span><span class="p">,</span>
+    <span class="n">read_scripts</span><span class="p">,</span>
+    <span class="n">resolve_project_type</span><span class="p">,</span>
+    <span class="n">validate_dependencies</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">BATCH_ENV_VAR</span><span class="p">,</span> <span class="n">MANIFEST_NAME</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">Store</span><span class="p">,</span> <span class="n">default_store</span>
+
+
+<span class="c1">#: Set for a script while ChartBook runs it: the pipeline's directory, and</span>
+<span class="c1">#: the script's name. They are how a command that would run that same</span>
+<span class="c1">#: script again can tell that it was called from inside it.</span>
+<span class="n">RUN_DIR_ENV_VAR</span> <span class="o">=</span> <span class="s2">"CHARTBOOK_RUN_DIR"</span>
+<span class="n">RUN_SCRIPT_ENV_VAR</span> <span class="o">=</span> <span class="s2">"CHARTBOOK_RUN_SCRIPT"</span>
+
+<span class="c1">#: Every script ChartBook is running, outermost first, as a JSON list of</span>
+<span class="c1">#: ``[directory, script]`` pairs, so that any character a directory can hold</span>
+<span class="c1">#: survives. The two variables above are the innermost; this is the whole</span>
+<span class="c1">#: chain, so that two pipelines whose scripts call each other are caught as</span>
+<span class="c1">#: well as one that calls itself.</span>
+<span class="n">RUN_STACK_ENV_VAR</span> <span class="o">=</span> <span class="s2">"CHARTBOOK_RUN_STACK"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stack</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The scripts this process is running inside, outermost first."""</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">RUN_STACK_ENV_VAR</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entries</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="c1"># The innermost is kept separately too, in two plain variables, so a</span>
+    <span class="c1"># stack that has been mangled still stops the simplest loop</span>
+    <span class="n">inside</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">RUN_DIR_ENV_VAR</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">RUN_SCRIPT_ENV_VAR</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">inside</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">and</span> <span class="p">(</span><span class="n">inside</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">found</span><span class="p">:</span>
+        <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">inside</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<div class="viewcode-block" id="running">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.running">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">running</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether this process is inside that script of that pipeline.</span>
+
+<span class="sd">    A build script that calls ``chartbook build`` or ``chartbook run`` in</span>
+<span class="sd">    its own pipeline would be run by the command it calls, without end; so</span>
+<span class="sd">    would two pipelines whose build scripts each run the other's. Every</span>
+<span class="sd">    script ChartBook is running is in :data:`RUN_STACK_ENV_VAR`, and a</span>
+<span class="sd">    pipeline anywhere in it is one this process is already inside.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">inside</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_stack</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">script</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">inside</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">==</span> <span class="n">here</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">continue</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
+<span class="c1">#: The file each build tool reads its tasks from, at a pipeline's top, by the word that runs the tool.</span>
+<span class="n">BUILD_TOOL_FILES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"doit"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"dodo.py"</span><span class="p">,),</span>
+    <span class="s2">"make"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"GNUmakefile"</span><span class="p">,</span> <span class="s2">"makefile"</span><span class="p">,</span> <span class="s2">"Makefile"</span><span class="p">),</span>
+    <span class="s2">"just"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"justfile"</span><span class="p">,</span> <span class="s2">"Justfile"</span><span class="p">,</span> <span class="s2">".justfile"</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># `chartbook build`, or `python -m chartbook.cli build`</span>
+<span class="n">_CHARTBOOK_BUILD</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?&lt;![\w-])chartbook(?:\.cli)?\s+build(?![\w-])"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tool_files</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The task files of the build tools *command* runs, as named in *directory*; every tool's when *command* is None."""</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z0-9_.-]+"</span><span class="p">,</span> <span class="n">command</span><span class="p">))</span> <span class="k">if</span> <span class="n">command</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">set</span><span class="p">(</span><span class="n">BUILD_TOOL_FILES</span><span class="p">)</span>
+    <span class="n">wanted</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">tool</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">BUILD_TOOL_FILES</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">present</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory</span><span class="p">))</span>  <span class="c1"># the name as it is on disk, on a disk that ignores case too</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">wanted</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">present</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_runs_build</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a command line runs `chartbook build` on this pipeline: not on another, by --project-dir."""</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">_CHARTBOOK_BUILD</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="ow">and</span> <span class="s2">"--project-dir"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_in_python</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The first line of Python source whose code runs `chartbook build`: in a string, or as `"chartbook", "build"`.</span>
+
+<span class="sd">    Read with Python's own tokenizer, so a comment is no code, and a</span>
+<span class="sd">    triple-quoted string (a docstring, a block of text) is not taken for a</span>
+<span class="sd">    command.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">tokenize</span>
+
+    <span class="n">strings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># the string tokens of the current run of `"a", "b", ...`</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tokenize</span><span class="o">.</span><span class="n">generate_tokens</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">readline</span><span class="p">))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">tokenize</span><span class="o">.</span><span class="n">TokenError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">,</span> <span class="ne">IndentationError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">STRING</span><span class="p">:</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">token</span><span class="o">.</span><span class="n">string</span>
+            <span class="n">body</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">"rRbBuUfF"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">body</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s1">'"""'</span><span class="p">,</span> <span class="s2">"'''"</span><span class="p">)):</span>
+                <span class="n">strings</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">continue</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">body</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="k">else</span> <span class="n">body</span>
+            <span class="k">if</span> <span class="n">_runs_build</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">token</span><span class="o">.</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">value</span>
+            <span class="n">strings</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">token</span><span class="o">.</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">value</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">strings</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">strings</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"chartbook"</span> <span class="ow">and</span> <span class="n">strings</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"build"</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">strings</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"chartbook build"</span>
+        <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">OP</span> <span class="ow">and</span> <span class="n">token</span><span class="o">.</span><span class="n">string</span> <span class="o">==</span> <span class="s2">","</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">token</span><span class="o">.</span><span class="n">type</span> <span class="ow">in</span> <span class="p">(</span><span class="n">tokenize</span><span class="o">.</span><span class="n">NL</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">NEWLINE</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">COMMENT</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">INDENT</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">.</span><span class="n">DEDENT</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">strings</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_in_recipes</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The first line of a Makefile or a justfile that runs `chartbook build`, a comment cut off first."""</span>
+    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">(),</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"(?:^|\s)#"</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">maxsplit</span><span class="o">=</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">_runs_build</span><span class="p">(</span><span class="n">code</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">number</span><span class="p">,</span> <span class="n">code</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="build_tool_runs_chartbook_build">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.build_tool_runs_chartbook_build">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_tool_runs_chartbook_build</span><span class="p">(</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">command</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""A line of a pipeline's build tool's own file that runs ``chartbook build``: the file, the line number, what it runs.</span>
+
+<span class="sd">    Before 0.2.0, ``chartbook build`` rendered the site, and a ``dodo.py``</span>
+<span class="sd">    task said ``chartbook build -f`` to do it. Now ``chartbook build`` runs</span>
+<span class="sd">    the pipeline's build command first, which is that same build tool. Only</span>
+<span class="sd">    the task file of the tool *command* runs is read: ``dodo.py`` for doit,</span>
+<span class="sd">    a ``Makefile`` for make, a ``justfile`` for just (each, with *command*</span>
+<span class="sd">    None). What is not run is not taken: a comment, a docstring, a</span>
+<span class="sd">    ``chartbook build --project-dir`` of another pipeline.</span>
+
+<span class="sd">    :param command: The pipeline's build command, as ``[scripts] build`` says it.</span>
+<span class="sd">    :returns: The first such line, or None.</span>
+<span class="sd">    """</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_tool_files</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">command</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">_in_python</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".py"</span><span class="p">)</span> <span class="k">else</span> <span class="n">_in_recipes</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">found</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="kept_missing">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.kept_missing">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kept_missing</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The assets a pipeline marks ``keep = true`` that are not on disk while a snapshot in the store holds them.</span>
+
+<span class="sd">    For each: its reference within the pipeline, its path as declared, and</span>
+<span class="sd">    the newest snapshot of the pipeline holding its bytes, in the store and</span>
+<span class="sd">    whole (:func:`chartbook.snapshot.newest_holder`). This is the one</span>
+<span class="sd">    moment a build would make a costly asset again that could be put back</span>
+<span class="sd">    instead (``docs_src/design/keep.md``): an asset no snapshot holds has</span>
+<span class="sd">    to be made, and nothing is said of it. A pipeline that is not in git</span>
+<span class="sd">    has no snapshots, and a shallow clone sees only the commits it has.</span>
+
+<span class="sd">    :raises ValueError: If the manifest cannot be read.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">hashing</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">declared_files</span>
+
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">marked</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">keeps_of</span><span class="p">(</span><span class="n">_read_manifest</span><span class="p">(</span><span class="n">directory</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">marked</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">declared</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">local</span><span class="p">):</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">absolute</span><span class="p">)</span> <span class="k">for</span> <span class="n">local</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">absolute</span> <span class="ow">in</span> <span class="n">declared_files</span><span class="p">(</span><span class="n">directory</span><span class="p">)}</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">marked</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">declared</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># a table or a query: nothing on disk to miss</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">hashing</span><span class="o">.</span><span class="n">find_files</span><span class="p">(</span><span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">found</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">history</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">held</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="c1"># The one `chartbook restore` would use, by the same rule: a version</span>
+        <span class="c1"># whose bytes are not in the store is nothing to put back, so the</span>
+        <span class="c1"># build is not stopped for it</span>
+        <span class="n">holder</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">newest_holder</span><span class="p">(</span><span class="n">history</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">holder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">held</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">holder</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">held</span></div>
+
+
+
+<div class="viewcode-block" id="RunError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.RunError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RunError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when the pipelines to run cannot be put in an order, or found."""</span></div>
+
+
+
+<div class="viewcode-block" id="Step">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.Step">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Step</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One pipeline a script may be run in, in the order they come.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id: The pipeline's name: its own ID. For a ``git`` dependency that</span>
+<span class="sd">            could not be fetched, or whose manifest sets no ``id``, the key</span>
+<span class="sd">            it is declared under.</span>
+<span class="sd">        directory: Where it is, and where its script runs. For a ``git``</span>
+<span class="sd">            dependency, its working copy. None if it could not be fetched.</span>
+<span class="sd">        source: How it comes to be in the order: ``"asked"`` (the pipeline</span>
+<span class="sd">            ``run`` was given, or a member of the catalog it was given) or</span>
+<span class="sd">            ``"git"`` (a git dependency of one of those).</span>
+<span class="sd">        scripts: Its named scripts.</span>
+<span class="sd">        has_dependencies: Whether it declares any.</span>
+<span class="sd">        missing: Why it cannot be run, if it cannot: it could not be fetched.</span>
+<span class="sd">        built: For a ``git`` dependency, whether its build has already</span>
+<span class="sd">            finished in this working copy.</span>
+<span class="sd">    """</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">scripts</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">has_dependencies</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">missing</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">built</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="RunReport">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.RunReport">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RunReport</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a run did.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        script: The script that was run.</span>
+<span class="sd">        ran: The pipelines it was run in, in order.</span>
+<span class="sd">        skipped: The pipelines it was not run in, each with why.</span>
+<span class="sd">        failed: The pipeline in which it failed, if it did.</span>
+<span class="sd">        exit_code: 0, or the exit code of what failed.</span>
+<span class="sd">        reason: What went wrong, when it was not the script itself.</span>
+<span class="sd">        snapshots: The snapshot made of each pipeline after its build, when</span>
+<span class="sd">            that was asked for, as :class:`chartbook.snapshot.SnapshotReport`.</span>
+<span class="sd">    """</span>
+
+    <span class="n">script</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ran</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">skipped</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Step</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">snapshots</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">failed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Step</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">exit_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_read_manifest</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read a pipeline's chartbook.toml; an error in it names the file.</span>
+
+<span class="sd">    Several manifests are read in one run, so "invalid statement at line 3"</span>
+<span class="sd">    has to say whose line 3.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">manifest_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">manifest_path</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
+            <span class="k">raise</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_locked_commit</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The commit a pipeline's lockfile pins one of its git dependencies at."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">locked</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">read_lock</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">listed</span> <span class="ow">in</span> <span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">locked</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]:</span>
+        <span class="k">if</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_working_copy</span><span class="p">(</span>
+    <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">:</span> <span class="n">GitCache</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A git dependency's writable copy, at the commit it is pinned at.</span>
+
+<span class="sd">    The commit is the lockfile's if it names one, since a pin does not</span>
+<span class="sd">    move; otherwise it is what the ``rev`` means now.</span>
+
+<span class="sd">    :returns: The working copy, or None and why there is none.</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">local_url</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"git"</span><span class="p">],</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="n">commit</span> <span class="o">=</span> <span class="n">_locked_commit</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">commit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">commit</span> <span class="o">=</span> <span class="n">git_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rev"</span><span class="p">))</span><span class="o">.</span><span class="n">commit</span>
+        <span class="k">elif</span> <span class="n">git_cache</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">git_cache</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">git_cache</span><span class="o">.</span><span class="n">work_copy</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">),</span> <span class="s2">""</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">GitError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"could not fetch </span><span class="si">{</span><span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">'git'</span><span class="p">])</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span>
+
+
+<div class="viewcode-block" id="plan">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.plan">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plan</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"."</span><span class="p">,</span>
+    <span class="n">git_cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GitCache</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">git</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Say which pipelines a run is about, in order.</span>
+
+<span class="sd">    That is the pipeline in *project_dir*, or every pipeline of the catalog</span>
+<span class="sd">    there, each after any other of them that it depends on. With *git*, it</span>
+<span class="sd">    is also their ``git`` dependencies, each before what depends on it: a</span>
+<span class="sd">    git dependency is fetched if it has to be and given a working copy,</span>
+<span class="sd">    which is the only thing here that changes anything.</span>
+
+<span class="sd">    A ``path`` dependency is never in the order. It is a folder somebody</span>
+<span class="sd">    works in, and it is theirs to build.</span>
+
+<span class="sd">    A git dependency that is built already is in the order, marked as</span>
+<span class="sd">    built, and what *it* depends on is left out: that was needed to build</span>
+<span class="sd">    it, and it is built. With *force* it is gone into all the same.</span>
+
+<span class="sd">    :param project_dir: A pipeline's directory, or a catalog's.</span>
+<span class="sd">    :param git_cache: Where ``git`` dependencies are fetched to; this</span>
+<span class="sd">        user's by default.</span>
+<span class="sd">    :param git: Whether ``git`` dependencies are in the order.</span>
+<span class="sd">    :param force: Whether to go into a git dependency that is built already.</span>
+<span class="sd">    :param store: The store, which says which dependencies named by their</span>
+<span class="sd">        ID have no snapshot and so are built from the default host; this</span>
+<span class="sd">        user's by default.</span>
+<span class="sd">    :returns: The pipelines, each after what it depends on.</span>
+<span class="sd">    :raises RunError: If *project_dir* holds no manifest, or two of a</span>
+<span class="sd">        catalog's pipelines depend on each other.</span>
+<span class="sd">    :raises ValueError: If a manifest cannot be read, or its</span>
+<span class="sd">        ``[dependencies]`` or ``[scripts]`` is malformed.</span>
+<span class="sd">    """</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_manifest</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No </span><span class="si">{</span><span class="n">MANIFEST_NAME</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">if</span> <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">start</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">))</span> <span class="o">==</span> <span class="s2">"catalog"</span><span class="p">:</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">directory</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">get_pipeline_dirs</span><span class="p">(</span><span class="n">load_manifest</span><span class="p">(</span><span class="n">start</span><span class="p">))</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">[</span><span class="n">start</span><span class="p">]</span>
+    <span class="n">asked</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">roots</span><span class="p">)</span>
+
+    <span class="n">order</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Step</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">done</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">visiting</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">caches</span> <span class="o">=</span> <span class="p">[</span><span class="n">git_cache</span><span class="p">]</span>  <span class="c1"># made only if some pipeline has a git dependency</span>
+    <span class="n">found_in_store</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>  <span class="c1"># read only if some pipeline names a dependency by its ID</span>
+    <span class="n">host</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>  <span class="c1"># the default host, read likewise</span>
+    <span class="n">by_id</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">asked_by_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The pipelines of this run, by their own ID."""</span>
+        <span class="k">if</span> <span class="n">by_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">by_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">there</span> <span class="ow">in</span> <span class="n">asked</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_manifest</span><span class="p">(</span><span class="n">there</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="n">by_id</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">there</span><span class="p">)]</span> <span class="o">=</span> <span class="n">there</span>
+        <span class="k">return</span> <span class="n">by_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">directory</span> <span class="o">=</span> <span class="n">directory</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">done</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">visiting</span><span class="p">:</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">visiting</span><span class="p">[</span><span class="n">visiting</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="p">:],</span> <span class="n">directory</span><span class="p">]</span>
+            <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+                <span class="s2">"These pipelines depend on each other, so there is no order to "</span>
+                <span class="s2">"run them in: "</span> <span class="o">+</span> <span class="s2">" -&gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">loop</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="n">manifest_path</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_manifest</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+            <span class="n">is_pipeline</span> <span class="o">=</span> <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">))</span> <span class="o">==</span> <span class="s2">"pipeline"</span>
+        <span class="k">except</span> <span class="n">RequiresChartbookError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+                <span class="c1"># Its path is ChartBook's own copy, which says nothing to the user</span>
+                <span class="k">raise</span> <span class="n">RequiresChartbookError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the git dependency </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="n">done</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+            <span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Step</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="sa">f</span><span class="s2">"no pipeline at </span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_pipeline</span><span class="p">:</span>
+            <span class="n">done</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+            <span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Step</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">directory</span><span class="si">}</span><span class="s2"> is a catalog"</span><span class="p">))</span>
+            <span class="k">return</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">dependencies</span> <span class="o">=</span> <span class="n">validate_dependencies</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dependencies"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">directory</span><span class="p">)</span>
+            <span class="n">scripts</span> <span class="o">=</span> <span class="n">read_scripts</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">if</span> <span class="n">git</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="c1"># One named by its ID that pin will get from its repository on the</span>
+            <span class="c1"># default host (lock.clone_instead, the one decision both make) is</span>
+            <span class="c1"># built as a git one is. One that is a pipeline of this run is</span>
+            <span class="c1"># built here, before it, and never cloned.</span>
+            <span class="k">if</span> <span class="n">host</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_default_host</span>
+
+                <span class="n">host</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_default_host</span><span class="p">()</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">in_store</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">found_in_store</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">found_in_store</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">readable_snapshots</span><span class="p">(</span><span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">found_in_store</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">locked</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">read_lock</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">:</span>
+                <span class="n">locked</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">listed</span> <span class="o">=</span> <span class="p">{</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">):</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">locked</span> <span class="k">else</span> <span class="p">[])}</span>
+            <span class="n">own</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{},</span> <span class="n">directory</span><span class="p">)</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">as_pin_will</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+                <span class="n">pinned</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">locked</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">locked</span><span class="o">.</span><span class="n">assets_of</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rev"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">asked_by_id</span><span class="p">():</span>
+                    <span class="c1"># What `rev` means is asked of its repository, as pin asks it</span>
+                    <span class="k">if</span> <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_git_cache</span><span class="p">()</span>
+                    <span class="n">kind</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">choose_for_rev</span><span class="p">(</span>
+                        <span class="n">entry</span><span class="p">,</span> <span class="n">own</span><span class="p">,</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="kc">False</span><span class="p">,</span> <span class="n">in_store</span><span class="p">,</span> <span class="n">host</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">directory</span><span class="p">,</span> <span class="n">pinned</span><span class="o">=</span><span class="n">pinned</span>
+                    <span class="p">)</span>
+                    <span class="k">return</span> <span class="n">value</span> <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"entry"</span> <span class="k">else</span> <span class="n">entry</span>
+                <span class="k">return</span> <span class="n">lock</span><span class="o">.</span><span class="n">clone_instead</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">own</span><span class="p">,</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="kc">False</span><span class="p">,</span> <span class="n">in_store</span><span class="p">,</span> <span class="n">host</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">asked_by_id</span><span class="p">(),</span> <span class="n">pinned</span><span class="o">=</span><span class="n">pinned</span><span class="p">)</span>
+
+            <span class="n">dependencies</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">as_pin_will</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="n">built</span> <span class="o">=</span> <span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span> <span class="ow">and</span> <span class="n">is_built</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">built</span> <span class="ow">or</span> <span class="n">force</span><span class="p">:</span>
+            <span class="n">visiting</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dependencies</span><span class="p">):</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">dependencies</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="s2">"git"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">git</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="k">if</span> <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_git_cache</span><span class="p">()</span>
+                    <span class="n">copy</span><span class="p">,</span> <span class="n">why</span> <span class="o">=</span> <span class="n">_working_copy</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">caches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_from_id"</span><span class="p">):</span>
+                        <span class="n">got_from</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">'git'</span><span class="p">])</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'_from'</span><span class="p">,</span><span class="w"> </span><span class="s1">'[resolve] default_host'</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+                        <span class="k">if</span> <span class="n">copy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">why</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"it is got from its repository, </span><span class="si">{</span><span class="n">got_from</span><span class="si">}</span><span class="s2">, and </span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">"</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># Got from its repository by its ID: it must call itself that, or it is not built</span>
+                            <span class="n">named</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">_project_id_in</span><span class="p">(</span><span class="n">copy</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">named</span> <span class="ow">and</span> <span class="n">named</span> <span class="o">!=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"_from_id"</span><span class="p">]:</span>
+                                <span class="n">copy</span><span class="p">,</span> <span class="n">why</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"its repository, </span><span class="si">{</span><span class="n">got_from</span><span class="si">}</span><span class="s2">, names itself </span><span class="si">{</span><span class="n">named</span><span class="si">}</span><span class="s2">, not </span><span class="si">{</span><span class="n">entry</span><span class="p">[</span><span class="s1">'_from_id'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="k">if</span> <span class="n">copy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Step</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"git"</span><span class="p">,</span> <span class="n">missing</span><span class="o">=</span><span class="n">why</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">visit</span><span class="p">(</span><span class="n">copy</span><span class="p">,</span> <span class="s2">"git"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">):</span>
+                    <span class="c1"># Named by its ID alone: its snapshots are read from the</span>
+                    <span class="c1"># store, and nothing of it is built here, unless it is a</span>
+                    <span class="c1"># pipeline of this run, which is built before it</span>
+                    <span class="n">there</span> <span class="o">=</span> <span class="n">asked_by_id</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">there</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">there</span> <span class="o">!=</span> <span class="n">directory</span><span class="p">:</span>
+                        <span class="n">visit</span><span class="p">(</span><span class="n">there</span><span class="p">,</span> <span class="s2">"asked"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># A folder somebody works in is not built from here. It</span>
+                    <span class="c1"># is in the order only if it was asked for itself, as</span>
+                    <span class="c1"># another pipeline of the same catalog.</span>
+                    <span class="n">there</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"_resolved_path"</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">there</span> <span class="ow">in</span> <span class="n">asked</span><span class="p">:</span>
+                        <span class="n">visit</span><span class="p">(</span><span class="n">there</span><span class="p">,</span> <span class="s2">"asked"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="n">visiting</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="n">done</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="n">project</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">):</span>
+            <span class="c1"># A working copy's directory is named after a commit, and has no</span>
+            <span class="c1"># remote to take a scope from. The name it is declared under is</span>
+            <span class="c1"># the one that means something.</span>
+            <span class="n">step_id</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step_id</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="n">order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Step</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">step_id</span><span class="p">,</span>
+                <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
+                <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+                <span class="n">scripts</span><span class="o">=</span><span class="n">scripts</span><span class="p">,</span>
+                <span class="n">has_dependencies</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">dependencies</span><span class="p">),</span>
+                <span class="n">built</span><span class="o">=</span><span class="n">built</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span><span class="p">:</span>
+        <span class="n">visit</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"asked"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">root</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">order</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_require_trust_to_run</span><span class="p">(</span><span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">here</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse unless every pipeline whose script would run is one the user trusts to run.</span>
+
+<span class="sd">    A script is code, and a folder is trusted to run it only when the</span>
+<span class="sd">    user has said so (``chartbook trust``; ``docs_src/design/trust.md``).</span>
+<span class="sd">    That is the pipeline asked for, or each pipeline of the catalog asked</span>
+<span class="sd">    for that has the script. A ``git`` dependency is built in ChartBook's</span>
+<span class="sd">    own copy of its commit: naming it in ``[dependencies]`` is the trust</span>
+<span class="sd">    for that, and it is not asked about here.</span>
+
+<span class="sd">    :raises RunError: Naming each folder that is not trusted to run, with</span>
+<span class="sd">        its ID and the command that trusts it.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">trust_of</span>
+
+    <span class="n">refused</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">!=</span> <span class="s2">"asked"</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">script</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="n">trust_of</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">level</span> <span class="o">!=</span> <span class="s2">"run"</span><span class="p">:</span>
+            <span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">step</span><span class="p">,</span> <span class="n">level</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">refused</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">standing</span><span class="p">(</span><span class="n">level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"trusted to render, not to run"</span> <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="s2">"render"</span> <span class="k">else</span> <span class="s2">"not trusted"</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">refused</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">refused</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">directory</span> <span class="o">==</span> <span class="n">here</span><span class="p">:</span>
+        <span class="n">step</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">refused</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">standing</span><span class="p">(</span><span class="n">level</span><span class="p">)</span><span class="si">}</span><span class="s2">, so its </span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2"> script was not run. A build script is "</span>
+            <span class="sa">f</span><span class="s2">"code, and it runs here once you say the pipeline is yours to run: `chartbook trust` in "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> trusts it."</span>
+        <span class="p">)</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">standing</span><span class="p">(</span><span class="n">level</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span> <span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="n">refused</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"These pipelines are not trusted to run, so nothing was run:</span><span class="se">\n</span><span class="si">{</span><span class="n">listed</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"A build script is code, and it runs here once you say the pipeline is yours to run: "</span>
+        <span class="sa">f</span><span class="s2">"`chartbook trust --members` in </span><span class="si">{</span><span class="n">here</span><span class="si">}</span><span class="s2"> trusts the catalog's folder and each member folder "</span>
+        <span class="sa">f</span><span class="s2">"on this machine; `chartbook trust` in one folder trusts that one."</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="execute">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.execute">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">foreign</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run one script in a directory, and return its exit code.</span>
+
+<span class="sd">    The script is handed to a shell whole, so a value of several lines is</span>
+<span class="sd">    one script: what one line sets up, the next can use. It stops at the</span>
+<span class="sd">    first command that fails. Its output goes where this process's does.</span>
+
+<span class="sd">    The shell is ``bash`` where there is one, because that is what an</span>
+<span class="sd">    ``module load`` or a ``conda activate`` expects, and ``sh`` otherwise.</span>
+<span class="sd">    On Windows it is ``cmd``: one line is run as it is, and several go in</span>
+<span class="sd">    a batch file that stops at the first line that fails, with its exit</span>
+<span class="sd">    code (:func:`_batch_script`).</span>
+
+<span class="sd">    :param name: The script's name in ``[scripts]``. With it, the script</span>
+<span class="sd">        is told which pipeline and which script it is (:func:`running`).</span>
+<span class="sd">    :param foreign: Whether the directory is a git dependency's working</span>
+<span class="sd">        copy, the cache's: then git in the script is not told of any other</span>
+<span class="sd">        repository the environment names (a git hook's ``GIT_DIR``).</span>
+<span class="sd">    :returns: The script's exit code. One that a signal stopped gives 128</span>
+<span class="sd">        plus the signal's number, as a shell reports it.</span>
+<span class="sd">    """</span>
+    <span class="c1"># What has been said so far goes out before the script says anything,</span>
+    <span class="c1"># or a log would have the two out of order</span>
+    <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">pass</span>
+    <span class="n">environment</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">foreign</span><span class="p">:</span>
+        <span class="c1"># A git dependency's working copy, which is the cache's: git in its</span>
+        <span class="c1"># build must find that copy, never the repository a git hook says</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GIT_LOCATION_VARIABLES</span>
+
+        <span class="n">environment</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">environment</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">GIT_LOCATION_VARIABLES</span><span class="p">}</span>
+        <span class="c1"># Nor the repository the git cache may be inside (a home kept in git):</span>
+        <span class="c1"># the copy has no .git of its own, and git looks no further up</span>
+        <span class="n">environment</span><span class="p">[</span><span class="s2">"GIT_CEILING_DIRECTORIES"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="n">BUILD_SCRIPT</span><span class="p">:</span>
+        <span class="c1"># A build is a batch run: a read of another pipeline that nothing</span>
+        <span class="c1"># would record is refused there, not warned about</span>
+        <span class="c1"># (chartbook.resolve.batch). Another script, `lab` or `test`, is as</span>
+        <span class="c1"># interactive as the shell it was run from.</span>
+        <span class="n">environment</span><span class="p">[</span><span class="n">BATCH_ENV_VAR</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+        <span class="n">environment</span><span class="p">[</span><span class="n">RUN_DIR_ENV_VAR</span><span class="p">]</span> <span class="o">=</span> <span class="n">where</span>
+        <span class="n">environment</span><span class="p">[</span><span class="n">RUN_SCRIPT_ENV_VAR</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">environment</span><span class="p">[</span><span class="n">RUN_STACK_ENV_VAR</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">([</span><span class="o">*</span><span class="n">_stack</span><span class="p">(),</span> <span class="p">[</span><span class="n">where</span><span class="p">,</span> <span class="n">name</span><span class="p">]])</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="n">_execute</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">environment</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">128</span> <span class="o">-</span> <span class="n">code</span> <span class="k">if</span> <span class="n">code</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">code</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_execute</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">environment</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">script</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="n">script</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">returncode</span>
+        <span class="c1"># cmd takes one line; several go in a file</span>
+        <span class="n">handle</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">".cmd"</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">_batch_script</span><span class="p">(</span><span class="n">script</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">"cmd"</span><span class="p">,</span> <span class="s2">"/d"</span><span class="p">,</span> <span class="s2">"/c"</span><span class="p">,</span> <span class="n">name</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">returncode</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">shell</span> <span class="o">=</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"bash"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"/bin/sh"</span>
+    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">shell</span><span class="p">,</span> <span class="s2">"-e"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="n">script</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">returncode</span>
+
+
+<span class="c1">#: Stops a batch file where the line before it failed, with that line's exit code.</span>
+<span class="n">_STOP_ON_FAILURE</span> <span class="o">=</span> <span class="s2">"if </span><span class="si">%e</span><span class="s2">rrorlevel% neq 0 exit /b </span><span class="si">%e</span><span class="s2">rrorlevel%"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_batch_script</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A script of several lines as a batch file that stops at the first line that fails.</span>
+
+<span class="sd">    ``cmd`` runs a batch file to its end whatever each line returns, and the</span>
+<span class="sd">    file's exit code is its last line's, where ``bash -e`` stops at the first</span>
+<span class="sd">    failure. So each command line is followed by a line that exits with the</span>
+<span class="sd">    last exit code when it is not zero. A blank line, a ``rem`` or ``::``</span>
+<span class="sd">    comment, and a line continued with a ``^`` at its end get no such line,</span>
+<span class="sd">    since they run nothing of their own. ``@echo off`` comes first, so the</span>
+<span class="sd">    lines are not echoed as they run, as a shell does not echo them.</span>
+
+<span class="sd">    A block in parentheses (``if ... (`` over several lines) is read by cmd</span>
+<span class="sd">    as one command, with ``%errorlevel%`` expanded once, before the block</span>
+<span class="sd">    runs; so a failure inside it is caught at the line after the block, not</span>
+<span class="sd">    inside it.</span>
+
+<span class="sd">    :param script: The script, as the manifest gives it.</span>
+<span class="sd">    :returns: The text of the batch file.</span>
+<span class="sd">    """</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"@echo off"</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">script</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">stripped</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">is_comment</span> <span class="o">=</span> <span class="n">stripped</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"::"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">stripped</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"rem"</span> <span class="ow">or</span> <span class="n">stripped</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"rem "</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stripped</span> <span class="ow">or</span> <span class="n">is_comment</span> <span class="ow">or</span> <span class="n">stripped</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"^"</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_STOP_ON_FAILURE</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
+
+
+<div class="viewcode-block" id="run">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.run.html#chartbook.run.run">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"."</span><span class="p">,</span>
+    <span class="n">script</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">BUILD_SCRIPT</span><span class="p">,</span>
+    <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">git_cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GitCache</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="nb">print</span><span class="p">,</span>
+    <span class="n">on_pin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">snapshot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">frozen</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">on_verify</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">on_snapshot</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">remake</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">remake_command</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"chartbook run --remake"</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RunReport</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run a script in a pipeline, or in every pipeline of a catalog.</span>
+
+<span class="sd">    For ``build``, two things are done first. A ``git`` dependency that has</span>
+<span class="sd">    not been built at its commit is built, in its working copy. And each</span>
+<span class="sd">    pipeline's dependencies are pinned before its own script runs: what has</span>
+<span class="sd">    no pin yet is pinned, and no pin is moved.</span>
+
+<span class="sd">    Nothing is ever run in a ``path`` dependency's directory. Any other</span>
+<span class="sd">    script is run only where it was asked for.</span>
+
+<span class="sd">    The pipeline that was asked for must have the script. A pipeline of a</span>
+<span class="sd">    catalog that has no script by that name is passed over.</span>
+
+<span class="sd">    :param project_dir: A pipeline's directory, or a catalog's.</span>
+<span class="sd">    :param script: The script to run; ``build`` by default.</span>
+<span class="sd">    :param store: The store to pin into; this user's by default.</span>
+<span class="sd">    :param git_cache: Where ``git`` dependencies are fetched to; this</span>
+<span class="sd">        user's by default.</span>
+<span class="sd">    :param echo: Called with each line that says what is being done.</span>
+<span class="sd">    :param on_pin: Called with a pipeline's step and its</span>
+<span class="sd">        :class:`chartbook.lock.PinReport` after its dependencies are pinned.</span>
+<span class="sd">    :param force: Build a ``git`` dependency again even if it is built</span>
+<span class="sd">        already. This is how data it pulls from outside is refreshed.</span>
+<span class="sd">    :param snapshot: After a pipeline's ``build`` succeeds, make a snapshot</span>
+<span class="sd">        of it (:mod:`chartbook.snapshot`): build, and declare the build</span>
+<span class="sd">        ready, in one command. Everything in its folder must be committed</span>
+<span class="sd">        before the build starts and still be when it ends. The snapshot</span>
+<span class="sd">        records that the build ran in the same command.</span>
+<span class="sd">    :param on_snapshot: Called with a pipeline's step and its</span>
+<span class="sd">        :class:`chartbook.snapshot.SnapshotReport` after its snapshot is made.</span>
+<span class="sd">    :param frozen: Write nothing before the build but, where the store can</span>
+<span class="sd">        be written, its note that this machine reads these pins</span>
+<span class="sd">        (:func:`chartbook.lock.note_this_machine`): no pin, no fetch, no</span>
+<span class="sd">        lockfile, no object. Instead check that the lockfile is complete and</span>
+<span class="sd">        every pin is in the store (:func:`chartbook.lock.verify`), and</span>
+<span class="sd">        refuse to build if not. A ``git`` dependency is not built either;</span>
+<span class="sd">        its pins have to be there. For CI, and for a store one may only read.</span>
+<span class="sd">    :param on_verify: Called with a pipeline's step and its</span>
+<span class="sd">        :class:`chartbook.lock.FrozenReport`, under *frozen*.</span>
+<span class="sd">    :param remake: Run ``build`` even though an asset the manifest marks</span>
+<span class="sd">        ``keep = true`` is not on disk while the store has a version of it.</span>
+<span class="sd">        Without it, that stops the command before anything is built, since</span>
+<span class="sd">        the build would make the costly asset again</span>
+<span class="sd">        (:func:`kept_missing`, ``docs_src/design/keep.md``).</span>
+<span class="sd">    :param remake_command: The command line that says *remake*, for the</span>
+<span class="sd">        message: ``chartbook build --remake`` from ``chartbook build``.</span>
+<span class="sd">    :returns: What was run, and what failed if anything did.</span>
+<span class="sd">    :raises RunError: If the pipelines cannot be put in an order, the one</span>
+<span class="sd">        asked for has no such script, or a kept asset is missing while the</span>
+<span class="sd">        store has it and *remake* is not set.</span>
+<span class="sd">    """</span>
+    <span class="n">here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">building</span> <span class="o">=</span> <span class="n">script</span> <span class="o">==</span> <span class="n">BUILD_SCRIPT</span>
+    <span class="k">if</span> <span class="n">frozen</span> <span class="ow">and</span> <span class="n">snapshot</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+            <span class="s2">"--frozen pins nothing and writes no object, and --snapshot writes a snapshot. One or the other."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">frozen</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">building</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"--frozen is about what `</span><span class="si">{</span><span class="n">BUILD_SCRIPT</span><span class="si">}</span><span class="s2">` pins before it runs, and "</span>
+            <span class="sa">f</span><span class="s2">"`chartbook run </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">` pins nothing, so `--frozen` has nothing to check."</span>
+        <span class="p">)</span>
+    <span class="c1"># Under --frozen a git dependency is neither fetched nor built: what is</span>
+    <span class="c1"># pinned of it has to be in the store already, and verify() checks that</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">plan</span><span class="p">(</span><span class="n">here</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="n">building</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">frozen</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">commits_before</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># A pipeline that is asked for by name must have the script. A catalog</span>
+    <span class="c1"># is asked for all of its pipelines, and those without it are passed over.</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="o">==</span> <span class="n">here</span> <span class="ow">and</span> <span class="n">script</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="p">:</span>
+            <span class="n">declared</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="p">))</span> <span class="ow">or</span> <span class="s2">"(none)"</span>
+            <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> has no script named </span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2">. Its scripts are: "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2">. To add it, put the command under [scripts] in "</span>
+                <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">MANIFEST_NAME</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s1"> = "…".'</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">script</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No pipeline here has a script named </span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="n">_require_trust_to_run</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">here</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">snapshot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">building</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"A snapshot is of what `</span><span class="si">{</span><span class="n">BUILD_SCRIPT</span><span class="si">}</span><span class="s2">` makes, so `chartbook run "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2"> --snapshot` has nothing to take one of."</span>
+            <span class="p">)</span>
+        <span class="c1"># Found out now, and not after an hour of building. The lockfile</span>
+        <span class="c1"># does not count: the pin before the build is about to write it,</span>
+        <span class="c1"># and the snapshot records what it says in `inputs`.</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">and</span> <span class="n">script</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">code</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">require_committed</span><span class="p">(</span>
+                        <span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">ignoring</span><span class="o">=</span><span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">LOCK_FILE</span><span class="p">,)</span>
+                    <span class="p">)</span>
+                    <span class="n">snapshots</span><span class="o">.</span><span class="n">check_within</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">SnapshotError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2"> Nothing was built."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                <span class="n">commits_before</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">]</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">commit</span>
+
+    <span class="k">if</span> <span class="n">building</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">remake</span><span class="p">:</span>
+        <span class="c1"># A costly output that is not on disk while the store has a version</span>
+        <span class="c1"># of it: found out now, before any pipeline's build remakes it</span>
+        <span class="n">said</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">!=</span> <span class="s2">"asked"</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">script</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">declared</span><span class="p">,</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">kept_missing</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">):</span>
+                <span class="n">said</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is kept, and is not on disk (</span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2">). The store has its version "</span>
+                    <span class="sa">f</span><span class="s2">"from </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">[:</span><span class="mi">10</span><span class="p">]</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">[</span><span class="mi">11</span><span class="p">:</span><span class="mi">16</span><span class="p">]</span><span class="si">}</span><span class="s2"> UTC."</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">said</span><span class="p">:</span>
+            <span class="n">them</span> <span class="o">=</span> <span class="s2">"them"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">said</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">"it"</span>
+            <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+                <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
+                <span class="o">+</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  chartbook restore</span><span class="si">{</span><span class="s1">' '</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="s1">'chartbook restore'</span><span class="p">))</span><span class="si">}</span><span class="s2">puts </span><span class="si">{</span><span class="n">them</span><span class="si">}</span><span class="s2"> back"</span>
+                <span class="o">+</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">  </span><span class="si">{</span><span class="n">remake_command</span><span class="si">}{</span><span class="s1">' '</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">28</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">remake_command</span><span class="p">))</span><span class="si">}</span><span class="s2">runs the build without </span><span class="si">{</span><span class="n">them</span><span class="si">}</span><span class="s2">, which makes </span><span class="si">{</span><span class="n">them</span><span class="si">}</span><span class="s2"> again"</span>
+                <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">Nothing was built."</span>
+            <span class="p">)</span>
+
+    <span class="n">report</span> <span class="o">=</span> <span class="n">RunReport</span><span class="p">(</span><span class="n">script</span><span class="o">=</span><span class="n">script</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: not run. </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">step</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">missing</span><span class="p">))</span>
+            <span class="k">continue</span>
+
+        <span class="n">command</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">script</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">command</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">why</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"it has no script named </span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">:</span>
+                <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: not run. </span><span class="si">{</span><span class="n">why</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}{</span><span class="n">why</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="c1"># A git dependency with no build script is the ordinary case of</span>
+            <span class="c1"># a repository that commits its data. There is nothing to say.</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">step</span><span class="p">,</span> <span class="n">why</span><span class="p">))</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">built</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+                <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: built already, at </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="o">.</span><span class="n">name</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">step</span><span class="p">,</span> <span class="s2">"it is built already"</span><span class="p">))</span>
+                <span class="k">continue</span>
+            <span class="c1"># Until this build finishes, the copy is not a built one</span>
+            <span class="n">forget_built</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">running</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">script</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">RunError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"`chartbook run </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">` was called from </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">'s own "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2"> script, which would then run itself without end. "</span>
+                <span class="sa">f</span><span class="s2">"Take it out of the script."</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">building</span> <span class="ow">and</span> <span class="n">frozen</span><span class="p">:</span>
+            <span class="c1"># Nothing is written but the store's note that this machine</span>
+            <span class="c1"># reads these pins, so that gc elsewhere keeps them. Either</span>
+            <span class="c1"># every pin can be had, or nothing runs. Checked whether or not</span>
+            <span class="c1"># the manifest has dependencies now: a lockfile may still list</span>
+            <span class="c1"># one it dropped.</span>
+            <span class="n">checked</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">note</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">on_verify</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">on_verify</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">checked</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">checked</span><span class="o">.</span><span class="n">problems</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="mi">1</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">"its lockfile is not complete, or a pin is not in the store, "</span>
+                    <span class="s2">"and --frozen pins nothing"</span>
+                <span class="p">)</span>
+                <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">building</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">has_dependencies</span><span class="p">:</span>
+            <span class="c1"># What its code reads from other pipelines has to be pinned</span>
+            <span class="c1"># before it runs. Nothing that is pinned is moved.</span>
+            <span class="n">pins</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">pin</span><span class="p">(</span>
+                <span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span>
+                <span class="n">built_here</span><span class="o">=</span><span class="p">{</span><span class="n">other</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">other</span> <span class="ow">in</span> <span class="n">steps</span> <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">on_pin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">on_pin</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">pins</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pins</span><span class="o">.</span><span class="n">problems</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="mi">1</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="s2">"what it depends on could not be pinned"</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">building</span> <span class="ow">and</span> <span class="n">snapshot</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">:</span>
+            <span class="c1"># Its snapshot will carry its lineage: found out now, with what</span>
+            <span class="c1"># was just pinned, and not after the build</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">gaps</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">lineage_gaps</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">gaps</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">gaps</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="mi">1</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">"its pins do not account for every dependency, so it could not have a snapshot, "</span>
+                    <span class="s2">"and it was not built:</span><span class="se">\n</span><span class="s2">"</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">gap</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">gap</span> <span class="ow">in</span> <span class="n">gaps</span><span class="p">)</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+                <span class="k">break</span>
+
+        <span class="n">where</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="o">==</span> <span class="n">here</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"    in </span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">script</span><span class="si">}{</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">code</span> <span class="o">=</span> <span class="n">execute</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">foreign</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">code</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="n">code</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"its </span><span class="si">{</span><span class="n">script</span><span class="si">!r}</span><span class="s2"> script exited with </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+            <span class="n">mark_built</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">ran</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">snapshot</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">:</span>
+            <span class="c1"># A build that changes a committed file, or that commits, leaves</span>
+            <span class="c1"># a folder the commit the build ran at does not describe, and</span>
+            <span class="c1"># the label would not be true</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">changed</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">uncommitted</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">ignoring</span><span class="o">=</span><span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">LOCK_FILE</span><span class="p">,))</span>
+                <span class="k">if</span> <span class="n">changed</span><span class="p">:</span>
+                    <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: its build changed files that are committed:"</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">changed</span><span class="p">[:</span><span class="mi">10</span><span class="p">]:</span>
+                        <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">(</span>
+                        <span class="s2">"its build left changes that are not committed, so no "</span>
+                        <span class="s2">"snapshot was made"</span>
+                    <span class="p">)</span>
+                <span class="n">now</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">code_of</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">commit</span>
+                <span class="k">if</span> <span class="n">now</span> <span class="o">!=</span> <span class="n">commits_before</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">now</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"its build moved the repository from "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commits_before</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">][:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">now</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, so no "</span>
+                        <span class="sa">f</span><span class="s2">"snapshot was made: the label would not say which code ran"</span>
+                    <span class="p">)</span>
+                <span class="n">made</span> <span class="o">=</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">make</span><span class="p">(</span>
+                    <span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">built_by_run</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ignoring</span><span class="o">=</span><span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">LOCK_FILE</span><span class="p">,)</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="n">snapshots</span><span class="o">.</span><span class="n">SnapshotError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">report</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">step</span><span class="p">,</span> <span class="mi">1</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">snapshots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">made</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">on_snapshot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">on_snapshot</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">made</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">report</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

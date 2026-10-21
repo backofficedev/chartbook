@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.lineage &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/lineage';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.lineage</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""The lineage of a pipeline: every snapshot upstream of it, walked through the pins, and checked.</span>
+
+<span class="sd">A snapshot records what its pipeline was pinned to (``inputs``): for each</span>
+<span class="sd">dependency, the commit and time of the snapshot pinned and one hash over</span>
+<span class="sd">everything pinned from it (``pinned_hash``). Those snapshots record</span>
+<span class="sd">theirs, and so on up: a graph whose every edge is a hash. :func:`walk`</span>
+<span class="sd">follows it up from a pipeline's own lockfile and checks each edge:</span>
+
+<span class="sd">- the snapshot an edge names is in the store and can be read;</span>
+<span class="sd">- what was pinned from it is what it holds: each asset at its hash, for</span>
+<span class="sd">  the pipeline's own lockfile (:func:`chartbook.snapshot.lineage_gaps`);</span>
+<span class="sd">  the hash over everything pinned, recomputed from the snapshot as a pin</span>
+<span class="sd">  would make it, for a snapshot's recorded input;</span>
+<span class="sd">- each snapshot's recorded inputs cover every dependency its own manifest</span>
+<span class="sd">  declares, the manifest kept with it in the store (a snapshot made before</span>
+<span class="sd">  snapshots checked their pins may not);</span>
+<span class="sd">- each asset of each snapshot is in the store, and with ``rehash`` still</span>
+<span class="sd">  hashes to its name.</span>
+
+<span class="sd">A ``git`` dependency is pinned from its clone, not from a snapshot, so the</span>
+<span class="sd">walk stops there and says so. A snapshot met twice is walked once. Nothing</span>
+<span class="sd">is written.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">tomli</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lock</span><span class="p">,</span> <span class="n">snapshot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetRef</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">Store</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
+
+<span class="c1">#: How many snapshots up the walk goes before it stops and says so:</span>
+<span class="c1">#: deeper than any real graph, and a bound on one a store was made to loop</span>
+<span class="n">DEEPEST</span> <span class="o">=</span> <span class="mi">64</span>
+
+<span class="c1">#: The most of a snapshot's kept manifest that is read</span>
+<span class="n">MANIFEST_LIMIT</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+
+<span class="c1">#: The most inputs of one snapshot that are walked: more than any pipeline</span>
+<span class="c1">#: declares, and a bound on a record written to make the walk wide</span>
+<span class="n">MOST_INPUTS</span> <span class="o">=</span> <span class="mi">1000</span>
+
+
+<div class="viewcode-block" id="Node">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Node</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One pipeline in the lineage: the folder it starts from, or a snapshot upstream.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        label: How the pipeline below names it: its key in ``[dependencies]``,</span>
+<span class="sd">            or, at the top, the pipeline's ID.</span>
+<span class="sd">        pipeline: The pipeline's ID, as its snapshot names it; empty when</span>
+<span class="sd">            no snapshot was found.</span>
+<span class="sd">        commit: The commit of the snapshot, or of a ``git`` dependency's</span>
+<span class="sd">            clone.</span>
+<span class="sd">        made_at: When the snapshot was made.</span>
+<span class="sd">        kind: ``working`` (the folder the walk starts from), ``snapshot``,</span>
+<span class="sd">            ``git`` (pinned from a clone; not walked further), ``no_snapshot``</span>
+<span class="sd">            (a pin that names no snapshot, as one in a lockfile changed by</span>
+<span class="sd">            hand does), ``nothing`` (nothing pinned),</span>
+<span class="sd">            ``missing`` (no such snapshot in the store), ``mismatch`` (the</span>
+<span class="sd">            snapshot is there and does not hold what was pinned) or</span>
+<span class="sd">            ``unreadable`` (a record that is not one ChartBook wrote).</span>
+<span class="sd">        gaps: What is wrong at this point of the lineage, one line each.</span>
+<span class="sd">        children: The pipelines it was pinned to.</span>
+<span class="sd">        seen: Whether this snapshot was met before in the walk, and is</span>
+<span class="sd">            shown there.</span>
+<span class="sd">        checked: How the snapshot's lineage was checked when it was made,</span>
+<span class="sd">            as its record says: ``pins``, ``deep``, or empty for one made</span>
+<span class="sd">            before snapshots checked their pins.</span>
+<span class="sd">    """</span>
+
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">made_at</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"snapshot"</span>
+    <span class="n">gaps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">children</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">"Node"</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">checked</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">hashes</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">set</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Node.to_dict">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The node and everything under it, as JSON can hold it."""</span>
+        <span class="n">shown</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"label"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="s2">"kind"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">"commit"</span><span class="p">,</span> <span class="s2">"made_at"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+                <span class="n">shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">seen</span><span class="p">:</span>
+            <span class="n">shown</span><span class="p">[</span><span class="s2">"seen"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"snapshot"</span><span class="p">:</span>
+            <span class="n">shown</span><span class="p">[</span><span class="s2">"checked"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checked</span> <span class="ow">or</span> <span class="kc">None</span>
+            <span class="n">shown</span><span class="p">[</span><span class="s2">"tags"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">)</span>
+        <span class="n">shown</span><span class="p">[</span><span class="s2">"gaps"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaps</span><span class="p">)</span>
+        <span class="n">shown</span><span class="p">[</span><span class="s2">"children"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">child</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">shown</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Lineage">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Lineage">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Lineage</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What :func:`walk` found.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        root: The pipeline the walk started from, with everything upstream.</span>
+<span class="sd">        snapshots: How many snapshots were walked.</span>
+<span class="sd">        rehashed: How many objects were hashed again (with ``rehash``).</span>
+<span class="sd">    """</span>
+
+    <span class="n">root</span><span class="p">:</span> <span class="n">Node</span>
+    <span class="n">snapshots</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">rehashed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Lineage.gaps">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Lineage.gaps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gaps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Every gap, with the node it is at, from the top down."""</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="n">node</span><span class="p">,</span> <span class="n">gap</span><span class="p">)</span> <span class="k">for</span> <span class="n">gap</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                <span class="n">visit</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+        <span class="n">visit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">found</span></div>
+
+
+<div class="viewcode-block" id="Lineage.to_dict">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Lineage.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">"snapshots"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshots</span><span class="p">,</span>
+            <span class="s2">"rehashed"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rehashed</span><span class="p">,</span>
+            <span class="s2">"gaps"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaps</span><span class="p">()),</span>
+            <span class="s2">"root"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="walk">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.walk">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">walk</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">rehash</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Lineage</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Walk a pipeline's lineage up from its lockfile, through every snapshot it leads to, and check each edge.</span>
+
+<span class="sd">    What is read from the store was written by whoever can write to it, so</span>
+<span class="sd">    a record that is not what ChartBook writes is a gap where it is met,</span>
+<span class="sd">    never an error that stops the walk.</span>
+
+<span class="sd">    :param project_dir: The pipeline's folder.</span>
+<span class="sd">    :param store: The store; this user's by default.</span>
+<span class="sd">    :param rehash: Also hash every asset of every snapshot again, and every</span>
+<span class="sd">        model version a label pinned, which reads all their bytes.</span>
+<span class="sd">    :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.</span>
+<span class="sd">    """</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">()</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">pipeline_in</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"working"</span><span class="p">)</span>
+    <span class="n">locked</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">gaps</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">lineage_gaps</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+        <span class="n">locked</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">read_lock</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">lock</span><span class="o">.</span><span class="n">LOCK_FILE</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># a lockfile written by hand: said, not raised</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">gaps</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"its lockfile cannot be checked: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+    <span class="n">found</span><span class="p">,</span> <span class="n">unreadable</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">readable_snapshots</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+    <span class="n">walker</span> <span class="o">=</span> <span class="n">_Walker</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">found</span><span class="p">,</span> <span class="n">unreadable</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">locked</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[]:</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">walker</span><span class="o">.</span><span class="n">guarded</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">walker</span><span class="o">.</span><span class="n">from_lockfile</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">locked</span><span class="o">.</span><span class="n">assets_of</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">))),</span> <span class="n">entry</span><span class="p">))</span>
+    <span class="n">lineage</span> <span class="o">=</span> <span class="n">Lineage</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">snapshots</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">walker</span><span class="o">.</span><span class="n">visited</span><span class="p">))</span>
+    <span class="n">walker</span><span class="o">.</span><span class="n">check_objects</span><span class="p">(</span><span class="n">lineage</span><span class="p">,</span> <span class="n">rehash</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lineage</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_text</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A value of a record as text, if it is text; else empty."""</span>
+    <span class="k">return</span> <span class="n">value</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Walker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One walk: the store's snapshots, read once, and what has been walked."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">found</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">unreadable</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="o">=</span> <span class="n">store</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">found</span> <span class="o">=</span> <span class="n">found</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unreadable</span> <span class="o">=</span> <span class="n">unreadable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visited</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Node</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">guarded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">make</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A node made from records anyone may have written: a gap, not an error, if they are not what they should be."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">make</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"?"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"unreadable"</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"its record is not one ChartBook wrote (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">node</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_at</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">made_at</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">taken</span> <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">found</span> <span class="k">if</span> <span class="n">taken</span><span class="o">.</span><span class="n">same_moment</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">made_at</span><span class="p">)]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_missing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">made_at</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">why</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">reason</span> <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">reason</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">unreadable</span> <span class="k">if</span> <span class="n">commit</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)),</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">said</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">": a record at that commit cannot be read (</span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">why</span>
+            <span class="k">else</span> <span class="s2">" (`store gc` lets old lineage go unless it is run with --keep-lineage)"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"its snapshot at </span><span class="si">{</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">made_at</span><span class="si">}</span><span class="s2">, is not in the store</span><span class="si">{</span><span class="n">said</span><span class="si">}</span><span class="s2">"</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_lockfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">records</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A dependency of the pipeline's own lockfile. Its gaps are the pipeline's, said at the top."""</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">_text</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">))</span> <span class="ow">or</span> <span class="s2">"?"</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)),</span> <span class="n">made_at</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snapshot"</span><span class="p">)))</span>
+        <span class="n">hashed</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">asset_id</span><span class="p">:</span> <span class="n">record</span> <span class="k">for</span> <span class="n">asset_id</span><span class="p">,</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_text</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">))</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"git"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hashed</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"nothing"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"no_snapshot"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="n">plain</span> <span class="o">=</span> <span class="p">[</span><span class="n">record</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">hashed</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ref"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rev"</span><span class="p">)]</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">{</span><span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">hashed</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ref"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rev"</span><span class="p">)}</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span>
+        <span class="n">held</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">taken</span> <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">at</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">content</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">local_name</span><span class="p">(</span><span class="n">record</span><span class="p">))</span> <span class="o">==</span> <span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">plain</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">held</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"missing"</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">at</span> <span class="k">else</span> <span class="s2">"mismatch"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_up</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">held</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A dependency a snapshot recorded among its inputs."""</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)),</span> <span class="n">made_at</span><span class="o">=</span><span class="n">_text</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snapshot"</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"git"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="n">expected</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pinned_hash"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">expected</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"nothing"</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"its pinned_hash is </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">expected</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, not text"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"no_snapshot"</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">"its pin named no snapshot, so nothing says which commit its bytes came from"</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="n">at</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_at</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span>
+        <span class="n">matching</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">at</span><span class="p">:</span>
+            <span class="n">made</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinned_hash</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">made</span> <span class="o">==</span> <span class="n">expected</span><span class="p">:</span>
+                <span class="n">matching</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">taken</span><span class="p">,</span> <span class="n">labels</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">matching</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"missing"</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">at</span> <span class="k">else</span> <span class="s2">"mismatch"</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">at</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_missing</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">unlisted</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"listing_error"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+                <span class="n">said</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"; the store's objects could not be listed (</span><span class="si">{</span><span class="n">unlisted</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">unlisted</span> <span class="k">else</span> <span class="s2">""</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"the hash recorded over what was pinned from its snapshot at </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2"> is "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">expected</span><span class="p">[:</span><span class="mi">19</span><span class="p">]</span><span class="si">}</span><span class="s2">…, and that snapshot gives another: what was pinned is not what it "</span>
+                    <span class="sa">f</span><span class="s2">"holds (or a version one of its labels names is no longer in the store)</span><span class="si">{</span><span class="n">said</span><span class="si">}</span><span class="s2">"</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="n">taken</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="n">matching</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_up</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">depth</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A snapshot found: what it is, whether its inputs are complete, and what it was pinned to."""</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="s2">"snapshot"</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">made_at</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">made_at</span>
+        <span class="n">recorded</span> <span class="o">=</span> <span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">built_with</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"lineage"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">built_with</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">checked</span> <span class="o">=</span> <span class="n">recorded</span> <span class="k">if</span> <span class="n">recorded</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"pins"</span><span class="p">,</span> <span class="s2">"deep"</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">tags</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">hashes</span> <span class="o">=</span> <span class="p">{</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">taken</span><span class="o">.</span><span class="n">content</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">h</span><span class="p">}</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">depth</span> <span class="o">&gt;</span> <span class="n">DEEPEST</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"the walk stops here, </span><span class="si">{</span><span class="n">DEEPEST</span><span class="si">}</span><span class="s2"> snapshots up: the store may have been made to loop"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="n">place</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">place</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">visited</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">seen</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">return</span> <span class="n">node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visited</span><span class="p">[</span><span class="n">place</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>
+        <span class="n">listed</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">inputs</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]:</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">[:</span><span class="n">MOST_INPUTS</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">),</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MOST_INPUTS</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"its record lists </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span><span class="si">}</span><span class="s2"> inputs; the first </span><span class="si">{</span><span class="n">MOST_INPUTS</span><span class="si">}</span><span class="s2"> are walked"</span><span class="p">)</span>
+        <span class="n">declared</span><span class="p">,</span> <span class="n">why</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_declared</span><span class="p">(</span><span class="n">taken</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">declared</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">why</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">declared</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">inputs</span><span class="p">)):</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"its manifest declares the dependency </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">, and the snapshot records no pin of "</span>
+                    <span class="sa">f</span><span class="s2">"it: it was made before snapshots checked their pins, or from a lockfile that did "</span>
+                    <span class="sa">f</span><span class="s2">"not list it"</span>
+                <span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">guarded</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_from_input</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">entry</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">node</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_declared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">taken</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">set</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The dependencies the snapshot's own manifest declares, as kept with it; None, and why, if that cannot be known."""</span>
+        <span class="n">documents</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">documents</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">documents</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">documents</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="p">(</span>
+                <span class="s2">"its manifest is not kept with it (it was made before snapshots kept their documents), "</span>
+                <span class="s2">"so whether its inputs are complete cannot be checked"</span>
+            <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">documents</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]))</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span>
+                <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_regular_file</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="s2">"chartbook.toml"</span><span class="p">,</span> <span class="n">MANIFEST_LIMIT</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">,</span> <span class="ne">RecursionError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"its manifest kept with it cannot be read (</span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">), so whether its inputs are complete cannot be checked"</span>
+        <span class="n">dependencies</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dependencies"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()),</span> <span class="s2">""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pinned_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">frozenset</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""The hash over everything a pin of this snapshot under this key would hold, as ``chartbook pin`` makes it; and the label versions in it.</span>
+
+<span class="sd">        When a label's version is named by more than one object (anyone who</span>
+<span class="sd">        can write to the store can add one), each reading is tried, and the</span>
+<span class="sd">        one that gives *expected* is taken.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+
+        <span class="n">records</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">):</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">renamed</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">key</span><span class="p">)</span>
+            <span class="n">records</span><span class="p">[</span><span class="n">record</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">record</span>
+        <span class="n">labelled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_label_records</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">choices</span> <span class="o">=</span> <span class="p">[[(</span><span class="n">label_id</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">options</span><span class="p">]</span> <span class="k">for</span> <span class="n">label_id</span><span class="p">,</span> <span class="n">options</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">labelled</span><span class="o">.</span><span class="n">items</span><span class="p">())]</span>
+        <span class="n">made</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">picked</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="o">*</span><span class="n">choices</span><span class="p">),</span> <span class="mi">64</span><span class="p">):</span>
+            <span class="n">trial</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">records</span><span class="p">,</span> <span class="o">**</span><span class="nb">dict</span><span class="p">(</span><span class="n">picked</span><span class="p">)}</span>
+            <span class="n">made</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">pinned_hash</span><span class="p">(</span><span class="n">trial</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">expected</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">made</span> <span class="o">==</span> <span class="n">expected</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">made</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">picked</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">choices</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">lock</span><span class="o">.</span><span class="n">pinned_hash</span><span class="p">(</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="nb">frozenset</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">made</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_label_records</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">taken</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The records a pin may have made of the snapshot's labels, by ID, each with the readings possible.</span>
+
+<span class="sd">        As :func:`chartbook.snapshot.label_records` makes them. Each label</span>
+<span class="sd">        names the start of a version's hash. The version is looked for among</span>
+<span class="sd">        the snapshots this walk read (never the store's records again, so</span>
+<span class="sd">        one that cannot be read does not stop it); failing that, among the</span>
+<span class="sd">        store's objects. Only versions whose bytes are in the store count,</span>
+<span class="sd">        as at pin time; a label with none is left out, as a pin leaves it.</span>
+<span class="sd">        """</span>
+        <span class="n">records</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">labels</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">labels</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">named</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">named</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">versions</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">named</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">start</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">12</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">versions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">versions</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="n">content_hash</span> <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">versions_of_pipeline</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">subdirectory</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">found</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">found</span>
+                        <span class="p">)</span>
+                    <span class="p">}</span>
+                <span class="n">named_hashes</span> <span class="o">=</span> <span class="p">{</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">versions</span> <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">start</span><span class="p">)}</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">named_hashes</span><span class="p">:</span>
+                    <span class="n">named_hashes</span> <span class="o">=</span> <span class="p">{</span><span class="n">h</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objects</span><span class="p">()</span> <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">start</span><span class="p">)}</span>
+                <span class="n">options</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">content_hash</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">named_hashes</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">content_hash</span><span class="p">):</span>
+                            <span class="k">continue</span>
+                    <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">renamed</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">"trained_on"</span><span class="p">}</span>
+                    <span class="n">ref</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">AssetRef</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"ref"</span><span class="p">]),</span> <span class="n">rev</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
+                    <span class="n">options</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="o">**</span><span class="n">record</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">),</span> <span class="s2">"ref"</span><span class="p">:</span> <span class="n">ref</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="s2">"label"</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"content_hash"</span><span class="p">:</span> <span class="n">content_hash</span><span class="p">})</span>
+                <span class="k">if</span> <span class="n">options</span><span class="p">:</span>
+                    <span class="n">records</span><span class="p">[</span><span class="n">options</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"id"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="k">return</span> <span class="n">records</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_objects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Every object's hash in the store, listed once a walk needs it."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_listed"</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">listing_error</span> <span class="o">=</span> <span class="s2">""</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_listed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">hashes</span><span class="p">())</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_listed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">listing_error</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listed</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_objects</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lineage</span><span class="p">:</span> <span class="n">Lineage</span><span class="p">,</span> <span class="n">rehash</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Each walked snapshot's assets, and each label version pinned: in the store, and with ``rehash``, still what their names say."""</span>
+        <span class="n">owners</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Node</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">visited</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">content_hash</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">hashes</span><span class="p">):</span>
+                <span class="n">owners</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">content_hash</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="n">present</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">nodes</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">owners</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">there</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">content_hash</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="n">there</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">there</span><span class="p">:</span>
+                <span class="n">present</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">content_hash</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"holds </span><span class="si">{</span><span class="n">content_hash</span><span class="p">[:</span><span class="mi">19</span><span class="p">]</span><span class="si">}</span><span class="s2">…, which the store does not have"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rehash</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">problem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">present</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">owners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"holds </span><span class="si">{</span><span class="n">problem</span><span class="o">.</span><span class="n">content_hash</span><span class="p">[:</span><span class="mi">19</span><span class="p">]</span><span class="si">}</span><span class="s2">…, which is not what its name says: </span><span class="si">{</span><span class="n">problem</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">lineage</span><span class="o">.</span><span class="n">rehashed</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">present</span><span class="p">)</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

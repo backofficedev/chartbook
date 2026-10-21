@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.backends.databricks &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/backends/databricks';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.backends.databricks</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Databricks: a source in a Databricks SQL warehouse. Experimental.</span>
+
+<span class="sd">An early experiment: tested against a stand-in for the warehouse</span>
+<span class="sd">(``tests/mocked_databricks.py``), not yet against a real workspace. See</span>
+<span class="sd">the roadmap in the documentation.</span>
+
+<span class="sd">::</span>
+
+<span class="sd">    [sources.warehouse]</span>
+<span class="sd">    backend = "databricks"</span>
+<span class="sd">    url = "databricks://dbc-a1b2c3d4-e5f6.cloud.databricks.com?http_path=/sql/1.0/warehouses/abc123&amp;catalog=main"</span>
+
+<span class="sd">    [dataframes.curve]</span>
+<span class="sd">    source = "warehouse"</span>
+<span class="sd">    table = "main.rates.curve"</span>
+
+<span class="sd">The URL names the workspace's host, the warehouse's HTTP path (its</span>
+<span class="sd">"Connection details" show both), and optionally the catalog and schema a</span>
+<span class="sd">name without them is found in. Every part is optional in a manifest, since</span>
+<span class="sd">the machine may supply it; a manifest's URL names no user, no token and no</span>
+<span class="sd">way of signing in. The driver is the Databricks SQL connector, which</span>
+<span class="sd">``pip install chartbook[databricks]`` installs.</span>
+
+<span class="sd">**The host comes from the machine, and so does the token.** A token is sent</span>
+<span class="sd">only to a host this machine names: the host of the machine's URL for the</span>
+<span class="sd">source (``CHARTBOOK_SOURCE_&lt;NAME&gt;_URL`` or ``~/.chartbook/sources.toml``,</span>
+<span class="sd">``databricks://token:&lt;token&gt;@&lt;host&gt;?http_path=…``), or else</span>
+<span class="sd">``DATABRICKS_HOST``, with ``DATABRICKS_TOKEN``, the engine's own variables.</span>
+<span class="sd">A manifest's host, or the host in another pipeline's record, is checked</span>
+<span class="sd">against it and never used in its place: a manifest or a store anyone can</span>
+<span class="sd">write must not be able to send this machine's token somewhere else. The</span>
+<span class="sd">HTTP path is the machine URL's, else the manifest's, else</span>
+<span class="sd">``DATABRICKS_HTTP_PATH``. ``auth=oauth`` in the machine's URL signs in</span>
+<span class="sd">through the browser instead of a token, once for the life of the process.</span>
+
+<span class="sd">A pipeline's SQL runs with this machine's credentials in this machine's</span>
+<span class="sd">workspace: building a pipeline someone else wrote runs their queries as</span>
+<span class="sd">you, as running their code does.</span>
+
+<span class="sd">**Reading.** :meth:`DatabricksBackend.sql` asks the warehouse for the</span>
+<span class="sd">query's columns at once, so a name it does not know is refused then, and</span>
+<span class="sd">returns a lazy frame that runs the query when it is collected, a batch at a</span>
+<span class="sd">time; ``head(n)`` with nothing filtered asks for ``n`` rows. ChartBook runs</span>
+<span class="sd">nothing but ``select`` on its own account; the SQL a person runs through</span>
+<span class="sd">``data.sql()`` or ``data.connect()`` is between them and the warehouse.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_qs</span><span class="p">,</span> <span class="n">unquote</span><span class="p">,</span> <span class="n">urlsplit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Backend</span><span class="p">,</span>
+    <span class="n">BackendError</span><span class="p">,</span>
+    <span class="n">machine_source_url</span><span class="p">,</span>
+    <span class="n">quote_identifier</span><span class="p">,</span>
+    <span class="n">refuse_in_an_untrusted_build</span><span class="p">,</span>
+    <span class="n">scheme_of</span><span class="p">,</span>
+    <span class="n">source_env_var</span><span class="p">,</span>
+    <span class="n">subselect</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">Location</span>
+
+<span class="c1">#: What a Databricks URL may say after ``?``.</span>
+<span class="n">URL_OPTIONS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"http_path"</span><span class="p">,</span> <span class="s2">"catalog"</span><span class="p">,</span> <span class="s2">"schema"</span><span class="p">,</span> <span class="s2">"auth"</span><span class="p">)</span>
+
+<span class="c1">#: How a connection may sign in: a token, or the browser.</span>
+<span class="n">AUTH</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"token"</span><span class="p">,</span> <span class="s2">"oauth"</span><span class="p">)</span>
+
+<span class="c1">#: Rows asked of the warehouse at a time when a frame is collected.</span>
+<span class="n">BATCH_ROWS</span> <span class="o">=</span> <span class="mi">100_000</span>
+
+<span class="c1">#: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host</span>
+<span class="c1">#: is never one label), and nothing a message could carry besides.</span>
+<span class="n">_HOST</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+"</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_SignedIn</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The OAuth sign-ins of this process, in memory, by host: one sign-in in the browser serves every connection.</span>
+
+<span class="sd">    What the connector's ``experimental_oauth_persistence`` takes. Nothing</span>
+<span class="sd">    is written to disk.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tokens</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">persist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hostname</span><span class="p">,</span> <span class="n">oauth_token</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tokens</span><span class="p">[</span><span class="n">hostname</span><span class="p">]</span> <span class="o">=</span> <span class="n">oauth_token</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hostname</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tokens</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">hostname</span><span class="p">)</span>
+
+
+<span class="n">_SIGNED_IN</span> <span class="o">=</span> <span class="n">_SignedIn</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="DatabricksURL">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksURL">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DatabricksURL</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The parts of a ``databricks://`` URL; each is empty when the URL does not say it."""</span>
+
+    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">http_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">schema</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">auth</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="host_of">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.host_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">host_of</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A workspace's host as it is compared, the host name alone in lower case; empty if *text* gives none.</span>
+
+<span class="sd">    ``host``, ``https://host/``, ``host:443`` and ``https://host/?o=123``, as</span>
+<span class="sd">    a workspace's address is written, all give ``host``.</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">text</span> <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">text</span> <span class="k">else</span> <span class="s2">"https://"</span> <span class="o">+</span> <span class="n">text</span><span class="p">)</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">port</span>  <span class="c1"># noqa: B018 - a port that does not parse is not an address</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">name</span> <span class="k">if</span> <span class="n">_HOST</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="parse_url">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.parse_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DatabricksURL</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Read a ``databricks://[token:&lt;token&gt;@]&lt;host&gt;?http_path=…&amp;catalog=…&amp;schema=…&amp;auth=…`` URL.</span>
+
+<span class="sd">    :raises ValueError: If it is not one: another scheme, a host that is</span>
+<span class="sd">        not a host name, a path after the host, a port, an option that is</span>
+<span class="sd">        not one of :data:`URL_OPTIONS`, an option given twice, a fragment,</span>
+<span class="sd">        or an ``auth`` that is not ``token`` or ``oauth``. The message</span>
+<span class="sd">        repeats nothing of the url, which may hold a token anywhere.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">scheme_of</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">"databricks"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a Databricks url begins with databricks://"</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="c1"># Never the parser's message: it repeats the url, token and all</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"not a url ChartBook can read"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="k">if</span> <span class="n">parts</span><span class="o">.</span><span class="n">fragment</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a Databricks url has nothing after #"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parts</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"a Databricks url names the host and nothing after it; the warehouse's HTTP path "</span>
+            <span class="s2">"goes after ?, as databricks://&lt;host&gt;?http_path=/sql/1.0/warehouses/&lt;id&gt;"</span>
+        <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">parts</span><span class="o">.</span><span class="n">port</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a Databricks url names the host without a port: the workspace is reached on 443"</span><span class="p">)</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">parse_qs</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">query</span><span class="p">,</span> <span class="n">keep_blank_values</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">options</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">URL_OPTIONS</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a Databricks url takes </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">URL_OPTIONS</span><span class="p">)</span><span class="si">}</span><span class="s2"> after ?, and nothing else"</span><span class="p">)</span>
+    <span class="n">twice</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">twice</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a Databricks url gives </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">twice</span><span class="p">)</span><span class="si">}</span><span class="s2"> more than once"</span><span class="p">)</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"auth"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">found</span><span class="p">[</span><span class="s2">"auth"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">AUTH</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"auth is token or oauth"</span><span class="p">)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">hostname</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_HOST</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">host</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"a Databricks url's host is a host name: letters, digits, dots and hyphens"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DatabricksURL</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+        <span class="n">http_path</span><span class="o">=</span><span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"http_path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">catalog</span><span class="o">=</span><span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"catalog"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"schema"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">auth</span><span class="o">=</span><span class="n">found</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"auth"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+        <span class="n">token</span><span class="o">=</span><span class="n">unquote</span><span class="p">(</span><span class="n">parts</span><span class="o">.</span><span class="n">password</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Connection">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.Connection">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Connection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a connection is opened with. ``token`` is empty when it signs in through the browser."""</span>
+
+    <span class="n">host</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">http_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">schema</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">oauth</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>  <span class="c1"># never the token</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Connection(host=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="si">!r}</span><span class="s2">, http_path=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">http_path</span><span class="si">!r}</span><span class="s2">, oauth=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">oauth</span><span class="si">}</span><span class="s2">)"</span></div>
+
+
+
+<div class="viewcode-block" id="connection_for">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.connection_for">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">connection_for</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">public_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Connection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How a source is reached from this machine; see the module's text for the rules.</span>
+
+<span class="sd">    :param source: The source's name, by which the machine's URL is found.</span>
+<span class="sd">    :param public_url: Its URL as the manifest, or another pipeline's</span>
+<span class="sd">        record, has it. Its host is a check; a user or a password in it is</span>
+<span class="sd">        never used.</span>
+<span class="sd">    :raises chartbook.backends.BackendError: If this machine does not say enough to connect,</span>
+<span class="sd">        or names another host than the manifest. The message never holds a</span>
+<span class="sd">        token.</span>
+<span class="sd">    """</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">public</span> <span class="o">=</span> <span class="n">parse_url</span><span class="p">(</span><span class="n">public_url</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> has a url ChartBook cannot read: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+    <span class="n">variable</span> <span class="o">=</span> <span class="n">source_env_var</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="k">if</span> <span class="n">source</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">machine_text</span> <span class="o">=</span> <span class="n">machine_source_url</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="k">if</span> <span class="n">source</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">machine</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">machine_text</span><span class="p">:</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2"> or ~/.chartbook/sources.toml"</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">machine</span> <span class="o">=</span> <span class="n">parse_url</span><span class="p">(</span><span class="n">machine_text</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The machine's url for the source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, from </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">machine</span><span class="o">.</span><span class="n">host</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The machine's url for the source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, from </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, names no host."</span><span class="p">)</span>
+        <span class="n">host</span> <span class="o">=</span> <span class="n">machine</span><span class="o">.</span><span class="n">host</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="s2">"DATABRICKS_HOST"</span>
+        <span class="n">host</span> <span class="o">=</span> <span class="n">host_of</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DATABRICKS_HOST"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DATABRICKS_HOST"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">host</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+                <span class="s2">"DATABRICKS_HOST is not a workspace's address: it is the host, as "</span>
+                <span class="s2">"dbc-a1b2c3d4-e5f6.cloud.databricks.com or https://adb-123.azuredatabricks.net/."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">host</span><span class="p">:</span>
+            <span class="n">named</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="n">public</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">public</span><span class="o">.</span><span class="n">host</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> is in Databricks, and this machine names no workspace</span><span class="si">{</span><span class="n">named</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"Set DATABRICKS_HOST to the workspace's host and DATABRICKS_TOKEN to an access token, "</span>
+                <span class="sa">f</span><span class="s2">"or give the whole url in </span><span class="si">{</span><span class="n">variable</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'CHARTBOOK_SOURCE_&lt;NAME&gt;_URL'</span><span class="si">}</span><span class="s2">: "</span>
+                <span class="sa">f</span><span class="s2">"databricks://token:&lt;token&gt;@&lt;host&gt;?http_path=&lt;the warehouse's HTTP path&gt;."</span>
+            <span class="p">)</span>
+    <span class="k">if</span> <span class="n">public</span><span class="o">.</span><span class="n">host</span> <span class="ow">and</span> <span class="n">public</span><span class="o">.</span><span class="n">host</span> <span class="o">!=</span> <span class="n">host</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> names the workspace </span><span class="si">{</span><span class="n">public</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">, and this machine's, from </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">, "</span>
+            <span class="sa">f</span><span class="s2">"is </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">. A token is sent only to the workspace this machine names: point </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> at "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">public</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">, or change the url the pipeline names."</span>
+        <span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">machine</span><span class="o">.</span><span class="n">token</span> <span class="k">if</span> <span class="n">machine</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="n">named</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DATABRICKS_HOST"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">token</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">named</span> <span class="ow">or</span> <span class="n">host_of</span><span class="p">(</span><span class="n">named</span><span class="p">)</span> <span class="o">==</span> <span class="n">host</span><span class="p">):</span>
+        <span class="c1"># DATABRICKS_TOKEN is for DATABRICKS_HOST's workspace, or for whichever this machine names</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DATABRICKS_TOKEN"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="c1"># How to sign in is the machine's to say, never a manifest's or a record's</span>
+    <span class="n">oauth</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">machine</span> <span class="ow">and</span> <span class="n">machine</span><span class="o">.</span><span class="n">auth</span> <span class="o">==</span> <span class="s2">"oauth"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">oauth</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">token</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> is in the Databricks workspace </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">, and this machine has no token "</span>
+            <span class="sa">f</span><span class="s2">"for it. Set DATABRICKS_TOKEN to an access token (in the workspace: your user name, "</span>
+            <span class="sa">f</span><span class="s2">"Settings, Developer, Access tokens), or put it in </span><span class="si">{</span><span class="n">variable</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'CHARTBOOK_SOURCE_&lt;NAME&gt;_URL'</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"as databricks://token:&lt;token&gt;@</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">?http_path=…; or, to sign in through the browser, set "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">variable</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'CHARTBOOK_SOURCE_&lt;NAME&gt;_URL'</span><span class="si">}</span><span class="s2"> to databricks://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">?auth=oauth."</span>
+        <span class="p">)</span>
+    <span class="n">http_path</span> <span class="o">=</span> <span class="p">(</span><span class="n">machine</span><span class="o">.</span><span class="n">http_path</span> <span class="k">if</span> <span class="n">machine</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">public</span><span class="o">.</span><span class="n">http_path</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DATABRICKS_HTTP_PATH"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">http_path</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> names no SQL warehouse. Add http_path=&lt;the warehouse's HTTP path&gt; to "</span>
+            <span class="sa">f</span><span class="s2">"its url, or set DATABRICKS_HTTP_PATH; the warehouse's Connection details show it."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">Connection</span><span class="p">(</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+        <span class="n">http_path</span><span class="o">=</span><span class="n">http_path</span><span class="p">,</span>
+        <span class="n">catalog</span><span class="o">=</span><span class="p">(</span><span class="n">machine</span><span class="o">.</span><span class="n">catalog</span> <span class="k">if</span> <span class="n">machine</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">public</span><span class="o">.</span><span class="n">catalog</span><span class="p">,</span>
+        <span class="n">schema</span><span class="o">=</span><span class="p">(</span><span class="n">machine</span><span class="o">.</span><span class="n">schema</span> <span class="k">if</span> <span class="n">machine</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">or</span> <span class="n">public</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+        <span class="n">oauth</span><span class="o">=</span><span class="n">oauth</span><span class="p">,</span>
+        <span class="n">token</span><span class="o">=</span><span class="s2">""</span> <span class="k">if</span> <span class="n">oauth</span> <span class="k">else</span> <span class="n">token</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DatabricksBackend">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DatabricksBackend</span><span class="p">(</span><span class="n">Backend</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A Databricks SQL warehouse, reached with the Databricks SQL connector.</span>
+
+<span class="sd">    A connection is opened for each thing asked and closed after it; a lazy</span>
+<span class="sd">    frame opens its own when it is collected.</span>
+<span class="sd">    """</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">"databricks"</span>
+
+<div class="viewcode-block" id="DatabricksBackend.check_url">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.check_url">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A manifest's URL: what :func:`parse_url` takes, with no user, no token, and no way of signing in.</span>
+
+<span class="sd">        The message never repeats what was before the ``@``, which is</span>
+<span class="sd">        looked for before the url is read at all.</span>
+<span class="sd">        """</span>
+        <span class="n">before_options</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"?"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"#"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"@"</span> <span class="ow">in</span> <span class="n">before_options</span> <span class="ow">or</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">before_options</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"the url names a user or a token before the host. A manifest is committed, so its url "</span>
+                <span class="s2">"holds the public part only; the machine supplies the token, in DATABRICKS_TOKEN, "</span>
+                <span class="s2">"CHARTBOOK_SOURCE_&lt;NAME&gt;_URL or ~/.chartbook/sources.toml."</span>
+            <span class="p">)</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">netloc</span> <span class="o">=</span> <span class="n">urlsplit</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">netloc</span>
+        <span class="k">if</span> <span class="s2">"@"</span> <span class="ow">in</span> <span class="n">netloc</span> <span class="ow">or</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">netloc</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"the url names a user or a token before the host. A manifest is committed, so its url "</span>
+                <span class="s2">"holds the public part only; the machine supplies the token, in DATABRICKS_TOKEN, "</span>
+                <span class="s2">"CHARTBOOK_SOURCE_&lt;NAME&gt;_URL or ~/.chartbook/sources.toml."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">parsed</span><span class="o">.</span><span class="n">auth</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"the url says how to sign in, and that is the machine's to say: put auth=oauth in "</span>
+                <span class="s2">"CHARTBOOK_SOURCE_&lt;NAME&gt;_URL or ~/.chartbook/sources.toml."</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DatabricksBackend.engine">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.engine">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">engine</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+        <span class="c1"># The machine's URL for the source names the workspace, so two</span>
+        <span class="c1"># sources are two engines even when their public URLs are the same</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DatabricksBackend.connect">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""A connection of the Databricks SQL connector, signed in as this machine says.</span>
+
+<span class="sd">        :raises chartbook.backends.BackendError: If the connector is not installed, this</span>
+<span class="sd">            machine does not say enough, this is a build of files from a</span>
+<span class="sd">            store, or the warehouse refuses.</span>
+<span class="sd">        """</span>
+        <span class="n">refuse_in_an_untrusted_build</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">databricks</span><span class="w"> </span><span class="kn">import</span> <span class="n">sql</span> <span class="k">as</span> <span class="n">databricks_sql</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The source </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> is in Databricks, and the Databricks SQL connector is not "</span>
+                <span class="sa">f</span><span class="s2">"installed: `pip install chartbook[databricks]` installs it."</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">connection_for</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># The arguments are made in a function of their own, so that no</span>
+            <span class="c1"># frame here holds the token for a traceback to show</span>
+            <span class="k">return</span> <span class="n">databricks_sql</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">_arguments</span><span class="p">(</span><span class="n">connection</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - the connector's own errors, whatever they are</span>
+            <span class="n">said</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">token</span><span class="p">,</span> <span class="s2">"&lt;token&gt;"</span><span class="p">)</span> <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">token</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="c1"># Raised out here, so that the connector's error, which may hold the</span>
+        <span class="c1"># token, is not carried along as the context of this one</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot connect to the Databricks workspace </span><span class="si">{</span><span class="n">connection</span><span class="o">.</span><span class="n">host</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">said</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DatabricksBackend.ref">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.ref">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ref</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""A table as a quoted identifier, each part between backticks; a query as a sub-select.</span>
+
+<span class="sd">        :raises chartbook.backends.BackendError: For a file, which the warehouse cannot read.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"table"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">quote_identifier</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span> <span class="s2">"`"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"query"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">subselect</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">sql</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"A Databricks warehouse cannot read a file of this machine, </span><span class="si">{</span><span class="nb">getattr</span><span class="p">(</span><span class="n">location</span><span class="p">,</span><span class="w"> </span><span class="s1">'path'</span><span class="p">,</span><span class="w"> </span><span class="n">location</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">answer</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run *query* on a connection of its own and return ``answer(cursor)``; the engine's errors as BackendError."""</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">answer</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">BackendError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - the warehouse's own message</span>
+            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - closed already, or the session timed out</span>
+                <span class="k">pass</span>
+
+<div class="viewcode-block" id="DatabricksBackend.sql">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.sql">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sql</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run SQL in the warehouse, as a Polars LazyFrame.</span>
+
+<span class="sd">        The warehouse binds it now (``select * from (…) limit 0``), so a name</span>
+<span class="sd">        it does not know is refused at once, and its columns are the</span>
+<span class="sd">        frame's schema; should the connector give an empty result no</span>
+<span class="sd">        columns, one row is asked for instead, and failing that the schema</span>
+<span class="sd">        is read from the type names the warehouse gives. Collecting the</span>
+<span class="sd">        frame runs it, and each batch is checked against that schema. An</span>
+<span class="sd">        error found while collecting comes as Polars' ``ComputeError``</span>
+<span class="sd">        with the warehouse's message in it, or as the</span>
+<span class="sd">        :class:`~chartbook.backends.BackendError` itself, by Polars version.</span>
+
+<span class="sd">        :raises chartbook.backends.BackendError: If the warehouse refuses the query, with its message.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">polars.io.plugins</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_io_source</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">columns</span><span class="p">(</span><span class="n">cursor</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall_arrow</span><span class="p">(),</span> <span class="nb">list</span><span class="p">(</span><span class="n">cursor</span><span class="o">.</span><span class="n">description</span> <span class="ow">or</span> <span class="p">[])</span>
+
+        <span class="n">empty</span><span class="p">,</span> <span class="n">described</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select * from </span><span class="si">{</span><span class="n">subselect</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="si">}</span><span class="s2"> limit 0"</span><span class="p">,</span> <span class="n">columns</span><span class="p">)</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">described</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">empty</span><span class="o">.</span><span class="n">column_names</span><span class="p">)</span> <span class="o">!=</span> <span class="n">names</span><span class="p">:</span>
+            <span class="n">empty</span><span class="p">,</span> <span class="n">described</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select * from </span><span class="si">{</span><span class="n">subselect</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="si">}</span><span class="s2"> limit 1"</span><span class="p">,</span> <span class="n">columns</span><span class="p">)</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">described</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">empty</span><span class="o">.</span><span class="n">column_names</span><span class="p">)</span> <span class="o">==</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">schema</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">from_arrow</span><span class="p">(</span><span class="n">empty</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">schema</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a type Polars cannot take</span>
+                <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Polars cannot take the query's columns: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># The result is empty and the connector sent no columns with it</span>
+            <span class="n">schema</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Schema</span><span class="p">({</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">_polars_type</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">described</span><span class="p">})</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">checked</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">wanted</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">"""A batch as the schema says it is; else what differs, said, rather than a frame mistyped."""</span>
+            <span class="k">if</span> <span class="n">frame</span><span class="o">.</span><span class="n">schema</span> <span class="o">!=</span> <span class="n">wanted</span><span class="p">:</span>
+                <span class="n">got</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">schema</span><span class="p">)</span>
+                <span class="n">differ</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">wanted</span> <span class="k">if</span> <span class="n">got</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="n">wanted</span><span class="p">[</span><span class="n">name</span><span class="p">]]</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="n">got</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"The warehouse sent </span><span class="si">{</span><span class="n">differ</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> as </span><span class="si">{</span><span class="n">got</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">differ</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2">, and gave its type as "</span>
+                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">wanted</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">differ</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2"> when the query was bound."</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">frame</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">batches</span><span class="p">(</span><span class="n">with_columns</span><span class="p">,</span> <span class="n">predicate</span><span class="p">,</span> <span class="n">n_rows</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+            <span class="c1"># Rows are asked for a batch at a time; a head with nothing</span>
+            <span class="c1"># filtered asks the warehouse for that many and no more</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">query</span> <span class="k">if</span> <span class="n">n_rows</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">predicate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"select * from </span><span class="si">{</span><span class="n">subselect</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="si">}</span><span class="s2"> limit </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">n_rows</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">n_rows</span>
+            <span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cursor</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - the warehouse's own message</span>
+                        <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                    <span class="k">while</span> <span class="n">left</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">left</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">batch</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchmany_arrow</span><span class="p">(</span><span class="n">batch_size</span> <span class="ow">or</span> <span class="n">BATCH_ROWS</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+                            <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                        <span class="k">if</span> <span class="n">batch</span><span class="o">.</span><span class="n">num_rows</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="k">return</span>
+                        <span class="n">frame</span> <span class="o">=</span> <span class="n">checked</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">from_arrow</span><span class="p">(</span><span class="n">batch</span><span class="p">),</span> <span class="n">schema</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">predicate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">predicate</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">with_columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">with_columns</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">left</span><span class="p">)</span>
+                            <span class="n">left</span> <span class="o">-=</span> <span class="n">frame</span><span class="o">.</span><span class="n">height</span>
+                        <span class="k">yield</span> <span class="n">frame</span>
+                <span class="k">finally</span><span class="p">:</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+                    <span class="k">pass</span>
+
+        <span class="c1"># Each batch is checked in `checked`: validate_schema= came only in Polars 1.25</span>
+        <span class="k">return</span> <span class="n">register_io_source</span><span class="p">(</span><span class="n">batches</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DatabricksBackend.describe">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.describe">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""A dataframe's columns, with the warehouse's type names (``int``, ``string``, ``timestamp``), and its row count."""</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">answer</span><span class="p">(</span><span class="n">cursor</span><span class="p">):</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"dtype"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">1</span><span class="p">])}</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">description</span> <span class="ow">or</span> <span class="p">[]]</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall_arrow</span><span class="p">()</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select count(*) from </span><span class="si">{</span><span class="n">ref</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">rows</span><span class="p">,)</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">columns</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span><span class="sa">f</span><span class="s2">"select * from </span><span class="si">{</span><span class="n">ref</span><span class="si">}</span><span class="s2"> limit 0"</span><span class="p">,</span> <span class="n">answer</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DatabricksBackend.span">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.DatabricksBackend.span">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">:</span> <span class="s2">"Location"</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The first and last date in one column: ``try_cast(col as timestamp)``, so what is not one is null."""</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">"`"</span> <span class="o">+</span> <span class="n">column</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"`"</span><span class="p">,</span> <span class="s2">"``"</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"`"</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"select min(try_cast(</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> as timestamp)), max(try_cast(</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> as timestamp)) from </span><span class="si">{</span><span class="n">ref</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="k">lambda</span> <span class="n">cursor</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()),</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_arguments</span><span class="p">(</span><span class="n">connection</span><span class="p">:</span> <span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What the connector's ``connect()`` is given for a connection."""</span>
+    <span class="n">arguments</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"server_hostname"</span><span class="p">:</span> <span class="n">connection</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+        <span class="s2">"http_path"</span><span class="p">:</span> <span class="n">connection</span><span class="o">.</span><span class="n">http_path</span><span class="p">,</span>
+        <span class="s2">"user_agent_entry"</span><span class="p">:</span> <span class="s2">"chartbook"</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">oauth</span><span class="p">:</span>
+        <span class="n">arguments</span><span class="p">[</span><span class="s2">"auth_type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"databricks-oauth"</span>
+        <span class="n">arguments</span><span class="p">[</span><span class="s2">"experimental_oauth_persistence"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_SIGNED_IN</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">arguments</span><span class="p">[</span><span class="s2">"access_token"</span><span class="p">]</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">token</span>
+    <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">catalog</span><span class="p">:</span>
+        <span class="n">arguments</span><span class="p">[</span><span class="s2">"catalog"</span><span class="p">]</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">catalog</span>
+    <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">schema</span><span class="p">:</span>
+        <span class="n">arguments</span><span class="p">[</span><span class="s2">"schema"</span><span class="p">]</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">schema</span>
+    <span class="k">return</span> <span class="n">arguments</span>
+
+
+<span class="c1">#: The Polars type of a column of each Databricks type a schema can be read from by name.</span>
+<span class="n">_TYPES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"tinyint"</span><span class="p">:</span> <span class="s2">"Int8"</span><span class="p">,</span> <span class="s2">"byte"</span><span class="p">:</span> <span class="s2">"Int8"</span><span class="p">,</span> <span class="s2">"smallint"</span><span class="p">:</span> <span class="s2">"Int16"</span><span class="p">,</span> <span class="s2">"short"</span><span class="p">:</span> <span class="s2">"Int16"</span><span class="p">,</span> <span class="s2">"int"</span><span class="p">:</span> <span class="s2">"Int32"</span><span class="p">,</span> <span class="s2">"integer"</span><span class="p">:</span> <span class="s2">"Int32"</span><span class="p">,</span>
+    <span class="s2">"bigint"</span><span class="p">:</span> <span class="s2">"Int64"</span><span class="p">,</span> <span class="s2">"long"</span><span class="p">:</span> <span class="s2">"Int64"</span><span class="p">,</span> <span class="s2">"float"</span><span class="p">:</span> <span class="s2">"Float32"</span><span class="p">,</span> <span class="s2">"double"</span><span class="p">:</span> <span class="s2">"Float64"</span><span class="p">,</span> <span class="s2">"string"</span><span class="p">:</span> <span class="s2">"String"</span><span class="p">,</span>
+    <span class="s2">"boolean"</span><span class="p">:</span> <span class="s2">"Boolean"</span><span class="p">,</span> <span class="s2">"date"</span><span class="p">:</span> <span class="s2">"Date"</span><span class="p">,</span> <span class="s2">"binary"</span><span class="p">:</span> <span class="s2">"Binary"</span><span class="p">,</span> <span class="s2">"void"</span><span class="p">:</span> <span class="s2">"Null"</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_polars_type</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The Polars type of a column from what ``cursor.description`` says of it.</span>
+
+<span class="sd">    For an empty result the connector sent no columns with. A type that</span>
+<span class="sd">    cannot be read from its name (an array, a map, a struct, an interval)</span>
+<span class="sd">    is refused, naming the column.</span>
+
+<span class="sd">    :raises chartbook.backends.BackendError: For such a type.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+
+    <span class="n">name</span><span class="p">,</span> <span class="n">kind</span> <span class="o">=</span> <span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">_TYPES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pl</span><span class="p">,</span> <span class="n">_TYPES</span><span class="p">[</span><span class="n">kind</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"timestamp"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">"us"</span><span class="p">,</span> <span class="s2">"UTC"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"timestamp_ntz"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">(</span><span class="s2">"us"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"decimal"</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">Decimal</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">column</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+    <span class="k">raise</span> <span class="n">BackendError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"The query's result is empty, the warehouse sent no columns with it, and the type of "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">kind</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'not given'</span><span class="si">}</span><span class="s2">, cannot be read from its name."</span>
+    <span class="p">)</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

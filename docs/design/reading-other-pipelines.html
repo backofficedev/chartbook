@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: reading another pipeline while you work &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/reading-other-pipelines';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Design: keeping costly outputs" href="keep.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/reading-other-pipelines.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: reading another pipeline while you work</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-story-this-serves">The story this serves</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-today">What happens today</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id">Option 1a: by ID, the store first, git worked out from the ID</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1b-by-git-url-bytes-from-the-store">Option 1b: by git URL, bytes from the store</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1c-by-id-the-store-only">Option 1c: by ID, the store only</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#path-in-every-option"><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2a-refuse-today">Option 2a: refuse (today)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so">Option 2b: read the newest snapshot, every time, and say so</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-snapshot-is-newest">Which snapshot is “newest”</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3a-refuse-and-say-what-to-add">Option 3a: refuse, and say what to add</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3b-read-it-and-warn-that-nothing-records-it">Option 3b: read it, and warn that nothing records it</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3c-declare-it-for-you">Option 3c: declare it for you</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4a-refuse">Option 4a: refuse</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4b-read-the-working-file-and-say-so-loudly">Option 4b: read the working file, and say so loudly</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5a-refuse">Option 5a: refuse</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">Option 5b: read the newest snapshot, and say nothing is recorded</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6a-nothing-about-dependencies-today">Option 6a: nothing about dependencies (today)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6b-every-declared-dependency-pinned-to-a-snapshot">Option 6b: every declared dependency pinned to a snapshot</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-strict-where">How strict, where</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work-if-approved">The order of work, if approved</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-the-maintainer-to-choose">For the maintainer to choose</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-reading-another-pipeline-while-you-work">
+<h1>Design: reading another pipeline while you work<a class="headerlink" href="#design-reading-another-pipeline-while-you-work" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, written 2026-10-16 for the maintainer to choose between options. Each decision
+shows what a data scientist would write and see under each option, and which one is recommended.
+Status: <strong>decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b (silent), 6b.</strong> Built by
+2026-10-17: 6b (#81), 1a’s dependency by ID from the store, with <code class="docutils literal notranslate"><span class="pre">commit</span></code> (#84), and 2c, 3b, 4b
+and 5b (#85), <code class="docutils literal notranslate"><span class="pre">[resolve]</span> <span class="pre">default_host</span></code> with building from git when there is no snapshot (#87), and
+<code class="docutils literal notranslate"><span class="pre">rev</span></code> on a dependency named by its ID (#88). All of the order of work below is built.</p>
+</div>
+<section id="the-story-this-serves">
+<h2>The story this serves<a class="headerlink" href="#the-story-this-serves" title="Link to this heading">#</a></h2>
+<p>The store is in a Google Drive folder, kept in step between two machines. Each machine’s
+<code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code> points at its local copy.</p>
+<ol class="arabic simple">
+<li><p><strong>On machine 1</strong>, pipeline A (<code class="docutils literal notranslate"><span class="pre">acme/rates</span></code>) is built, and its owner declares the build ready:
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>. Drive syncs the new files to machine 2.</p></li>
+<li><p><strong>On machine 2</strong>, pipeline B (<code class="docutils literal notranslate"><span class="pre">acme/forecast</span></code>) is in the middle of development. In a notebook,
+B’s author loads A’s <code class="docutils literal notranslate"><span class="pre">rates</span></code> dataframe with <code class="docutils literal notranslate"><span class="pre">data.load</span></code>. It should get A’s newest snapshot from
+the store, with no clone of A, no build of A, and no decision yet about which version to keep.</p></li>
+<li><p><strong>B is finished</strong>, and its author runs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> in B. That should refuse unless B
+has recorded which version of A it read, so that B’s snapshot carries its lineage. B’s
+snapshot holds B’s outputs only: A’s bytes are in the store already, and B’s lockfile names
+them.</p></li>
+</ol>
+</section>
+<section id="what-happens-today">
+<h2>What happens today<a class="headerlink" href="#what-happens-today" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>Step 2 does not work.</strong> B must declare A with a <code class="docutils literal notranslate"><span class="pre">path</span></code> (A’s folder on this machine) or a
+<code class="docutils literal notranslate"><span class="pre">git</span></code> URL. With a <code class="docutils literal notranslate"><span class="pre">path</span></code>, choosing A’s version needs A’s folder on machine 2. With <code class="docutils literal notranslate"><span class="pre">git</span></code>,
+ChartBook clones A and builds it. Until something is pinned, <code class="docutils literal notranslate"><span class="pre">data.load(&quot;rates:rates&quot;)</span></code> fails
+with <code class="docutils literal notranslate"><span class="pre">AssetNotPinnedError:</span> <span class="pre">...</span> <span class="pre">Run</span> <span class="pre">chartbook</span> <span class="pre">pin</span></code>.</p></li>
+<li><p><strong>A load through a catalog reads a working folder, silently.</strong>
+<code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;acme/rates&quot;,</span> <span class="pre">dataframe=&quot;rates&quot;)</span></code> reads the file in A’s folder as it is
+right now.</p></li>
+<li><p><strong>Step 3 checks nothing about dependencies.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> in B succeeds with no
+lockfile, and records B’s inputs as empty.</p></li>
+<li><p><strong>What already works, and stays.</strong> Once B’s <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> is committed, any machine with the
+store reads A’s pinned bytes, with A’s folder gone and A never built there (checked
+2026-10-16, for a folder store and an S3 store). A pipeline’s own
+assets, <code class="docutils literal notranslate"><span class="pre">data.load(&quot;forecast_inputs&quot;)</span></code> inside B, are B’s working files: that is what is being
+developed, and a snapshot of B captures them.</p></li>
+</ul>
+<p>The decisions below close the gaps. They are independent enough to choose one at a time.</p>
+</section>
+<section id="decision-1-how-b-names-a">
+<h2>Decision 1: how B names A<a class="headerlink" href="#decision-1-how-b-names-a" title="Link to this heading">#</a></h2>
+<section id="option-1a-by-id-the-store-first-git-worked-out-from-the-id">
+<h3>Option 1a: by ID, the store first, git worked out from the ID<a class="headerlink" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id" title="Link to this heading">#</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># acme/forecast/chartbook.toml</span>
+<span class="k">[dependencies]</span>
+<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
+</pre></div>
+</div>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># ~/.chartbook/settings.toml, once per machine (or the organization's settings)</span>
+<span class="k">[resolve]</span>
+<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"github.com"</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+
+<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pin</span></code> finds <code class="docutils literal notranslate"><span class="pre">acme/rates</span></code>’s snapshots in the store by its ID, as the catalog already does.</p></li>
+<li><p>When A’s code is needed (A has no snapshot and must be built, or its repository is wanted),
+ChartBook clones <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates</span></code>: the URL is the ID on the default host.
+<code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">git</span> <span class="pre">=</span> <span class="pre">&quot;...&quot;</span> <span class="pre">}</span></code> in the entry overrides that.</p></li>
+<li><p>The key is a local name, as it is today. A short one reads better in code:
+<code class="docutils literal notranslate"><span class="pre">rates</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">id</span> <span class="pre">=</span> <span class="pre">&quot;acme/rates&quot;</span> <span class="pre">}</span></code>, then <code class="docutils literal notranslate"><span class="pre">data.load(&quot;rates:rates&quot;)</span></code>.</p></li>
+<li><p>This is the identity <a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a> already decided: the ID is the identity, git distributes
+code, and the host is a setting, so a repository move changes one line. Only the store lookup
+is new. <code class="docutils literal notranslate"><span class="pre">default_host</span></code> was designed there and never built.</p></li>
+</ul>
+</section>
+<section id="option-1b-by-git-url-bytes-from-the-store">
+<h3>Option 1b: by git URL, bytes from the store<a class="headerlink" href="#option-1b-by-git-url-bytes-from-the-store" title="Link to this heading">#</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
+<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"https://github.com/acme/rates"</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"main"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"rates:rates"</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The entry says where the code is, as today. <code class="docutils literal notranslate"><span class="pre">pin</span></code> works out the pipeline’s ID from the URL, and
+takes the newest snapshot in the store at or before the commit <code class="docutils literal notranslate"><span class="pre">rev</span></code> names. It builds A from its
+clone only when there is no snapshot.</p></li>
+<li><p>Every pin asks the git host what <code class="docutils literal notranslate"><span class="pre">rev</span></code> means, so it needs the network.</p></li>
+<li><p>The host is in every manifest that depends on A, so a repository move changes all of them.</p></li>
+</ul>
+</section>
+<section id="option-1c-by-id-the-store-only">
+<h3>Option 1c: by ID, the store only<a class="headerlink" href="#option-1c-by-id-the-store-only" title="Link to this heading">#</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
+<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The same entry as 1a, with no <code class="docutils literal notranslate"><span class="pre">default_host</span></code> and no <code class="docutils literal notranslate"><span class="pre">git</span></code>. Snapshots in the store are the only
+source: a pipeline with no snapshot cannot be read, and ChartBook never clones or builds it.</p></li>
+<li><p>Simplest, and it works offline. A clone of B on a machine without the store cannot get A at all.</p></li>
+<li><p>This is what 1a does when no default host is set, so choosing 1a includes it.</p></li>
+</ul>
+</section>
+<section id="path-in-every-option">
+<h3><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option<a class="headerlink" href="#path-in-every-option" title="Link to this heading">#</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
+<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"../rates"</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># still allowed</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>check
+<span class="go">warning: acme/forecast: the dependency `rates` is a path, ../rates. It works on this machine only;</span>
+<span class="go">  name it by its ID, "acme/rates" = {}, to read it from the store anywhere.</span>
+</pre></div>
+</div>
+<p>Kept for two pipelines in one repository and for working on both at once, with a warning that
+says what to write instead.</p>
+<p><strong>Recommended: 1a.</strong> It is the identity already decided, it reads the store first, which is
+your use case, and with no default host it is 1c. <em>Decided by the maintainer 2026-10-16: 1a.</em></p>
+</section>
+</section>
+<section id="decision-2-what-an-unpinned-dependency-gives-you">
+<h2>Decision 2: what an unpinned dependency gives you<a class="headerlink" href="#decision-2-what-an-unpinned-dependency-gives-you" title="Link to this heading">#</a></h2>
+<p>B declares A and has pinned nothing. In a notebook:</p>
+<section id="option-2a-refuse-today">
+<h3>Option 2a: refuse (today)<a class="headerlink" href="#option-2a-refuse-today" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<span class="go">AssetNotPinnedError: 'acme/rates:rates' is not pinned: ~/forecast/chartbook.lock does not list</span>
+<span class="go">the dependency 'acme/rates'. Run `chartbook pin` in ~/forecast.</span>
+</pre></div>
+</div>
+</section>
+<section id="option-2b-read-the-newest-snapshot-every-time-and-say-so">
+<h3>Option 2b: read the newest snapshot, every time, and say so<a class="headerlink" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<span class="go">UserWarning: acme/rates is not pinned: reading its newest snapshot, 3f2a9c1, made</span>
+<span class="go">2026-10-16 22:06 UTC. `chartbook pin` records it.</span>
+<span class="go">&lt;LazyFrame ...&gt;</span>
+</pre></div>
+</div>
+<p>Nothing is written. A later call gets a newer snapshot as soon as one arrives in the store, so
+two runs of the same notebook can read different data.</p>
+</section>
+<section id="option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">
+<h3>Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles<a class="headerlink" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<span class="go">acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock).</span>
+<span class="go">`chartbook update acme/rates` moves it.</span>
+<span class="go">&lt;LazyFrame ...&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>      <span class="c1"># the same bytes, until you update</span>
+<span class="go">&lt;LazyFrame ...&gt;</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>update<span class="w"> </span>acme/rates<span class="w">           </span><span class="c1"># when A's owner has made a newer snapshot</span>
+<span class="go">acme/rates: 3f2a9c1 (2026-10-16) -&gt; 8b41d07 (2026-10-18)</span>
+<span class="go">  rates: changed, 5,210 -&gt; 5,233 rows</span>
+<span class="go">Wrote chartbook.lock.</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>A pin is not a decision about the final version. It is a note of what you read, which you move
+whenever you like.</p></li>
+<li><p>B’s lineage is right from its first read, results do not change under you, and step 3 needs no
+extra command.</p></li>
+<li><p>The cost is that a load in a notebook writes a file, <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>, which you commit with B.</p></li>
+</ul>
+</section>
+<section id="which-snapshot-is-newest">
+<h3>Which snapshot is “newest”<a class="headerlink" href="#which-snapshot-is-newest" title="Link to this heading">#</a></h3>
+<p>The one made last, by its owner’s clock, across every branch. An entry narrows it:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"3f2a9c1"</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># exactly this one (the newest at that commit)</span>
+<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"main"</span><span class="w"> </span><span class="p">}</span><span class="w">         </span><span class="c1"># the newest at or before main's commit (asks git)</span>
+</pre></div>
+</div>
+<p><strong>Recommended: 2c,</strong> with “newest” by time and <code class="docutils literal notranslate"><span class="pre">commit</span></code> or <code class="docutils literal notranslate"><span class="pre">rev</span></code> to narrow it. <em>Decided by the
+maintainer 2026-10-16: 2c.</em></p>
+</section>
+</section>
+<section id="decision-3-a-pipeline-b-has-not-declared">
+<h2>Decision 3: a pipeline B has not declared<a class="headerlink" href="#decision-3-a-pipeline-b-has-not-declared" title="Link to this heading">#</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/yields:curve"</span><span class="p">)</span>    <span class="c1"># acme/yields is not in B's [dependencies]</span>
+</pre></div>
+</div>
+<section id="option-3a-refuse-and-say-what-to-add">
+<h3>Option 3a: refuse, and say what to add<a class="headerlink" href="#option-3a-refuse-and-say-what-to-add" title="Link to this heading">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>DependencyNotDeclaredError: acme/forecast does not declare acme/yields. Add it:
+    chartbook add acme/yields          # writes "acme/yields" = {} under [dependencies]
+</pre></div>
+</div>
+</section>
+<section id="option-3b-read-it-and-warn-that-nothing-records-it">
+<h3>Option 3b: read it, and warn that nothing records it<a class="headerlink" href="#option-3b-read-it-and-warn-that-nothing-records-it" title="Link to this heading">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>UserWarning: acme/yields is not a dependency of acme/forecast: reading its newest snapshot,
+a91c2e0, and recording nothing. `chartbook add acme/yields` declares it; until then
+`chartbook run` and `chartbook snapshot` refuse this read.
+&lt;LazyFrame ...&gt;
+</pre></div>
+</div>
+</section>
+<section id="option-3c-declare-it-for-you">
+<h3>Option 3c: declare it for you<a class="headerlink" href="#option-3c-declare-it-for-you" title="Link to this heading">#</a></h3>
+<p>The load adds <code class="docutils literal notranslate"><span class="pre">&quot;acme/yields&quot;</span> <span class="pre">=</span> <span class="pre">{}</span></code> to B’s <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, pins it, and reads it.</p>
+<p><strong>Recommended: 3b.</strong> Exploring is quick, the warning says exactly what a batch run will refuse,
+and a manifest is never edited behind your back. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code> is new in every option.
+<em>Decided by the maintainer 2026-10-16: 3b.</em></p>
+</section>
+</section>
+<section id="decision-4-no-snapshot-but-a-working-folder">
+<h2>Decision 4: no snapshot, but a working folder<a class="headerlink" href="#decision-4-no-snapshot-but-a-working-folder" title="Link to this heading">#</a></h2>
+<p>A has never been snapshotted, but its folder is on this machine (a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency, or the
+catalog lists it).</p>
+<section id="option-4a-refuse">
+<h3>Option 4a: refuse<a class="headerlink" href="#option-4a-refuse" title="Link to this heading">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>SnapshotNotFoundError: acme/rates has no snapshot in the store. Its owner makes one with
+`chartbook snapshot` in its folder.
+</pre></div>
+</div>
+</section>
+<section id="option-4b-read-the-working-file-and-say-so-loudly">
+<h3>Option 4b: read the working file, and say so loudly<a class="headerlink" href="#option-4b-read-the-working-file-and-say-so-loudly" title="Link to this heading">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>UserWarning: acme/rates has no snapshot in the store: reading its WORKING version,
+/Users/you/repos/rates/_data/rates.parquet, as it is right now. Nothing records this read, and
+`chartbook run` and `chartbook snapshot` refuse it.
+&lt;LazyFrame ...&gt;
+</pre></div>
+</div>
+<p><strong>Recommended: 4b,</strong> as you suggested. The hidden <code class="docutils literal notranslate"><span class="pre">--from-folder</span></code> option of <code class="docutils literal notranslate"><span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">update</span></code>
+becomes this, and a lockfile never records a working read. <em>Decided by the maintainer 2026-10-16:
+4b.</em> <em>Built 2026-10-17: <code class="docutils literal notranslate"><span class="pre">--from-folder</span></code> is removed.</em></p>
+</section>
+</section>
+<section id="decision-5-outside-any-pipeline">
+<h2>Decision 5: outside any pipeline<a class="headerlink" href="#decision-5-outside-any-pipeline" title="Link to this heading">#</a></h2>
+<p>A scratch notebook with no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> in its folder or above it.</p>
+<section id="option-5a-refuse">
+<h3>Option 5a: refuse<a class="headerlink" href="#option-5a-refuse" title="Link to this heading">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ManifestNotFoundError: no chartbook.toml in ~/scratch or above it. `chartbook init` makes one,
+and data.load then reads what it declares.
+</pre></div>
+</div>
+</section>
+<section id="option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">
+<h3>Option 5b: read the newest snapshot, and say nothing is recorded<a class="headerlink" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<span class="go">UserWarning: not in a pipeline: reading acme/rates's newest snapshot, 3f2a9c1, and recording</span>
+<span class="go">nothing.</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;acme/rates&quot;,</span> <span class="pre">dataframe=&quot;rates&quot;)</span></code> becomes the same read: the store’s newest
+snapshot, never a working folder without the 4b warning.</p>
+<p>You suggested 5a. <strong>I lean 5b,</strong> for browsing and for an assistant on the command line, since
+nothing here can be built or snapshotted, so there is no lineage to protect. Either is small.</p>
+<p><em>Decided by the maintainer 2026-10-16: 5b, and silent.</em> With no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, a script is a
+one-off exploration: it loads the newest snapshot quietly, with no warning. Once a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>
+exists, the stricter rules above apply, and they get noisier exactly when someone makes the work
+a proper pipeline. <em>Proposed with it, 2026-10-16:</em> a read of another pipeline’s working folder
+(4b) still warns outside a pipeline, since that warning is about which data was read, not about
+lineage.</p>
+</section>
+</section>
+<section id="decision-6-what-chartbook-snapshot-requires">
+<h2>Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires<a class="headerlink" href="#decision-6-what-chartbook-snapshot-requires" title="Link to this heading">#</a></h2>
+<section id="option-6a-nothing-about-dependencies-today">
+<h3>Option 6a: nothing about dependencies (today)<a class="headerlink" href="#option-6a-nothing-about-dependencies-today" title="Link to this heading">#</a></h3>
+</section>
+<section id="option-6b-every-declared-dependency-pinned-to-a-snapshot">
+<h3>Option 6b: every declared dependency pinned to a snapshot<a class="headerlink" href="#option-6b-every-declared-dependency-pinned-to-a-snapshot" title="Link to this heading">#</a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>snapshot
+<span class="go">Error: acme/forecast cannot have a snapshot: its lockfile does not match its dependencies.</span>
+<span class="go">  acme/rates: declared, not pinned</span>
+<span class="go">  acme/yields: pinned from a working folder, not a snapshot</span>
+<span class="go">Run `chartbook pin`, then snapshot again.</span>
+</pre></div>
+</div>
+<p>It is the check <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span> <span class="pre">--frozen</span></code> already makes, run first. B’s snapshot then holds B’s
+outputs and its lockfile; A’s bytes are in the store already, named by that lockfile.</p>
+<p><strong>Recommended: 6b.</strong> <em>Decided by the maintainer 2026-10-16: 6b, a snapshot only with full
+lineage by its pins.</em> Being built: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> runs the <code class="docutils literal notranslate"><span class="pre">--frozen</span></code> check first, and also
+refuses a dependency pinned from a working folder. An upstream asset that was not built when it
+was pinned does not stop it, since B cannot have read it.</p>
+</section>
+</section>
+<section id="how-strict-where">
+<h2>How strict, where<a class="headerlink" href="#how-strict-where" title="Link to this heading">#</a></h2>
+<p>“Batch” is <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> (it sets an environment variable that the <code class="docutils literal notranslate"><span class="pre">data.load</span></code> calls in its
+build see), <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span> <span class="pre">--frozen</span></code> and CI. Everything else is interactive.
+With the recommended options:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">data.load</span></code> of another pipeline finds</p></th>
+<th class="head"><p>In a notebook or script in a pipeline</p></th>
+<th class="head"><p>In a batch run</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>A pin</p></td>
+<td><p>Reads it</p></td>
+<td><p>Reads it</p></td>
+</tr>
+<tr class="row-odd"><td><p>A declared dependency, not pinned, with a snapshot</p></td>
+<td><p>Pins the newest, says so (2c)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">run</span></code> pins it before the build, as it does today; <code class="docutils literal notranslate"><span class="pre">snapshot</span></code> refuses (6b)</p></td>
+</tr>
+<tr class="row-even"><td><p>An undeclared pipeline</p></td>
+<td><p>Reads the newest snapshot, warns (3b)</p></td>
+<td><p>Refuses</p></td>
+</tr>
+<tr class="row-odd"><td><p>No snapshot, a working folder</p></td>
+<td><p>Reads it, warns loudly (4b)</p></td>
+<td><p>Refuses</p></td>
+</tr>
+<tr class="row-even"><td><p>Nothing</p></td>
+<td><p>Error</p></td>
+<td><p>Error</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Outside any pipeline (no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>), a read takes the newest snapshot silently; only a read
+of a working folder warns. <em>(2026-10-18: in a batch run it is refused, since nothing records it.
+And the two-argument form, <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=…,</span> <span class="pre">dataframe=…)</span></code>, finds the pipeline a call is in as
+a reference does, from the calling file first; a review found it asking the working directory
+alone, so a script run from elsewhere read a snapshot its pipeline had not pinned.)</em></p>
+</section>
+<section id="the-order-of-work-if-approved">
+<h2>The order of work, if approved<a class="headerlink" href="#the-order-of-work-if-approved" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> refuses unpinned dependencies (6b). Small, and right in every option.
+<em>Built, #81 (2026-10-16).</em></p></li>
+<li><p>A dependency by ID, pinned from the store (1a without <code class="docutils literal notranslate"><span class="pre">default_host</span></code>, which is 1c), with
+<code class="docutils literal notranslate"><span class="pre">commit</span></code> and <code class="docutils literal notranslate"><span class="pre">rev</span></code>, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code>. <em>Built, #84 (2026-10-17), with <code class="docutils literal notranslate"><span class="pre">commit</span></code>; <code class="docutils literal notranslate"><span class="pre">rev</span></code> moved to
+step 4, since it asks the repository, and is built in #88: the newest snapshot of that
+repository at or before the commit the rev names, found by walking its history back; with none,
+the repository at that commit, as from the default host.</em></p></li>
+<li><p>The interactive rules (2c, 3b, 4b, 5b) and the batch variable. <em>Built, #85 (2026-10-17). As
+built, a reference by the pipeline’s own ID is refused unless a dependency is known to be that
+pipeline, and the batch variable is set for <code class="docutils literal notranslate"><span class="pre">build</span></code> only.</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[resolve]</span> <span class="pre">default_host</span></code>, and building from git when there is no snapshot. <em>Built (2026-10-17),
+except <code class="docutils literal notranslate"><span class="pre">rev</span></code>. As built: a dependency named by its ID is cloned only when the store has no
+snapshot of it at all; the lockfile then lists it as from its repository by its ID, with no
+address (each machine has its own host setting), and a pin keeps where it was pinned from,
+the store or its repository, while <code class="docutils literal notranslate"><span class="pre">update</span></code> looks again. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> makes the same
+decision, from the lockfile, and never clones a pipeline it builds itself. A plain
+<code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">git</span> <span class="pre">=</span> <span class="pre">&quot;...&quot;</span> <span class="pre">}</span></code> entry is unchanged: cloned first, as before.</em></p></li>
+</ol>
+</section>
+<section id="for-the-maintainer-to-choose">
+<h2>For the maintainer to choose<a class="headerlink" href="#for-the-maintainer-to-choose" title="Link to this heading">#</a></h2>
+<p>All decided by the maintainer on 2026-10-16:</p>
+<ol class="arabic simple">
+<li><p>How B names A: <strong>1a</strong>.</p></li>
+<li><p>An unpinned dependency: <strong>2c</strong>.</p></li>
+<li><p>An undeclared pipeline: <strong>3b</strong>.</p></li>
+<li><p>No snapshot, a working folder: <strong>4b</strong>.</p></li>
+<li><p>Outside a pipeline: <strong>5b, silent</strong> (a working-folder read still warns: proposed).</p></li>
+<li><p>What a snapshot requires: <strong>6b</strong> (built).</p></li>
+</ol>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="keep.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: keeping costly outputs</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-story-this-serves">The story this serves</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-today">What happens today</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id">Option 1a: by ID, the store first, git worked out from the ID</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1b-by-git-url-bytes-from-the-store">Option 1b: by git URL, bytes from the store</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1c-by-id-the-store-only">Option 1c: by ID, the store only</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#path-in-every-option"><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2a-refuse-today">Option 2a: refuse (today)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so">Option 2b: read the newest snapshot, every time, and say so</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-snapshot-is-newest">Which snapshot is “newest”</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3a-refuse-and-say-what-to-add">Option 3a: refuse, and say what to add</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3b-read-it-and-warn-that-nothing-records-it">Option 3b: read it, and warn that nothing records it</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3c-declare-it-for-you">Option 3c: declare it for you</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4a-refuse">Option 4a: refuse</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4b-read-the-working-file-and-say-so-loudly">Option 4b: read the working file, and say so loudly</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5a-refuse">Option 5a: refuse</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">Option 5b: read the newest snapshot, and say nothing is recorded</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6a-nothing-about-dependencies-today">Option 6a: nothing about dependencies (today)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6b-every-declared-dependency-pinned-to-a-snapshot">Option 6b: every declared dependency pinned to a snapshot</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-strict-where">How strict, where</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work-if-approved">The order of work, if approved</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-the-maintainer-to-choose">For the maintainer to choose</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

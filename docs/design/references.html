@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: references &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/references';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: the asset graph" href="asset-graph.html" />
+    <link rel="prev" title="Design: chartbook.toml Format v2" href="toml-format-v2.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/references.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: references</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-idea-in-one-picture">The idea in one picture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-grammar">The grammar</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rules">Rules</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-reference-to-a-pipeline-is-a-different-thing">A reference to a pipeline is a different thing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kinds">Kinds</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-address-three-spellings">One address, three spellings</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-kind-means">What <code class="docutils literal notranslate"><span class="pre">kind=</span></code> means</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#type-safety-the-small-version">Type safety, the small version</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parts">Parts: <code class="docutils literal notranslate"><span class="pre">#</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#versions">Versions: <code class="docutils literal notranslate"><span class="pre">@</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-references-appear">Where references appear</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-works-today">What works today</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-code-is">Where the code is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-shape">Why this shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-other-tools-teach">What other tools teach</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#alternatives-that-were-turned-down">Alternatives that were turned down</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-references">
+<h1>Design: references<a class="headerlink" href="#design-references" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, and the specification for how ChartBook addresses an asset. Every other
+design here writes addresses in this grammar, so read it before <a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a>,
+<a class="reference internal" href="index-schema.html"><span class="doc">Design: the index</span></a>, <a class="reference internal" href="models.html"><span class="doc">Design: models</span></a> or <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a>. New to the project? Start with
+<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>.</p>
+<p>Status: <strong>accepted 2026-10-12.</strong> The parser accepts the whole grammar (<code class="docutils literal notranslate"><span class="pre">chartbook.refs</span></code>, in
+0.2.0). A <em>local</em> reference resolves to the path its manifest declares, and a reference to an
+asset of <em>another pipeline</em> resolves to the copy that <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins, for all five
+kinds. A part, a version and a registry parse, and are refused as “reserved and not yet
+supported”. See <a class="reference internal" href="#refs-status"><span class="std std-ref">What works today</span></a>.</p>
+</div>
+<section id="the-idea-in-one-picture">
+<h2>The idea in one picture<a class="headerlink" href="#the-idea-in-one-picture" title="Link to this heading">#</a></h2>
+<p>Data is the spine of ChartBook. An organization has pipelines, a pipeline has dataframes, and a
+dataframe has series (its columns):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ftsfr / fed_yield_curve : treasury_rates # dgs10
+scope   pipeline          dataframe        series
+</pre></div>
+</div>
+<p>Everything else a pipeline declares hangs off the pipeline, and says what kind of thing it is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ftsfr/fed_yield_curve:chart/curve_today
+ftsfr/fed_yield_curve:notebook/analysis
+ftsfr/fed_yield_curve:note/methodology
+ftsfr/fed_yield_curve:model/rate_forecaster@v3
+</pre></div>
+</div>
+<p>That string is a <strong>reference</strong>. It is the one way to name an asset, wherever a name is needed: on
+the command line, in Python, in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, in the index, in a lockfile and in a URL.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Reference</p></th>
+<th class="head"><p>Means</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code></p></td>
+<td><p>The dataframe <code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code> in the pipeline you are in</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chart/curve_today</span></code></p></td>
+<td><p>The chart <code class="docutils literal notranslate"><span class="pre">curve_today</span></code> in the pipeline you are in</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">notebook/analysis</span></code></p></td>
+<td><p>A notebook</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">note/methodology</span></code></p></td>
+<td><p>A note</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code></p></td>
+<td><p>A model</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code></p></td>
+<td><p>The series <code class="docutils literal notranslate"><span class="pre">dgs10</span></code> of that dataframe</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster#weights.pt</span></code></p></td>
+<td><p>One file inside that model</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;v3</span></code></p></td>
+<td><p>Version 3 of that model</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;champion</span></code></p></td>
+<td><p>Whichever version is currently labelled <code class="docutils literal notranslate"><span class="pre">champion</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code></p></td>
+<td><p>A dataframe in another pipeline</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:treasury_rates</span></code></p></td>
+<td><p>The same, naming the organization too</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:chart/curve_today</span></code></p></td>
+<td><p>A chart in another pipeline</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">charthub.example/ftsfr/fed_yield_curve:treasury_rates</span></code></p></td>
+<td><p>The same dataframe, from a named registry</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="the-grammar">
+<h2>The grammar<a class="headerlink" href="#the-grammar" title="Link to this heading">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>reference   = [ pipeline-id ":" ] asset [ "#" part ] [ "@" rev ]
+
+pipeline-id = [ registry "/" ] [ scope "/" ] pipeline
+asset       = [ kind "/" ] name
+kind        = "dataframe" | "chart" | "notebook" | "note" | "model"
+
+scope, pipeline, name = one or more of  A-Z a-z 0-9 . _ -
+part                  = one or more of  A-Z a-z 0-9 . _ - /
+rev                   = one or more of  A-Z a-z 0-9 . _ - :
+registry              = a host name, optionally with a port
+</pre></div>
+</div>
+<p>There are four separators, and each asks a different question. Read left to right:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Separator</p></th>
+<th class="head"><p>Question it answers</p></th>
+<th class="head"><p>Example</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/</span></code></p></td>
+<td><p>One level down. Scope, then pipeline. Kind, then name.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code>, <code class="docutils literal notranslate"><span class="pre">chart/curve_today</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">:</span></code></p></td>
+<td><p>“From this pipeline, take…”</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">#</span></code></p></td>
+<td><p>“…this part of it.”</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&#64;</span></code></p></td>
+<td><p>“…at this version.”</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;v3</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Because the separators differ, any piece can be left out and the rest still reads the same way.
+That is the whole reason there are four and not one.</p>
+<section id="rules">
+<h3>Rules<a class="headerlink" href="#rules" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><strong>No colon means local.</strong> A reference without <code class="docutils literal notranslate"><span class="pre">:</span></code> names an asset of the pipeline you are in.
+The current pipeline is found by walking up from the caller to the nearest <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>,
+as git finds a repository.</p></li>
+<li><p><strong>No kind means dataframe.</strong> <code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code> and <code class="docutils literal notranslate"><span class="pre">dataframe/treasury_rates</span></code> are the same
+reference. The short one is canonical: ChartBook always writes it that way.</p></li>
+<li><p><strong>Kinds are singular.</strong> <code class="docutils literal notranslate"><span class="pre">chart/gdp</span></code>, never <code class="docutils literal notranslate"><span class="pre">charts/gdp</span></code>. The manifest’s <em>tables</em> are plural
+(<code class="docutils literal notranslate"><span class="pre">[charts.gdp]</span></code>); the parser says “did you mean <code class="docutils literal notranslate"><span class="pre">chart</span></code>?” when given a plural.</p></li>
+<li><p><strong>Without a colon, <code class="docutils literal notranslate"><span class="pre">x/y</span></code> is always <code class="docutils literal notranslate"><span class="pre">kind/name</span></code>.</strong> It is never <code class="docutils literal notranslate"><span class="pre">scope/pipeline</span></code>. So
+<code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code> is not an asset reference, and the error says to write
+<code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:&lt;asset&gt;</span></code>. This keeps the short forms unambiguous.</p></li>
+<li><p><strong>Each kind has its own names.</strong> <code class="docutils literal notranslate"><span class="pre">[dataframes.gdp]</span></code> and <code class="docutils literal notranslate"><span class="pre">[charts.gdp]</span></code> are two assets, <code class="docutils literal notranslate"><span class="pre">gdp</span></code>
+and <code class="docutils literal notranslate"><span class="pre">chart/gdp</span></code>. Nothing is ambiguous, because the kind is part of the address.</p></li>
+<li><p><strong>An asset may be named like a kind.</strong> <code class="docutils literal notranslate"><span class="pre">chart</span></code> alone is a dataframe called <code class="docutils literal notranslate"><span class="pre">chart</span></code>.</p></li>
+<li><p><strong>A registry is only ever the first of exactly three components</strong>, and only if it looks like
+a host: it contains <code class="docutils literal notranslate"><span class="pre">.</span></code> or <code class="docutils literal notranslate"><span class="pre">:</span></code>, or is <code class="docutils literal notranslate"><span class="pre">localhost</span></code>. So <code class="docutils literal notranslate"><span class="pre">charthub.example/acme/rates</span></code> has a
+registry, and <code class="docutils literal notranslate"><span class="pre">my.group/rates</span></code> is a scope with a dot in it. No ID that was valid before
+registries were reserved changes meaning. (This is Docker’s rule, narrowed to three
+components.)</p></li>
+<li><p><strong>Parsing goes right to left</strong>: take off <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> at the last <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>, then <code class="docutils literal notranslate"><span class="pre">#part</span></code> at the first
+<code class="docutils literal notranslate"><span class="pre">#</span></code>, then split pipeline from asset at the last <code class="docutils literal notranslate"><span class="pre">:</span></code>. That order is what lets a revision be a
+hash (<code class="docutils literal notranslate"><span class="pre">&#64;sha256:7f3a…</span></code>) and a registry carry a port (<code class="docutils literal notranslate"><span class="pre">localhost:5000/acme/rates:gdp</span></code>).</p></li>
+</ol>
+</section>
+<section id="a-reference-to-a-pipeline-is-a-different-thing">
+<h3>A reference to a pipeline is a different thing<a class="headerlink" href="#a-reference-to-a-pipeline-is-a-different-thing" title="Link to this heading">#</a></h3>
+<p>Some places name a <em>pipeline</em>, not an asset: <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;ftsfr/fed_yield_curve&quot;,</span> <span class="pre">…)</span></code>,
+a key of <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, a key of a catalog’s <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code>. Those take a pipeline ID,
+<code class="docutils literal notranslate"><span class="pre">[registry/][scope/]name</span></code>, optionally with <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>. They are handled by <code class="docutils literal notranslate"><span class="pre">chartbook.identity</span></code>, and
+they also accept a repository URL. The <code class="docutils literal notranslate"><span class="pre">pipeline-id</span></code> half of an asset reference follows the same
+rules, minus the URL form.</p>
+<p><em>(Corrected 2026-10-12, proposed.)</em> That is true of a <em>lookup</em>, such as <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=…)</span></code>.
+A <strong>key</strong> of <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> or of <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> is narrower: a plain ID, <code class="docutils literal notranslate"><span class="pre">name</span></code> or
+<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>. A URL is never an identity, so it is not a key; and a dependency’s revision is
+written in its entry (<code class="docutils literal notranslate"><span class="pre">rev</span> <span class="pre">=</span> <span class="pre">&quot;a1b2c3d&quot;</span></code>), so <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> in a key is refused as reserved.</p>
+<p>Where a pipeline is found, given its name, is one function: <code class="docutils literal notranslate"><span class="pre">chartbook.resolve.locate_pipeline</span></code>.
+It asks the <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> of the pipeline that wants to know, then the catalog. A scoped name
+must match exactly. A bare name matches if exactly one entry has it, so with
+<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/fed_yield_curve&quot;</span></code> declared, <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code> names that pipeline.</p>
+</section>
+</section>
+<section id="kinds">
+<h2>Kinds<a class="headerlink" href="#kinds" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Kind</p></th>
+<th class="head"><p>Manifest table</p></th>
+<th class="head"><p>Index record</p></th>
+<th class="head"><p>What <code class="docutils literal notranslate"><span class="pre">#part</span></code> means</p></th>
+<th class="head"><p>Python front door</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[dataframes.x]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Dataframe</span></code></p></td>
+<td><p>A series: one column</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chart</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[charts.x]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Chart</span></code></p></td>
+<td><p>Nothing yet</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">notebook</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[notebooks.x]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Notebook</span></code></p></td>
+<td><p>Nothing yet</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">note</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[notes.x]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Note</span></code></p></td>
+<td><p>Nothing yet</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[models.x]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Model</span></code></p></td>
+<td><p>A file inside the model (not yet)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Why dataframe is the default.</strong> Data is what gets passed between pipelines, loaded in
+notebooks and written in dependency lists. Charts, notebooks and notes are mostly looked at, not
+passed around. The common case gets the short spelling. (kubectl and Hugging Face do the same:
+the most common kind needs no prefix.)</p>
+<p><strong>Why names are per kind, not one namespace.</strong> An earlier draft made every asset name unique
+within a pipeline, so that <code class="docutils literal notranslate"><span class="pre">scope/pipeline:name</span></code> was enough. The maintainer rejected it: a chart
+of GDP and the GDP dataframe are naturally both called <code class="docutils literal notranslate"><span class="pre">gdp</span></code>, charts are not first-class in the
+way data is, and one namespace would have forced renames on existing projects.</p>
+<p><strong>Adding a kind</strong> means, in this order: add it to <code class="docutils literal notranslate"><span class="pre">KINDS</span></code> and <code class="docutils literal notranslate"><span class="pre">KIND_TABLES</span></code> in
+<code class="docutils literal notranslate"><span class="pre">chartbook/refs.py</span></code>; teach the manifest loader its table; add it to <code class="docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code> in
+<code class="docutils literal notranslate"><span class="pre">chartbook/resolve.py</span></code>; add its record to the <a class="reference internal" href="index-schema.html"><span class="doc">index schema</span></a>; give it a
+page in the site; decide what <code class="docutils literal notranslate"><span class="pre">#part</span></code> means for it; and, if code will ask for it often, give it a
+front door module. <code class="docutils literal notranslate"><span class="pre">model</span></code> was the first kind to go through this; <a class="reference internal" href="models.html"><span class="doc">Design: models</span></a> lists every
+place it touched, under “What is built”.</p>
+</section>
+<section id="one-address-three-spellings">
+<h2>One address, three spellings<a class="headerlink" href="#one-address-three-spellings" title="Link to this heading">#</a></h2>
+<p>The same address is written three ways, depending on who is reading it.</p>
+<p><strong>Text</strong>, for people, the command line, and <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>chart/curve_today
+<span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>curve_today<span class="w"> </span>--kind<span class="w"> </span>chart
+</pre></div>
+</div>
+<p><strong>Python</strong>, where the kind can be an argument:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span><span class="p">,</span> <span class="n">data</span>
+
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"chart/curve_today"</span><span class="p">)</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"curve_today"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"chart"</span><span class="p">)</span>     <span class="c1"># the same call</span>
+<span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"treasury_rates"</span><span class="p">)</span>                  <span class="c1"># dataframes only</span>
+</pre></div>
+</div>
+<p><strong>JSON</strong>, in the index and anywhere a program reads an address. Named fields, nothing to parse:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"model"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rate_forecaster"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"v3"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">name</span></code> are always present. The other keys (<code class="docutils literal notranslate"><span class="pre">registry</span></code>, <code class="docutils literal notranslate"><span class="pre">scope</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">part</span></code>,
+<code class="docutils literal notranslate"><span class="pre">rev</span></code>) appear only when set, in the order the address is written.</p>
+<section id="what-kind-means">
+<h3>What <code class="docutils literal notranslate"><span class="pre">kind=</span></code> means<a class="headerlink" href="#what-kind-means" title="Link to this heading">#</a></h3>
+<p>In Python and on the command line, <code class="docutils literal notranslate"><span class="pre">kind</span></code> says <strong>what you expect</strong>:</p>
+<ul class="simple">
+<li><p>the reference names no kind → it takes this one;</p></li>
+<li><p>the reference names the same kind → fine;</p></li>
+<li><p>the reference names a different kind → <code class="docutils literal notranslate"><span class="pre">KindMismatchError</span></code>.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"gdp"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"chart"</span><span class="p">)</span>          <span class="c1"># chart/gdp</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"chart/gdp"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"chart"</span><span class="p">)</span>    <span class="c1"># chart/gdp</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"chart/gdp"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"note"</span><span class="p">)</span>     <span class="c1"># KindMismatchError</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"gdp"</span><span class="p">)</span>                        <span class="c1"># the dataframe gdp</span>
+</pre></div>
+</div>
+</section>
+<section id="type-safety-the-small-version">
+<h3>Type safety, the small version<a class="headerlink" href="#type-safety-the-small-version" title="Link to this heading">#</a></h3>
+<p>Two things, and no more:</p>
+<ol class="arabic simple">
+<li><p><strong>Parse once.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook.refs.parse_asset_ref()</span></code> turns text into an <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code>, a frozen
+object with named fields that is checked when it is made. Code inside ChartBook passes that
+object around, never a raw string, and never splits a reference by hand.</p></li>
+<li><p><strong>Typed front doors.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code> takes any kind. <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> takes dataframes
+only: <code class="docutils literal notranslate"><span class="pre">data.path(&quot;chart/gdp&quot;)</span></code> raises, and says to use <code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code>. A later
+<code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code> does the same for models. So a typo cannot hand back a chart’s HTML file
+where a parquet file was meant.</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span>
+
+<span class="n">ref</span> <span class="o">=</span> <span class="n">assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">"ftsfr/fed_yield_curve:model/rate_forecaster@v3"</span><span class="p">)</span>
+<span class="n">ref</span><span class="o">.</span><span class="n">scope</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">rev</span>
+<span class="c1"># ('ftsfr', 'fed_yield_curve', 'model', 'rate_forecaster', 'v3')</span>
+
+<span class="n">ref</span><span class="o">.</span><span class="n">pipeline_id</span>     <span class="c1"># 'ftsfr/fed_yield_curve'</span>
+<span class="n">ref</span><span class="o">.</span><span class="n">local_name</span>      <span class="c1"># 'model/rate_forecaster'</span>
+<span class="n">ref</span><span class="o">.</span><span class="n">table</span>           <span class="c1"># 'models'   (the manifest table)</span>
+<span class="n">ref</span><span class="o">.</span><span class="n">is_local</span>        <span class="c1"># False</span>
+<span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>            <span class="c1"># the canonical text</span>
+<span class="n">ref</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>       <span class="c1"># the JSON form</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">AssetRef</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">to_dict</span><span class="p">())</span> <span class="o">==</span> <span class="n">ref</span>     <span class="c1"># True</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="parts">
+<h2>Parts: <code class="docutils literal notranslate"><span class="pre">#</span></code><a class="headerlink" href="#parts" title="Link to this heading">#</a></h2>
+<p>A part is something <em>inside</em> an asset that deserves its own address. It needs no storage of its
+own; the asset already holds it.</p>
+<p><em>(2026-10-13, decided by the maintainer: a part is an <strong>address</strong>, and never a way to load
+data. <code class="docutils literal notranslate"><span class="pre">data.load(&quot;treasury_rates#dgs10&quot;)</span></code> will not be built: ChartBook does not select
+columns, and a column is picked with polars or SQL. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, step 4, “4e”. What
+follows describes the address.)</em></p>
+<ul class="simple">
+<li><p><strong>In a dataframe, a part is a series.</strong> <code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code> is one column, so that
+documentation, units and a frequency can attach to it. The key after <code class="docutils literal notranslate"><span class="pre">#</span></code> is the series’ key in
+<code class="docutils literal notranslate"><span class="pre">[dataframes.treasury_rates.series.dgs10]</span></code>, which may name a differently-spelled column. See
+<a class="reference internal" href="asset-graph.html#series-addressing"><span class="std std-ref">Addressing a series inside a dataframe</span></a> in the asset graph.</p></li>
+<li><p><strong>In a model, a part is a file.</strong> A model is often a directory (weights, a tokenizer, a config).
+<code class="docutils literal notranslate"><span class="pre">model/rate_forecaster#weights/best.pt</span></code> is one file in it. This is why a part may contain <code class="docutils literal notranslate"><span class="pre">/</span></code>.</p></li>
+<li><p><strong>Charts, notebooks and notes have no parts yet.</strong> The syntax parses; nothing gives it meaning.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">#</span></code> was chosen because it maps onto the URL fragment of the asset’s page
+(<code class="docutils literal notranslate"><span class="pre">…/treasury_rates.html#dgs10</span></code>), and because it cannot appear in a name. In a shell it sometimes
+needs quoting (zsh with extended globbing reads <code class="docutils literal notranslate"><span class="pre">#</span></code> specially).</p>
+</section>
+<section id="versions">
+<h2>Versions: <code class="docutils literal notranslate"><span class="pre">&#64;</span></code><a class="headerlink" href="#versions" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">&#64;</span></code> selects a version. Two kinds of version name exist, and both are needed:</p>
+<ul class="simple">
+<li><p>an <strong>exact version</strong>, which never changes meaning: <code class="docutils literal notranslate"><span class="pre">&#64;v3</span></code>, or a content hash <code class="docutils literal notranslate"><span class="pre">&#64;sha256:7f3a…</span></code>;</p></li>
+<li><p>a <strong>label that moves</strong>: <code class="docutils literal notranslate"><span class="pre">&#64;champion</span></code> points at whichever version was last given that label.</p></li>
+</ul>
+<p>This is Docker’s lesson. A tag (<code class="docutils literal notranslate"><span class="pre">:latest</span></code>) and a digest (<code class="docutils literal notranslate"><span class="pre">&#64;sha256:…</span></code>) are different things, and
+conflating them is how “it worked yesterday” happens.</p>
+<div class="warning admonition">
+<p class="admonition-title">Proposed, not yet settled</p>
+<p>What follows is the working proposal for how a <code class="docutils literal notranslate"><span class="pre">rev</span></code> is looked up. It needs the store and the
+lockfile, so it is settled when those are built (step 4 in the <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>). The decided
+part is only: <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> means a version, and exact versions and moving labels both exist.</p>
+<ol class="arabic simple">
+<li><p>If it contains <code class="docutils literal notranslate"><span class="pre">:</span></code>, it is a <strong>content hash</strong> (<code class="docutils literal notranslate"><span class="pre">sha256:&lt;hex&gt;</span></code>): exactly those bytes.</p></li>
+<li><p>Otherwise, if the asset’s pipeline has recorded a <strong>version</strong> or an <strong>alias</strong> by that name
+for that asset (<code class="docutils literal notranslate"><span class="pre">v3</span></code>, <code class="docutils literal notranslate"><span class="pre">champion</span></code>), it is that.</p></li>
+<li><p>Otherwise it is a <strong>git revision of the pipeline</strong> (a commit, tag or branch): the asset as
+that revision of the pipeline built it.</p></li>
+</ol>
+<p>Where version names and aliases are recorded is proposed in <a class="reference internal" href="models.html"><span class="doc">Design: models</span></a>, since models are the
+first asset that needs them.</p>
+</div>
+</section>
+<section id="where-references-appear">
+<h2>Where references appear<a class="headerlink" href="#where-references-appear" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Place</p></th>
+<th class="head"><p>Example</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Command line</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">chart/curve_today</span></code></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>Python</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">assets.path(…)</span></code>, <code class="docutils literal notranslate"><span class="pre">data.path(…)</span></code></p></td>
+<td><p>Text or an <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dataframe</span> <span class="pre">=</span> <span class="pre">&quot;repo_public&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">[charts.x]</span></code></p></td>
+<td><p>A local dataframe reference today. Future fields (<code class="docutils literal notranslate"><span class="pre">inputs</span></code>, <code class="docutils literal notranslate"><span class="pre">trained_on</span></code>) hold references in this grammar, with dataframe as the default kind</p></td>
+</tr>
+<tr class="row-odd"><td><p>The index</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;id&quot;:</span> <span class="pre">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span></code> plus a <code class="docutils literal notranslate"><span class="pre">ref</span></code> object</p></td>
+<td><p>IDs are fully qualified and carry no <code class="docutils literal notranslate"><span class="pre">rev</span></code>. See <a class="reference internal" href="index-schema.html"><span class="doc">Design: the index</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>The lockfile</p></td>
+<td><p>Keys of pinned assets</p></td>
+<td><p>Same form as index IDs</p></td>
+</tr>
+<tr class="row-odd"><td><p>SQL templates</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{acme/rates:treasury_rates}</span></code> in <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code></p></td>
+<td><p>Dataframes only. See <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>URLs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">…/treasury_rates.html#dgs10</span></code></p></td>
+<td><p>Why <code class="docutils literal notranslate"><span class="pre">#</span></code> is the part separator</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="what-works-today">
+<span id="refs-status"></span><h2>What works today<a class="headerlink" href="#what-works-today" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Form</p></th>
+<th class="head"><p>Example</p></th>
+<th class="head"><p>Today</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Local dataframe</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code></p></td>
+<td><p><strong>Resolves</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>Local chart, notebook, note</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chart/curve_today</span></code></p></td>
+<td><p><strong>Resolves</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>A dataframe through a catalog</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;fed_yield_curve&quot;,</span> <span class="pre">dataframe=&quot;treasury_rates&quot;)</span></code></p></td>
+<td><p><strong>Resolves</strong>, by the older two-argument call</p></td>
+</tr>
+<tr class="row-odd"><td><p>Another pipeline’s asset</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code>, <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:chart/curve_today</span></code></p></td>
+<td><p><strong>Resolves</strong>, to the pinned copy in the store, for a pipeline in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> that has been pinned. <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> takes it too</p></td>
+</tr>
+<tr class="row-even"><td><p>A part</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code></p></td>
+<td><p>Parses. <code class="docutils literal notranslate"><span class="pre">UnsupportedReferenceError</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>A version</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">treasury_rates&#64;a1b2c3d</span></code></p></td>
+<td><p>Parses. <code class="docutils literal notranslate"><span class="pre">UnsupportedRevisionError</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>A registry</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">charthub.example/acme/rates:gdp</span></code></p></td>
+<td><p>Parses. <code class="docutils literal notranslate"><span class="pre">UnsupportedRegistryError</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Local model</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code></p></td>
+<td><p><strong>Resolves</strong></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Local is live; another pipeline’s is pinned.</strong> <code class="docutils literal notranslate"><span class="pre">treasury_rates</span></code> is a file of the pipeline
+you are in, which you are editing, so it resolves to that file. <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code>
+is someone else’s, so it resolves to the copy your <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins, in the store, and
+does not change until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>. The other pipeline must be in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>; one
+that is not raises <code class="docutils literal notranslate"><span class="pre">DependencyNotDeclaredError</span></code>, and an asset with no pinned copy raises
+<code class="docutils literal notranslate"><span class="pre">AssetNotPinnedError</span></code>. Both say what to add or run. (<a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a>, “Pinning and
+isolation”.)</p>
+<p>All three <code class="docutils literal notranslate"><span class="pre">Unsupported…</span></code> errors are <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>s whose message contains “reserved syntax and not
+yet supported”. A reference that breaks the grammar raises a plain <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> instead. The
+difference matters: “not yet” tells the user the syntax is right.</p>
+<p>What unlocks each row is in the <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>’s build order.</p>
+</section>
+<section id="where-the-code-is">
+<h2>Where the code is<a class="headerlink" href="#where-the-code-is" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Module</p></th>
+<th class="head"><p>What it does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/refs.py</span></code></p></td>
+<td><p>The grammar. <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code>, <code class="docutils literal notranslate"><span class="pre">parse_asset_ref()</span></code>, <code class="docutils literal notranslate"><span class="pre">KINDS</span></code>, <code class="docutils literal notranslate"><span class="pre">KIND_TABLES</span></code>, <code class="docutils literal notranslate"><span class="pre">KindMismatchError</span></code>. Parses and formats; knows nothing about what resolves</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/resolve.py</span></code></p></td>
+<td><p>The one resolver. <code class="docutils literal notranslate"><span class="pre">resolve(ref,</span> <span class="pre">kind=…)</span></code> returns a typed <code class="docutils literal notranslate"><span class="pre">Location</span></code>: <code class="docutils literal notranslate"><span class="pre">_resolve_local()</span></code> for an asset of this pipeline, <code class="docutils literal notranslate"><span class="pre">_resolve_pinned()</span></code> for another’s. <code class="docutils literal notranslate"><span class="pre">parse_declared_ref()</span></code> says which forms are supported and refuses the reserved ones. <code class="docutils literal notranslate"><span class="pre">locate_pipeline()</span></code> is the resolution chain: where a <em>pipeline</em> is, from <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> and then the catalog</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/assets.py</span></code></p></td>
+<td><p>The general front door: <code class="docutils literal notranslate"><span class="pre">assets.path()</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.parse()</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.AssetRef</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/data.py</span></code></p></td>
+<td><p>The dataframe front door: <code class="docutils literal notranslate"><span class="pre">data.path()</span></code>, <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>, <code class="docutils literal notranslate"><span class="pre">data.scratch()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/models.py</span></code></p></td>
+<td><p>The model front door: <code class="docutils literal notranslate"><span class="pre">models.path()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/identity.py</span></code></p></td>
+<td><p>Pipeline IDs: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, the registry rule, deriving an ID from a git remote</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/index.py</span></code></p></td>
+<td><p>Writes each asset’s fully qualified <code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">ref</span></code> into <code class="docutils literal notranslate"><span class="pre">index.json</span></code>, from one <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code> (<code class="docutils literal notranslate"><span class="pre">ref.in_pipeline(pipeline_id)</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook/cli.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">REF</span> <span class="pre">[--kind</span> <span class="pre">KIND]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">tests/test_refs.py</span></code></p></td>
+<td><p>Every example in this document, as a test</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Rules for whoever extends this:</p>
+<ul class="simple">
+<li><p><strong>There is one parser.</strong> Do not split a reference with string operations anywhere else. If a
+new form is needed, add it to <code class="docutils literal notranslate"><span class="pre">refs.py</span></code> and to this document in the same change.</p></li>
+<li><p><strong>There is one resolver.</strong> <code class="docutils literal notranslate"><span class="pre">path()</span></code>, <code class="docutils literal notranslate"><span class="pre">load()</span></code> and the CLI all call <code class="docutils literal notranslate"><span class="pre">resolve()</span></code>. Name
+resolution is singular by design (<a class="reference internal" href="asset-graph.html#not-doing"><span class="std std-ref">Not doing</span></a>): two code paths that disagree about a name
+make dependencies unportable.</p></li>
+<li><p><strong>Refuse, do not guess.</strong> A form that cannot be resolved yet raises an <code class="docutils literal notranslate"><span class="pre">Unsupported…</span></code> error.
+It never falls back to something that happens to work.</p></li>
+<li><p><strong>To unlock a form</strong>, remove its refusal in <code class="docutils literal notranslate"><span class="pre">parse_declared_ref()</span></code> and add the resolution
+next to <code class="docutils literal notranslate"><span class="pre">_resolve_local()</span></code> and <code class="docutils literal notranslate"><span class="pre">_resolve_pinned()</span></code>. The grammar does not change. <em>(There
+used to be a second function, <code class="docutils literal notranslate"><span class="pre">parse_local_ref()</span></code>, for what resolved, while another
+pipeline’s asset could be stated and not resolved. Since 2026-10-12 what may be stated is
+what resolves.)</em></p></li>
+</ul>
+</section>
+<section id="why-this-shape">
+<h2>Why this shape<a class="headerlink" href="#why-this-shape" title="Link to this heading">#</a></h2>
+<section id="what-other-tools-teach">
+<h3>What other tools teach<a class="headerlink" href="#what-other-tools-teach" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Tool</p></th>
+<th class="head"><p>Address</p></th>
+<th class="head"><p>Lesson taken</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Docker</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">registry/org/image:tag&#64;digest</span></code></p></td>
+<td><p>Different separators let you leave parts out. A moving label and an exact version are different things; keep both</p></td>
+</tr>
+<tr class="row-odd"><td><p>Bazel, Python entry points, git</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">//pkg:target</span></code>, <code class="docutils literal notranslate"><span class="pre">module:object</span></code>, <code class="docutils literal notranslate"><span class="pre">commit:path</span></code></p></td>
+<td><p>A colon means “container, then the thing inside it”. That is our colon</p></td>
+</tr>
+<tr class="row-even"><td><p>URLs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">page#section</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">#</span></code> means a part of the thing</p></td>
+</tr>
+<tr class="row-odd"><td><p>kubectl, Hugging Face</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pod/web</span></code>, <code class="docutils literal notranslate"><span class="pre">datasets/org/name</span></code></p></td>
+<td><p>Kind goes in front, and the most common kind needs no prefix</p></td>
+</tr>
+<tr class="row-even"><td><p>npm, pip, Hugging Face</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pkg&#64;1.2.3</span></code>, <code class="docutils literal notranslate"><span class="pre">repo&#64;revision</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&#64;</span></code> means a version</p></td>
+</tr>
+<tr class="row-odd"><td><p>SQL, Maven</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">db.schema.table</span></code>, <code class="docutils literal notranslate"><span class="pre">group:artifact:version</span></code></p></td>
+<td><p>With one separator you must fill every slot, or depend on a hidden “current schema” setting</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="alternatives-that-were-turned-down">
+<h3>Alternatives that were turned down<a class="headerlink" href="#alternatives-that-were-turned-down" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>One separator for everything</strong> (<code class="docutils literal notranslate"><span class="pre">ftsfr.fed_yield_curve.treasury_rates.dgs10</span></code>). You could not
+tell <code class="docutils literal notranslate"><span class="pre">pipeline.dataframe</span></code> from <code class="docutils literal notranslate"><span class="pre">dataframe.series</span></code>, and <code class="docutils literal notranslate"><span class="pre">.</span></code> is legal inside a name.</p></li>
+<li><p><strong>The kind as a Python argument only</strong> (<code class="docutils literal notranslate"><span class="pre">data.path(&quot;gdp&quot;,</span> <span class="pre">kind=&quot;chart&quot;)</span></code>). It works in Python
+and nowhere else: not on a command line, not in TOML, not in the index. And it made
+<code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> hand out charts. The argument stays, as a statement of what you expect.</p></li>
+<li><p><strong>One namespace for all asset names.</strong> See “Kinds” above.</p></li>
+<li><p><strong>A URI scheme</strong> (<code class="docutils literal notranslate"><span class="pre">chartbook://ftsfr/fed_yield_curve/dataframe/treasury_rates</span></code>). Unambiguous,
+and nobody would type it. The short local form is the one people write a hundred times a day.</p></li>
+<li><p><strong>Plural kinds</strong> (<code class="docutils literal notranslate"><span class="pre">charts/gdp</span></code>), to match the manifest tables. Singular reads as a name
+(“the chart gdp”) and matches the index’s record kinds.</p></li>
+</ul>
+</section>
+</section>
+<section id="open-questions">
+<h2>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>How <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> is looked up.</strong> Proposed above; settled with the store. <em>(2026-10-13: built
+for one case, a version of one of this pipeline’s own models. <code class="docutils literal notranslate"><span class="pre">model/x&#64;7f3a9c2e41b0</span></code> is found
+among the pipeline’s snapshots by the start of the model’s content hash, and
+<code class="docutils literal notranslate"><span class="pre">model/x&#64;champion</span></code> through a label in <code class="docutils literal notranslate"><span class="pre">[models.x.aliases]</span></code>. A revision of any other kind of
+asset, or of another pipeline’s, is still refused. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4d, as built”.)</em></p></li>
+<li><p><strong>Parts of charts, notebooks and notes.</strong> A notebook cell? A chart’s series? Nothing has asked
+for one yet.</p></li>
+<li><p><strong>Whether <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> tables may themselves be keyed by a reference</strong> (for example
+documenting a series of another pipeline’s dataframe). Not needed so far.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="toml-format-v2.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="asset-graph.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: the asset graph</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-idea-in-one-picture">The idea in one picture</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-grammar">The grammar</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#rules">Rules</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-reference-to-a-pipeline-is-a-different-thing">A reference to a pipeline is a different thing</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kinds">Kinds</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-address-three-spellings">One address, three spellings</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-kind-means">What <code class="docutils literal notranslate"><span class="pre">kind=</span></code> means</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#type-safety-the-small-version">Type safety, the small version</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parts">Parts: <code class="docutils literal notranslate"><span class="pre">#</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#versions">Versions: <code class="docutils literal notranslate"><span class="pre">@</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-references-appear">Where references appear</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-works-today">What works today</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-code-is">Where the code is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-shape">Why this shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-other-tools-teach">What other tools teach</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#alternatives-that-were-turned-down">Alternatives that were turned down</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

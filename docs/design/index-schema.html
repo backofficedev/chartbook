@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the index &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/index-schema';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: the writer, and what every page shows" href="writer.html" />
+    <link rel="prev" title="Design: the asset graph" href="asset-graph.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/index-schema.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the index</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-is">What the index is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-per-record-kind-and-version">Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#conventions">Conventions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog">Catalog</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe">Dataframe</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#series">Series</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart">Chart</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebook-and-note">Notebook and Note</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build">Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added-for-the-versioned-catalog">Added for the versioned catalog</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-lockfile-fits">Where the lockfile fits</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#candidate-additions-deliberately-out-of-v1">Candidate additions, deliberately out of v1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example">Worked example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-unblocks">What this unblocks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-index">
+<h1>Design: the index<a class="headerlink" href="#design-the-index" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document. The index is the artifact every other part of ChartBook reads or writes, so it
+is specified before anything that depends on it. See <a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a> for the mechanism this
+serves.</p>
+<p>Status: <strong>the first implementation is built</strong> (<code class="docutils literal notranslate"><span class="pre">chartbook.index</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook.hashing</span></code>): every
+build writes <code class="docutils literal notranslate"><span class="pre">index.json</span></code> with <code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code>, <code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">Notebook</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Note</span></code> and <code class="docutils literal notranslate"><span class="pre">Model</span></code> records, and each pipeline’s declared <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>. <code class="docutils literal notranslate"><span class="pre">Build</span></code> records and
+pinned hashes are not written yet; they come with the parts of the <a class="reference internal" href="asset-graph.html"><span class="doc">asset graph</span></a> that produce them.
+<a class="reference internal" href="#index-implementing"><span class="std std-ref">What the first implementation does</span></a> says exactly what is and is not there.</p>
+<p>Revised 2026-10-12, before any of it was built: IDs carry the asset’s kind
+(<code class="docutils literal notranslate"><span class="pre">…:chart/curve_today</span></code>), every asset record has a structured <code class="docutils literal notranslate"><span class="pre">ref</span></code>, an asset’s whereabouts is a
+typed <code class="docutils literal notranslate"><span class="pre">location</span></code> object, a <code class="docutils literal notranslate"><span class="pre">Model</span></code> record was added, and the <code class="docutils literal notranslate"><span class="pre">Build</span></code> record gained <code class="docutils literal notranslate"><span class="pre">code</span></code>. The
+reasons are in <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>, <a class="reference internal" href="models.html"><span class="doc">Design: models</span></a> and <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a>.</p>
+</div>
+<section id="what-the-index-is">
+<h2>What the index is<a class="headerlink" href="#what-the-index-is" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> produces two things: the <strong>write-ups</strong> (markdown, as authored) and an <strong>index</strong> (a
+structured description of everything the catalog contains). <em>(2026-10-14: the words are now fixed
+in <a class="reference internal" href="../guide/vocabulary.html"><span class="doc">Vocabulary</span></a>: a writer turns the index into <strong>pages</strong> for a site tool; the index
+records facts and no renderings; the lockfile is never merged into it.)</em> The index is a build product, not
+source — the resolved, composed view of the manifests, with paths absolutized, cross-pipeline edges
+resolved, defaults filled in, policy inherited and content hashes attached.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>_build/
+  index.json     # the resolved catalog
+  content/       # markdown as authored
+  site/          # Sphinx output — one renderer among several
+</pre></div>
+</div>
+<p>The relationship is exactly dbt’s <code class="docutils literal notranslate"><span class="pre">manifest.json</span></code> to its <code class="docutils literal notranslate"><span class="pre">.sql</span></code> and <code class="docutils literal notranslate"><span class="pre">schema.yml</span></code> files. And dbt’s
+entire third-party ecosystem exists because that file is stable and documented, which is the
+outcome worth copying.</p>
+<div class="important admonition">
+<p class="admonition-title">The index is the product; every renderer is a consumer</p>
+<p>Sphinx renders it today. Another frontend could render it tomorrow. An MCP server serves it. A
+Dagster adapter reads it. A registry stores it. A diff of two of them is a review surface.
+Sphinx stops being an architectural commitment and becomes the default frontend.</p>
+</div>
+<p>Four properties are load-bearing:</p>
+<ul class="simple">
+<li><p><strong>Self-contained.</strong> A consumer reads the index and needs nothing else — no catalog lookup, no
+filesystem walk, no manifest parsing.</p></li>
+<li><p><strong>Versioned per record</strong>, so the format can change without a flag day.</p></li>
+<li><p><strong>Content-addressed.</strong> Every asset carries its hash, in the same record format the lockfile
+and a snapshot use. <em>(2026-10-14: the lockfile stays its own document, an input to the build
+where the index is the output; the shared record format is the only merge.)</em></p></li>
+<li><p><strong>Diffable.</strong> <code class="docutils literal notranslate"><span class="pre">diff(before,</span> <span class="pre">after)</span></code> answers “what did this build change?” — which assets moved,
+which hashes changed, which upstream inputs shifted.</p></li>
+</ul>
+</section>
+<section id="file-shape">
+<h2>File shape<a class="headerlink" href="#file-shape" title="Link to this heading">#</a></h2>
+<p>One JSON object: an envelope, then a flat array of self-describing records.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/index/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T22:14:03Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"generator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/catalog"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>(Today the file is not under <code class="docutils literal notranslate"><span class="pre">_build/</span></code>. It is written beside the HTML, as <code class="docutils literal notranslate"><span class="pre">docs/index.json</span></code>, and
+in the build directory. See <a class="reference internal" href="#index-implementing"><span class="std std-ref">What the first implementation does</span></a>.)</p>
+<p><code class="docutils literal notranslate"><span class="pre">schema</span></code> versions the <em>file</em>; each record versions <em>itself</em>. This is the shape Kubernetes uses — a
+list with its own version, holding items that each carry <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code> — and it has survived
+a decade and hundreds of resource types.</p>
+<section id="why-per-record-kind-and-version">
+<h3>Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code><a class="headerlink" href="#why-per-record-kind-and-version" title="Link to this heading">#</a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w">     </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w">     </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p><strong>One file holds mixed types.</strong> New record kinds need no restructuring.</p></li>
+<li><p><strong>Readers skip what they do not understand.</strong> An MCP server filters for <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">&quot;Dataframe&quot;</span></code>; a
+Dagster adapter that has never heard of <code class="docutils literal notranslate"><span class="pre">kind:</span> <span class="pre">&quot;Note&quot;</span></code> ignores it rather than failing.</p></li>
+<li><p><strong>Version is per record.</strong> Charts can move to <code class="docutils literal notranslate"><span class="pre">chartbook/v2</span></code> while everything else stays <code class="docutils literal notranslate"><span class="pre">v1</span></code>.
+Otherwise every change is a whole-file bump and a coordinated upgrade for every consumer.</p></li>
+</ol>
+<p>Twenty bytes per record, and the cheapest available insurance for a project that intends to stop
+breaking things before 1.0.</p>
+<p>A JSON Schema is published per <code class="docutils literal notranslate"><span class="pre">kind</span></code> per version, under <code class="docutils literal notranslate"><span class="pre">schemas/chartbook/v1/&lt;Kind&gt;.json</span></code>. That
+publication is what makes third-party consumers possible.</p>
+<p>They are in the package, at <code class="docutils literal notranslate"><span class="pre">chartbook/schemas/chartbook/v1/</span></code>, with one for the envelope at
+<code class="docutils literal notranslate"><span class="pre">chartbook/schemas/chartbook/index/v1.json</span></code>, and they are published with this documentation at
+the URL each one’s <code class="docutils literal notranslate"><span class="pre">$id</span></code> gives, e.g.
+<code class="docutils literal notranslate"><span class="pre">https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Dataframe.json</span></code>. Each schema
+fixes the fields this document names and allows others, because an asset record also carries
+whatever else its manifest entry declares.</p>
+</section>
+</section>
+<section id="conventions">
+<h2>Conventions<a class="headerlink" href="#conventions" title="Link to this heading">#</a></h2>
+<p><strong>Identifiers</strong> follow the reference grammar in <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[registry/][scope/]pipeline:[kind/]name[#part][@rev]
+</pre></div>
+</div>
+<p>Every record’s <code class="docutils literal notranslate"><span class="pre">id</span></code> is fully qualified — never local, never relative — so an ID is meaningful
+wherever it is copied to. An asset’s ID carries its kind, unless it is a dataframe:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ftsfr/fed_yield_curve                          Pipeline
+ftsfr/fed_yield_curve:treasury_rates           Dataframe
+ftsfr/fed_yield_curve:treasury_rates#dgs10     Series
+ftsfr/fed_yield_curve:chart/curve_today        Chart
+ftsfr/fed_yield_curve:notebook/analysis        Notebook
+ftsfr/fed_yield_curve:note/methodology         Note
+ftsfr/fed_yield_curve:model/rate_forecaster    Model
+</pre></div>
+</div>
+<p>An ID never carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>. Which version a record describes is said by its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>.</p>
+<p>Each kind has its own names, so the kind is what keeps <code class="docutils literal notranslate"><span class="pre">…:gdp</span></code> (a dataframe) and <code class="docutils literal notranslate"><span class="pre">…:chart/gdp</span></code>
+(a chart) apart. An earlier draft of this document gave both the ID <code class="docutils literal notranslate"><span class="pre">…:gdp</span></code>.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">ref</span></code>.</strong> Every asset record, and every <code class="docutils literal notranslate"><span class="pre">Series</span></code> record, also carries the same address as named
+fields, so that no consumer ever has to parse an ID:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"id"</span><span class="p">:</span><span class="w">  </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
+<span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">name</span></code> are always present; <code class="docutils literal notranslate"><span class="pre">registry</span></code>, <code class="docutils literal notranslate"><span class="pre">scope</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> and <code class="docutils literal notranslate"><span class="pre">part</span></code> appear when
+set. This is exactly <code class="docutils literal notranslate"><span class="pre">chartbook.refs.AssetRef.to_dict()</span></code>, and <code class="docutils literal notranslate"><span class="pre">str()</span></code> of the same object is the
+<code class="docutils literal notranslate"><span class="pre">id</span></code>. Build both from one <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code>; never assemble an ID by joining strings.</p>
+<p><strong>Record kinds and asset kinds.</strong> A record’s <code class="docutils literal notranslate"><span class="pre">kind</span></code> is capitalized (<code class="docutils literal notranslate"><span class="pre">Chart</span></code>). The kind in a
+reference is lowercase (<code class="docutils literal notranslate"><span class="pre">chart</span></code>). For the five asset kinds one is the other, capitalized:
+<code class="docutils literal notranslate"><span class="pre">dataframe</span></code>/<code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">chart</span></code>/<code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">notebook</span></code>/<code class="docutils literal notranslate"><span class="pre">Notebook</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>/<code class="docutils literal notranslate"><span class="pre">Note</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>/<code class="docutils literal notranslate"><span class="pre">Model</span></code>.
+<code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code> and <code class="docutils literal notranslate"><span class="pre">Build</span></code> are records that are not assets.</p>
+<p><strong>Hashes</strong> are <code class="docutils literal notranslate"><span class="pre">&quot;&lt;algorithm&gt;:&lt;hex&gt;&quot;</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;sha256:7f3a9c…&quot;</span></code>. Never a bare hex string, so the
+algorithm can change without ambiguity.</p>
+<p>What gets hashed is fixed, because hash computation is one of the three things that must have
+exactly one implementation (<a class="reference internal" href="asset-graph.html#not-doing"><span class="std std-ref">Not doing</span></a>):</p>
+<ul class="simple">
+<li><p><strong>A file:</strong> SHA-256 of its bytes.</p></li>
+<li><p><strong>A glob of files, or a directory:</strong> SHA-256 of a listing with one line per file,
+<code class="docutils literal notranslate"><span class="pre">&lt;hex</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">file's</span> <span class="pre">SHA-256&gt;</span></code>, two spaces, <code class="docutils literal notranslate"><span class="pre">&lt;path</span> <span class="pre">relative</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">directory</span> <span class="pre">or</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">glob's</span> <span class="pre">fixed</span> <span class="pre">prefix,</span> <span class="pre">with</span> <span class="pre">forward</span> <span class="pre">slashes&gt;</span></code>, newline; lines sorted by path (by code point, which is
+what <code class="docutils literal notranslate"><span class="pre">LC_ALL=C</span> <span class="pre">sort</span></code> gives). The fixed prefix of a glob is its leading directories that
+contain no wildcard: <code class="docutils literal notranslate"><span class="pre">_data/rates</span></code> for <code class="docutils literal notranslate"><span class="pre">_data/rates/**/*.parquet</span></code>. This is the output format
+of <code class="docutils literal notranslate"><span class="pre">sha256sum</span></code>, so anyone can reproduce it by hand, and a test does. A glob that matches one
+file is still a listing. <em>(Decided 2026-10-12; implemented in <code class="docutils literal notranslate"><span class="pre">chartbook.hashing</span></code>. Once a
+release carries it, it must not change without a new algorithm prefix.)</em></p></li>
+<li><p><strong>Which files count:</strong> every file, hidden ones included, except a short, fixed list that
+operating systems create by themselves: <code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code>, <code class="docutils literal notranslate"><span class="pre">Thumbs.db</span></code>, <code class="docutils literal notranslate"><span class="pre">desktop.ini</span></code>, and any file
+whose name starts with <code class="docutils literal notranslate"><span class="pre">._</span></code>, compared without regard to case. So opening a model’s folder in
+Finder does not change the model’s hash, and a Zarr dataset’s <code class="docutils literal notranslate"><span class="pre">.zarray</span></code> still counts. The
+list applies to a directory and to a glob. A <code class="docutils literal notranslate"><span class="pre">path</span></code> that names one file is that file,
+whatever it is called. <em>(Decided by the maintainer 2026-10-12, replacing “every file counts,
+hidden ones included”. No release carried the earlier rule, so the algorithm prefix is
+unchanged. <code class="docutils literal notranslate"><span class="pre">chartbook.hashing.is_ignored</span></code>.)</em></p></li>
+</ul>
+<p><strong>Location.</strong> Where an asset’s content is, as a typed object. Today there is one kind:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">path</span></code> — exactly as declared in the manifest, relative to the pipeline root. Stable across
+machines. This is what a human compares against their TOML.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> — absolute, machine-specific. Convenient for a local consumer; meaningless to a
+remote one, and therefore never the field a registry stores, and never published to a website.</p></li>
+</ul>
+<p><a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a> adds <code class="docutils literal notranslate"><span class="pre">&quot;kind&quot;:</span> <span class="pre">&quot;table&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;kind&quot;:</span> <span class="pre">&quot;query&quot;</span></code> for dataframes that live in a
+database. That a location is a typed object and not a bare path was settled there; this document
+used to show <code class="docutils literal notranslate"><span class="pre">path</span></code> and <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> at the top level of each record.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record also has a <code class="docutils literal notranslate"><span class="pre">location</span></code>, with a different vocabulary: <code class="docutils literal notranslate"><span class="pre">&quot;path&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;git&quot;</span></code>,
+saying where the pipeline’s <em>source</em> comes from.</p>
+<p><strong>Docs.</strong> An asset’s write-up is <code class="docutils literal notranslate"><span class="pre">&quot;docs&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;path&quot;:</span> <span class="pre">&quot;./docs_src/…md&quot;</span> <span class="pre">}</span></code> when the manifest gives
+<code class="docutils literal notranslate"><span class="pre">docs_path</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;docs&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;text&quot;:</span> <span class="pre">&quot;…&quot;</span> <span class="pre">}</span></code> when it gives the text inline with <code class="docutils literal notranslate"><span class="pre">docs</span></code>. The
+<code class="docutils literal notranslate"><span class="pre">rendered</span></code> key shown in the examples below points into the <code class="docutils literal notranslate"><span class="pre">content/</span></code> directory of the target
+layout; it is not written until that layout exists.</p>
+<p><strong>Declared metadata.</strong> An asset record carries every field its manifest entry declares
+(<code class="docutils literal notranslate"><span class="pre">sources</span></code>, <code class="docutils literal notranslate"><span class="pre">tags</span></code>, <code class="docutils literal notranslate"><span class="pre">license</span></code>, <code class="docutils literal notranslate"><span class="pre">units</span></code>, a field of your own), as declared, with keys sorted. TOML
+dates become ISO strings. What the index states in another form is left out: <code class="docutils literal notranslate"><span class="pre">path</span></code> (it is in
+<code class="docutils literal notranslate"><span class="pre">location</span></code>), <code class="docutils literal notranslate"><span class="pre">docs</span></code> and <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> (in <code class="docutils literal notranslate"><span class="pre">docs</span></code>), a chart’s <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> (in <code class="docutils literal notranslate"><span class="pre">inputs</span></code>), and a
+dataframe’s <code class="docutils literal notranslate"><span class="pre">series</span></code> (they are records of their own). A chart’s <code class="docutils literal notranslate"><span class="pre">series</span></code>, the list of what it
+shows, is declared metadata and stays (so written 2026-10-15; before that the index dropped it
+from every kind).</p>
+<p><strong>Timestamps</strong> are RFC 3339 with an explicit offset, in UTC.</p>
+<p><code class="docutils literal notranslate"><span class="pre">generated_at</span></code> is when the index last <em>changed</em>. A build that finds nothing different from the
+<code class="docutils literal notranslate"><span class="pre">index.json</span></code> already there leaves the file as it is, timestamp included, so that a build which
+changes nothing writes nothing and a published site does not churn. <em>(Decided 2026-10-12.)</em></p>
+<p><strong>Absent versus empty.</strong> A field that was not declared is omitted. A field declared as empty is
+present and empty. A consumer can therefore tell “no tags were given” from “tags were explicitly
+cleared”, which matters for diffing.</p>
+</section>
+<section id="record-kinds">
+<h2>Record kinds<a class="headerlink" href="#record-kinds" title="Link to this heading">#</a></h2>
+<section id="catalog">
+<h3>Catalog<a class="headerlink" href="#catalog" title="Link to this heading">#</a></h3>
+<p>The root. Exactly one per index.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Catalog"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/catalog"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FTSFR Catalog"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"pipelines"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ftsfr/crsp_treasury"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"warn"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"dataframes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"description"</span><span class="p">,</span><span class="w"> </span><span class="s2">"sources"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">policy</span></code> is the catalog’s resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>, so the keys of <code class="docutils literal notranslate"><span class="pre">required</span></code> are the manifest’s:
+<code class="docutils literal notranslate"><span class="pre">project</span></code>, <code class="docutils literal notranslate"><span class="pre">dataframes</span></code>, <code class="docutils literal notranslate"><span class="pre">charts</span></code>, <code class="docutils literal notranslate"><span class="pre">notebooks</span></code>. <em>(An earlier version of this example wrote
+<code class="docutils literal notranslate"><span class="pre">dataframe</span></code>.)</em></p>
+<p>An index for a single pipeline omits the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record and sets <code class="docutils literal notranslate"><span class="pre">root</span></code> to that pipeline’s ID.</p>
+<p><em>(2026-10-15, built: the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record also has a <code class="docutils literal notranslate"><span class="pre">location</span></code>, <code class="docutils literal notranslate"><span class="pre">{&quot;kind&quot;:</span> <span class="pre">&quot;path&quot;,</span> <span class="pre">&quot;value&quot;:</span> <span class="pre">&quot;/…/catalog&quot;}</span></code>, as a pipeline’s has, so a writer knows where the catalog’s own template
+overrides are; it is dropped from the published index altogether, since a catalog is only ever
+a folder and a bare <code class="docutils literal notranslate"><span class="pre">kind</span></code> would say nothing. The diagnostics page is a
+comparison a writer makes from the records and this record’s <code class="docutils literal notranslate"><span class="pre">policy</span></code>, as the inventory
+proposed; the build still writes the same comparison as a CSV file.)</em></p>
+</section>
+<section id="pipeline">
+<h3>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading">#</a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fed Yield Curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily Treasury constant-maturity yields."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"maintainer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Jeremy Bejarano"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"contributors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"…"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"repo_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"os_compatibility"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Linux"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Windows"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"build"</span><span class="p">:</span><span class="w"> </span><span class="s2">"doit"</span><span class="p">,</span><span class="w"> </span><span class="nt">"test"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pytest"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/crsp_compustat"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rev"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"git"</span><span class="p">,</span><span class="w"> </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a1b2c3d"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"pinned_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"assets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">             </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./README.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"content/ftsfr/fed_yield_curve/readme.md"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">location.kind</span></code> is <code class="docutils literal notranslate"><span class="pre">&quot;path&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;git&quot;</span></code>. <code class="docutils literal notranslate"><span class="pre">dependencies[].via</span></code> records whether the pin came from a
+local directory or a fetched revision — the field that keeps “was this built against a stable
+upstream?” answerable.</p>
+<p><em>(2026-10-15, built: a pipeline that supplies pages for its own site — <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">site_dir</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">docs_src/site/</span></code> when that exists — has <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> (<code class="docutils literal notranslate"><span class="pre">path</span></code> relative to its root, and
+<code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> until published) and <code class="docutils literal notranslate"><span class="pre">site_pages</span></code>, every Markdown file under it by relative path,
+sorted. The build copies them beside the generated pages; a writer lists them in the front page’s
+table of contents and reads <code class="docutils literal notranslate"><span class="pre">index_toc.md</span></code> if it is one of them. Without hashes for now.)</em></p>
+<p><em>(Added 2026-10-12 with the implementation; proposed.)</em> The example above shows a <code class="docutils literal notranslate"><span class="pre">git</span></code>
+dependency. One that is a directory is written like this:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"../fed_yield_curve"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">path</span></code> is as declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, relative to the pipeline’s root. <code class="docutils literal notranslate"><span class="pre">value</span></code> is the
+absolute directory, as in the pipeline’s own <code class="docutils literal notranslate"><span class="pre">location</span></code>, and like it is left out of a published
+index. <code class="docutils literal notranslate"><span class="pre">pinned_hash</span></code> is there once the dependency is pinned, copied from <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>. A <code class="docutils literal notranslate"><span class="pre">git</span></code> location’s <code class="docutils literal notranslate"><span class="pre">url</span></code> is written
+without any user name or password it had in the manifest (<code class="docutils literal notranslate"><span class="pre">https://user:token&#64;host/…</span></code>), since a
+published index goes wherever the site goes.</p>
+<p><code class="docutils literal notranslate"><span class="pre">dependencies</span></code> is absent when the manifest has no <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> table, and <code class="docutils literal notranslate"><span class="pre">[]</span></code> when it has
+an empty one, by the rule under “Absent versus empty”. (The worked example below writes
+<code class="docutils literal notranslate"><span class="pre">&quot;dependencies&quot;:</span> <span class="pre">[]</span></code> for a pipeline that is not said to have the table.)</p>
+<p>A dependency’s <code class="docutils literal notranslate"><span class="pre">id</span></code> is its key in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, with one exception. A key is the pipeline’s
+own name for another pipeline. In a catalog’s index, a dependency that is one of the catalog’s
+pipelines is written by the catalog’s ID for it, so that it is the <code class="docutils literal notranslate"><span class="pre">id</span></code> of a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record
+in the same file. The same goes for a model’s <code class="docutils literal notranslate"><span class="pre">inputs</span></code>.</p>
+</section>
+<section id="dataframe">
+<h3>Dataframe<a class="headerlink" href="#dataframe" title="Link to this heading">#</a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Treasury Rates"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Constant-maturity yields from H.15."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"row_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">15842</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"date_col"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w">  </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS2"</span><span class="p">,</span><span class="w">  </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/crsp_compustat:ratings"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"sources"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"FRED"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Federal Reserve Board"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"access_types"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Public"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"license"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Public domain"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"license_expiration"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Interest Rates"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/treasury_rates.md"</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"content/ftsfr/fed_yield_curve/dataframes/treasury_rates.md"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"built_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">columns</span></code> carries the physical schema read from the parquet file. This is what makes <strong>which series
+exist knowable without any declaration</strong> — see below. The schema is read the way <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>
+reads it, so it includes the partition columns of a hive-partitioned dataset, and a <code class="docutils literal notranslate"><span class="pre">dtype</span></code> is
+the Polars type in lower case with its parameters in square brackets: <code class="docutils literal notranslate"><span class="pre">float64</span></code>, <code class="docutils literal notranslate"><span class="pre">int32</span></code>,
+<code class="docutils literal notranslate"><span class="pre">string</span></code>, <code class="docutils literal notranslate"><span class="pre">boolean</span></code>, <code class="docutils literal notranslate"><span class="pre">date</span></code>, <code class="docutils literal notranslate"><span class="pre">datetime[ns]</span></code>, <code class="docutils literal notranslate"><span class="pre">datetime[us,</span> <span class="pre">UTC]</span></code>, <code class="docutils literal notranslate"><span class="pre">duration[ms]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">decimal[10,2]</span></code>, <code class="docutils literal notranslate"><span class="pre">list[int64]</span></code>, <code class="docutils literal notranslate"><span class="pre">categorical</span></code>, <code class="docutils literal notranslate"><span class="pre">struct</span></code>. <em>(The dtype vocabulary was added
+2026-10-12 with the implementation; this document had only shown <code class="docutils literal notranslate"><span class="pre">date</span></code> and <code class="docutils literal notranslate"><span class="pre">float64</span></code>.)</em> <code class="docutils literal notranslate"><span class="pre">inputs</span></code> carries the asset-level edges;
+<code class="docutils literal notranslate"><span class="pre">built_by</span></code> points at the <code class="docutils literal notranslate"><span class="pre">Build</span></code> record whose <code class="docutils literal notranslate"><span class="pre">output_hash</span></code> matches.</p>
+</section>
+<section id="series">
+<h3>Series<a class="headerlink" href="#series" title="Link to this heading">#</a></h3>
+<p>A series needs no storage — the dataframe holds the data. It needs an <em>address</em>, so documentation
+and metadata can attach to one column.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Series"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="nt">"part"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dgs10"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"dataframe"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"declared"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/series/dgs10.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">declared:</span> <span class="pre">false</span></code> marks a series inferred from the parquet schema — present, addressable, and
+undocumented. <code class="docutils literal notranslate"><span class="pre">declared:</span> <span class="pre">true</span></code> marks one with a <code class="docutils literal notranslate"><span class="pre">[dataframes.x.series.y]</span></code> table behind it. So
+declaring is how you <em>document</em> a series, not how you make it exist, and a FRED-style listing works
+from day one without anyone filling in metadata.</p>
+<p>An explicit <code class="docutils literal notranslate"><span class="pre">column</span></code> is what lets the address survive a column rename.</p>
+<p>A series is the <strong>part</strong> of a dataframe, in the reference grammar’s word: what follows <code class="docutils literal notranslate"><span class="pre">#</span></code>. For
+an undeclared series the part is the column’s own name. A column whose name is not a legal part
+(it contains a space, say) gets no <code class="docutils literal notranslate"><span class="pre">Series</span></code> record until a <code class="docutils literal notranslate"><span class="pre">[dataframes.x.series.y]</span></code> table gives
+it a key; it still appears in the dataframe’s <code class="docutils literal notranslate"><span class="pre">columns</span></code>. <em>(Decided 2026-10-12.)</em></p>
+<p>That is deliberate, and comes with a recommendation the maintainer made when deciding it:
+<strong>columns should have code-friendly, SQL-compatible names</strong>, letters, digits and underscores,
+starting with a letter (<code class="docutils literal notranslate"><span class="pre">spread_10y_2y</span></code>). The readable name (“10Y-2Y Spread”) is metadata, and
+belongs in the series table’s <code class="docutils literal notranslate"><span class="pre">name</span></code>, not in the data. <a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a> makes the same
+names appear in SQL, which is one more reason.</p>
+<p>The dataframe’s <code class="docutils literal notranslate"><span class="pre">date_col</span></code> is not a series. A declared series whose <code class="docutils literal notranslate"><span class="pre">column</span></code> the data does not
+have is still recorded, and the build warns.</p>
+</section>
+<section id="chart">
+<h3>Chart<a class="headerlink" href="#chart" title="Link to this heading">#</a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yield Curve, Latest"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/curve_today.html"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_output/curve_today.html"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
+<span class="w">             </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs2"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Interest Rates"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"date_cleared_by_iv_and_v"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-15"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"last_legal_clearance_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-15"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">inputs</span></code> replaces the single <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> field, as a list — a chart may plot several dataframes, and
+with series now addressable it may name individual series. This is a breaking change to the manifest
+and worth taking while nothing external depends on it.</p>
+<p>Until the manifest changes, a chart’s <code class="docutils literal notranslate"><span class="pre">dataframe</span> <span class="pre">=</span> <span class="pre">&quot;x&quot;</span></code> becomes <code class="docutils literal notranslate"><span class="pre">&quot;inputs&quot;:</span> <span class="pre">[&quot;&lt;pipeline&gt;:x&quot;]</span></code> in
+the index. The entries of <code class="docutils literal notranslate"><span class="pre">inputs</span></code> are IDs, so they are always fully qualified, whatever was
+written in the manifest.</p>
+</section>
+<section id="notebook-and-note">
+<h3>Notebook and Note<a class="headerlink" href="#notebook-and-note" title="Link to this heading">#</a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Notebook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:notebook/analysis"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"notebook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"analysis"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Initial exploration"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/analysis.ipynb"</span><span class="p">,</span><span class="w"> </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Note"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:note/methodology"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"note"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"methodology"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>A notebook’s <code class="docutils literal notranslate"><span class="pre">name</span></code> is inferred from its first level-one heading when not declared, as today.</p>
+</section>
+<section id="model">
+<h3>Model<a class="headerlink" href="#model" title="Link to this heading">#</a></h3>
+<p>A trained model that a pipeline declares. The record, its fields and what they are for are in
+<a class="reference internal" href="models.html"><span class="doc">Design: models</span></a> (“In the index”). It has the same skeleton as the other asset records — <code class="docutils literal notranslate"><span class="pre">id</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ref</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">location</span></code>, <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>, <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, <code class="docutils literal notranslate"><span class="pre">docs</span></code>, <code class="docutils literal notranslate"><span class="pre">built_by</span></code> — plus
+<code class="docutils literal notranslate"><span class="pre">metrics</span></code>, and <code class="docutils literal notranslate"><span class="pre">files</span></code> when the model is a directory. Its ID is
+<code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:model/rate_forecaster</span></code>.</p>
+<p>A model whose inputs include another pipeline’s dataframe also has <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>: for each
+such input, its ID as <code class="docutils literal notranslate"><span class="pre">inputs</span></code> writes it, and the content hash <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins it at.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast:features"</span><span class="p">],</span>
+<span class="nt">"pinned_inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>It is absent when nothing is pinned. An input of the pipeline’s own is not in it: a local
+asset is live, so there is no pin to name. It says what is pinned, which is what code that
+asks for the input is handed; it is not proof of what one training run read. That is a
+<code class="docutils literal notranslate"><span class="pre">Build</span></code> record’s job. <em>(Decided by the maintainer 2026-10-12: a field beside <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, which
+stays a list of IDs with no version in them.)</em></p>
+<p><em>(2026-10-13, proposed: a <code class="docutils literal notranslate"><span class="pre">Model</span></code> record also has <code class="docutils literal notranslate"><span class="pre">aliases</span></code>, the model’s labels as declared,
+and <code class="docutils literal notranslate"><span class="pre">versions</span></code>, oldest first: each with <code class="docutils literal notranslate"><span class="pre">version</span></code> (its name), <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>, <code class="docutils literal notranslate"><span class="pre">made_at</span></code>,
+<code class="docutils literal notranslate"><span class="pre">commit</span></code>, and where there are any <code class="docutils literal notranslate"><span class="pre">labels</span></code>, <code class="docutils literal notranslate"><span class="pre">metrics</span></code> and <code class="docutils literal notranslate"><span class="pre">inputs</span></code>. They are the versions in
+the store of the machine that built the index.)</em></p>
+<p><em>(2026-10-14, built: when the model file’s bytes are a version whose snapshot recorded what they
+were trained on, the record has <code class="docutils literal notranslate"><span class="pre">trained_with</span></code>, the content hash of each input then, keyed as the
+lockfile writes an input (<code class="docutils literal notranslate"><span class="pre">d</span></code>, <code class="docutils literal notranslate"><span class="pre">rates:treasury</span></code>), and <code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code>, the keys whose content now
+differs. 2026-10-15: <code class="docutils literal notranslate"><span class="pre">inputs_now</span></code> beside them, each input’s content hash now under the same keys
+— a local dataframe’s as it is in the folder, another pipeline’s as <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins it —
+so that the record alone says which input moved from what to what. A writer cannot derive it:
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code> and <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code> are keyed by build ID, and the index does not state which
+lockfile-style key is which build ID once a declaration is reordered or two upstreams share a
+dataframe name.)</em></p>
+<p><code class="docutils literal notranslate"><span class="pre">Model</span></code> records are written (step 2), without <code class="docutils literal notranslate"><span class="pre">built_by</span></code>. An entry of a model’s <code class="docutils literal notranslate"><span class="pre">inputs</span></code> that
+is in another pipeline is written by the ID that pipeline has in this build when it is part of
+it (a catalog knows <code class="docutils literal notranslate"><span class="pre">rates</span></code> as <code class="docutils literal notranslate"><span class="pre">ftsfr/rates</span></code>); otherwise by the name <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> declares
+that pipeline under (<code class="docutils literal notranslate"><span class="pre">rates:x</span></code> becomes <code class="docutils literal notranslate"><span class="pre">ftsfr/rates:x</span></code> when the table has <code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/rates&quot;</span></code>); and
+as the manifest states it when nothing knows the pipeline. So in a
+catalog’s index an input is the <code class="docutils literal notranslate"><span class="pre">id</span></code> of another record in the same file whenever it can be. A model’s <code class="docutils literal notranslate"><span class="pre">location</span></code> has
+<code class="docutils literal notranslate"><span class="pre">&quot;kind&quot;:</span> <span class="pre">&quot;file&quot;</span></code> whether its <code class="docutils literal notranslate"><span class="pre">path</span></code> is a file or a directory; <code class="docutils literal notranslate"><span class="pre">files</span></code> is what tells the two
+apart.</p>
+</section>
+<section id="build">
+<h3>Build<a class="headerlink" href="#build" title="Link to this heading">#</a></h3>
+<p>The derivation record: a complete description of how an asset was produced. One object serving as
+build plan, cache key and provenance record.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"input_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"output_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"recipe_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"params"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"ftsfr/crsp_compustat:ratings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rev"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/ftsfr/crsp_compustat@a1b2c3d"</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"rev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a1b2c3d4e5f6…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dirty"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"chartbook"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"python"</span><span class="p">:</span><span class="w"> </span><span class="s2">"3.12.4"</span><span class="p">,</span><span class="w"> </span><span class="nt">"polars"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.9.0"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"built_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T21:58:09Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"duration_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mf">412.6</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"impure"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"wrds_fetch"</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">asset</span></code> is the ID of what was built, so for a chart it is <code class="docutils literal notranslate"><span class="pre">…:chart/curve_today</span></code> and for a model
+<code class="docutils literal notranslate"><span class="pre">…:model/rate_forecaster</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">code</span></code> is the pipeline’s git commit when the asset was built, and whether the working tree had
+uncommitted changes. It answers “what code made this?” in a form a person can check out. It is a
+label for people, not an input to any hash: <code class="docutils literal notranslate"><span class="pre">recipe_hash</span></code> is what the cache uses. <em>(Added
+2026-10-12, proposed. It is what lets a <a class="reference internal" href="models.html"><span class="doc">model</span></a> version say which code trained
+it.)</em></p>
+<p><code class="docutils literal notranslate"><span class="pre">input_hash</span></code> is the store’s lookup key — computable <em>before</em> building, which is what lets a cache be
+asked and the work skipped. <code class="docutils literal notranslate"><span class="pre">output_hash</span></code> is what downstream consumers compare, so a rebuild
+producing identical bytes does not cascade.</p>
+<p><strong>Hashes are transitive.</strong> <code class="docutils literal notranslate"><span class="pre">input_hash</span></code> covers each input’s <em>hash</em>, not its path or name. Because
+those hashes were computed the same way, an asset’s identity transitively covers its whole upstream
+history — a Merkle DAG, the same structure that makes a git commit hash a statement about an entire
+repository. That is what makes recorded lineage <em>checkable</em> rather than merely trusted.</p>
+<p><code class="docutils literal notranslate"><span class="pre">impure</span></code> names steps that cannot be reproduced from their inputs. Verifiability reaches back to the
+last impure boundary, and a digest of what arrived is recorded there.</p>
+</section>
+<section id="added-for-the-versioned-catalog">
+<h3>Added for the versioned catalog<a class="headerlink" href="#added-for-the-versioned-catalog" title="Link to this heading">#</a></h3>
+<p><em>Added 2026-10-16</em> (<a class="reference internal" href="versioned-catalog.html"><span class="doc">Design: the versioned catalog</span></a>). In a <strong>catalog’s</strong> index only, read from the store
+of the machine that built it, as a model’s versions are:</p>
+<ul class="simple">
+<li><p>A <strong>Pipeline</strong> record’s <code class="docutils literal notranslate"><span class="pre">snapshots</span></code>: every snapshot of it in the store, newest first, each with
+<code class="docutils literal notranslate"><span class="pre">commit</span></code>, <code class="docutils literal notranslate"><span class="pre">made_at</span></code>, <code class="docutils literal notranslate"><span class="pre">name</span></code> (the version’s folder under <code class="docutils literal notranslate"><span class="pre">versions/</span></code>), <code class="docutils literal notranslate"><span class="pre">built_by_run</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">rendered</span></code>, whether the catalog built that snapshot’s site or shows the page that says why.</p></li>
+<li><p>For a pipeline shown from the store alone (<code class="docutils literal notranslate"><span class="pre">location.kind:</span> <span class="pre">store</span></code>), its <code class="docutils literal notranslate"><span class="pre">assets</span></code> are those its
+newest snapshot’s own index lists, and <code class="docutils literal notranslate"><span class="pre">asset_names</span></code> gives each one’s name there as plain text.
+<em>Added 2026-10-17.</em></p></li>
+<li><p>A <strong>Model</strong> record’s <code class="docutils literal notranslate"><span class="pre">trained_from</span></code>: for each input of another pipeline it was trained on, keyed
+as <code class="docutils literal notranslate"><span class="pre">inputs</span></code> is, the snapshot of that pipeline it was trained on: the one the model’s pipeline
+was pinned to when the model’s bytes were first snapshotted, else the newest holding the
+trained bytes made no later than that.</p></li>
+</ul>
+<p>In any index: a <strong>Pipeline</strong> record’s <code class="docutils literal notranslate"><span class="pre">from_snapshot</span></code> (<code class="docutils literal notranslate"><span class="pre">commit</span></code>, <code class="docutils literal notranslate"><span class="pre">made_at</span></code>) when its folder is a
+version laid out from the store; and on a pipeline’s <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> entry, <code class="docutils literal notranslate"><span class="pre">key</span></code>, the name the
+pipeline knows the other by in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, when it is not the other’s ID in the build (the
+name its lockfile, its snapshots and <code class="docutils literal notranslate"><span class="pre">trained_with</span></code> use).</p>
+</section>
+</section>
+<section id="where-the-lockfile-fits">
+<h2>Where the lockfile fits<a class="headerlink" href="#where-the-lockfile-fits" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> is the subset of the index that a project commits: its own <code class="docutils literal notranslate"><span class="pre">Build</span></code> records and its
+resolved <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>. The index is a build product and need not be committed; the lockfile is
+source, because it is what makes a rebuild reproducible and an upstream pin stable.</p>
+<p>Both use the same record schemas. There is no second format.</p>
+<p><em>(Built 2026-10-12, <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> the module. Corrected here as built; the shape was decided
+by the maintainer, the details below are proposed.)</em> What the lockfile holds is not quite the
+paragraph above. There are no <code class="docutils literal notranslate"><span class="pre">Build</span></code> records yet. And the part that freezes anything is
+missing from it: one record for each asset of each dependency, with its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/lock/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"../yield_curve"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">          </span><span class="nt">"pinned_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:9ac2…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>The envelope</strong> is the index’s, without <code class="docutils literal notranslate"><span class="pre">generated_at</span></code> and without <code class="docutils literal notranslate"><span class="pre">generator</span></code>, so that
+neither the clock nor a ChartBook upgrade changes a lockfile.</p></li>
+<li><p><strong>An asset record</strong> is the index’s record for that asset, cut down to these fields. It fits
+the index’s JSON Schema for its kind as it is. One with a <code class="docutils literal notranslate"><span class="pre">content_hash</span></code> is a pin; one
+without was declared by the other pipeline and not built when this was pinned.</p></li>
+<li><p><strong>The <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record</strong> is this pipeline’s, cut down to <code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>. That is
+below what the index’s schema requires of a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> (<code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">location</span></code>, <code class="docutils literal notranslate"><span class="pre">assets</span></code>), on
+purpose: those would change the lockfile whenever the manifest changed. The lockfile’s own
+envelope schema, <code class="docutils literal notranslate"><span class="pre">schemas/chartbook/lock/v1.json</span></code>, says what is there.</p></li>
+<li><p><strong>IDs use the dependency’s key</strong> in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, which is this pipeline’s name for it.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pinned_hash</span></code></strong> is the SHA-256 of a listing with one line per pinned asset of that
+dependency, <code class="docutils literal notranslate"><span class="pre">&lt;hex</span> <span class="pre">of</span> <span class="pre">its</span> <span class="pre">content</span> <span class="pre">hash&gt;</span></code>, two spaces, <code class="docutils literal notranslate"><span class="pre">&lt;its</span> <span class="pre">ID&gt;</span></code>, newline, sorted by ID.</p></li>
+<li><p><strong>A <code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">path</span></code> has <code class="docutils literal notranslate"><span class="pre">path</span></code> and no <code class="docutils literal notranslate"><span class="pre">value</span></code></strong>: a lockfile holds no absolute path.</p></li>
+<li><p><strong>A <code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">git</span></code> has <code class="docutils literal notranslate"><span class="pre">url</span></code>, <code class="docutils literal notranslate"><span class="pre">rev</span></code> if the manifest gives one, and <code class="docutils literal notranslate"><span class="pre">commit</span></code></strong>: the
+full hash that <code class="docutils literal notranslate"><span class="pre">rev</span></code> meant when the dependency was pinned. <code class="docutils literal notranslate"><span class="pre">rev</span></code> is what was asked for;
+<code class="docutils literal notranslate"><span class="pre">commit</span></code> is what was got. The index copies <code class="docutils literal notranslate"><span class="pre">commit</span></code> onto the pipeline’s dependency once it
+is pinned. The <code class="docutils literal notranslate"><span class="pre">url</span></code> never has a user name or a password in it. <em>(Proposed 2026-10-12, with
+<code class="docutils literal notranslate"><span class="pre">git</span></code> dependencies.)</em></p></li>
+</ul>
+</section>
+<section id="candidate-additions-deliberately-out-of-v1">
+<h2>Candidate additions, deliberately out of v1<a class="headerlink" href="#candidate-additions-deliberately-out-of-v1" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Diagnostic</span></code> records</strong> carrying metadata-completeness results. Derived and recomputable, so the
+index does not need to carry them yet.</p></li>
+<li><p><strong>A parquet form of the asset table</strong>, for catalogs large enough that a browser should query the
+index with DuckDB-WASM rather than parse JSON.</p></li>
+<li><p><strong>Per-pipeline index fragments</strong> (<code class="docutils literal notranslate"><span class="pre">_build/index/&lt;scope&gt;/&lt;name&gt;.json</span></code>) to make incremental
+regeneration cheap. An implementation detail if adopted; <code class="docutils literal notranslate"><span class="pre">index.json</span></code> stays the normative artifact
+a consumer reads.</p></li>
+<li><p><strong>An <code class="docutils literal notranslate"><span class="pre">Export</span></code> record</strong> describing what was emitted to RO-Crate, OpenLineage or Dagster, so a
+consumer can tell which views exist.</p></li>
+</ul>
+</section>
+<section id="worked-example">
+<h2>Worked example<a class="headerlink" href="#worked-example" title="Link to this heading">#</a></h2>
+<p>The smallest useful index — one pipeline, one dataframe, one documented series, one chart.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/index/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T22:14:03Z"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"generator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fed Yield Curve"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"build"</span><span class="p">:</span><span class="w"> </span><span class="s2">"doit"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">      </span><span class="nt">"assets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">                 </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Treasury Rates"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"date_col"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">                   </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">      </span><span class="nt">"built_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:9ac2…"</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Series"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="nt">"part"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dgs10"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"dataframe"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"declared"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span><span class="w"> </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yield Curve, Latest"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/curve_today.html"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:cc71…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"input_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:0e55…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"output_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"recipe_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:7721…"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">      </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"chartbook"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"python"</span><span class="p">:</span><span class="w"> </span><span class="s2">"3.12.4"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"built_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T21:58:09Z"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"impure"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"fred_api_fetch"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The asset records here leave <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> out of <code class="docutils literal notranslate"><span class="pre">location</span></code>, as a published copy of the index
+does. Note the <code class="docutils literal notranslate"><span class="pre">Series</span></code> record for <code class="docutils literal notranslate"><span class="pre">DGS10</span></code> but none for <code class="docutils literal notranslate"><span class="pre">date</span></code>, and that a hypothetical
+<code class="docutils literal notranslate"><span class="pre">DGS2</span></code> column would appear as <code class="docutils literal notranslate"><span class="pre">declared:</span> <span class="pre">false</span></code> — addressable, undocumented. Note also that the chart’s <code class="docutils literal notranslate"><span class="pre">inputs</span></code>
+names a <em>series</em>, so “what does this chart depend on” is answerable at column granularity even
+though the build graph remains coarse.</p>
+</section>
+<section id="what-this-unblocks">
+<h2>What this unblocks<a class="headerlink" href="#what-this-unblocks" title="Link to this heading">#</a></h2>
+<p>Once the index exists, several things stop being subsystems and become readers of one file:</p>
+<ul class="simple">
+<li><p>An <strong>MCP server</strong> exposing pipelines and assets as resources, and <code class="docutils literal notranslate"><span class="pre">data.load</span></code> as a tool.</p></li>
+<li><p>A <strong>Dagster export</strong>, mapping each asset to an <code class="docutils literal notranslate"><span class="pre">&#64;asset</span></code> with <code class="docutils literal notranslate"><span class="pre">deps</span></code>.</p></li>
+<li><p><strong>Faceted search</strong> over the catalog, computed in a browser against a small file.</p></li>
+<li><p>A <strong>provenance panel</strong> on every asset page: what built this, from which inputs at which hashes.
+<em>(Built 2026-10-14: <code class="docutils literal notranslate"><span class="pre">chartbook/provenance.py</span></code>, the index is built first and each page reads its
+record; <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “6b, as built”.)</em></p></li>
+<li><p>A <strong>build diff</strong> for reviewing what changed, including changes made by automated tooling.
+<em>(Built 2026-10-14: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">index</span> <span class="pre">diff</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook/indexdiff.py</span></code>; <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “6a, as built”.)</em></p></li>
+</ul>
+<p>Which is the reason this document comes first.</p>
+</section>
+<section id="what-the-first-implementation-does">
+<span id="index-implementing"></span><h2>What the first implementation does<a class="headerlink" href="#what-the-first-implementation-does" title="Link to this heading">#</a></h2>
+<p>Built in <code class="docutils literal notranslate"><span class="pre">chartbook/index.py</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook/hashing.py</span></code>, with the JSON Schemas beside them in
+<code class="docutils literal notranslate"><span class="pre">chartbook/schemas/</span></code>. <code class="docutils literal notranslate"><span class="pre">tests/test_index.py</span></code> and <code class="docutils literal notranslate"><span class="pre">tests/test_hashing.py</span></code> are the executable form
+of this section.</p>
+<p><em>(2026-10-14, for the writer, <a class="reference internal" href="writer.html"><span class="doc">Design: the writer, and what every page shows</span></a>: every write-up carries its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>; a <code class="docutils literal notranslate"><span class="pre">file</span></code>
+location its <code class="docutils literal notranslate"><span class="pre">modified_at</span></code>; a dated dataframe its <code class="docutils literal notranslate"><span class="pre">date_range</span></code>; a pipeline its <code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code>.)</em></p>
+<p><strong>What is written.</strong> <code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code>, <code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">Notebook</span></code>, <code class="docutils literal notranslate"><span class="pre">Note</span></code>
+and <code class="docutils literal notranslate"><span class="pre">Model</span></code> records; <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> on a <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> that declares some, each with its
+<code class="docutils literal notranslate"><span class="pre">pinned_hash</span></code> once pinned; and <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code> on a <code class="docutils literal notranslate"><span class="pre">Model</span></code>. Not yet: <code class="docutils literal notranslate"><span class="pre">Build</span></code>
+records and <code class="docutils literal notranslate"><span class="pre">built_by</span></code>;
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code> on a dataframe or a notebook (the manifest has no field to declare them); <code class="docutils literal notranslate"><span class="pre">rendered</span></code>
+in <code class="docutils literal notranslate"><span class="pre">docs</span></code>. A dependency that is a directory, once pinned from a snapshot, has the
+snapshot’s commit in its <code class="docutils literal notranslate"><span class="pre">location.commit</span></code> and its time in <code class="docutils literal notranslate"><span class="pre">snapshot</span></code> <em>(2026-10-13, proposed;
+a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency already had <code class="docutils literal notranslate"><span class="pre">commit</span></code>)</em>. A pipeline’s scripts are written as <code class="docutils literal notranslate"><span class="pre">&quot;scripts&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;build&quot;:</span> <span class="pre">…,</span> <span class="pre">&quot;test&quot;:</span> <span class="pre">…</span> <span class="pre">}</span></code>,
+sorted by name: all of <code class="docutils literal notranslate"><span class="pre">[scripts]</span></code>, with <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">build</span></code> as <code class="docutils literal notranslate"><span class="pre">build</span></code> <em>(all of them since
+2026-10-13; before the table was read, only <code class="docutils literal notranslate"><span class="pre">build</span></code>)</em>.</p>
+<p><strong>Where it is written.</strong> The <code class="docutils literal notranslate"><span class="pre">_build/</span></code> layout at the top of this document is a destination, not
+today’s layout. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> <em>(since 2026-10-13, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code>: the command that
+renders the site was renamed)</em> writes two files:</p>
+<ul class="simple">
+<li><p>the <strong>published</strong> index, <code class="docutils literal notranslate"><span class="pre">index.json</span></code> beside the HTML (<code class="docutils literal notranslate"><span class="pre">docs/index.json</span></code>), so that it travels
+with the site and a browser can fetch it. It has no <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> anywhere, and a pipeline’s
+<code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">path</span></code> has no <code class="docutils literal notranslate"><span class="pre">value</span></code>, nor does a dependency’s: local absolute paths never
+reach a published site;</p></li>
+<li><p>the <strong>full</strong> index, <code class="docutils literal notranslate"><span class="pre">index.json</span></code> in the build directory (<code class="docutils literal notranslate"><span class="pre">_docs/</span></code>), with those paths. A plain
+build deletes that directory when it finishes, so the full index outlives the build only with
+<code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code> or in an incremental build, which is the default for a catalog.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook.index.build_index(manifest)</span></code> returns the full index to a program, and
+<code class="docutils literal notranslate"><span class="pre">chartbook.index.published()</span></code> turns it into the other.</p>
+<p><strong>Records come from one object.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook.refs.AssetRef</span></code> gives the <code class="docutils literal notranslate"><span class="pre">id</span></code> (<code class="docutils literal notranslate"><span class="pre">str(ref)</span></code>) and the
+<code class="docutils literal notranslate"><span class="pre">ref</span></code> (<code class="docutils literal notranslate"><span class="pre">ref.to_dict()</span></code>). A local name from a manifest becomes an ID with
+<code class="docutils literal notranslate"><span class="pre">ref.in_pipeline(pipeline_id)</span></code>. In a catalog, the pipeline’s ID is the catalog’s key for it.</p>
+<p><strong>It is deterministic.</strong> The same manifests and files give the same bytes, apart from
+<code class="docutils literal notranslate"><span class="pre">generated_at</span></code>. Records are in a fixed order: the catalog; then pipelines by ID; within one, the
+pipeline, then its dataframes, charts, notebooks, notes and models, each by name, and each
+dataframe followed by its series in column order. Declared metadata is in sorted key order, so reordering
+a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> does not reorder the index.</p>
+<p><strong>Hashes are cached.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook.hashing.HashCache</span></code> remembers each file’s hash against its size
+and modification time, in <code class="docutils literal notranslate"><span class="pre">.chartbook-hash-cache.json</span></code> in the build directory. An incremental
+build reads only the files that changed. A plain build starts from an empty build directory and
+hashes everything, as it does everything else.</p>
+<p><strong>Files that are not built yet.</strong> A declared asset whose file is missing still has a record,
+without <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>, <code class="docutils literal notranslate"><span class="pre">size_bytes</span></code>, <code class="docutils literal notranslate"><span class="pre">row_count</span></code> or <code class="docutils literal notranslate"><span class="pre">columns</span></code>. The index describes what the
+manifest declares; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> is what complains about missing files. (By default
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code> stops on a missing file before it gets this far, and with <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> the
+affected pipelines are left out of the site and of the index alike. The case arises through the
+Python API, and in a pipeline that has built none of its outputs yet, which <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code>
+renders with each of them shown as not built.)</p>
+<p><strong>A key that is not an address.</strong> An asset whose key in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> cannot be written in a
+reference (it contains a space, say) is left out, with a warning naming it.</p>
+<p><strong>The site does not read the index.</strong> Sphinx still renders from the manifests. Moving the
+renderer onto the index is its own change (step 6 in <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>), for when the index has
+been stable for a while.</p>
+<section id="decided-while-building-it">
+<h3>Decided while building it<a class="headerlink" href="#decided-while-building-it" title="Link to this heading">#</a></h3>
+<p>Each of these was open or unstated when the build began.</p>
+<p><strong>Decided by the maintainer, 2026-10-12:</strong></p>
+<ol class="arabic simple">
+<li><p>The hashing rule for a glob or a directory, as written under “Conventions”. Which files
+count was decided a second time the same day, when the store was built: a short fixed
+list of operating-system files is left out.</p></li>
+<li><p>Columns whose names are not legal parts have no <code class="docutils literal notranslate"><span class="pre">Series</span></code> record until a table names them.
+Columns should have SQL-compatible names; the readable name is metadata.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">generated_at</span></code> is when the index last changed; an unchanged index is not rewritten.</p></li>
+</ol>
+<p><strong>Proposed: implemented, and waiting on the maintainer’s yes:</strong></p>
+<ol class="arabic simple" start="4">
+<li><p>Two files, with the published one free of local paths.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">dtype</span></code> vocabulary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs.text</span></code> for inline write-ups, and no <code class="docutils literal notranslate"><span class="pre">rendered</span></code> for now.</p></li>
+<li><p>An asset record carries all declared metadata, not a fixed list of fields.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">policy.required</span></code> keeps the manifest’s plural keys.</p></li>
+<li><p>Pipelines that a <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> build skips are left out of the index.</p></li>
+</ol>
+<p><strong>Proposed with declared dependencies (step 3a), 2026-10-12: implemented, and waiting on the
+maintainer’s yes:</strong></p>
+<ol class="arabic simple" start="10">
+<li><p>A <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency’s <code class="docutils literal notranslate"><span class="pre">location</span></code> has <code class="docutils literal notranslate"><span class="pre">path</span></code> (as declared) and <code class="docutils literal notranslate"><span class="pre">value</span></code> (absolute, not
+published). The design showed only the <code class="docutils literal notranslate"><span class="pre">git</span></code> form.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dependencies</span></code> is absent when there is no <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> table, not <code class="docutils literal notranslate"><span class="pre">[]</span></code>. A build of a
+project with no dependencies therefore writes the same index as before.</p></li>
+<li><p>Within one index, a dependency and a cross-pipeline input are written by the ID the
+pipeline has in that index, when it is one of its pipelines; by its key in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>
+otherwise.</p></li>
+<li><p>Credentials are removed from a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s <code class="docutils literal notranslate"><span class="pre">url</span></code>.</p></li>
+</ol>
+<p><strong>Proposed with cross-pipeline references (step 3d), 2026-10-12:</strong></p>
+<ol class="arabic simple" start="14">
+<li><p><code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code> holds only inputs that belong to another pipeline, and is absent when none
+is pinned. (That it is a field beside <code class="docutils literal notranslate"><span class="pre">inputs</span></code> was the maintainer’s decision.)</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> that cannot be read leaves what is pinned out of the index, with a
+warning, and does not stop the build.</p></li>
+</ol>
+<p><strong>Proposed with <code class="docutils literal notranslate"><span class="pre">git</span></code> dependencies (step 3e), 2026-10-12:</strong></p>
+<ol class="arabic simple" start="16">
+<li><p>A dependency’s <code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">git</span></code> gains <code class="docutils literal notranslate"><span class="pre">commit</span></code>, beside <code class="docutils literal notranslate"><span class="pre">url</span></code> and <code class="docutils literal notranslate"><span class="pre">rev</span></code>.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="asset-graph.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: the asset graph</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="writer.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: the writer, and what every page shows</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-is">What the index is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-per-record-kind-and-version">Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#conventions">Conventions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog">Catalog</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe">Dataframe</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#series">Series</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart">Chart</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebook-and-note">Notebook and Note</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build">Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added-for-the-versioned-catalog">Added for the versioned catalog</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-lockfile-fits">Where the lockfile fits</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#candidate-additions-deliberately-out-of-v1">Candidate additions, deliberately out of v1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example">Worked example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-unblocks">What this unblocks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

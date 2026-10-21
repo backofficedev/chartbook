@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>chartbook.backends &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.backends';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="chartbook.backends.databricks" href="chartbook.backends.databricks.html" />
+    <link rel="prev" title="chartbook.data" href="chartbook.data.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 current active has-children"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/apidocs/chartbook/chartbook.backends.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>chartbook.backends</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#package-contents">Package Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.BACKEND_PLUGIN_GROUP"><code class="docutils literal notranslate"><span class="pre">BACKEND_PLUGIN_GROUP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend"><code class="docutils literal notranslate"><span class="pre">Backend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.check_url"><code class="docutils literal notranslate"><span class="pre">Backend.check_url()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.connect"><code class="docutils literal notranslate"><span class="pre">Backend.connect()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.describe"><code class="docutils literal notranslate"><span class="pre">Backend.describe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.engine"><code class="docutils literal notranslate"><span class="pre">Backend.engine()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.name"><code class="docutils literal notranslate"><span class="pre">Backend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.reads_files"><code class="docutils literal notranslate"><span class="pre">Backend.reads_files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.ref"><code class="docutils literal notranslate"><span class="pre">Backend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.scan"><code class="docutils literal notranslate"><span class="pre">Backend.scan()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.span"><code class="docutils literal notranslate"><span class="pre">Backend.span()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.sql"><code class="docutils literal notranslate"><span class="pre">Backend.sql()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.BackendError"><code class="docutils literal notranslate"><span class="pre">BackendError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.check_url"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.check_url()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.connect"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.connect()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.describe"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.describe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.engine"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.engine()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.name"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.reads_files"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.reads_files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.ref"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.scratch"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.scratch()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.span"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.span()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.sql"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.sql()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.EXTRAS"><code class="docutils literal notranslate"><span class="pre">EXTRAS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.MEMORY_URL"><code class="docutils literal notranslate"><span class="pre">MEMORY_URL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend"><code class="docutils literal notranslate"><span class="pre">ParquetBackend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.name"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.ref"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.scan"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.scan()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.SOURCES_FILE"><code class="docutils literal notranslate"><span class="pre">SOURCES_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.SOURCE_ENV_PREFIX"><code class="docutils literal notranslate"><span class="pre">SOURCE_ENV_PREFIX</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_class"><code class="docutils literal notranslate"><span class="pre">backend_class()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_for"><code class="docutils literal notranslate"><span class="pre">backend_for()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_names"><code class="docutils literal notranslate"><span class="pre">backend_names()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.check_backend"><code class="docutils literal notranslate"><span class="pre">check_backend()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.check_url"><code class="docutils literal notranslate"><span class="pre">check_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.duckdb_path"><code class="docutils literal notranslate"><span class="pre">duckdb_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.machine_source_url"><code class="docutils literal notranslate"><span class="pre">machine_source_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.open_backend"><code class="docutils literal notranslate"><span class="pre">open_backend()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.quote_identifier"><code class="docutils literal notranslate"><span class="pre">quote_identifier()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.quote_literal"><code class="docutils literal notranslate"><span class="pre">quote_literal()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.refuse_in_an_untrusted_build"><code class="docutils literal notranslate"><span class="pre">refuse_in_an_untrusted_build()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.scheme_of"><code class="docutils literal notranslate"><span class="pre">scheme_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.source_env_var"><code class="docutils literal notranslate"><span class="pre">source_env_var()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.source_url"><code class="docutils literal notranslate"><span class="pre">source_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.subselect"><code class="docutils literal notranslate"><span class="pre">subselect()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.backends">
+<span id="chartbook-backends"></span><h1><a class="reference internal" href="#module-chartbook.backends" title="chartbook.backends"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><a class="headerlink" href="#module-chartbook.backends" title="Link to this heading">#</a></h1>
+<p>Backends: the engines behind a pipeline’s <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p>
+<p>A dataframe is a file, or it is a table or a query in a <strong>source</strong>: a named,
+configured instance of a backend, declared in the manifest::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/local.duckdb"
+
+[dataframes.slopes]
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
+</pre></div>
+</div>
+<p>The rule, from <code class="docutils literal notranslate"><span class="pre">docs_src/design/data-access.md</span></code>: <strong>a name resolves to a
+location; the backend runs the query; Arrow comes back; Polars wraps it.</strong>
+ChartBook never parses, plans or rewrites SQL. It knows where a name lives
+and which dialect lives there, and it substitutes identifiers. The SQL is
+the user’s (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.data.sql</span></code>).</p>
+<p>Three backends are built. <code class="docutils literal notranslate"><span class="pre">parquet</span></code> is what a file-backed dataframe has
+always been: it reads the file, and in SQL it is <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>.
+<code class="docutils literal notranslate"><span class="pre">duckdb</span></code> is the local engine: a file, or <code class="docutils literal notranslate"><span class="pre">:memory:</span></code>, that holds tables
+and runs any SQL that mentions them, and reads parquet files too, so a
+query can join a table of one source with a file of this pipeline.
+<code class="docutils literal notranslate"><span class="pre">databricks</span></code> is a SQL warehouse (:mod:<code class="docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code>),
+whose driver <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[databricks]</span></code> installs. A source’s
+backend is found by its name: <code class="docutils literal notranslate"><span class="pre">duckdb</span></code> here, any other in the entry-point
+group <code class="docutils literal notranslate"><span class="pre">chartbook.backends</span></code>, as a kind of store is in <code class="docutils literal notranslate"><span class="pre">chartbook.stores</span></code>.
+What a backend does for ChartBook is :class:<code class="docutils literal notranslate"><span class="pre">Backend</span></code>. A manifest that
+names a backend nothing provides is refused, so that the message can say so.</p>
+<p><strong>Credentials never enter a manifest.</strong> A source’s <code class="docutils literal notranslate"><span class="pre">url</span></code> is the public
+part. The machine supplies the rest (:func:<code class="docutils literal notranslate"><span class="pre">source_url</span></code>): an environment
+variable <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SOURCE_&lt;NAME&gt;_URL</span></code> holding a complete URL, then a
+<code class="docutils literal notranslate"><span class="pre">url</span></code> for the source in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/sources.toml</span></code>, then the manifest’s
+URL alone, which is all a DuckDB file needs. A manifest URL that carries a
+user name or a password is refused when the manifest loads, and so is a
+machine URL for a different engine than the manifest’s backend. A
+warehouse’s backend may take its credentials from the engine’s own
+environment variables too, and sends them only to a host the machine names.</p>
+<p><strong>No writes.</strong> A connection to a DuckDB file is opened read-only.
+ChartBook never creates, loads or alters a table; <code class="docutils literal notranslate"><span class="pre">table</span></code> and <code class="docutils literal notranslate"><span class="pre">query</span></code>
+describe what the pipeline’s own tools have already made. A <code class="docutils literal notranslate"><span class="pre">:memory:</span></code>
+source is the exception by nature: it holds nothing until something is put
+in it through :func:<code class="docutils literal notranslate"><span class="pre">chartbook.data.connect</span></code>, so it is one writable
+connection for the life of the process.</p>
+<p><strong>Connections are not kept.</strong> A DuckDB file is opened afresh for each
+load, so a rebuilt file is seen on the next call. A lazy frame handed out
+keeps its own connection alive for as long as it lives, and DuckDB locks
+the file against writers for that long; drop the frame before rebuilding
+the file in the same process.</p>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</div>
+</section>
+<section id="package-contents">
+<h2>Package Contents<a class="headerlink" href="#package-contents" title="Link to this heading">#</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.Backend" title="chartbook.backends.Backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Backend</span></code></a></p></td>
+<td><p>An engine behind a source: what ChartBook asks of one.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.DuckDBBackend" title="chartbook.backends.DuckDBBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DuckDBBackend</span></code></a></p></td>
+<td><p>A DuckDB file, opened read-only for each use, or an in-memory engine.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.ParquetBackend" title="chartbook.backends.ParquetBackend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ParquetBackend</span></code></a></p></td>
+<td><p>What a file-backed dataframe has always been.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.backend_class" title="chartbook.backends.backend_class"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_class</span></code></a></p></td>
+<td><p>The :class:<code class="docutils literal notranslate"><span class="pre">Backend</span></code> class a source’s <code class="docutils literal notranslate"><span class="pre">backend</span></code> names; None if nothing provides it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.backend_for" title="chartbook.backends.backend_for"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_for</span></code></a></p></td>
+<td><p>The backend that reads a location: parquet for a file, else the source’s.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.backend_names" title="chartbook.backends.backend_names"><code class="xref py py-obj docutils literal notranslate"><span class="pre">backend_names</span></code></a></p></td>
+<td><p>Every backend a source may name here: <code class="docutils literal notranslate"><span class="pre">duckdb</span></code>, and each one a plugin provides.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.check_backend" title="chartbook.backends.check_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_backend</span></code></a></p></td>
+<td><p>Refuse a backend nothing provides, and say which there are.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.check_url" title="chartbook.backends.check_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_url</span></code></a></p></td>
+<td><p>Refuse a source URL that carries credentials or the wrong scheme.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.duckdb_path" title="chartbook.backends.duckdb_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">duckdb_path</span></code></a></p></td>
+<td><p>The file a <code class="docutils literal notranslate"><span class="pre">duckdb://</span></code> URL names, absolute; or <code class="docutils literal notranslate"><span class="pre">:memory:</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.machine_source_url" title="chartbook.backends.machine_source_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">machine_source_url</span></code></a></p></td>
+<td><p>The URL this machine gives a source, credentials and all; None if it gives none.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.open_backend" title="chartbook.backends.open_backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">open_backend</span></code></a></p></td>
+<td><p>The backend a source names, made from its public URL and its name.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.quote_identifier" title="chartbook.backends.quote_identifier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quote_identifier</span></code></a></p></td>
+<td><p>Quote a one-to-three-part identifier for DuckDB: <code class="docutils literal notranslate"><span class="pre">&quot;a&quot;.&quot;b&quot;.&quot;c&quot;</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.quote_literal" title="chartbook.backends.quote_literal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quote_literal</span></code></a></p></td>
+<td><p>Quote a string for SQL: <code class="docutils literal notranslate"><span class="pre">'…'</span></code> with a quote inside doubled.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.refuse_in_an_untrusted_build" title="chartbook.backends.refuse_in_an_untrusted_build"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refuse_in_an_untrusted_build</span></code></a></p></td>
+<td><p>Refuse to reach an engine in a build of files from a store.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.scheme_of" title="chartbook.backends.scheme_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scheme_of</span></code></a></p></td>
+<td><p>The scheme of a URL, lower-cased; empty when it has none.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.source_env_var" title="chartbook.backends.source_env_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_env_var</span></code></a></p></td>
+<td><p>The environment variable that may hold a source’s URL.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.source_url" title="chartbook.backends.source_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_url</span></code></a></p></td>
+<td><p>The URL a source is opened with, credentials and all.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.subselect" title="chartbook.backends.subselect"><code class="xref py py-obj docutils literal notranslate"><span class="pre">subselect</span></code></a></p></td>
+<td><p>A query as a table expression: <code class="docutils literal notranslate"><span class="pre">(…)</span></code> on its own lines.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.BACKEND_PLUGIN_GROUP" title="chartbook.backends.BACKEND_PLUGIN_GROUP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BACKEND_PLUGIN_GROUP</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.EXTRAS" title="chartbook.backends.EXTRAS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EXTRAS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.MEMORY_URL" title="chartbook.backends.MEMORY_URL"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MEMORY_URL</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.backends.SOURCES_FILE" title="chartbook.backends.SOURCES_FILE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SOURCES_FILE</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.backends.SOURCE_ENV_PREFIX" title="chartbook.backends.SOURCE_ENV_PREFIX"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SOURCE_ENV_PREFIX</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.backends.BACKEND_PLUGIN_GROUP">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">BACKEND_PLUGIN_GROUP</span></span><a class="headerlink" href="#chartbook.backends.BACKEND_PLUGIN_GROUP" title="Link to this definition">#</a></dt>
+<dd><p>‘chartbook.backends’</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.backends.Backend">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">Backend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend" title="Link to this definition">#</a></dt>
+<dd><p>An engine behind a source: what ChartBook asks of one.</p>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> is what <code class="docutils literal notranslate"><span class="pre">[sources.x]</span> <span class="pre">backend</span></code> says. A backend is made from a
+source’s public URL, as its location carries it, and the source’s name,
+by which the machine’s own URL and credentials are found; it connects
+only when asked. Every call that reaches the engine raises</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Class<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">BackendError</span></code> with the engine’s own message when it fails; an
+error found only when a lazy frame is collected comes as Polars’
+<code class="docutils literal notranslate"><span class="pre">ComputeError</span></code> with the engine’s message in it, or as the</p>
+</dd>
+<dt class="field-even">Class<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">BackendError</span></code> itself, by Polars version.</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">reads_files</span></code> says whether SQL run in it may name a file of this
+machine as :class:<code class="docutils literal notranslate"><span class="pre">ParquetBackend</span></code> writes one, <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>:
+so whether :func:<code class="docutils literal notranslate"><span class="pre">chartbook.data.sql</span></code> may join this engine’s tables
+with a pipeline’s files in one query.</p>
+<p class="rubric">Initialization</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.check_url">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">check_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.check_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.check_url" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a manifest URL this backend cannot open, with what to write instead.</p>
+<p>Credentials and the scheme are checked before this (:func:<code class="docutils literal notranslate"><span class="pre">check_url</span></code>).</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – Saying what is wrong with it.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.connect">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.connect" title="Link to this definition">#</a></dt>
+<dd><p>The engine’s own connection, for :func:<code class="docutils literal notranslate"><span class="pre">chartbook.data.connect</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.describe">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">describe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.describe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.describe" title="Link to this definition">#</a></dt>
+<dd><p>A dataframe’s columns, with the engine’s type names, and its row count.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.engine">
+<span class="sig-name descname"><span class="pre">engine</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.engine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.engine" title="Link to this definition">#</a></dt>
+<dd><p>What tells one engine from another: two locations with the same run in one query.</p>
+<p>By default the backend, its URL and the source’s name, since the
+machine may give each source its own place to connect to.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.backends.Backend.name" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.reads_files">
+<span class="sig-name descname"><span class="pre">reads_files</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.15)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.backends.Backend.reads_files" title="Link to this definition">#</a></dt>
+<dd><p>False</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.ref">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.ref" title="Link to this definition">#</a></dt>
+<dd><p>A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.scan">
+<span class="sig-name descname"><span class="pre">scan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.scan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.scan" title="Link to this definition">#</a></dt>
+<dd><p>A table or a query, as a Polars LazyFrame.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.span">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">span</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.span"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.span" title="Link to this definition">#</a></dt>
+<dd><p>The first and last date in one column, read as timestamps; a value that is not one is left out.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.Backend.sql">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">sql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#Backend.sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.Backend.sql" title="Link to this definition">#</a></dt>
+<dd><p>Run SQL in this engine and return a Polars LazyFrame.</p>
+<p>The engine binds the query here, so a name it does not know is
+refused at once; collecting the frame runs it.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.backends.BackendError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">BackendError</span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#BackendError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.BackendError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#Exception" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<p>Raised when a source cannot be opened or a query cannot be run.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">DuckDBBackend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#chartbook.backends.Backend" title="chartbook.backends.Backend"><code class="xref py py-obj docutils literal notranslate"><span class="pre">chartbook.backends.Backend</span></code></a></p>
+<p>A DuckDB file, opened read-only for each use, or an in-memory engine.</p>
+<p>A file is opened afresh by every :meth:<code class="docutils literal notranslate"><span class="pre">connect</span></code>, so nothing in the
+process keeps a stale handle: a frame handed out keeps its own
+connection for as long as it lives, and no longer. The in-memory engine
+of a <code class="docutils literal notranslate"><span class="pre">:memory:</span></code> source is one connection for the life of the process,
+since what is put in it through <code class="docutils literal notranslate"><span class="pre">data.connect()</span></code> is all it holds.</p>
+<p class="rubric">Initialization</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.check_url">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">check_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.check_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.check_url" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.connect" title="Link to this definition">#</a></dt>
+<dd><p>The raw <code class="docutils literal notranslate"><span class="pre">duckdb</span></code> connection.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If the file is not there, or cannot be opened;
+or if this is a build of files from a store, whose manifest
+anyone who can write the store may have written: such a build
+runs no table and no query (a query can read any file of the
+machine), and says so on the page.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.describe">
+<span class="sig-name descname"><span class="pre">describe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.describe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.describe" title="Link to this definition">#</a></dt>
+<dd><p>A dataframe’s columns, with DuckDB’s type names, and its row count.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.engine">
+<span class="sig-name descname"><span class="pre">engine</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.engine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.engine" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#chartbook.backends.DuckDBBackend.name" title="Link to this definition">#</a></dt>
+<dd><p>‘duckdb’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.reads_files">
+<span class="sig-name descname"><span class="pre">reads_files</span></span><a class="headerlink" href="#chartbook.backends.DuckDBBackend.reads_files" title="Link to this definition">#</a></dt>
+<dd><p>True</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.ref">
+<span class="sig-name descname"><span class="pre">ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.ref" title="Link to this definition">#</a></dt>
+<dd><p>A table as a quoted identifier; a query as a sub-select.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.scratch">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">scratch</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.backends.DuckDBBackend" title="chartbook.backends.DuckDBBackend"><span class="pre">chartbook.backends.DuckDBBackend</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.scratch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.scratch" title="Link to this definition">#</a></dt>
+<dd><p>A fresh in-memory engine of its own, for SQL over files alone.</p>
+<p>Nothing put into any source’s connection is visible in it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.span">
+<span class="sig-name descname"><span class="pre">span</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.span"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.span" title="Link to this definition">#</a></dt>
+<dd><p>The first and last date in one column, read as timestamps.</p>
+<p><code class="docutils literal notranslate"><span class="pre">try_cast(col</span> <span class="pre">as</span> <span class="pre">timestamp)</span></code>: a date or timestamp column is itself,
+a text column is parsed where it can be, and anything else is null.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.DuckDBBackend.sql">
+<span class="sig-name descname"><span class="pre">sql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#DuckDBBackend.sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.DuckDBBackend.sql" title="Link to this definition">#</a></dt>
+<dd><p>Run SQL in this engine and return a Polars LazyFrame.</p>
+<p>The engine binds the query here, so a name it does not know or SQL
+it cannot parse is refused at once. Collecting the frame runs it;
+an error that only running can find, such as a cast that fails on
+a value, is raised then with DuckDB’s message: as Polars’
+<code class="docutils literal notranslate"><span class="pre">ComputeError</span></code> or as DuckDB’s own exception, by Polars version.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If DuckDB refuses the query. The message is
+DuckDB’s own; the SQL is the user’s.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.backends.EXTRAS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">EXTRAS</span></span><a class="headerlink" href="#chartbook.backends.EXTRAS" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.backends.MEMORY_URL">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">MEMORY_URL</span></span><a class="headerlink" href="#chartbook.backends.MEMORY_URL" title="Link to this definition">#</a></dt>
+<dd><p>‘duckdb:///:memory:’</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.backends.ParquetBackend">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">ParquetBackend</span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#ParquetBackend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.ParquetBackend" title="Link to this definition">#</a></dt>
+<dd><p>What a file-backed dataframe has always been.</p>
+<p>In SQL a file is <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>, which DuckDB reads as a table,
+partitions and all.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.backends.ParquetBackend.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#chartbook.backends.ParquetBackend.name" title="Link to this definition">#</a></dt>
+<dd><p>‘parquet’</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.ParquetBackend.ref">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.FileLocation" title="chartbook.resolve.FileLocation"><span class="pre">chartbook.resolve.FileLocation</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#ParquetBackend.ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.ParquetBackend.ref" title="Link to this definition">#</a></dt>
+<dd><p>The file as a DuckDB table expression.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.backends.ParquetBackend.scan">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">scan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.FileLocation" title="chartbook.resolve.FileLocation"><span class="pre">chartbook.resolve.FileLocation</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#ParquetBackend.scan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.ParquetBackend.scan" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.backends.SOURCES_FILE">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">SOURCES_FILE</span></span><a class="headerlink" href="#chartbook.backends.SOURCES_FILE" title="Link to this definition">#</a></dt>
+<dd><p>‘sources.toml’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.backends.SOURCE_ENV_PREFIX">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">SOURCE_ENV_PREFIX</span></span><a class="headerlink" href="#chartbook.backends.SOURCE_ENV_PREFIX" title="Link to this definition">#</a></dt>
+<dd><p>‘CHARTBOOK_SOURCE_’</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.backend_class">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">backend_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#type" title="(in Python v3.15)"><span class="pre">type</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#backend_class"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.backend_class" title="Link to this definition">#</a></dt>
+<dd><p>The :class:<code class="docutils literal notranslate"><span class="pre">Backend</span></code> class a source’s <code class="docutils literal notranslate"><span class="pre">backend</span></code> names; None if nothing provides it.</p>
+<p><code class="docutils literal notranslate"><span class="pre">duckdb</span></code> is built in. Another name is looked up once per process in the
+entry-point group <code class="docutils literal notranslate"><span class="pre">chartbook.backends</span></code>; the first entry with the name
+wins. A plugin whose driver is not installed still loads: the driver is
+imported when the backend connects, and the message then names the extra.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the plugin is there and cannot be loaded, naming it.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.backend_for">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">backend_for</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.resolve.html#chartbook.resolve.Location" title="chartbook.resolve.Location"><span class="pre">chartbook.resolve.Location</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/backends.html#backend_for"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.backend_for" title="Link to this definition">#</a></dt>
+<dd><p>The backend that reads a location: parquet for a file, else the source’s.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#NotImplementedError" title="(in Python v3.15)"><strong>NotImplementedError</strong></a> – For a kind of location nothing here reads.</p></li>
+<li><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – For a source whose backend nothing provides here,
+as a location read from another pipeline’s record may name.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.backend_names">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">backend_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#backend_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.backend_names" title="Link to this definition">#</a></dt>
+<dd><p>Every backend a source may name here: <code class="docutils literal notranslate"><span class="pre">duckdb</span></code>, and each one a plugin provides.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.check_backend">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">check_backend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#check_backend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.check_backend" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a backend nothing provides, and say which there are.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>where</strong> – The manifest table, for the message.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.check_url">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">check_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#check_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.check_url" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a source URL that carries credentials or the wrong scheme.</p>
+<p>Then what the backend itself refuses (:meth:<code class="docutils literal notranslate"><span class="pre">Backend.check_url</span></code>): for a
+DuckDB URL, one with a host, a user, connection options or a fragment,
+<code class="docutils literal notranslate"><span class="pre">duckdb:///&lt;file&gt;</span></code> and nothing else.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.duckdb_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">duckdb_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#duckdb_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.duckdb_path" title="Link to this definition">#</a></dt>
+<dd><p>The file a <code class="docutils literal notranslate"><span class="pre">duckdb://</span></code> URL names, absolute; or <code class="docutils literal notranslate"><span class="pre">:memory:</span></code>.</p>
+<p>Follows the SQLAlchemy convention: <code class="docutils literal notranslate"><span class="pre">duckdb:///relative.db</span></code> is relative
+to the pipeline’s directory, <code class="docutils literal notranslate"><span class="pre">duckdb:////abs/path.db</span></code> is absolute, and
+<code class="docutils literal notranslate"><span class="pre">duckdb:///:memory:</span></code> is nothing on disk.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the URL has a host or a user (<code class="docutils literal notranslate"><span class="pre">duckdb://x/f</span></code>),
+connection options (<code class="docutils literal notranslate"><span class="pre">?access_mode=…</span></code>) or a fragment. ChartBook
+passes none of those to the engine, so it refuses to look as if it
+did.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.machine_source_url">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">machine_source_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#machine_source_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.machine_source_url" title="Link to this definition">#</a></dt>
+<dd><p>The URL this machine gives a source, credentials and all; None if it gives none.</p>
+<p>The environment variable :func:<code class="docutils literal notranslate"><span class="pre">source_env_var</span></code> names, then <code class="docutils literal notranslate"><span class="pre">url</span></code>
+under <code class="docutils literal notranslate"><span class="pre">[&lt;name&gt;]</span></code> in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/sources.toml</span></code>.</p>
+<p>In a build of files from a store, none: such a build reaches no engine,
+and has no use for this machine’s credentials.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> – The source’s name in <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">sources.toml</span></code> is there and cannot be read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.open_backend">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">open_backend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.backends.Backend" title="chartbook.backends.Backend"><span class="pre">chartbook.backends.Backend</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#open_backend"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.open_backend" title="Link to this definition">#</a></dt>
+<dd><p>The backend a source names, made from its public URL and its name.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If nothing here provides it: a record from
+another machine may name a backend this one has no plugin for.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.quote_identifier">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">quote_identifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">identifier</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">quote</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'&quot;'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#quote_identifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.quote_identifier" title="Link to this definition">#</a></dt>
+<dd><p>Quote a one-to-three-part identifier for DuckDB: <code class="docutils literal notranslate"><span class="pre">&quot;a&quot;.&quot;b&quot;.&quot;c&quot;</span></code>.</p>
+<p>With a backtick for <em>quote</em>, as Databricks quotes one, each part is
+between backticks instead, and a backtick inside it is doubled.</p>
+<p>A part is quoted with double quotes, and a double quote inside it is
+doubled. What is between the dots is the user’s; nothing is guessed.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.quote_literal">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">quote_literal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#quote_literal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.quote_literal" title="Link to this definition">#</a></dt>
+<dd><p>Quote a string for SQL: <code class="docutils literal notranslate"><span class="pre">'…'</span></code> with a quote inside doubled.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.refuse_in_an_untrusted_build">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">refuse_in_an_untrusted_build</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#refuse_in_an_untrusted_build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.refuse_in_an_untrusted_build" title="Link to this definition">#</a></dt>
+<dd><p>Refuse to reach an engine in a build of files from a store.</p>
+<p>Anyone who can write the store may have written its manifest: a query
+can read any file of the machine, and a warehouse’s URL could send this
+machine’s credentials elsewhere.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – In such a build.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.scheme_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">scheme_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#scheme_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.scheme_of" title="Link to this definition">#</a></dt>
+<dd><p>The scheme of a URL, lower-cased; empty when it has none.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.source_env_var">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">source_env_var</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#source_env_var"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.source_env_var" title="Link to this definition">#</a></dt>
+<dd><p>The environment variable that may hold a source’s URL.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.source_url">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">source_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">manifest_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#source_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.source_url" title="Link to this definition">#</a></dt>
+<dd><p>The URL a source is opened with, credentials and all.</p>
+<p>In order: the environment variable :func:<code class="docutils literal notranslate"><span class="pre">source_env_var</span></code> gives;
+<code class="docutils literal notranslate"><span class="pre">url</span></code> under <code class="docutils literal notranslate"><span class="pre">[&lt;name&gt;]</span></code> in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/sources.toml</span></code>; the
+manifest’s own URL, which is enough for a DuckDB file.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> – The source’s name in <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p></li>
+<li><p><strong>manifest_url</strong> – Its <code class="docutils literal notranslate"><span class="pre">url</span></code> as the manifest has it.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.backends.subselect">
+<span class="sig-prename descclassname"><span class="pre">chartbook.backends.</span></span><span class="sig-name descname"><span class="pre">subselect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sql</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/backends.html#subselect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.backends.subselect" title="Link to this definition">#</a></dt>
+<dd><p>A query as a table expression: <code class="docutils literal notranslate"><span class="pre">(…)</span></code> on its own lines.</p>
+<p>Two things are dropped from the end of the text, each as many times as
+one is left there, so that a query that ends with <code class="docutils literal notranslate"><span class="pre">;</span></code>, with a <code class="docutils literal notranslate"><span class="pre">--</span></code>
+comment, or with both (<code class="docutils literal notranslate"><span class="pre">select</span> <span class="pre">…</span> <span class="pre">from</span> <span class="pre">t;</span> <span class="pre">--</span> <span class="pre">note</span></code>) still stands where
+a table would: a semicolon that is the last character; and a <code class="docutils literal notranslate"><span class="pre">--</span></code>
+comment that runs to the end, when its <code class="docutils literal notranslate"><span class="pre">--</span></code> is outside every string
+(<code class="docutils literal notranslate"><span class="pre">'…'</span></code>, <code class="docutils literal notranslate"><span class="pre">E'…'</span></code>, <code class="docutils literal notranslate"><span class="pre">$$…$$</span></code>), quoted identifier (<code class="docutils literal notranslate"><span class="pre">&quot;…&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">`…`</span></code>)
+and block comment, as :func:<code class="docutils literal notranslate"><span class="pre">_ends_in</span></code> reads them. Nothing else
+changes: a <code class="docutils literal notranslate"><span class="pre">;</span></code> or a <code class="docutils literal notranslate"><span class="pre">--</span></code> inside quotes stays, and a comment after a
+quote the scanner takes as left open stays too, which the engine reads
+as the comment it is. The parenthesis closes on a new line.</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chartbook.data.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="chartbook.backends.databricks.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#package-contents">Package Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.BACKEND_PLUGIN_GROUP"><code class="docutils literal notranslate"><span class="pre">BACKEND_PLUGIN_GROUP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend"><code class="docutils literal notranslate"><span class="pre">Backend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.check_url"><code class="docutils literal notranslate"><span class="pre">Backend.check_url()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.connect"><code class="docutils literal notranslate"><span class="pre">Backend.connect()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.describe"><code class="docutils literal notranslate"><span class="pre">Backend.describe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.engine"><code class="docutils literal notranslate"><span class="pre">Backend.engine()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.name"><code class="docutils literal notranslate"><span class="pre">Backend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.reads_files"><code class="docutils literal notranslate"><span class="pre">Backend.reads_files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.ref"><code class="docutils literal notranslate"><span class="pre">Backend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.scan"><code class="docutils literal notranslate"><span class="pre">Backend.scan()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.span"><code class="docutils literal notranslate"><span class="pre">Backend.span()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.Backend.sql"><code class="docutils literal notranslate"><span class="pre">Backend.sql()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.BackendError"><code class="docutils literal notranslate"><span class="pre">BackendError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.check_url"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.check_url()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.connect"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.connect()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.describe"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.describe()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.engine"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.engine()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.name"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.reads_files"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.reads_files</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.ref"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.scratch"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.scratch()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.span"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.span()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.DuckDBBackend.sql"><code class="docutils literal notranslate"><span class="pre">DuckDBBackend.sql()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.EXTRAS"><code class="docutils literal notranslate"><span class="pre">EXTRAS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.MEMORY_URL"><code class="docutils literal notranslate"><span class="pre">MEMORY_URL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend"><code class="docutils literal notranslate"><span class="pre">ParquetBackend</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.name"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.name</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.ref"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.ref()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.ParquetBackend.scan"><code class="docutils literal notranslate"><span class="pre">ParquetBackend.scan()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.SOURCES_FILE"><code class="docutils literal notranslate"><span class="pre">SOURCES_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.SOURCE_ENV_PREFIX"><code class="docutils literal notranslate"><span class="pre">SOURCE_ENV_PREFIX</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_class"><code class="docutils literal notranslate"><span class="pre">backend_class()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_for"><code class="docutils literal notranslate"><span class="pre">backend_for()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.backend_names"><code class="docutils literal notranslate"><span class="pre">backend_names()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.check_backend"><code class="docutils literal notranslate"><span class="pre">check_backend()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.check_url"><code class="docutils literal notranslate"><span class="pre">check_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.duckdb_path"><code class="docutils literal notranslate"><span class="pre">duckdb_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.machine_source_url"><code class="docutils literal notranslate"><span class="pre">machine_source_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.open_backend"><code class="docutils literal notranslate"><span class="pre">open_backend()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.quote_identifier"><code class="docutils literal notranslate"><span class="pre">quote_identifier()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.quote_literal"><code class="docutils literal notranslate"><span class="pre">quote_literal()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.refuse_in_an_untrusted_build"><code class="docutils literal notranslate"><span class="pre">refuse_in_an_untrusted_build()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.scheme_of"><code class="docutils literal notranslate"><span class="pre">scheme_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.source_env_var"><code class="docutils literal notranslate"><span class="pre">source_env_var()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.source_url"><code class="docutils literal notranslate"><span class="pre">source_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.backends.subselect"><code class="docutils literal notranslate"><span class="pre">subselect()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Vocabulary &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/vocabulary';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Documenting a Pipeline" href="documenting-a-pipeline.html" />
+    <link rel="prev" title="Getting Started" href="../getting-started.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/guide/vocabulary.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Vocabulary</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-sentence">The sentence</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-chain">The chain</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-documents">The four documents</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-the-snapshot-and-the-index-relate">How the snapshot and the index relate</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-rest-of-the-words">The rest of the words</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="vocabulary">
+<h1>Vocabulary<a class="headerlink" href="#vocabulary" title="Link to this heading">#</a></h1>
+<p>ChartBook has few words, and they are used exactly. This page is where they are defined; every
+other page uses them in these senses.</p>
+<section id="the-sentence">
+<h2>The sentence<a class="headerlink" href="#the-sentence" title="Link to this heading">#</a></h2>
+<p><strong>A manifest asks, a lockfile records what was got, a snapshot records what was made, and an
+index records what a site shows.</strong></p>
+</section>
+<section id="the-chain">
+<h2>The chain<a class="headerlink" href="#the-chain" title="Link to this heading">#</a></h2>
+<p>A pipeline is a folder of code in git. ChartBook turns it into a site in three steps, each a
+transformation of the one before:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span> repository ──resolve──▶ index ──write──▶ pages ──build──▶ site
+ (source)               (the facts)       (text for a tool)   (HTML)
+</pre></div>
+</div>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Word</p></th>
+<th class="head"><p>What it is</p></th>
+<th class="head"><p>Who makes it</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>repository</strong></p></td>
+<td><p>A pipeline’s folder in git: its manifest, its code, its write-ups and the data it builds. For a catalog, several of these. The <strong>source</strong>: when anything disagrees with the repository, the repository is right</p></td>
+<td><p>People</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>index</strong></p></td>
+<td><p>One JSON file, <code class="docutils literal notranslate"><span class="pre">index.json</span></code>, describing everything a site contains: every pipeline and asset by ID, where each is, its content hash, what it was made from and at which hashes, what pins what. The record of what was true when the build ran</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> (and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, which runs the build first). Never <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>pages</strong></p></td>
+<td><p>The files a site tool reads: Markdown for Sphinx or MkDocs. Text, never data</p></td>
+<td><p>A <strong>writer</strong>: one per site tool, reading the index and the write-ups it points at</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>site</strong></p></td>
+<td><p>HTML</p></td>
+<td><p>The site tool, by its name: Sphinx by default, or MkDocs when <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">writer</span> <span class="pre">=</span> <span class="pre">&quot;mkdocs&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Two roles, named by what each does and not by what it produces:</p>
+<ul class="simple">
+<li><p>A <strong>writer</strong> turns the index into pages for one site tool. ChartBook’s writers are its own:
+<code class="docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code>, reading the same index.
+<code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">writer</span></code> chooses one; <code class="docutils literal notranslate"><span class="pre">sphinx</span></code> is the default.</p></li>
+<li><p>A <strong>site tool</strong> turns pages into a site: Sphinx or MkDocs. ChartBook writes neither and calls
+each by its name.</p></li>
+</ul>
+</section>
+<section id="the-four-documents">
+<h2>The four documents<a class="headerlink" href="#the-four-documents" title="Link to this heading">#</a></h2>
+<p>Four files, one record format. Each answers a different question, and none is another in
+disguise.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Document</p></th>
+<th class="head"><p>File</p></th>
+<th class="head"><p>Records</p></th>
+<th class="head"><p>Written by</p></th>
+<th class="head"><p>Where it lives</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>manifest</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></td>
+<td><p>What a pipeline <em>asks</em>: which assets it declares, where they are, what it depends on, what its scripts are</p></td>
+<td><p>People</p></td>
+<td><p>In the repository, committed</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>lockfile</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code></p></td>
+<td><p>What was <em>got</em>: for each dependency, which snapshot was pinned and the content hash of each of its assets</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> (and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, for a first pin)</p></td>
+<td><p>In the repository, committed. No timestamp on purpose: a <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code> of it means “a pin moved”</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>snapshot</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&lt;store&gt;/snapshots/&lt;commit&gt;/…/&lt;time&gt;.json</span></code></p></td>
+<td><p>What was <em>made</em>: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline’s own index at that commit and the files a writer needs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code></p></td>
+<td><p>In the store, with the bytes. Not in git, since one commit can have several</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>index</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">index.json</span></code> beside the site</p></td>
+<td><p>What a site <em>shows</em>: every record of every pipeline the site contains, as built now, with each dependency’s pins reported</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code></p></td>
+<td><p>Beside the site, so it travels with it</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Three rules follow, and they settle arguments:</p>
+<ol class="arabic simple">
+<li><p><strong>The lockfile is an input to a build; the index is its output.</strong> One cannot be the other.
+The index <em>reports</em> pins and never makes one. They share one record format, and that is the
+only merge there is.</p></li>
+<li><p><strong>The index records facts about the build, including comparisons it made, and no
+renderings.</strong> A fact is an ID, a location, a hash, a row count, an input, a pin, a version, a
+label, the path and hash of a write-up, or a comparison such as which of a model’s inputs
+have moved since it was trained. A rendering is anything a writer makes from facts: a table of
+first rows, a “2 days ago”, a link, a page. Renderings stay out, so that the index can be
+turned into pages for any tool.</p></li>
+<li><p><strong>Write-ups are not pinned.</strong> A snapshot records the commit it was made at, and the commit
+holds the write-ups as they were. The index records each write-up’s path and hash, so a build
+can say which text it showed.</p></li>
+</ol>
+</section>
+<section id="how-the-snapshot-and-the-index-relate">
+<h2>How the snapshot and the index relate<a class="headerlink" href="#how-the-snapshot-and-the-index-relate" title="Link to this heading">#</a></h2>
+<p>They stay two documents, and the record format is the only thing they share. A snapshot is a
+preservation act: the bytes one pipeline built at one commit, copied into the store and declared
+ready. An index is a description of what a site shows, taken from whatever is in the folders
+now, across many pipelines, with comparisons no one pipeline can make. Neither can be derived
+from the other.</p>
+<p>A snapshot <em>holds</em> the index of its version: the pipeline’s own index at that commit, with the
+write-ups and the other files a writer needs, so that the description of the data is preserved
+with the data and a site can be built for any version from the store alone. A catalog shows every
+version of every pipeline this way: each snapshot’s site is built from the store, under
+<code class="docutils literal notranslate"><span class="pre">versions/</span></code>, and the catalog’s Versions page lists them. The catalog’s own index describes the
+working versions, each pipeline’s record listing its snapshots, with the comparisons only a site
+can make (<a class="reference internal" href="catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>). The reasoning is in <a class="reference internal" href="../design/versioned-catalog.html"><span class="doc">Design: the versioned catalog</span></a>.</p>
+</section>
+<section id="the-rest-of-the-words">
+<h2>The rest of the words<a class="headerlink" href="#the-rest-of-the-words" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Word</p></th>
+<th class="head"><p>Means</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>pipeline</strong></p></td>
+<td><p>One project with a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>: code that produces assets. Identified as <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>scope</strong></p></td>
+<td><p>The organization or owner half of a pipeline’s ID. Taken from the git remote’s owner</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>catalog</strong></p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> that lists pipelines and builds one site over all of them. It declares no assets of its own</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>asset</strong></p></td>
+<td><p>Something a pipeline declares: a dataframe, chart, notebook, note or model</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>kind</strong></p></td>
+<td><p>Which of those five an asset is. Written singular: <code class="docutils literal notranslate"><span class="pre">chart</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>dataframe</strong></p></td>
+<td><p>A table of data: a parquet file (or a glob of them), or a table or query in a source</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>series</strong></p></td>
+<td><p>One column of a dataframe, given its own address and documentation</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>part</strong></p></td>
+<td><p>Something inside an asset, addressed with <code class="docutils literal notranslate"><span class="pre">#</span></code>. A series is a dataframe’s part; a file is a model’s part</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>reference</strong></p></td>
+<td><p>The address of an asset: <code class="docutils literal notranslate"><span class="pre">[registry/][scope/]pipeline:[kind/]name[#part][&#64;rev]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>local reference</strong></p></td>
+<td><p>A reference with no <code class="docutils literal notranslate"><span class="pre">pipeline:</span></code> in front: “in the pipeline I am in”</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>front door</strong></p></td>
+<td><p>A Python module that hands out one kind of asset: <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> for dataframes, <code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code> for models, <code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code> for any kind</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>location</strong></p></td>
+<td><p>Where an asset physically is: a file, or a table or query in a source</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>record</strong></p></td>
+<td><p>One entry in the index, a lockfile or a snapshot. Each has a <code class="docutils literal notranslate"><span class="pre">kind</span></code> (<code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">Chart</span></code>, …) and a <code class="docutils literal notranslate"><span class="pre">version</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>store</strong></p></td>
+<td><p>A folder of files named by their hash: <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store</span></code>, or one a team shares (a shared or synced folder, or an S3 bucket). Holds snapshots and the pinned copies pipelines read</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>object</strong></p></td>
+<td><p>One asset in the store: a directory named by the asset’s content hash, holding its files under their own names</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>dependency</strong></p></td>
+<td><p>Another pipeline this one reads from, declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>: its ID, and where to find it: the store alone (<code class="docutils literal notranslate"><span class="pre">&quot;acme/rates&quot;</span> <span class="pre">=</span> <span class="pre">{}</span></code>), a folder (<code class="docutils literal notranslate"><span class="pre">path</span></code>) or a repository (<code class="docutils literal notranslate"><span class="pre">git</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>pin</strong></p></td>
+<td><p>To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> makes pins and never moves one; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves them</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>version</strong></p></td>
+<td><p>A model’s bytes as a snapshot first held them, named by the first twelve digits of their hash (more, if two would otherwise share a name); <code class="docutils literal notranslate"><span class="pre">[models.x.aliases]</span></code> gives labels such as <code class="docutils literal notranslate"><span class="pre">champion</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>source / backend</strong></p></td>
+<td><p>A named database connection in a manifest / the engine behind it. DuckDB is the engine that is built</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>writer</strong></p></td>
+<td><p>What turns the index into pages for one site tool</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>scratch</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">_data/_scratch/</span></code> inside a pipeline: throwaway files that are not assets</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Three different things are called “kind”, and they do not mix: an <strong>asset kind</strong>, lowercase, in
+a reference (<code class="docutils literal notranslate"><span class="pre">chart</span></code>); a <strong>record kind</strong>, capitalized, in the index (<code class="docutils literal notranslate"><span class="pre">Chart</span></code>, plus the non-asset
+records <code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code>); and a <strong>location kind</strong>, inside a record’s <code class="docutils literal notranslate"><span class="pre">location</span></code>
+(<code class="docutils literal notranslate"><span class="pre">file</span></code>, <code class="docutils literal notranslate"><span class="pre">table</span></code>, <code class="docutils literal notranslate"><span class="pre">query</span></code>).</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../getting-started.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Getting Started</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="documenting-a-pipeline.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Documenting a Pipeline</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-sentence">The sentence</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-chain">The chain</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-four-documents">The four documents</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-the-snapshot-and-the-index-relate">How the snapshot and the index relate</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-rest-of-the-words">The rest of the words</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

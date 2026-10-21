@@ -72,17 +72,6 @@ orphan: true
 
 ````
 
-````{py:attribute} default_backend
-:canonical: chartbook.plotting._config.PlottingConfig.default_backend
-:type: typing.Literal[plotly, matplotlib]
-:value: >
-   'plotly'
-
-```{autodoc2-docstring} chartbook.plotting._config.PlottingConfig.default_backend
-```
-
-````
-
 ````{py:attribute} default_interactive
 :canonical: chartbook.plotting._config.PlottingConfig.default_interactive
 :type: bool
@@ -169,7 +158,7 @@ orphan: true
 ```
 ````
 
-````{py:function} configure(*, default_output_dir: str | pathlib.Path | None = None, default_interactive: bool | None = None, default_backend: typing.Literal[plotly, matplotlib] | None = None, nber_recessions: bool | None = None, matplotlib_style: str | pathlib.Path | None = None, plotly_template: str | None = None, figure_size_single: tuple[float, float] | None = None, figure_size_wide: tuple[float, float] | None = None, color_palette: list[str] | None = None) -> None
+````{py:function} configure(*, default_output_dir: str | pathlib.Path | None = None, default_interactive: bool | None = None, nber_recessions: bool | None = None, matplotlib_style: str | pathlib.Path | None = None, plotly_template: str | None = None, figure_size_single: tuple[float, float] | None = None, figure_size_wide: tuple[float, float] | None = None, color_palette: list[str] | None = None) -> None
 :canonical: chartbook.plotting._config.configure
 
 ```{autodoc2-docstring} chartbook.plotting._config.configure

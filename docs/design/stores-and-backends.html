@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: stores and backends &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/stores-and-backends';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: the versioned catalog" href="versioned-catalog.html" />
+    <link rel="prev" title="Design: data access" href="data-access.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/stores-and-backends.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: stores and backends</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-is-for">What this is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-extension-points-because-data-moves-differently">Two extension points, because data moves differently</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-is-a-setting-of-the-machine-never-of-the-pipeline">The store is a setting of the machine, never of the pipeline</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-backend-is-named-by-the-pipeline-located-by-the-machine">A backend is named by the pipeline, located by the machine</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scales-to-zero-plugins-behind-extras">Scales to zero: plugins behind extras</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-interface">The store interface</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pins-in-a-warehouse">Pins in a warehouse</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-stores-and-backends">
+<h1>Design: stores and backends<a class="headerlink" href="#design-stores-and-backends" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, written 2026-10-16 after cross-pipeline dependencies were made to work on one
+machine (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, step 4, and PR 65). It plans how ChartBook keeps the same experience for
+the person using it, from a laptop with nothing installed to an organization’s own storage and
+warehouses. Status: <strong>the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface and reading from Databricks, the first warehouse, are built (2026-10-17); pins in a warehouse are proposed.</strong>
+The decisions the maintainer has taken are marked <em>decided</em>; the rest is <em>proposed</em>.</p>
+</div>
+<section id="what-this-is-for">
+<h2>What this is for<a class="headerlink" href="#what-this-is-for" title="Link to this heading">#</a></h2>
+<p>ChartBook should scale to zero and to the enterprise with the same manifest, the same commands
+and the same <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> calls. On a laptop, <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code> and nothing else: the store
+is a folder under the home directory, and the data engine is DuckDB, which the package already
+brings. In an organization, the store may be an object store or a database, the tables may live
+in a warehouse, and the credentials may come from a secret manager, and the pipeline’s repository
+must not know any of that.</p>
+<p>One rule makes it possible, and the sources follow it already: <strong>the manifest names the kind of
+thing; the machine says where it is.</strong> A pipeline’s <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> says <code class="docutils literal notranslate"><span class="pre">backend</span> <span class="pre">=</span> <span class="pre">&quot;duckdb&quot;</span></code> and, for a
+file engine, the manifest’s public path, and never a credential. Where that engine is on this machine comes from the environment or
+the settings. This page extends the rule to the store, and says what it takes to add a store or a
+backend without changing anything a pipeline’s author sees.</p>
+</section>
+<section id="two-extension-points-because-data-moves-differently">
+<h2>Two extension points, because data moves differently<a class="headerlink" href="#two-extension-points-because-data-moves-differently" title="Link to this heading">#</a></h2>
+<p>ChartBook holds data in two ways, and they generalize separately.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>A <strong>store</strong></p></th>
+<th class="head"><p>A <strong>backend</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Holds</p></td>
+<td><p>Bytes ChartBook <em>copied</em>: snapshots, and the pinned files pipelines read</p></td>
+<td><p>Tables ChartBook <em>never copies</em>: a dataframe declared as a <code class="docutils literal notranslate"><span class="pre">table</span></code> or <code class="docutils literal notranslate"><span class="pre">query</span></code> in a <code class="docutils literal notranslate"><span class="pre">[sources]</span></code> entry</p></td>
+</tr>
+<tr class="row-odd"><td><p>Is a fact about</p></td>
+<td><p>The machine, or the organization</p></td>
+<td><p>The pipeline</p></td>
+</tr>
+<tr class="row-even"><td><p>Named in</p></td>
+<td><p>The settings (never the manifest)</p></td>
+<td><p>The manifest, as the engine’s name only</p></td>
+</tr>
+<tr class="row-odd"><td><p>Today</p></td>
+<td><p>A folder, content-addressed</p></td>
+<td><p>DuckDB</p></td>
+</tr>
+<tr class="row-even"><td><p>Later</p></td>
+<td><p>An object store (S3, GCS, Azure Blob), a shared drive, a database</p></td>
+<td><p>Snowflake, Databricks, Postgres, …</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="the-store-is-a-setting-of-the-machine-never-of-the-pipeline">
+<h3>The store is a setting of the machine, never of the pipeline<a class="headerlink" href="#the-store-is-a-setting-of-the-machine-never-of-the-pipeline" title="Link to this heading">#</a></h3>
+<p><em>Decided 2026-10-16.</em> A store is where snapshots of all of a person’s, or an organization’s,
+pipelines are kept. Which store a machine uses is not a property of any one pipeline, so it never
+appears in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, and no record ever names it. It is read from settings, in layers;
+each layer is consulted only where the one above it is silent, key by key:</p>
+<ol class="arabic simple">
+<li><p>the environment, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code>, for CI and a one-off run;</p></li>
+<li><p>the user’s own settings, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>;</p></li>
+<li><p>the organization’s settings, system-wide: <code class="docutils literal notranslate"><span class="pre">/etc/chartbook/settings.toml</span></code> on Unix and macOS,
+<code class="docutils literal notranslate"><span class="pre">%ProgramData%\chartbook\settings.toml</span></code> on Windows, or the file <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SYSTEM_SETTINGS</span></code>
+names;</p></li>
+<li><p>the default, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store</span></code>, so a machine with nothing configured works.</p></li>
+</ol>
+<p>So an organization sets the store once, for every machine, and a person keeps their own choices
+for everything else. A person who sets their own store overrides the organization’s for
+themselves, which is the right way round for a laptop that is sometimes offline.</p>
+<p>The setting is a URL, not a path. A bare path is a folder, as today. <code class="docutils literal notranslate"><span class="pre">s3://bucket/prefix</span></code> is an
+object store. A database URL is a database used as a store, which is what an organization that
+runs everything in one warehouse wants. The key is <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code>; <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">path</span></code> is read as a
+folder URL for one release of notice, then goes.</p>
+</section>
+<section id="a-backend-is-named-by-the-pipeline-located-by-the-machine">
+<h3>A backend is named by the pipeline, located by the machine<a class="headerlink" href="#a-backend-is-named-by-the-pipeline-located-by-the-machine" title="Link to this heading">#</a></h3>
+<p><em>As built.</em> Which engine a pipeline reads from is a fact about the pipeline, so <code class="docutils literal notranslate"><span class="pre">[sources.x]</span> <span class="pre">backend</span> <span class="pre">=</span> <span class="pre">&quot;duckdb&quot;</span></code> stays in the manifest, with the manifest’s public <code class="docutils literal notranslate"><span class="pre">url</span></code> for a file engine.
+Where that engine is on this machine, and the credentials, come from <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SOURCE_&lt;NAME&gt;_URL</span></code>
+or <code class="docutils literal notranslate"><span class="pre">~/.chartbook/sources.toml</span></code>; reading <code class="docutils literal notranslate"><span class="pre">sources.toml</span></code> in the same layers as the store is
+proposed, not built. One pipeline
+can read from Postgres while the organization’s store is in Snowflake, and nothing in the
+repository knows either address.</p>
+</section>
+</section>
+<section id="scales-to-zero-plugins-behind-extras">
+<h2>Scales to zero: plugins behind extras<a class="headerlink" href="#scales-to-zero-plugins-behind-extras" title="Link to this heading">#</a></h2>
+<p><em>Proposed; built for stores 2026-10-16.</em> <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code> installs no cloud library and no warehouse driver. Each store
+kind and each backend is a plugin found by an entry point, as plotting backends already are
+(<a class="reference internal" href="../guide/plotting-backends.html"><span class="doc">Writing a Plotting Backend</span></a>): the groups <code class="docutils literal notranslate"><span class="pre">chartbook.stores</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook.backends</span></code>. An
+extra installs one: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook[snowflake]</span></code>. The local folder store
+and DuckDB are in the package itself and are what you get with no extra. A setting or a manifest
+that names a plugin that is not installed gets one message, naming the extra to install. <em>As
+built:</em> the S3 store’s module ships in the package and is registered in <code class="docutils literal notranslate"><span class="pre">chartbook.stores</span></code>; only
+boto3 is behind the extra, and a store URL that needs it says <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code>.</p>
+<p>Credentials stay where they are now: never in a manifest, never in a record, never in a
+snapshot. They come from the environment, the settings files, or whatever the organization’s
+secret manager hands to the process.</p>
+</section>
+<section id="the-store-interface">
+<h2>The store interface<a class="headerlink" href="#the-store-interface" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em> Everything that stores or finds bytes already goes through one class,
+<code class="docutils literal notranslate"><span class="pre">chartbook.store.Store</span></code>, and every record refers to bytes by content hash, so the records do not
+change when the store does. The class becomes an interface with the local folder as its first
+implementation:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Method</p></th>
+<th class="head"><p>What it does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">put(path)</span> <span class="pre">-&gt;</span> <span class="pre">StoredObject</span></code></p></td>
+<td><p>Store what a declared path names; the object’s name is the hash of what the store holds</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">has(hash)</span></code>, <code class="docutils literal notranslate"><span class="pre">get(hash)</span></code></p></td>
+<td><p>Whether an object is there; where it is, as something a reader can open</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">hashes()</span></code>, <code class="docutils literal notranslate"><span class="pre">size_of(hash)</span></code>, <code class="docutils literal notranslate"><span class="pre">age_of(hash)</span></code>, <code class="docutils literal notranslate"><span class="pre">delete(hash)</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">verify</span></code> and <code class="docutils literal notranslate"><span class="pre">gc</span></code> need</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">add_root</span></code>, <code class="docutils literal notranslate"><span class="pre">remove_root</span></code>, <code class="docutils literal notranslate"><span class="pre">roots()</span></code></p></td>
+<td><p>The lockfiles that keep objects alive</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">write_snapshot</span></code>, <code class="docutils literal notranslate"><span class="pre">read_snapshot</span></code>, <code class="docutils literal notranslate"><span class="pre">snapshots(pipeline,</span> <span class="pre">commit)</span></code></p></td>
+<td><p>The snapshot records, which today are JSON files under <code class="docutils literal notranslate"><span class="pre">store/snapshots/</span></code>; four places in <code class="docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code> reach into the folder for them and move behind this</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Three things tie the folder store to a local disk, and each is a seam, not a wall. <code class="docutils literal notranslate"><span class="pre">get()</span></code> hands
+back a filesystem path and the readers open the parquet there; a remote store hands back a URL,
+and the readers scan it through Polars, which reads <code class="docutils literal notranslate"><span class="pre">s3://</span></code> paths already, so <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> may
+then answer with a URL. <code class="docutils literal notranslate"><span class="pre">put()</span></code> makes objects by reflink, hard link or copy; those are local
+speed tricks, and an upload replaces them. And the snapshot folder is listed directly; the
+interface’s snapshot methods replace that.</p>
+<p><em>Built otherwise, 2026-10-16:</em> the S3 store’s <code class="docutils literal notranslate"><span class="pre">get()</span></code> hands back a path after all: it downloads
+the object’s files once into a cache on this machine (<code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/</span></code>, laid out as a folder
+store), checks that they hash to the object’s name, and returns that folder. So every reader,
+every model loader and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code> work unchanged, a file is read from the bucket once and
+then from disk, and a corrupt download is refused before anything reads it. <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> is the
+path of the cached copy. A URL-returning <code class="docutils literal notranslate"><span class="pre">get()</span></code> remains possible for a reader that wants to scan
+a bucket directly, and nothing built here is in its way.</p>
+<p>The interface was extracted before the second implementation, against the maintainer’s
+earlier preference, because every caller already went through one class and the snapshot
+module’s four folder accesses were the only thing left to move; a plugin will reshape it if it
+must. The first remote store is S3 through one object-store library, behind
+<code class="docutils literal notranslate"><span class="pre">chartbook[s3]</span></code>; the headline use is a build server running <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--frozen</span></code> against a
+read-only shared store, which already needs no write to it.</p>
+</section>
+<section id="pins-in-a-warehouse">
+<h2>Pins in a warehouse<a class="headerlink" href="#pins-in-a-warehouse" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em> A table in a DuckDB file is pinned by writing it out as parquet into the store (PR
+65). A table in a warehouse should not be copied out: a warehouse with time travel, Delta
+versions, Iceberg snapshots, Snowflake’s <code class="docutils literal notranslate"><span class="pre">AT</span></code>, can pin a table as a <em>version or a timestamp</em>, and
+<code class="docutils literal notranslate"><span class="pre">data.load(&quot;rates:curve&quot;)</span></code> then runs the query at that version. The lockfile record keeps the
+source’s <code class="docutils literal notranslate"><span class="pre">location</span></code> and gains a <code class="docutils literal notranslate"><span class="pre">pinned_at</span></code> (the version or timestamp) where it has a
+<code class="docutils literal notranslate"><span class="pre">content_hash</span></code> today; the content hash of the result is recorded too when the engine can give
+one cheaply, so staleness is still a comparison of hashes. An engine without time travel pins by
+copy, as DuckDB does. What a backend must provide, then, is: scan a table or query to Arrow,
+describe it, say whether it can pin by version, and run a pinned query. The interface is
+formalized from what DuckDB does today, and the first warehouse adapter shapes the rest.</p>
+</section>
+<section id="the-order-of-work">
+<h2>The order of work<a class="headerlink" href="#the-order-of-work" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>This page, and the settings layers with <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code>. <em>Built 2026-10-16:</em> the organization’s file is read where the user’s is silent, key by key; each layer is put in order before the merge, so a user’s <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">path</span></code> (read as <code class="docutils literal notranslate"><span class="pre">url</span></code> with a warning) still wins over the organization’s <code class="docutils literal notranslate"><span class="pre">url</span></code>; a fault in the organization’s file is a warning and the file is ignored, a fault in the user’s names the file; a relative folder is relative to its settings file.</p></li>
+<li><p>The store interface extracted, the folder store as its implementation, a test double, and the
+snapshot folder access moved behind it. No behaviour changes; the matrix and the live examples
+prove it. <em>Built 2026-10-16:</em> <code class="docutils literal notranslate"><span class="pre">chartbook.store.Store</span></code> is the interface (objects, roots, snapshot
+records), <code class="docutils literal notranslate"><span class="pre">FolderStore</span></code> the implementation; <code class="docutils literal notranslate"><span class="pre">store_for_url()</span></code> makes a store from the settings’
+URL and finds another kind by its scheme in the entry-point group <code class="docutils literal notranslate"><span class="pre">chartbook.stores</span></code>;
+<code class="docutils literal notranslate"><span class="pre">tests/test_store_contract.py</span></code> is what any kind must pass. In place of a test double, the
+contract test runs against each implementation.</p></li>
+<li><p>The S3 store behind <code class="docutils literal notranslate"><span class="pre">chartbook[s3]</span></code>; readers accept URLs. <em>Built 2026-10-16, with readers taking
+paths through a cache rather than URLs (above):</em>
+<code class="docutils literal notranslate"><span class="pre">chartbook.stores.s3.S3Store</span></code>, found by the scheme <code class="docutils literal notranslate"><span class="pre">s3</span></code> in the entry-point group; the bucket
+is laid out exactly as a folder store, so a folder store synced into a bucket is this store;
+objects and records are read through a cache on this machine, so the readers take paths as
+before (see above); credentials are the SDK’s own and never in the URL, which may carry
+<code class="docutils literal notranslate"><span class="pre">?endpoint=</span></code> and <code class="docutils literal notranslate"><span class="pre">?region=</span></code>; a read-only bucket serves <code class="docutils literal notranslate"><span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span> <span class="pre">--frozen</span></code> and <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>,
+and a write to it raises <code class="docutils literal notranslate"><span class="pre">ReadOnlyStoreError</span></code>, which <code class="docutils literal notranslate"><span class="pre">pin</span></code> treats as it treats a read-only
+folder; offline, an object read and checked before is served from the cache; the contract
+tests run against it in a mocked bucket. A table in a DuckDB file is pinned as parquet into
+the bucket as into a folder. One thing a bucket cannot do that a folder does: make an object
+of several files appear whole or not at all; a snapshot interrupted mid-upload leaves a
+partial object that readers refuse by name, and making the snapshot again completes it.
+<em>Amended 2026-10-18, after a review found <code class="docutils literal notranslate"><span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">update</span></code> and <code class="docutils literal notranslate"><span class="pre">--frozen</span></code> taking such an
+object as whole:</em> the S3 store tells a partial object as the folder store tells a half-synced
+one, by the listing against the record’s files and sizes (<code class="docutils literal notranslate"><span class="pre">S3Store.incomplete</span></code>, one listing
+request), so the three say it is not fully uploaded yet and <code class="docutils literal notranslate"><span class="pre">update</span></code> does not move to it; a
+read through a lockfile asks <code class="docutils literal notranslate"><span class="pre">get()</span></code> before it asks whether the object is whole, so it meets
+the store’s refusal by name, which says the same.</p></li>
+<li><p>The backend interface formalized from DuckDB; the first warehouse adapter with version pins.
+<em>Built 2026-10-17, all but the pins:</em> <code class="docutils literal notranslate"><span class="pre">chartbook.backends</span></code> is a package; <code class="docutils literal notranslate"><span class="pre">Backend</span></code> is the
+interface (<code class="docutils literal notranslate"><span class="pre">ref</span></code>, <code class="docutils literal notranslate"><span class="pre">sql</span></code>, <code class="docutils literal notranslate"><span class="pre">scan</span></code>, <code class="docutils literal notranslate"><span class="pre">describe</span></code>, <code class="docutils literal notranslate"><span class="pre">span</span></code>, <code class="docutils literal notranslate"><span class="pre">connect</span></code>, <code class="docutils literal notranslate"><span class="pre">check_url</span></code>, and <code class="docutils literal notranslate"><span class="pre">reads_files</span></code>
+for whether a query there may name a file); a backend other than DuckDB is found by its name in
+the entry-point group <code class="docutils literal notranslate"><span class="pre">chartbook.backends</span></code>; <code class="docutils literal notranslate"><span class="pre">chartbook.backends.databricks.DatabricksBackend</span></code>
+reads a Databricks SQL warehouse through the Databricks SQL connector, behind
+<code class="docutils literal notranslate"><span class="pre">chartbook[databricks]</span></code>, with a lazy frame that asks for the columns at once and the rows when
+collected. One rule was added that this page did not foresee: a warehouse’s credentials are sent
+only to the host the machine names (its URL for the source, or <code class="docutils literal notranslate"><span class="pre">DATABRICKS_HOST</span></code>), and a host a
+manifest or a record names is a check against it, never used in its place, since anyone who
+can write a manifest or a shared store could otherwise send this machine’s token to their own
+server. A snapshot records a warehouse table without a copy until the pins are built.</p></li>
+</ol>
+</section>
+<section id="what-this-does-not-decide">
+<h2>What this does not decide<a class="headerlink" href="#what-this-does-not-decide" title="Link to this heading">#</a></h2>
+<p>Which warehouse comes first, Snowflake or Databricks; the first one shapes the backend
+interface. <em>Decided by the maintainer 2026-10-17: Databricks, which has a free edition that does
+not expire to test with.</em> Whether a warehouse pin should be a version where the engine offers one and a copy
+only where it does not, which is the recommendation here. How a database used as a <em>store</em>
+lays out objects and snapshots inside it. Each is marked where it arises, and each waits for the
+maintainer.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="data-access.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: data access</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="versioned-catalog.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: the versioned catalog</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-is-for">What this is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-extension-points-because-data-moves-differently">Two extension points, because data moves differently</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-is-a-setting-of-the-machine-never-of-the-pipeline">The store is a setting of the machine, never of the pipeline</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-backend-is-named-by-the-pipeline-located-by-the-machine">A backend is named by the pipeline, located by the machine</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#scales-to-zero-plugins-behind-extras">Scales to zero: plugins behind extras</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-store-interface">The store interface</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pins-in-a-warehouse">Pins in a warehouse</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

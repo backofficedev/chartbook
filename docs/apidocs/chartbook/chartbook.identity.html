@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,73 +15,74 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=55ac272d"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.identity';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="chartbook.build_docs" href="chartbook.build_docs.html" />
+    <link rel="next" title="chartbook.incremental" href="chartbook.incremental.html" />
     <link rel="prev" title="chartbook.config" href="chartbook.config.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,7 +90,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -98,17 +97,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -121,15 +120,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,8 +144,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -154,7 +155,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -168,7 +169,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -181,15 +183,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,8 +207,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -230,21 +234,17 @@ document.write(`
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -255,12 +255,17 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
@@ -271,6 +276,13 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -278,22 +290,64 @@ document.write(`
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -302,9 +356,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -401,24 +460,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -441,20 +499,45 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout"><code class="docutils literal notranslate"><span class="pre">Checkout</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.address"><code class="docutils literal notranslate"><span class="pre">Checkout.address</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.common_dir"><code class="docutils literal notranslate"><span class="pre">Checkout.common_dir</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.first_commit"><code class="docutils literal notranslate"><span class="pre">Checkout.first_commit</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.main"><code class="docutils literal notranslate"><span class="pre">Checkout.main</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.subfolder"><code class="docutils literal notranslate"><span class="pre">Checkout.subfolder</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.ID_COMPONENT_PATTERN"><code class="docutils literal notranslate"><span class="pre">ID_COMPONENT_PATTERN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.UnsupportedRegistryError"><code class="docutils literal notranslate"><span class="pre">UnsupportedRegistryError</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.UnsupportedRevisionError"><code class="docutils literal notranslate"><span class="pre">UnsupportedRevisionError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.VERSION_FILE"><code class="docutils literal notranslate"><span class="pre">VERSION_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.checkout_of"><code class="docutils literal notranslate"><span class="pre">checkout_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.clear_git_remote_cache"><code class="docutils literal notranslate"><span class="pre">clear_git_remote_cache()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.derive_pipeline_id"><code class="docutils literal notranslate"><span class="pre">derive_pipeline_id()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.get_git_remote_url"><code class="docutils literal notranslate"><span class="pre">get_git_remote_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.id_from_address"><code class="docutils literal notranslate"><span class="pre">id_from_address()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.in_another_case"><code class="docutils literal notranslate"><span class="pre">in_another_case()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.is_repository_top"><code class="docutils literal notranslate"><span class="pre">is_repository_top()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.looks_like_registry"><code class="docutils literal notranslate"><span class="pre">looks_like_registry()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.match_pipeline_ref"><code class="docutils literal notranslate"><span class="pre">match_pipeline_ref()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.normalize_ref_to_id"><code class="docutils literal notranslate"><span class="pre">normalize_ref_to_id()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.plain_line"><code class="docutils literal notranslate"><span class="pre">plain_line()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.read_version_file"><code class="docutils literal notranslate"><span class="pre">read_version_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.remote_to_web_url"><code class="docutils literal notranslate"><span class="pre">remote_to_web_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.repository_key"><code class="docutils literal notranslate"><span class="pre">repository_key()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.resolve_pipeline_ref"><code class="docutils literal notranslate"><span class="pre">resolve_pipeline_ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.same_pipeline_checked_out"><code class="docutils literal notranslate"><span class="pre">same_pipeline_checked_out()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.split_registry"><code class="docutils literal notranslate"><span class="pre">split_registry()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.split_rev"><code class="docutils literal notranslate"><span class="pre">split_rev()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.strip_url_credentials"><code class="docutils literal notranslate"><span class="pre">strip_url_credentials()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.validate_pipeline_id"><code class="docutils literal notranslate"><span class="pre">validate_pipeline_id()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.web_link"><code class="docutils literal notranslate"><span class="pre">web_link()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -477,34 +560,97 @@ document.write(`
 (e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>) or a bare <code class="docutils literal notranslate"><span class="pre">name</span></code> for local-only projects.
 URLs are accepted as <em>input</em> wherever a pipeline reference is taken and are
 normalized to scoped names; they are never stored as identity.</p>
+<p>Two extensions of the grammar are reserved: recognized by the parser, and
+refused with a “not yet supported” error rather than a grammar error, so
+that they can be given meaning later without changing what any existing ID
+means.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">scope/name&#64;rev</span></code> — a pinned revision.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">registry/scope/name</span></code> — an ID qualified with the registry that resolves
+it, Docker-style, e.g. <code class="docutils literal notranslate"><span class="pre">charthub.example/acme/rates</span></code>.</p></li>
+</ul>
 <p>See the format design doc (<code class="docutils literal notranslate"><span class="pre">docs_src/design/toml-format-v2.md</span></code>) for the
-rationale behind this scheme.</p>
+rationale behind this scheme, and “Reserving a future global namespace” in
+<code class="docutils literal notranslate"><span class="pre">docs_src/design/asset-graph.md</span></code> for the registry prefix.</p>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.Checkout" title="chartbook.identity.Checkout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Checkout</span></code></a></p></td>
+<td><p>Where a folder is in git: which repository, and where in it.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="functions">
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.clear_git_remote_cache" title="chartbook.identity.clear_git_remote_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear_git_remote_cache</span></code></a></p></td>
-<td><p>Clear the cached git remote lookups (mainly for tests).</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.checkout_of" title="chartbook.identity.checkout_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">checkout_of</span></code></a></p></td>
+<td><p>Where a folder is in git; None if it is in no repository.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.derive_pipeline_id" title="chartbook.identity.derive_pipeline_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">derive_pipeline_id</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.clear_git_remote_cache" title="chartbook.identity.clear_git_remote_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear_git_remote_cache</span></code></a></p></td>
+<td><p>Clear the cached git remote and repository top lookups (mainly for tests).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.derive_pipeline_id" title="chartbook.identity.derive_pipeline_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">derive_pipeline_id</span></code></a></p></td>
 <td><p>Derive a pipeline’s canonical ID.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.get_git_remote_url" title="chartbook.identity.get_git_remote_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_git_remote_url</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.get_git_remote_url" title="chartbook.identity.get_git_remote_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_git_remote_url</span></code></a></p></td>
 <td><p>Return the git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote URL for a directory, or None.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.id_from_address" title="chartbook.identity.id_from_address"><code class="xref py py-obj docutils literal notranslate"><span class="pre">id_from_address</span></code></a></p></td>
+<td><p>The ID a pipeline at the top of the repository at an address derives: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, or a bare <code class="docutils literal notranslate"><span class="pre">name</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.in_another_case" title="chartbook.identity.in_another_case"><code class="xref py py-obj docutils literal notranslate"><span class="pre">in_another_case</span></code></a></p></td>
+<td><p>The one ID among <em>keys</em> that a reference names but for the case of its letters; None if none, or several.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.is_repository_top" title="chartbook.identity.is_repository_top"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_repository_top</span></code></a></p></td>
+<td><p>Whether a directory is the top folder of a git repository: of a clone, a worktree or a submodule.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.looks_like_registry" title="chartbook.identity.looks_like_registry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">looks_like_registry</span></code></a></p></td>
+<td><p>Tell whether an ID’s leading component names a registry, not a scope.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.match_pipeline_ref" title="chartbook.identity.match_pipeline_ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">match_pipeline_ref</span></code></a></p></td>
+<td><p>Match a user-supplied pipeline reference against a set of pipeline IDs.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.normalize_ref_to_id" title="chartbook.identity.normalize_ref_to_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize_ref_to_id</span></code></a></p></td>
 <td><p>Normalize any accepted pipeline reference form to an ID.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.plain_line" title="chartbook.identity.plain_line"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plain_line</span></code></a></p></td>
+<td><p>Text someone else wrote, as one line of what can be seen; empty if nothing can.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.read_version_file" title="chartbook.identity.read_version_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_version_file</span></code></a></p></td>
+<td><p>What a laid-out version’s :data:<code class="docutils literal notranslate"><span class="pre">VERSION_FILE</span></code> says; empty unless the folder is one.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.remote_to_web_url" title="chartbook.identity.remote_to_web_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remote_to_web_url</span></code></a></p></td>
+<td><p>Turn a git remote into the web address of the repository it names.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.repository_key" title="chartbook.identity.repository_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">repository_key</span></code></a></p></td>
+<td><p>A repository’s address, reduced so that the ways of writing one repository give one key.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.resolve_pipeline_ref" title="chartbook.identity.resolve_pipeline_ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_pipeline_ref</span></code></a></p></td>
 <td><p>Resolve a user-supplied pipeline reference against catalog keys.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.same_pipeline_checked_out" title="chartbook.identity.same_pipeline_checked_out"><code class="xref py py-obj docutils literal notranslate"><span class="pre">same_pipeline_checked_out</span></code></a></p></td>
+<td><p>Whether two folders are one pipeline in two checkouts of one repository, at the same place in it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.split_registry" title="chartbook.identity.split_registry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_registry</span></code></a></p></td>
+<td><p>Split a registry prefix off a fully qualified pipeline ID.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.split_rev" title="chartbook.identity.split_rev"><code class="xref py py-obj docutils literal notranslate"><span class="pre">split_rev</span></code></a></p></td>
 <td><p>Split an <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> suffix off a pipeline reference.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.validate_pipeline_id" title="chartbook.identity.validate_pipeline_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_pipeline_id</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.strip_url_credentials" title="chartbook.identity.strip_url_credentials"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip_url_credentials</span></code></a></p></td>
+<td><p>Take any user name and password out of a repository URL.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.validate_pipeline_id" title="chartbook.identity.validate_pipeline_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_pipeline_id</span></code></a></p></td>
 <td><p>Validate a pipeline ID against the <code class="docutils literal notranslate"><span class="pre">[scope/]name</span></code> grammar.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.web_link" title="chartbook.identity.web_link"><code class="xref py py-obj docutils literal notranslate"><span class="pre">web_link</span></code></a></p></td>
+<td><p>The value if it is a plain web address (<code class="docutils literal notranslate"><span class="pre">http</span></code> or <code class="docutils literal notranslate"><span class="pre">https</span></code>), with no credentials; else an empty string.</p></td>
 </tr>
 </tbody>
 </table>
@@ -517,12 +663,60 @@ rationale behind this scheme.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.identity.ID_COMPONENT_PATTERN" title="chartbook.identity.ID_COMPONENT_PATTERN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ID_COMPONENT_PATTERN</span></code></a></p></td>
 <td></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.identity.VERSION_FILE" title="chartbook.identity.VERSION_FILE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VERSION_FILE</span></code></a></p></td>
+<td></td>
+</tr>
 </tbody>
 </table>
 </div>
 </section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">Checkout</span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#Checkout"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.Checkout" title="Link to this definition">#</a></dt>
+<dd><p>Where a folder is in git: which repository, and where in it.</p>
+<p>Attributes:
+common_dir: The repository’s own git folder, which its worktrees share.
+first_commit: Its first commit, back from where it is by first
+parents: the same in every full clone. Empty in a shallow one.
+subfolder: The folder within the repository, with <code class="docutils literal notranslate"><span class="pre">/</span></code> between its
+parts; empty at the top.
+main: Whether this is the repository’s main worktree, not one made
+with <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">worktree</span> <span class="pre">add</span></code>.
+address: Its <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote, reduced by :func:<code class="docutils literal notranslate"><span class="pre">repository_key</span></code>;
+empty when it has none or the remote names no host.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout.address">
+<span class="sig-name descname"><span class="pre">address</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.identity.Checkout.address" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout.common_dir">
+<span class="sig-name descname"><span class="pre">common_dir</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.identity.Checkout.common_dir" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout.first_commit">
+<span class="sig-name descname"><span class="pre">first_commit</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.identity.Checkout.first_commit" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout.main">
+<span class="sig-name descname"><span class="pre">main</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.identity.Checkout.main" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.identity.Checkout.subfolder">
+<span class="sig-name descname"><span class="pre">subfolder</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.identity.Checkout.subfolder" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="chartbook.identity.ID_COMPONENT_PATTERN">
 <span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">ID_COMPONENT_PATTERN</span></span><a class="headerlink" href="#chartbook.identity.ID_COMPONENT_PATTERN" title="Link to this definition">#</a></dt>
@@ -530,9 +724,20 @@ rationale behind this scheme.</p>
 </dd></dl>
 
 <dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.identity.UnsupportedRegistryError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">UnsupportedRegistryError</span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#UnsupportedRegistryError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.UnsupportedRegistryError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised when a pipeline ID or reference carries a registry prefix.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">registry/scope/name</span></code> grammar is reserved for a future registry
+and is recognized but not yet supported.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py exception">
 <dt class="sig sig-object py" id="chartbook.identity.UnsupportedRevisionError">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">UnsupportedRevisionError</span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#UnsupportedRevisionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.UnsupportedRevisionError" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">UnsupportedRevisionError</span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#UnsupportedRevisionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.UnsupportedRevisionError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
 <p>Raised when a pipeline reference carries an <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> suffix.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">scope/name&#64;rev</span></code> grammar is reserved for future version pinning
 and is recognized but not yet supported.</p>
@@ -540,23 +745,44 @@ and is recognized but not yet supported.</p>
 <p>Initialize self.  See help(type(self)) for accurate signature.</p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.identity.VERSION_FILE">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">VERSION_FILE</span></span><a class="headerlink" href="#chartbook.identity.VERSION_FILE" title="Link to this definition">#</a></dt>
+<dd><p>‘.chartbook-version.json’</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.checkout_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">checkout_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.identity.Checkout" title="chartbook.identity.Checkout"><span class="pre">chartbook.identity.Checkout</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#checkout_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.checkout_of" title="Link to this definition">#</a></dt>
+<dd><p>Where a folder is in git; None if it is in no repository.</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.clear_git_remote_cache">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">clear_git_remote_cache</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#clear_git_remote_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.clear_git_remote_cache" title="Link to this definition">#</a></dt>
-<dd><p>Clear the cached git remote lookups (mainly for tests).</p>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">clear_git_remote_cache</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#clear_git_remote_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.clear_git_remote_cache" title="Link to this definition">#</a></dt>
+<dd><p>Clear the cached git remote and repository top lookups (mainly for tests).</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.derive_pipeline_id">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">derive_pipeline_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#derive_pipeline_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.derive_pipeline_id" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">derive_pipeline_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#derive_pipeline_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.derive_pipeline_id" title="Link to this definition">#</a></dt>
 <dd><p>Derive a pipeline’s canonical ID.</p>
 <p>Precedence:</p>
 <ol class="arabic simple">
 <li><p>Explicit <code class="docutils literal notranslate"><span class="pre">id</span></code> in the <code class="docutils literal notranslate"><span class="pre">[project]</span></code> table.</p></li>
-<li><p>Scope from the git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote (or <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>), name from the
-directory name.</p></li>
+<li><p>The pipeline a laid-out version’s :data:<code class="docutils literal notranslate"><span class="pre">VERSION_FILE</span></code> names.</p></li>
+<li><p>With a repository address, <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> or else the git <code class="docutils literal notranslate"><span class="pre">origin</span></code>
+remote, the scope from it (:func:<code class="docutils literal notranslate"><span class="pre">id_from_address</span></code>); and the name
+from it too when the directory is the top of its git repository,
+else the directory’s name. So a clone, a git worktree or a renamed
+folder of one repository is one pipeline, whatever its folder is
+called, and each pipeline in a repository’s subfolders is named by
+its subfolder. A <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> comes first, so a fork whose
+manifest names its upstream keeps the upstream’s ID.</p></li>
 <li><p>Bare directory name.</p></li>
 </ol>
+<p>A name is lowercase snake_case, from the folder or from the remote:
+<code class="docutils literal notranslate"><span class="pre">first-pipeline</span></code> is <code class="docutils literal notranslate"><span class="pre">first_pipeline</span></code>; a scope is in lowercase.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -572,7 +798,7 @@ directory name.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.get_git_remote_url">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">get_git_remote_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#get_git_remote_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.get_git_remote_url" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">get_git_remote_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#get_git_remote_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.get_git_remote_url" title="Link to this definition">#</a></dt>
 <dd><p>Return the git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote URL for a directory, or None.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -585,14 +811,108 @@ directory name.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.id_from_address">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">id_from_address</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#id_from_address"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.id_from_address" title="Link to this definition">#</a></dt>
+<dd><p>The ID a pipeline at the top of the repository at an address derives: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, or a bare <code class="docutils literal notranslate"><span class="pre">name</span></code>.</p>
+<p>The address is a repository’s web address or its git remote, in any of
+the forms git takes (<code class="docutils literal notranslate"><span class="pre">https://</span></code>, <code class="docutils literal notranslate"><span class="pre">ssh://</span></code>, <code class="docutils literal notranslate"><span class="pre">user&#64;host:path</span></code>,
+<code class="docutils literal notranslate"><span class="pre">host:path</span></code>), with the host, any user, port and <code class="docutils literal notranslate"><span class="pre">.git</span></code> left out:
+<code class="docutils literal notranslate"><span class="pre">git&#64;github.com:Acme/CRSP-Treasury.git</span></code> is <code class="docutils literal notranslate"><span class="pre">acme/crsp_treasury</span></code>. The
+scope is in lowercase and the name is written as a folder’s is
+(:func:<code class="docutils literal notranslate"><span class="pre">_sanitize_component</span></code>), so that every way of writing one
+address, on every machine, gives one ID. A remote that is a path on
+disk names no repository, and gives None; so does a name of nothing but
+dots (<code class="docutils literal notranslate"><span class="pre">_.._</span></code>), which names no component.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.in_another_case">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">in_another_case</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#in_another_case"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.in_another_case" title="Link to this definition">#</a></dt>
+<dd><p>The one ID among <em>keys</em> that a reference names but for the case of its letters; None if none, or several.</p>
+<p>A scope derived from a remote is in lowercase, so a reference written as
+a web page shows its owner (<code class="docutils literal notranslate"><span class="pre">Acme/rates</span></code>) misses it: this is what to
+suggest.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.is_repository_top">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">is_repository_top</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#is_repository_top"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.is_repository_top" title="Link to this definition">#</a></dt>
+<dd><p>Whether a directory is the top folder of a git repository: of a clone, a worktree or a submodule.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>base_dir</strong> – The directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>False if it is in no repository, or in one’s subfolder.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.looks_like_registry">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">looks_like_registry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">component</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#looks_like_registry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.looks_like_registry" title="Link to this definition">#</a></dt>
+<dd><p>Tell whether an ID’s leading component names a registry, not a scope.</p>
+<p>The rule is Docker’s: a component containing <code class="docutils literal notranslate"><span class="pre">.</span></code> or <code class="docutils literal notranslate"><span class="pre">:</span></code>, or equal to
+<code class="docutils literal notranslate"><span class="pre">localhost</span></code>, is a host. <code class="docutils literal notranslate"><span class="pre">charthub.example</span></code> and <code class="docutils literal notranslate"><span class="pre">localhost:5000</span></code> are
+registries; <code class="docutils literal notranslate"><span class="pre">acme</span></code> is a scope.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>component</strong> – The leading component of a three-component ID.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.match_pipeline_ref">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">match_pipeline_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'this</span> <span class="pre">catalog'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#match_pipeline_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.match_pipeline_ref" title="Link to this definition">#</a></dt>
+<dd><p>Match a user-supplied pipeline reference against a set of pipeline IDs.</p>
+<p>Matching order:</p>
+<ol class="arabic simple">
+<li><p>Exact match on the (possibly scoped) key.</p></li>
+<li><p>URL references are normalized to <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> and matched exactly,
+as written and then as the ID rule derives one from the address
+(:func:<code class="docutils literal notranslate"><span class="pre">id_from_address</span></code>): <code class="docutils literal notranslate"><span class="pre">https://github.com/ftsfr/crsp-treasury</span></code>
+matches <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>.</p></li>
+<li><p>A bare name matches any key whose name component equals it — but only
+if exactly one does; multiple matches raise an error listing the
+candidates.</p></li>
+</ol>
+<p>Finding nothing is not an error here, so that a caller with somewhere
+else to look can go on to it. :func:<code class="docutils literal notranslate"><span class="pre">resolve_pipeline_ref</span></code> is this
+function for a caller with nowhere else.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keys</strong> – The pipeline IDs to match against: a catalog’s keys, or
+those of a <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> table.</p></li>
+<li><p><strong>ref</strong> – The reference to match (bare, scoped, or URL).</p></li>
+<li><p><strong>where</strong> – What <em>keys</em> are the keys of, to say where a name is
+ambiguous.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The matching key, or None if there is none.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRevisionError" title="chartbook.identity.UnsupportedRevisionError"><strong>UnsupportedRevisionError</strong></a> – If the reference carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>.</p></li>
+<li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If the reference carries a registry
+prefix.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If a bare name matches more than one key.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.normalize_ref_to_id">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">normalize_ref_to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#normalize_ref_to_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.normalize_ref_to_id" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">normalize_ref_to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#normalize_ref_to_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.normalize_ref_to_id" title="Link to this definition">#</a></dt>
 <dd><p>Normalize any accepted pipeline reference form to an ID.</p>
 <p>Accepted forms:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">name</span></code> or <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> — returned as-is</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">https://github.com/scope/name</span></code> (or any URL) — reduced to the last
-two path segments, with a trailing <code class="docutils literal notranslate"><span class="pre">.git</span></code> stripped</p></li>
+two path segments, with a trailing <code class="docutils literal notranslate"><span class="pre">.git</span></code> (in any case) stripped</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">git&#64;github.com:scope/name.git</span></code> — same reduction</p></li>
 </ul>
 <dl class="myst field-list simple">
@@ -605,24 +925,87 @@ two path segments, with a trailing <code class="docutils literal notranslate"><s
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRevisionError" title="chartbook.identity.UnsupportedRevisionError"><strong>UnsupportedRevisionError</strong></a> – If the reference carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If nothing ID-like can be extracted.</p></li>
+<li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If the reference is qualified with a
+registry, e.g. <code class="docutils literal notranslate"><span class="pre">charthub.example/acme/rates</span></code>.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If nothing ID-like can be extracted.</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.plain_line">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">plain_line</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">longest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#plain_line"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.plain_line" title="Link to this definition">#</a></dt>
+<dd><p>Text someone else wrote, as one line of what can be seen; empty if nothing can.</p>
+<p>Characters that do not print (controls, format characters, lone
+surrogates) become spaces, and runs of space become one; the text is
+otherwise as written. Text with no character that shows (only spaces,
+fillers or combining marks) is no text. It is read only as far as the
+length kept, so that a long value costs nothing.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>longest</strong> – Cut to this many characters.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.read_version_file">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">read_version_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#read_version_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.read_version_file" title="Link to this definition">#</a></dt>
+<dd><p>What a laid-out version’s :data:<code class="docutils literal notranslate"><span class="pre">VERSION_FILE</span></code> says; empty unless the folder is one.</p>
+<p>A folder is a laid-out version when it has the file and is not a
+repository’s own folder: no <code class="docutils literal notranslate"><span class="pre">.git</span></code> in it, and the file not tracked by
+git. A laid-out folder copied to start a new pipeline and committed is
+that new pipeline, not the old version. A file too large, or not a JSON
+object, is not read.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.remote_to_web_url">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">remote_to_web_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#remote_to_web_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.remote_to_web_url" title="Link to this definition">#</a></dt>
+<dd><p>Turn a git remote into the web address of the repository it names.</p>
+<p>A remote is written for git, not for a browser, and may carry things
+that must not be published. This reduces it to <code class="docutils literal notranslate"><span class="pre">https://host/path</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">git&#64;github.com:acme/rates.git</span></code> → <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ssh://git&#64;gitlab.internal:2222/acme/rates.git</span></code> → <code class="docutils literal notranslate"><span class="pre">https://gitlab.internal/acme/rates</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">https://user:token&#64;github.com/acme/rates.git</span></code> → <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates</span></code></p></li>
+</ul>
+<p>Credentials embedded in the remote are always dropped. A remote that is
+a path on disk has no web address and gives an empty string; a Windows
+path with a drive letter, <code class="docutils literal notranslate"><span class="pre">C:\repos\rates</span></code> or <code class="docutils literal notranslate"><span class="pre">C:/repos/rates</span></code>, is
+one, as git reads it, and not a host <code class="docutils literal notranslate"><span class="pre">C</span></code>.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>remote</strong> – The remote URL, as <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">config</span> <span class="pre">remote.origin.url</span></code> prints it.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A web URL, or <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> if the remote does not name a host.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.repository_key">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">repository_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#repository_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.repository_key" title="Link to this definition">#</a></dt>
+<dd><p>A repository’s address, reduced so that the ways of writing one repository give one key.</p>
+<p><code class="docutils literal notranslate"><span class="pre">git&#64;github.com:Acme/Rates.git</span></code>, <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates/</span></code>
+and <code class="docutils literal notranslate"><span class="pre">http://github.com:443/acme/rates</span></code> are one repository: the scheme
+is taken as <code class="docutils literal notranslate"><span class="pre">https</span></code>, the host in lower case with no default port, the
+path with no <code class="docutils literal notranslate"><span class="pre">.git</span></code> or final slash, and in lower case for a host that
+ignores its case.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The key, or <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> for no address or one with no host.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.resolve_pipeline_ref">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">resolve_pipeline_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#resolve_pipeline_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.resolve_pipeline_ref" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">resolve_pipeline_ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#resolve_pipeline_ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.resolve_pipeline_ref" title="Link to this definition">#</a></dt>
 <dd><p>Resolve a user-supplied pipeline reference against catalog keys.</p>
-<p>Resolution order:</p>
-<ol class="arabic simple">
-<li><p>Exact match on the (possibly scoped) key.</p></li>
-<li><p>URL references are normalized to <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> and matched exactly.</p></li>
-<li><p>A bare name matches any key whose name component equals it — but only
-if exactly one does; multiple matches raise an error listing the
-candidates.</p></li>
-</ol>
+<p>The matching rules are :func:<code class="docutils literal notranslate"><span class="pre">match_pipeline_ref</span></code>’s.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -636,15 +1019,51 @@ candidates.</p></li>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRevisionError" title="chartbook.identity.UnsupportedRevisionError"><strong>UnsupportedRevisionError</strong></a> – If the reference carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no key matches, or a bare name is ambiguous.</p></li>
+<li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If the reference carries a registry
+prefix.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If no key matches, or a bare name is ambiguous.</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.same_pipeline_checked_out">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">same_pipeline_checked_out</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">first</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.identity.Checkout" title="chartbook.identity.Checkout"><span class="pre">chartbook.identity.Checkout</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">second</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.identity.Checkout" title="chartbook.identity.Checkout"><span class="pre">chartbook.identity.Checkout</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#same_pipeline_checked_out"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.same_pipeline_checked_out" title="Link to this definition">#</a></dt>
+<dd><p>Whether two folders are one pipeline in two checkouts of one repository, at the same place in it.</p>
+<p>Two worktrees of one repository share its git folder. Two clones are
+one repository as a pin takes one: by the address of their remotes
+where both have one, so that two repositories made from one template
+(one first commit, two addresses) are two; by their first commit where
+either has none.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.split_registry">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">split_registry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#split_registry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.split_registry" title="Link to this definition">#</a></dt>
+<dd><p>Split a registry prefix off a fully qualified pipeline ID.</p>
+<p>A registry-qualified ID has exactly three components,
+<code class="docutils literal notranslate"><span class="pre">registry/scope/name</span></code>, and its first looks like a host (see</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">looks_like_registry</span></code>). Anything else has no registry: a bare
+<code class="docutils literal notranslate"><span class="pre">name</span></code> and a <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> are returned whole, whatever characters the
+scope contains, so no ID that was valid before the prefix was reserved
+changes meaning.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>pipeline_id</strong> – A pipeline ID, or a reference that starts with one
+(a trailing <code class="docutils literal notranslate"><span class="pre">:asset</span></code> does not affect the split).</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple of (registry or None, the ID without it).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.split_rev">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">split_rev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#split_rev"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.split_rev" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">split_rev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#split_rev"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.split_rev" title="Link to this definition">#</a></dt>
 <dd><p>Split an <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> suffix off a pipeline reference.</p>
 <p>URLs are passed through untouched (an <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> may be part of ssh syntax).</p>
 <dl class="myst field-list simple">
@@ -658,8 +1077,30 @@ candidates.</p></li>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.strip_url_credentials">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">strip_url_credentials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#strip_url_credentials"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.strip_url_credentials" title="Link to this definition">#</a></dt>
+<dd><p>Take any user name and password out of a repository URL.</p>
+<p>For anything that shows or publishes a URL a manifest wrote: an index,
+a warning in a CI log. <code class="docutils literal notranslate"><span class="pre">https://user:token&#64;host/…</span></code> becomes
+<code class="docutils literal notranslate"><span class="pre">https://host/…</span></code>. An ssh URL keeps its user (<code class="docutils literal notranslate"><span class="pre">ssh://git&#64;host/…</span></code>),
+which is part of the address and not a secret, and loses only a
+password. A URL with no scheme (<code class="docutils literal notranslate"><span class="pre">git&#64;host:acme/rates.git</span></code>, a path on
+disk) is returned as it is.</p>
+<p>Unlike :func:<code class="docutils literal notranslate"><span class="pre">remote_to_web_url</span></code>, the result is still the address git
+fetches from.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>url</strong> – The URL as written.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The URL without credentials.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.identity.validate_pipeline_id">
-<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">validate_pipeline_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#validate_pipeline_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.validate_pipeline_id" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">validate_pipeline_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#validate_pipeline_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.validate_pipeline_id" title="Link to this definition">#</a></dt>
 <dd><p>Validate a pipeline ID against the <code class="docutils literal notranslate"><span class="pre">[scope/]name</span></code> grammar.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -670,8 +1111,29 @@ or a bare <code class="docutils literal notranslate"><span class="pre">&quot;crs
 <dd class="field-even"><p>The validated ID, unchanged.</p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the ID has more than two components or a
-component contains disallowed characters.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference internal" href="#chartbook.identity.UnsupportedRegistryError" title="chartbook.identity.UnsupportedRegistryError"><strong>UnsupportedRegistryError</strong></a> – If the ID is qualified with a registry
+(<code class="docutils literal notranslate"><span class="pre">registry/scope/name</span></code>), which is reserved syntax.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the ID has more than two components or a
+component contains disallowed characters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.identity.web_link">
+<span class="sig-prename descclassname"><span class="pre">chartbook.identity.</span></span><span class="sig-name descname"><span class="pre">web_link</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.15)"><span class="pre">object</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/identity.html#web_link"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.identity.web_link" title="Link to this definition">#</a></dt>
+<dd><p>The value if it is a plain web address (<code class="docutils literal notranslate"><span class="pre">http</span></code> or <code class="docutils literal notranslate"><span class="pre">https</span></code>), with no credentials; else an empty string.</p>
+<p>For a link whose text someone else wrote, as a pipeline’s snapshot in
+the store says where its repository and site are: a <code class="docutils literal notranslate"><span class="pre">javascript:</span></code>
+link, or one that would break out of the page’s markup, is no link.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> – The address as written.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The address, or <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code>.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -701,11 +1163,11 @@ component contains disallowed characters.</p>
       </div>
     </a>
     <a class="right-next"
-       href="chartbook.build_docs.html"
+       href="chartbook.incremental.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -716,7 +1178,8 @@ component contains disallowed characters.</p>
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -724,20 +1187,45 @@ component contains disallowed characters.</p>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout"><code class="docutils literal notranslate"><span class="pre">Checkout</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.address"><code class="docutils literal notranslate"><span class="pre">Checkout.address</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.common_dir"><code class="docutils literal notranslate"><span class="pre">Checkout.common_dir</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.first_commit"><code class="docutils literal notranslate"><span class="pre">Checkout.first_commit</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.main"><code class="docutils literal notranslate"><span class="pre">Checkout.main</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.Checkout.subfolder"><code class="docutils literal notranslate"><span class="pre">Checkout.subfolder</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.ID_COMPONENT_PATTERN"><code class="docutils literal notranslate"><span class="pre">ID_COMPONENT_PATTERN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.UnsupportedRegistryError"><code class="docutils literal notranslate"><span class="pre">UnsupportedRegistryError</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.UnsupportedRevisionError"><code class="docutils literal notranslate"><span class="pre">UnsupportedRevisionError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.VERSION_FILE"><code class="docutils literal notranslate"><span class="pre">VERSION_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.checkout_of"><code class="docutils literal notranslate"><span class="pre">checkout_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.clear_git_remote_cache"><code class="docutils literal notranslate"><span class="pre">clear_git_remote_cache()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.derive_pipeline_id"><code class="docutils literal notranslate"><span class="pre">derive_pipeline_id()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.get_git_remote_url"><code class="docutils literal notranslate"><span class="pre">get_git_remote_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.id_from_address"><code class="docutils literal notranslate"><span class="pre">id_from_address()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.in_another_case"><code class="docutils literal notranslate"><span class="pre">in_another_case()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.is_repository_top"><code class="docutils literal notranslate"><span class="pre">is_repository_top()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.looks_like_registry"><code class="docutils literal notranslate"><span class="pre">looks_like_registry()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.match_pipeline_ref"><code class="docutils literal notranslate"><span class="pre">match_pipeline_ref()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.normalize_ref_to_id"><code class="docutils literal notranslate"><span class="pre">normalize_ref_to_id()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.plain_line"><code class="docutils literal notranslate"><span class="pre">plain_line()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.read_version_file"><code class="docutils literal notranslate"><span class="pre">read_version_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.remote_to_web_url"><code class="docutils literal notranslate"><span class="pre">remote_to_web_url()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.repository_key"><code class="docutils literal notranslate"><span class="pre">repository_key()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.resolve_pipeline_ref"><code class="docutils literal notranslate"><span class="pre">resolve_pipeline_ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.same_pipeline_checked_out"><code class="docutils literal notranslate"><span class="pre">same_pipeline_checked_out()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.split_registry"><code class="docutils literal notranslate"><span class="pre">split_registry()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.split_rev"><code class="docutils literal notranslate"><span class="pre">split_rev()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.strip_url_credentials"><code class="docutils literal notranslate"><span class="pre">strip_url_credentials()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.validate_pipeline_id"><code class="docutils literal notranslate"><span class="pre">validate_pipeline_id()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.identity.web_link"><code class="docutils literal notranslate"><span class="pre">web_link()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -790,8 +1278,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

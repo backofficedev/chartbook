@@ -27,6 +27,10 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`built_nothing <chartbook.conf_validation.built_nothing>`
+  - ```{autodoc2-docstring} chartbook.conf_validation.built_nothing
+    :summary:
+    ```
 * - {py:obj}`validate_conf_py_values <chartbook.conf_validation.validate_conf_py_values>`
   - ```{autodoc2-docstring} chartbook.conf_validation.validate_conf_py_values
     :summary:
@@ -37,7 +41,29 @@
     ```
 ````
 
+### Data
+
+````{list-table}
+:class: autosummary longtable
+:align: left
+
+* - {py:obj}`OUTPUT_FILE_TYPES <chartbook.conf_validation.OUTPUT_FILE_TYPES>`
+  - ```{autodoc2-docstring} chartbook.conf_validation.OUTPUT_FILE_TYPES
+    :summary:
+    ```
+````
+
 ### API
+
+````{py:data} OUTPUT_FILE_TYPES
+:canonical: chartbook.conf_validation.OUTPUT_FILE_TYPES
+:value: >
+   'frozenset(...)'
+
+```{autodoc2-docstring} chartbook.conf_validation.OUTPUT_FILE_TYPES
+```
+
+````
 
 `````{py:class} SiteConfig
 :canonical: chartbook.conf_validation.SiteConfig
@@ -143,6 +169,13 @@
 ````
 
 `````
+
+````{py:function} built_nothing(manifest: dict, missing_files: list) -> bool
+:canonical: chartbook.conf_validation.built_nothing
+
+```{autodoc2-docstring} chartbook.conf_validation.built_nothing
+```
+````
 
 ````{py:function} validate_conf_py_values(manifest: dict, pipeline_theme: str) -> chartbook.conf_validation.SiteConfig
 :canonical: chartbook.conf_validation.validate_conf_py_values

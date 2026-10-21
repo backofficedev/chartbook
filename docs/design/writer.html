@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the writer, and what every page shows &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/writer';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: models" href="models.html" />
+    <link rel="prev" title="Design: the index" href="index-schema.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/writer.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the writer, and what every page shows</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-is-for">What this is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-writers-input-the-index-and-the-files-it-names">The writer’s input: the index, and the files it names</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-inventory">The inventory</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#every-asset-page">Every asset page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe-page">Dataframe page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-page">Chart page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model-page">Model page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-page-notebooks-notes">Pipeline page, notebooks, notes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalogs-own-pages">The catalog’s own pages</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-must-gain">What the index must gain</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-writer-in-outline">The writer, in outline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-second-writer-mkdocs">A second writer: MkDocs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-slice-by-slice">As built, slice by slice</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-writer-and-what-every-page-shows">
+<h1>Design: the writer, and what every page shows<a class="headerlink" href="#design-the-writer-and-what-every-page-shows" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
+vocabulary (<a class="reference internal" href="../guide/vocabulary.html"><span class="doc">Vocabulary</span></a>), then this inventory, then the Sphinx writer, then the
+documentation site. Status: <strong>built (2026-10-15). The writer renders every page from the index
+and the files it names, the build calls it (<code class="docutils literal notranslate"><span class="pre">sitefiles.write_site()</span></code>), and the generator is
+gone.</strong> The decisions it
+proposes are marked <em>proposed</em> until the maintainer takes them.</p>
+</div>
+<section id="what-this-is-for">
+<h2>What this is for<a class="headerlink" href="#what-this-is-for" title="Link to this heading">#</a></h2>
+<p>A <strong>writer</strong> turns the index into <strong>pages</strong> for one site tool. For the Sphinx writer to replace the
+generator that writes pages today, two things have to be true: the index must carry every <em>fact</em>
+a page shows, and every <em>rendering</em> a page shows must be something the writer can make from
+facts. This page inventories every section of every page the generator writes now, says which it
+is, and lists what the index must gain. The rule it applies is the one on the vocabulary page: the
+index records facts about the build, including comparisons it made, and no renderings.</p>
+</section>
+<section id="the-writers-input-the-index-and-the-files-it-names">
+<h2>The writer’s input: the index, and the files it names<a class="headerlink" href="#the-writers-input-the-index-and-the-files-it-names" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em> The vocabulary page settles that the writer reads the write-ups the index points at,
+because they are source and not facts about the build. The inventory below shows the same is
+true of two more things a page shows: the <strong>first rows of a dataframe</strong> (the glimpse) and a
+<strong>chart’s HTML</strong> (the iframe). Neither is a fact about the build, and neither belongs in a JSON
+file; both are files the index names, with their hashes. So the writer’s input is: <strong>the index,
+and the files the index names</strong> — write-ups, data files, chart files, notebooks — read at the
+paths the index gives, and nothing else. A writer never reads a manifest, never walks a folder,
+and never asks git. The index is the map; the files are the territory it maps.</p>
+</section>
+<section id="the-inventory">
+<h2>The inventory<a class="headerlink" href="#the-inventory" title="Link to this heading">#</a></h2>
+<p>Each row: a section a page shows today; what it shows; whether that is a <strong>fact</strong> (belongs in the
+index), a <strong>rendering</strong> (the writer makes it from facts), or a <strong>file</strong> (the writer reads what the
+index names); where the generator gets it today; and whether the index has it.</p>
+<section id="every-asset-page">
+<h3>Every asset page<a class="headerlink" href="#every-asset-page" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Title</p></td>
+<td><p>Kind, ID, name</p></td>
+<td><p>fact</p></td>
+<td><p>manifest</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>Freshness line</p></td>
+<td><p>When the data file was last written (“Data updated 2 days ago”); for a chart, when the chart file was; “Code updated” on the pipeline page</p></td>
+<td><p>fact: a file’s modification time; a pipeline’s last code change</p></td>
+<td><p>file system; git</p></td>
+<td><p><strong>no.</strong> Add <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> to a <code class="docutils literal notranslate"><span class="pre">file</span></code> location; add the pipeline’s last code change to the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record</p></td>
+</tr>
+<tr class="row-even"><td><p>The write-up</p></td>
+<td><p>The author’s text, from <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> or inline <code class="docutils literal notranslate"><span class="pre">docs</span></code></p></td>
+<td><p>file</p></td>
+<td><p>the file, or the manifest</p></td>
+<td><p>partly: <code class="docutils literal notranslate"><span class="pre">docs</span></code> has the path or the text. Add the <strong>hash</strong> (decided)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Provenance panel</p></td>
+<td><p>What this is, where, hash, size, rows, built by, made from, used by, version</p></td>
+<td><p>fact</p></td>
+<td><p>the index</p></td>
+<td><p>yes (6b)</p></td>
+</tr>
+<tr class="row-even"><td><p>Manifest tables</p></td>
+<td><p>Name, description, tags, sources, providers, links, access, pull method, units, frequency… every declared field</p></td>
+<td><p>fact</p></td>
+<td><p>manifest</p></td>
+<td><p>yes: every declared field is on the record</p></td>
+</tr>
+<tr class="row-odd"><td><p>Pipeline manifest table</p></td>
+<td><p>Name, ID, maintainer, contributors, repository, site URL, OS, code update date, linked dataframes, build command</p></td>
+<td><p>fact</p></td>
+<td><p>manifest; git</p></td>
+<td><p>mostly. Add <code class="docutils literal notranslate"><span class="pre">site_url</span></code> and <code class="docutils literal notranslate"><span class="pre">readme</span></code> if absent; the code change date as above; linked dataframes are the <code class="docutils literal notranslate"><span class="pre">assets</span></code> list</p></td>
+</tr>
+<tr class="row-even"><td><p>Download links</p></td>
+<td><p>Parquet, Excel, HTML of the chart</p></td>
+<td><p>rendering of a location</p></td>
+<td><p>manifest</p></td>
+<td><p>yes (location)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="dataframe-page">
+<h3>Dataframe page<a class="headerlink" href="#dataframe-page" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Glimpse</p></td>
+<td><p>Row and column counts, dtypes, one sample row</p></td>
+<td><p>counts and dtypes: fact (<code class="docutils literal notranslate"><span class="pre">row_count</span></code>, <code class="docutils literal notranslate"><span class="pre">columns</span></code>); the sample row: <strong>file</strong></p></td>
+<td><p>the parquet file</p></td>
+<td><p>counts and columns yes; the sample is read from the file the location names</p></td>
+</tr>
+<tr class="row-odd"><td><p>Data available up to (min/max)</p></td>
+<td><p>For a file: the least and the greatest, over the other columns, of the last date at which that column is non-null (a staleness measure across columns); for a table or query: the first and last date</p></td>
+<td><p>a <strong>comparison the writer makes from the file</strong>, for a file; a fact, for a table or query</p></td>
+<td><p>the parquet file; the engine</p></td>
+<td><p>the plain first and last date are now a fact, <code class="docutils literal notranslate"><span class="pre">date_range</span></code>, for both; the per-column measure the file page shows stays a rendering the writer computes from the file it names</p></td>
+</tr>
+<tr class="row-even"><td><p>Table / query row</p></td>
+<td><p>Source, identifier or SQL</p></td>
+<td><p>fact</p></td>
+<td><p>manifest</p></td>
+<td><p>yes (location)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Linked charts</p></td>
+<td><p>Charts whose <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> is this one</p></td>
+<td><p>rendering of a comparison</p></td>
+<td><p>manifest</p></td>
+<td><p>yes: the charts’ <code class="docutils literal notranslate"><span class="pre">inputs</span></code>; the panel’s reverse map</p></td>
+</tr>
+<tr class="row-even"><td><p>Series tables</p></td>
+<td><p>Documented columns</p></td>
+<td><p>fact</p></td>
+<td><p>manifest</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">Series</span></code> records)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="chart-page">
+<h3>Chart page<a class="headerlink" href="#chart-page" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Front matter</p></td>
+<td><p>Date, tags, category, for ABlog’s listing</p></td>
+<td><p>rendering of facts: the chart file’s time, the dataframe’s <code class="docutils literal notranslate"><span class="pre">sources</span></code>, the chart’s <code class="docutils literal notranslate"><span class="pre">tags</span></code></p></td>
+<td><p>manifest; file system</p></td>
+<td><p>yes once <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> exists</p></td>
+</tr>
+<tr class="row-odd"><td><p>The chart</p></td>
+<td><p>The HTML file, in an iframe; “Sources: …” under it</p></td>
+<td><p><strong>file</strong>; a fact</p></td>
+<td><p>the chart file; the dataframe’s declared fields</p></td>
+<td><p>the location names the file; <code class="docutils literal notranslate"><span class="pre">sources</span></code> is on the dataframe record</p></td>
+</tr>
+<tr class="row-even"><td><p>Chart specs</p></td>
+<td><p>Frequency, units, period, release lag…</p></td>
+<td><p>fact</p></td>
+<td><p>manifest</p></td>
+<td><p>yes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="model-page">
+<h3>Model page<a class="headerlink" href="#model-page" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Section</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Scores</p></td>
+<td><p>The metrics file’s values</p></td>
+<td><p>fact</p></td>
+<td><p>the metrics file</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">metrics</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Versions table</p></td>
+<td><p>Each version: name, made, commit, labels, each metric</p></td>
+<td><p>fact</p></td>
+<td><p>the store</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">versions</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>Trained on</p></td>
+<td><p>Each input, linked where the site has it</p></td>
+<td><p>rendering: links from <code class="docutils literal notranslate"><span class="pre">inputs</span></code></p></td>
+<td><p>manifest; site manifest</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">inputs</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Out of date</p></td>
+<td><p>The inputs that moved, then and now</p></td>
+<td><p>fact: a comparison the build made</p></td>
+<td><p>the store, the lockfile, the files</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">trained_with</span></code>, <code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>Files</p></td>
+<td><p>A directory model’s files and sizes</p></td>
+<td><p>fact</p></td>
+<td><p>the file system</p></td>
+<td><p>yes (<code class="docutils literal notranslate"><span class="pre">files</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="pipeline-page-notebooks-notes">
+<h3>Pipeline page, notebooks, notes<a class="headerlink" href="#pipeline-page-notebooks-notes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Page</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Pipeline README</p></td>
+<td><p>The README’s text under a title; the manifest table</p></td>
+<td><p>file; facts</p></td>
+<td><p>the README file</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">docs</span></code> on the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record names it; add the hash</p></td>
+</tr>
+<tr class="row-odd"><td><p>Notebook</p></td>
+<td><p>The executed notebook, rendered by Sphinx</p></td>
+<td><p>file</p></td>
+<td><p>the <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code> file</p></td>
+<td><p>the location names it</p></td>
+</tr>
+<tr class="row-even"><td><p>Note</p></td>
+<td><p>The write-up</p></td>
+<td><p>file</p></td>
+<td><p>the file</p></td>
+<td><p>the location names it</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="the-catalogs-own-pages">
+<h3>The catalog’s own pages<a class="headerlink" href="#the-catalogs-own-pages" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Page</p></th>
+<th class="head"><p>Shows</p></th>
+<th class="head"><p>Is</p></th>
+<th class="head"><p>Today from</p></th>
+<th class="head"><p>In the index</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Landing</p></td>
+<td><p>Cards to charts, dataframes, models, pipelines, contributing, diagnostics</p></td>
+<td><p>rendering (static text)</p></td>
+<td><p>the theme</p></td>
+<td><p>nothing needed</p></td>
+</tr>
+<tr class="row-odd"><td><p>Lists (dataframes, models, pipelines)</p></td>
+<td><p>Every page of a kind</p></td>
+<td><p>rendering of the records</p></td>
+<td><p>the manifest</p></td>
+<td><p>yes</p></td>
+</tr>
+<tr class="row-even"><td><p>Charts</p></td>
+<td><p>ABlog’s listing by date and category</p></td>
+<td><p>rendering</p></td>
+<td><p>front matter</p></td>
+<td><p>yes once <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> exists</p></td>
+</tr>
+<tr class="row-odd"><td><p>Diagnostics</p></td>
+<td><p>Which assets lack which required fields, against the policy</p></td>
+<td><p><strong>a comparison</strong>: rendering, or a fact the build records</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">diagnostics.py</span></code>, against <code class="docutils literal notranslate"><span class="pre">[policy]</span></code></p></td>
+<td><p>the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record must carry the <strong>policy</strong>; then the writer computes it, or the build records a <code class="docutils literal notranslate"><span class="pre">complete</span></code> flag per record. <em>Proposed: the writer computes it; the policy is a fact, completeness is a comparison any reader can make</em></p></td>
+</tr>
+<tr class="row-even"><td><p>Contributing</p></td>
+<td><p>Static text</p></td>
+<td><p>rendering</p></td>
+<td><p>the theme</p></td>
+<td><p>nothing needed</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="what-the-index-must-gain">
+<h2>What the index must gain<a class="headerlink" href="#what-the-index-must-gain" title="Link to this heading">#</a></h2>
+<p>In the order a writer needs them. Each is a fact, and each is small. <em>(All built 2026-10-14,
+the same day, as 6c; <code class="docutils literal notranslate"><span class="pre">tests/test_index.py</span></code>, <code class="docutils literal notranslate"><span class="pre">TestWhatTheWriterNeeds</span></code>. The diff reads what a
+file holds, not when it was written, so <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> alone is not a change; a changed write-up
+reads “write-up changed”, a <code class="docutils literal notranslate"><span class="pre">date_range</span></code> whose last date moved “data reaches further” or “less
+far”, a pipeline’s <code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code> “source changed”. A review found and fixed: <code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code>
+was written from file times by any <code class="docutils literal notranslate"><span class="pre">build_index()</span></code> while the schema promised git — it is present
+only in an index a docs build writes; a directory’s <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> was the directory’s own; a text
+<code class="docutils literal notranslate"><span class="pre">date_col</span></code> gave a lexical range — only temporal columns are read, in ISO 8601; the diff said
+“reaches further” whatever the direction. Known: the time is carried as an instant when freshly
+worked out, and from the incremental state’s local-time string when remembered, so a state file
+reused on a machine in another zone, or a stamp in the repeated hour of a DST change, can be off.)</em></p>
+<ol class="arabic simple">
+<li><p><strong>The write-up’s path and hash</strong> on every asset record and on the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record (its
+README). <em>Decided 2026-10-14.</em> A build then says which text it showed, and a diff says the
+write-up changed.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">modified_at</span></code></strong> on every <code class="docutils literal notranslate"><span class="pre">file</span></code> location: when the file was last written, in UTC. The
+freshness lines and ABlog’s dates come from it. <em>Proposed.</em></p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">date_range</span></code></strong> on a dataframe record with a <code class="docutils literal notranslate"><span class="pre">date_col</span></code>: the first and last date in the
+data, in ISO 8601; a text column is parsed as dates, and what does not parse is left out. <em>Proposed.</em> The engine answers it for a table
+or a query; for a file it is one column, read from the parquet statistics. The file page’s
+per-column “available up to” rows are a different quantity, a comparison across columns,
+which the writer computes from the file it names.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code></strong> on the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record: when the pipeline’s code last changed, as
+the build works it out (the last commit that touched the source where it is committed and
+unmodified, else the newest modification time), which the pipeline page shows today.
+<em>Proposed.</em> The index asks git for nothing itself: the build works the times out once, and
+an incremental build remembers them for the pipelines it reuses. It is the first field of
+the <code class="docutils literal notranslate"><span class="pre">Build</span></code> record the index design leaves for later; the rest of that record (the commit
+the site was built at, the time, the tool versions) belongs with it, and the envelope’s
+<code class="docutils literal notranslate"><span class="pre">generator</span></code> already carries the versions.</p></li>
+<li><p><strong>The policy</strong> on the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record, so the diagnostics page is a comparison a reader can
+make. <em>Proposed.</em> The schema has a place for it.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">site_url</span></code> and <code class="docutils literal notranslate"><span class="pre">readme</span></code></strong> on the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record if either is missing; a check, not a
+design.</p></li>
+</ol>
+<p>Nothing on this list is a rendering. The sample row, the chart HTML and the write-up text stay
+in the files the index names.</p>
+</section>
+<section id="the-writer-in-outline">
+<h2>The writer, in outline<a class="headerlink" href="#the-writer-in-outline" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em></p>
+<ul class="simple">
+<li><p><strong>One module per site tool</strong>: <code class="docutils literal notranslate"><span class="pre">chartbook/writers/sphinx.py</span></code> first. Its input is the index and
+the files it names; its output is a folder of pages and the files Sphinx needs beside them.
+It takes the theme (<code class="docutils literal notranslate"><span class="pre">pipeline</span></code> or <code class="docutils literal notranslate"><span class="pre">catalog</span></code>) and the build options the pages depend on.</p></li>
+<li><p><strong>The link scheme is the writer’s.</strong> <code class="docutils literal notranslate"><span class="pre">page_path(record)</span> <span class="pre">-&gt;</span> <span class="pre">str</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline_page_link(record)</span></code> and <code class="docutils literal notranslate"><span class="pre">link_to_dataframe(record,</span> <span class="pre">from_kind)</span></code>,
+one rule per writer. The provenance panel names assets by ID today because the scheme is not
+yet a function; it becomes one here, and the panel gains links.</p></li>
+<li><p><strong>Today’s Jinja templates become the Sphinx writer’s templates.</strong> They already render from a
+context; the context becomes the record plus what the writer computed. The generator is
+replaced section by section, each section’s page compared with the old one on the example
+sites, and the old code removed when the pages match.</p></li>
+<li><p><strong>Golden tests:</strong> one page of each kind, rendered from a fixed index and fixed files, compared
+whole. The index is small enough to keep as a fixture.</p></li>
+<li><p><strong>MkDocs and Next.js</strong> are later writers reading the same index; they are why the index stays
+free of renderings. MkDocs is built (below); Next.js is not scheduled.</p></li>
+</ul>
+</section>
+<section id="a-second-writer-mkdocs">
+<h2>A second writer: MkDocs<a class="headerlink" href="#a-second-writer-mkdocs" title="Link to this heading">#</a></h2>
+<p><em>Proposed 2026-10-16.</em> The maintainer asked for an MkDocs writer, behind an extra: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code> keeps installing Sphinx, and <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[mkdocs]</span></code> adds MkDocs. The writer
+is the proof that the index is what it claims to be: a second site tool, reading the same index,
+writing pages of its own, with the build unchanged above the writer.</p>
+<p><strong>Which tool a site is built with is a fact about the pipeline’s site</strong>, so it is in the manifest:
+<code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">writer</span> <span class="pre">=</span> <span class="pre">&quot;mkdocs&quot;</span></code>, default <code class="docutils literal notranslate"><span class="pre">&quot;sphinx&quot;</span></code>. A catalog’s choice applies to the catalog’s
+site; a pipeline’s to its own. (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code> keeps no flag for it: the site is built the same
+way by everyone who builds it.)</p>
+<p><strong>What the writer is.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook/writers/mkdocs.py</span></code>, <code class="docutils literal notranslate"><span class="pre">MkDocsWriter</span></code>, with the Sphinx writer’s
+methods and signatures: <code class="docutils literal notranslate"><span class="pre">page_path(record)</span></code>, <code class="docutils literal notranslate"><span class="pre">page(record)</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline_page_link</span></code>,
+<code class="docutils literal notranslate"><span class="pre">link_to_dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">catalog_page_paths()</span></code>, <code class="docutils literal notranslate"><span class="pre">catalog_page(path)</span></code>. Its input rule is the same:
+the index and the files it names, nothing else. Its output is a MkDocs project: <code class="docutils literal notranslate"><span class="pre">mkdocs.yml</span></code>
+with the nav written from the index, and a <code class="docutils literal notranslate"><span class="pre">docs/</span></code> folder of Markdown pages in MkDocs’
+dialect (Material admonitions, plain tables, relative <code class="docutils literal notranslate"><span class="pre">.md</span></code> links). The provenance and manifest
+templates are plain Markdown already and are shared; the two templates that use MyST
+(<code class="docutils literal notranslate"><span class="pre">chart_entry_top.md</span></code>, <code class="docutils literal notranslate"><span class="pre">freshness.md</span></code>) and the theme’s own pages (<code class="docutils literal notranslate"><span class="pre">index.md</span></code>, <code class="docutils literal notranslate"><span class="pre">charts.md</span></code>, the
+catalog’s five) get MkDocs versions in a theme folder of the writer’s own.</p>
+<p><strong>What MkDocs does not have.</strong> Sphinx’s blog (<code class="docutils literal notranslate"><span class="pre">ablog</span></code>) carries the notes; in MkDocs the notes are
+pages listed on the front page, newest first, with their dates. Notebooks are rendered by
+<code class="docutils literal notranslate"><span class="pre">mkdocs-jupyter</span></code>, which the extra installs. Charts are HTML files, shown as they are now, in an
+iframe on the chart page. The diagnostics page, the catalog’s tables and the search are MkDocs’
+own.</p>
+<p><strong>The build.</strong> <code class="docutils literal notranslate"><span class="pre">sitefiles.write_site()</span></code> picks the writer by the manifest and writes the pages;
+<code class="docutils literal notranslate"><span class="pre">build_docs</span></code> runs <code class="docutils literal notranslate"><span class="pre">mkdocs</span> <span class="pre">build</span></code> where it runs <code class="docutils literal notranslate"><span class="pre">sphinx-build</span></code>, and copies the site out the same
+way; <code class="docutils literal notranslate"><span class="pre">index.json</span></code> is written beside the site as now, by code that never
+knew which tool rendered it. The incremental build is Sphinx’s for now: an MkDocs site is built
+whole.</p>
+<p><strong>Tests.</strong> The golden tests of <code class="docutils literal notranslate"><span class="pre">tests/test_writer_sphinx.py</span></code> have an MkDocs twin: one page of
+each kind from the same fixed index, compared whole. A build test runs <code class="docutils literal notranslate"><span class="pre">mkdocs</span> <span class="pre">build</span></code> where
+MkDocs is installed (the test environments install it) and checks the pages are there and the
+index is beside them. The first page compared by eye is the example pipelines’ sites, built with
+both writers.</p>
+<p><strong>Not in this step.</strong> Theme options beyond the logo and the favicon the manifest already has; a
+Next.js writer; a plugin seam for writers (two implementations are not three).</p>
+<p><em>Found on the way, 2026-10-16:</em> three links the Sphinx writer carries from the generator do not
+resolve, in either site tool: the dataframe page’s link to itself in the pipeline theme
+(<code class="docutils literal notranslate"><span class="pre">../dataframes/&lt;slug&gt;/&lt;name&gt;.md</span></code> from <code class="docutils literal notranslate"><span class="pre">cb/dataframes/&lt;slug&gt;/</span></code>), the chart page’s link to itself
+(<code class="docutils literal notranslate"><span class="pre">../../charts/&lt;slug&gt;.&lt;name&gt;.md</span></code> from <code class="docutils literal notranslate"><span class="pre">cb/charts/</span></code>) and, in the catalog theme, a dataframe page’s
+link to its pipeline (<code class="docutils literal notranslate"><span class="pre">../pipelines/&lt;slug&gt;_README.md</span></code> from <code class="docutils literal notranslate"><span class="pre">cb/dataframes/&lt;slug&gt;/</span></code>), and in the catalog theme a dataframe
+page’s link to itself (<code class="docutils literal notranslate"><span class="pre">&lt;slug&gt;/&lt;name&gt;.md</span></code> from <code class="docutils literal notranslate"><span class="pre">cb/dataframes/&lt;slug&gt;/</span></code>); Sphinx renders
+each as an anchor on the same page. MkDocs reports them as warnings. They are the link scheme’s to
+fix, for both writers at once, with the golden tests updated; not part of this step. <em>Fixed
+2026-10-16:</em> <code class="docutils literal notranslate"><span class="pre">link_to_dataframe</span></code> and <code class="docutils literal notranslate"><span class="pre">pipeline_page_link</span></code> are relative to the page they are on, the
+linked-charts list uses the page’s own prefix, and the MkDocs build test asserts that MkDocs reports
+no unresolved link.</p>
+<p><em>Built 2026-10-16:</em> <code class="docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs.MkDocsWriter</span></code>, a subclass of the Sphinx writer that
+swaps the template search path for a theme folder of its own
+(<code class="docutils literal notranslate"><span class="pre">chartbook/docs_src_mkdocs/&lt;theme&gt;</span></code>) and renders the front pages and lists as links rather than
+toctrees; <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">writer</span> <span class="pre">=</span> <span class="pre">&quot;mkdocs&quot;</span></code> chooses it, and the build (<code class="docutils literal notranslate"><span class="pre">build_docs._generate_docs_mkdocs</span></code>)
+writes the pages under <code class="docutils literal notranslate"><span class="pre">pages/</span></code>, <code class="docutils literal notranslate"><span class="pre">mkdocs.yml</span></code> beside them with the navigation from the records, and
+runs <code class="docutils literal notranslate"><span class="pre">mkdocs</span> <span class="pre">build</span></code>. The site’s own pages (<code class="docutils literal notranslate"><span class="pre">cb/charts.md</span></code>, the catalog’s) are a question the build
+asks any writer, <code class="docutils literal notranslate"><span class="pre">own_page_paths()</span></code> and <code class="docutils literal notranslate"><span class="pre">own_page()</span></code>; the Sphinx writer answers with the catalog’s
+pages, the MkDocs writer with the chart listing too. The incremental build is Sphinx’s and says so
+when asked for an MkDocs site. <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[mkdocs]</span></code> installs MkDocs, the Material theme
+and <code class="docutils literal notranslate"><span class="pre">mkdocs-jupyter</span></code>; <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code> still installs Sphinx and nothing of MkDocs. Two
+things the proposal above says differently from what was built: the notes and the charts are
+listed by name, not newest first; and the tests are not golden twins but checks that every page
+of a pipeline site and a catalog site is free of Sphinx syntax, that the chart listing and the
+navigation name every page, and that MkDocs builds a pipeline site (notes, site pages in the
+order of <code class="docutils literal notranslate"><span class="pre">index_toc.md</span></code>, MkDocs’ own search) and a catalog site end to end. A pipeline’s own
+site pages are copied as they are, listed on the front page and in the navigation, and one that
+carries a MyST fence is named in a warning, since MkDocs shows it as code. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">build</span></code> reads the catalog’s manifest and builds whole when it names MkDocs; <code class="docutils literal notranslate"><span class="pre">--watch</span></code> is refused
+there. The model page’s versions table, which had blank lines between its rows and so rendered
+as paragraphs in both tools, is a table now.</p>
+</section>
+<section id="as-built-slice-by-slice">
+<h2>As built, slice by slice<a class="headerlink" href="#as-built-slice-by-slice" title="Link to this heading">#</a></h2>
+<p><em>2026-10-15, slice 1: the dataframe page.</em> <code class="docutils literal notranslate"><span class="pre">chartbook/writers/sphinx.py</span></code>, <code class="docutils literal notranslate"><span class="pre">SphinxWriter</span></code>. Its
+input is the <strong>full</strong> index (with <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code>, since it reads the files the index names) and
+the files; it takes the theme, the project’s own <code class="docutils literal notranslate"><span class="pre">docs_src</span></code> for template overrides, and the two
+build options the page depends on. It renders today’s templates unchanged, from a context made
+of records: the dataframe’s declared fields and location; a <code class="docutils literal notranslate"><span class="pre">project</span></code> table and the dataframes
+list made from the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record; the write-up read at the path the record gives; the glimpse
+and the per-column date rows from the data file, or from the engine for a table or a query,
+opened through <code class="docutils literal notranslate"><span class="pre">chartbook.backends.source_url()</span></code> from the public <code class="docutils literal notranslate"><span class="pre">url</span></code> the location now carries;
+the freshness line from <code class="docutils literal notranslate"><span class="pre">modified_at</span></code>; the panel from the records. The link scheme is three
+functions on the writer. A golden test (<code class="docutils literal notranslate"><span class="pre">tests/test_writer_sphinx.py</span></code>) builds the site with the
+generator and asserts the writer’s page is the same text, on a file-backed pipeline and on one
+with a DuckDB table and query. Two facts were added for it: <code class="docutils literal notranslate"><span class="pre">site_url</span></code> on the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record
+(dropped from the published index when it is a local <code class="docutils literal notranslate"><span class="pre">file://</span></code> path, as <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> is) and
+<code class="docutils literal notranslate"><span class="pre">url</span></code> on a table or query location. Not yet: the chart, model, notebook, note and pipeline pages,
+the catalog’s list pages, and the build calling the writer instead of the generator.</p>
+<p><em>Decided with the slice, proposed:</em> <strong>a write-up is text, not a template.</strong> The generator had
+concatenated the write-up into the page’s Jinja source, so <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">name</span> <span class="pre">}}</span></code> or <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">if</span> <span class="pre">%}</span></code> inside a
+write-up was evaluated, and <code class="docutils literal notranslate"><span class="pre">{{'a':</span> <span class="pre">1}}</span></code> crashed the build; nothing documented it and no example
+used it. The writer passes the write-up as a value, and the generator’s dataframe page does the
+same now, so what the author wrote is what the page shows. <strong>The date rows of a table or query
+come from the index’s <code class="docutils literal notranslate"><span class="pre">date_range</span></code></strong>, which parses a text column as dates, where the generator had
+shown the engine’s least and greatest text. <strong>A declared path is shown normalized</strong>
+(<code class="docutils literal notranslate"><span class="pre">../shared/x</span></code> as the folder it names), as the index and the resolver have it. An adversarial
+review of the slice found the writer resolving a relative DuckDB url against the process’s
+working directory instead of the pipeline’s folder, which the golden test’s <code class="docutils literal notranslate"><span class="pre">chdir</span></code> had hidden
+(fixed; the catalog theme, built from the catalog’s root, is tested now); a published index gave
+a bare <code class="docutils literal notranslate"><span class="pre">KeyError</span></code> (a message says the writer needs the full index); <code class="docutils literal notranslate"><span class="pre">docs_src_dir</span></code> unset dropped
+the override paths (it defaults as the generator’s). Known: the pipeline table’s code-change time
+is converted back from UTC to local for the page and can land on the other side of a repeated
+DST hour.</p>
+<p><em>2026-10-15, slice 2: the chart page.</em> <code class="docutils literal notranslate"><span class="pre">SphinxWriter.chart_page()</span></code>. The chart’s record gives its
+declared fields and its file’s path and <code class="docutils literal notranslate"><span class="pre">modified_at</span></code>; its <code class="docutils literal notranslate"><span class="pre">inputs</span></code> name the dataframe it was
+drawn from, whose record gives the dataframe manifest table, the link and “Data updated”; the
+pipeline’s record gives the pipeline table and the fallback date for the listing’s front matter;
+the write-up is read at the path the record gives. The chart’s HTML is not read: the page embeds
+it by its path under the site, and the build copies it there (that copy is the build’s, not the
+writer’s, as the inventory said). The link scheme gained the chart page’s own forms, which the
+generator had: a chart links to the pipeline’s page from one folder less deep, and to its
+dataframe through <code class="docutils literal notranslate"><span class="pre">../dataframes/</span></code> in both themes. Decided with it, proposed: <strong>a chart’s
+write-up is text too</strong>, as a dataframe’s became; and <strong>“Data updated” on a chart of a table or
+query is the engine file’s time</strong> — the generator had taken the pipeline folder’s own
+modification time for it, since a table has no <code class="docutils literal notranslate"><span class="pre">path</span></code>, and now says what the writer says. The
+writer does not refuse an index that a build could not have made (a chart whose dataframe record
+is missing, or whose file has no <code class="docutils literal notranslate"><span class="pre">modified_at</span></code>): it writes the page with no data line and no
+dataframe table, and takes the listing’s date from the pipeline’s code-change time, as the
+generator would; the manifest loader and a strict build refuse both cases before an index exists.
+The golden test covers the chart pages of the file-backed pipeline, of a chart drawn from a DuckDB
+table (with a <code class="docutils literal notranslate"><span class="pre">series</span></code> list, which the index had been dropping from charts: <code class="docutils literal notranslate"><span class="pre">series</span></code> was treated
+as structural for every kind, where only a dataframe’s become Series records — an adversarial
+review of the slice found it), and of the catalog. The same review found the generator’s
+provenance-panel cache keyed by the <code class="docutils literal notranslate"><span class="pre">id()</span></code> of the records dict, which a later build in the same
+process could reuse after the first was freed; it holds the records themselves now.</p>
+<p><em>2026-10-15, slice 3: the model page.</em> <code class="docutils literal notranslate"><span class="pre">SphinxWriter.model_page()</span></code>. The whole page is in the
+<code class="docutils literal notranslate"><span class="pre">Model</span></code> record, as the inventory said it should be: scores from <code class="docutils literal notranslate"><span class="pre">metrics</span></code>, the versions table from
+<code class="docutils literal notranslate"><span class="pre">versions</span></code>, the files table from <code class="docutils literal notranslate"><span class="pre">files</span></code>, “Trained On” from <code class="docutils literal notranslate"><span class="pre">inputs</span></code> (a link when the input’s
+record is in this index, which is when its pipeline is part of the site; a name and a note
+otherwise), and the out-of-date notice from <code class="docutils literal notranslate"><span class="pre">trained_with</span></code>, <code class="docutils literal notranslate"><span class="pre">inputs_now</span></code> and <code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code>. The
+third of those is new with this slice, and an adversarial review is why: the notice shows each
+moved input’s hash <em>then</em> and <em>now</em>, and the first version of the writer took “now” from the
+inputs’ own records (a local dataframe’s <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>, another pipeline’s pin in
+<code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>), matching the lockfile-style keys of <code class="docutils literal notranslate"><span class="pre">trained_with</span></code> (<code class="docutils literal notranslate"><span class="pre">d</span></code>, <code class="docutils literal notranslate"><span class="pre">rates:treasury</span></code>) to the
+build IDs of <code class="docutils literal notranslate"><span class="pre">inputs</span></code> by name. The review built the cases where that guess is wrong — the
+declaration reordered after the snapshot, two upstream pipelines with a dataframe of the same
+name, an input dropped from <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> but still in the version’s record — and showed the page
+naming a wrong hash or raising. The index did not state the mapping, so the writer could not
+derive it; now the record states the three facts of the comparison, keyed alike, and a reader
+needs nothing else. The model’s bytes are never read. The page’s skeleton is still the generator’s
+two template strings, imported, until the generator goes and they move here. Decided with it,
+proposed: <strong>a model’s write-up is text too</strong>. Aligned on both sides: a directory model’s files are
+listed by path as text, as the index sorts them (the generator had sorted <code class="docutils literal notranslate"><span class="pre">Path</span></code> objects, which
+order <code class="docutils literal notranslate"><span class="pre">a-b/x</span></code> and <code class="docutils literal notranslate"><span class="pre">a/x</span></code> the other way); a directory’s <code class="docutils literal notranslate"><span class="pre">modified_at</span></code> in the index counts the files
+its hash counts, and is absent when there are none — an empty folder, or one holding only
+<code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code>, had been given the folder’s own time and so a “Model updated” line the generator did
+not show; the generator’s “Data updated” for a dataframe that is a directory now says the same
+(it had shown the folder’s own modification time, which moves only when an entry is added or
+removed, so a folder of parts written days ago could be dated today); and training data that a pipeline <em>in the site</em> does not declare is named by its build
+ID on both sides, with the note “which that pipeline does not declare” (the generator had named it
+as stated and called it “not part of this site”, which it was). The golden test covers a file
+model with scores, a bare directory model, one with nothing counted in it, a model with two
+versions that is out of date on a local and on another pipeline’s dataframe, the same model in a
+catalog that also holds the other pipeline (where “Trained On” links to it), and one trained on a
+name its upstream does not declare.</p>
+<p><em>2026-10-15, slice 4: the pipeline page.</em> <code class="docutils literal notranslate"><span class="pre">SphinxWriter.pipeline_page()</span></code>. In the pipeline theme
+it is the site’s front page: the theme’s <code class="docutils literal notranslate"><span class="pre">index.md</span></code> (or the project’s override) rendered with the
+README’s text from the file the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record’s <code class="docutils literal notranslate"><span class="pre">docs</span></code> names, the tables of contents made from
+the records — notebooks and notes of this pipeline, dataframes and models of the site, each by
+name — and “Code updated” from <code class="docutils literal notranslate"><span class="pre">code_changed_at</span></code>. In a catalog it is the pipeline’s README page,
+<code class="docutils literal notranslate"><span class="pre">cb/pipelines/&lt;slug&gt;_README.md</span></code>, with the repository and site named above the text from the
+record’s <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> and <code class="docutils literal notranslate"><span class="pre">site_url</span></code>. One fact was added for it: a pipeline’s own <strong>site pages</strong>.
+The generator found them by walking <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">site_dir</span></code> (or <code class="docutils literal notranslate"><span class="pre">docs_src/site/</span></code>), which the writer
+may not do; the <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record now carries <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> (<code class="docutils literal notranslate"><span class="pre">path</span></code>, and <code class="docutils literal notranslate"><span class="pre">resolved_path</span></code> until
+published) and <code class="docutils literal notranslate"><span class="pre">site_pages</span></code>, every Markdown file under it by relative path, sorted. The build
+copies them beside the generated pages, as before; the writer lists them in the front page’s
+table of contents and reads <code class="docutils literal notranslate"><span class="pre">index_toc.md</span></code>, if it is one of them, to merge in. Decided with it,
+proposed: <strong>notebooks and notes are listed by name</strong>, as the index has them, where the generator
+had kept the manifest’s order; the generator does the same now. Notebooks and notes themselves
+are files the build copies, not pages the writer renders (the inventory above). The golden test
+covers a pipeline site with and without its own site pages, one with notes, and a catalog’s
+README pages. An adversarial review found the generator ordering the site pages as <code class="docutils literal notranslate"><span class="pre">Path</span></code> objects
+(<code class="docutils literal notranslate"><span class="pre">guide/intro.md</span></code> before <code class="docutils literal notranslate"><span class="pre">guide.md</span></code>) where the index orders them as text, and listing a directory
+named <code class="docutils literal notranslate"><span class="pre">*.md</span></code>; the generator now does as the index does, since the index’s order is the one any
+reader of the JSON reproduces. It also found the writer splitting the README with <code class="docutils literal notranslate"><span class="pre">splitlines()</span></code>,
+which breaks on a form feed where the generator’s <code class="docutils literal notranslate"><span class="pre">readlines()</span></code> does not; both read lines now. A
+diff says “site pages changed” when one appears or goes. Known: the site pages are listed without
+hashes, so a diff cannot say <em>which</em> page changed. <em>Proposed:</em> give each the same <code class="docutils literal notranslate"><span class="pre">path</span></code> +
+<code class="docutils literal notranslate"><span class="pre">content_hash</span></code> shape as a write-up when a reader needs it.</p>
+<p><em>2026-10-15, slice 5: the catalog’s own pages.</em> <code class="docutils literal notranslate"><span class="pre">SphinxWriter.catalog_page(path)</span></code> for
+<code class="docutils literal notranslate"><span class="pre">index.md</span></code>, <code class="docutils literal notranslate"><span class="pre">cb/dataframes.md</span></code>, <code class="docutils literal notranslate"><span class="pre">cb/models.md</span></code> (when some pipeline declares a model),
+<code class="docutils literal notranslate"><span class="pre">cb/pipelines.md</span></code> and <code class="docutils literal notranslate"><span class="pre">cb/diagnostics.md</span></code>; <code class="docutils literal notranslate"><span class="pre">catalog_page_paths()</span></code> says which. The landing page and
+the lists are renderings of the records, as the inventory said; <code class="docutils literal notranslate"><span class="pre">pipelines.md</span></code> reuses the pipeline
+manifest table made from each <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record. The diagnostics page is the comparison the
+inventory proposed the writer should make: each record’s declared fields against the <code class="docutils literal notranslate"><span class="pre">required</span></code>
+lists of the policy the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record carries (always resolved, defaults filled). A record
+carries the fields its entry declared, and its structure stands in for the rest — a <code class="docutils literal notranslate"><span class="pre">location</span></code>
+is the <code class="docutils literal notranslate"><span class="pre">path</span></code>, a <code class="docutils literal notranslate"><span class="pre">docs</span></code> is the write-up, a chart’s <code class="docutils literal notranslate"><span class="pre">inputs</span></code> is its <code class="docutils literal notranslate"><span class="pre">dataframe</span></code>, a model’s
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code> are its <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> — so the rows come out as the generator’s <code class="docutils literal notranslate"><span class="pre">build_diagnostics()</span></code>
+does from the manifests, which the golden test holds them to on a catalog with a <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>, a
+model and assets missing fields. The generator had read the rows back from the CSV the build
+writes; the build still writes that CSV, and the page links to it. <code class="docutils literal notranslate"><span class="pre">charts.md</span></code> and
+<code class="docutils literal notranslate"><span class="pre">contributing.md</span></code> are static files of the theme that the build copies, not pages the writer
+renders. One fact was added: the <code class="docutils literal notranslate"><span class="pre">Catalog</span></code> record’s <code class="docutils literal notranslate"><span class="pre">location</span></code>, so the writer looks in the
+catalog’s folder for template overrides as it does in a pipeline’s. Aligned on both sides: the
+lists and the diagnostics rows are by name (pipelines, then assets), as the index orders records,
+where the generator had kept the manifests’ order; and an empty “Missing Fields” cell is empty on
+the page, where the generator’s round trip through pandas had printed <code class="docutils literal notranslate"><span class="pre">nan</span></code>. An adversarial
+review found the first version of the comparison treating as missing what a record states in
+another form: a policy may require <code class="docutils literal notranslate"><span class="pre">readme</span></code>, <code class="docutils literal notranslate"><span class="pre">site_url</span></code> or <code class="docutils literal notranslate"><span class="pre">copyright</span></code> of a pipeline, <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>,
+<code class="docutils literal notranslate"><span class="pre">linked_charts</span></code>, <code class="docutils literal notranslate"><span class="pre">series</span></code> or <code class="docutils literal notranslate"><span class="pre">source</span></code> of a dataframe, <code class="docutils literal notranslate"><span class="pre">metrics_path</span></code> of a model, and the writer
+had no such keys to look at. Each is put back under the entry’s name now, from the record’s
+<code class="docutils literal notranslate"><span class="pre">docs</span></code>, <code class="docutils literal notranslate"><span class="pre">location</span></code>, the records that point at it (charts, declared series) or its own fields; the
+<code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record carries <code class="docutils literal notranslate"><span class="pre">copyright</span></code> and the <code class="docutils literal notranslate"><span class="pre">Model</span></code> record <code class="docutils literal notranslate"><span class="pre">metrics_path</span></code> for it, as declared.
+A blank inline write-up (<code class="docutils literal notranslate"><span class="pre">docs</span> <span class="pre">=</span> <span class="pre">&quot;</span> <span class="pre">&quot;</span></code>) is missing on both sides, since the record’s <code class="docutils literal notranslate"><span class="pre">docs.text</span></code>
+is what is checked, not whether a <code class="docutils literal notranslate"><span class="pre">docs</span></code> exists. The review also found a decision nobody had
+made: a pipeline that <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> leaves out of the build was still listed by the generator’s
+catalog pages (pages that did not exist) and counted in the diagnostics, while the index, and so
+the writer, left it out. <em>Decided with the slice, proposed:</em> <strong>a skipped pipeline is not part of
+the site</strong>, so the lists and the diagnostics leave it out; the generator does so now. Two more:
+the loader now refuses a dataframe, chart, notebook or note key that cannot be part of an
+address, as it already did a model’s, since the index left such an asset out with a warning while
+the generator rendered its page — the manifest and the index must describe the same set; and a
+catalog’s <code class="docutils literal notranslate"><span class="pre">location</span></code> is dropped entirely from the published index, not left as a bare <code class="docutils literal notranslate"><span class="pre">kind</span></code>,
+which a diff against an older index had called “moved”. With this, every page the generator
+renders has a writer; what remains is for the build to call the writer and copy the files, and
+for the generator to go.</p>
+<p><em>2026-10-15, the build calls the writer; the generator goes.</em> <code class="docutils literal notranslate"><span class="pre">chartbook/sitefiles.py</span></code>,
+<code class="docutils literal notranslate"><span class="pre">write_site()</span></code>, replaces the generator’s <code class="docutils literal notranslate"><span class="pre">build_all()</span></code>: it builds the index first (or takes the
+one the incremental build made), then writes a page for every <code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">Model</span></code> and
+<code class="docutils literal notranslate"><span class="pre">Pipeline</span></code> record of a pipeline the build generates — one the build skips, or an incremental
+build keeps, has none written, except a pipeline site’s front page, which is the site’s — and
+the catalog’s own pages; then it copies the files the index names beside them, from the records
+rather than from the manifests: a chart’s HTML to the download folder and to <code class="docutils literal notranslate"><span class="pre">_static</span></code>, a
+notebook to <code class="docutils literal notranslate"><span class="pre">cb/notebooks/</span></code>, a note to <code class="docutils literal notranslate"><span class="pre">cb/</span></code>, a dataframe’s one file to the download folder when
+downloads are enabled; gives a copied notebook a title cell if it lacks one, from its record’s
+<code class="docutils literal notranslate"><span class="pre">name</span></code>; copies the theme’s own files and, in the pipeline theme, the pipeline’s own site pages
+from <code class="docutils literal notranslate"><span class="pre">site_dir</span></code>. The page skeletons and helpers the writer had imported from the generator
+(the model page’s two template strings, the freshness fact, the two number formats, the YAML
+escape, the front-matter check, the per-column date range) live in the writer now;
+<code class="docutils literal notranslate"><span class="pre">markdown_generator.py</span></code> is deleted. The golden tests keep their shape — build the site with the
+CLI, compare each page with the writer’s — and now guard the plumbing: that the build writes
+every page at its path and leaves out what it should. Two behaviours changed with it, both
+proposed: a catalog copies no pipeline’s site pages (the generator had copied the first
+pipeline’s to the catalog’s root, where no front page listed them), and the generated folders
+<code class="docutils literal notranslate"><span class="pre">cb/download_chart/&lt;slug&gt;/</span></code>, <code class="docutils literal notranslate"><span class="pre">_static/&lt;slug&gt;/</span></code> and <code class="docutils literal notranslate"><span class="pre">cb/notebooks/&lt;slug&gt;/</span></code> exist only when
+something is copied into them. An adversarial review of the step found a regression and two
+smaller things: an incremental rebuild had deleted a reused pipeline’s notes — nothing of a reused
+pipeline was copied, and the sync removes what a build did not write, while the front page,
+written on every build, still listed them; a reused pipeline’s notes are copied again now, since
+the page that lists them is. Notes are copied in the pipeline theme only, as the generator did (a
+catalog has no page that lists them, and two pipelines’ notes of one name would collide at
+<code class="docutils literal notranslate"><span class="pre">cb/&lt;name&gt;.md</span></code>). And the theme files to leave out are matched against their path under the theme
+folder, not the machine’s whole path, so a project under a folder named <code class="docutils literal notranslate"><span class="pre">models</span></code> gets its theme
+(the generator had the same fault).</p>
+</section>
+<section id="what-this-does-not-decide">
+<h2>What this does not decide<a class="headerlink" href="#what-this-does-not-decide" title="Link to this heading">#</a></h2>
+<p>Whether a site built later for a past snapshot (the direction on the vocabulary page) reads the
+write-ups from git at the snapshot’s commit, or from the store; the <code class="docutils literal notranslate"><span class="pre">Build</span></code> record’s full shape;
+whether the catalog’s diagnostics are computed by the writer or recorded by the build. Each is
+marked above where it arises.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index-schema.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: the index</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="models.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: models</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-is-for">What this is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-writers-input-the-index-and-the-files-it-names">The writer’s input: the index, and the files it names</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-inventory">The inventory</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#every-asset-page">Every asset page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe-page">Dataframe page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-page">Chart page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model-page">Model page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-page-notebooks-notes">Pipeline page, notebooks, notes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalogs-own-pages">The catalog’s own pages</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-must-gain">What the index must gain</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-writer-in-outline">The writer, in outline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-second-writer-mkdocs">A second writer: MkDocs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-slice-by-slice">As built, slice by slice</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -15,71 +14,72 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../../_static/documentation_options.js?v=1238456f"></script>
-    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/plotting/backends/_matplotlib';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../../../search.html"
       method="get">
@@ -87,7 +87,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -95,17 +94,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -118,15 +117,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -139,8 +141,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -163,7 +164,8 @@ document.write(`
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -176,15 +178,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -197,8 +202,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -225,21 +229,17 @@ document.write(`
     
     
     <img src="../../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -250,48 +250,99 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../../../why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../../examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../../examples/data-pipeline.html">Data Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../reference/stability.html">Stability</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -300,9 +351,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -351,24 +407,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -395,42 +450,42 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.plotting.backends._matplotlib</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Matplotlib backend for static chart output.&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""Matplotlib backend for static chart output."""</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
-<span class="kn">from</span> <span class="nn">chartbook.plotting._config</span> <span class="kn">import</span> <span class="n">apply_matplotlib_style</span><span class="p">,</span> <span class="n">get_config</span>
-<span class="kn">from</span> <span class="nn">chartbook.plotting.backends._base</span> <span class="kn">import</span> <span class="n">BaseBackend</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._config</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_matplotlib_style</span><span class="p">,</span> <span class="n">get_config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting.backends._base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseBackend</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">matplotlib.axes</span>
-    <span class="kn">import</span> <span class="nn">matplotlib.figure</span>
-    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.axes</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.figure</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-    <span class="kn">from</span> <span class="nn">chartbook.plotting._types</span> <span class="kn">import</span> <span class="n">ChartConfig</span><span class="p">,</span> <span class="n">DualAxisConfig</span><span class="p">,</span> <span class="n">OverlayConfig</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChartConfig</span><span class="p">,</span> <span class="n">DualAxisConfig</span><span class="p">,</span> <span class="n">OverlayConfig</span>
 
 
 <div class="viewcode-block" id="MatplotlibBackend">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend">[docs]</a>
-<span class="k">class</span> <span class="nc">MatplotlibBackend</span><span class="p">(</span><span class="n">BaseBackend</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Matplotlib backend for creating static charts (PNG, PDF, EPS).&quot;&quot;&quot;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MatplotlibBackend</span><span class="p">(</span><span class="n">BaseBackend</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Matplotlib backend for creating static charts (PNG, PDF, EPS)."""</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;matplotlib&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"matplotlib"</span>
 
 <div class="viewcode-block" id="MatplotlibBackend.build_figure">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.build_figure">[docs]</a>
-    <span class="k">def</span> <span class="nf">build_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig | DualAxisConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a matplotlib figure and axes for the given chart config.</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig | DualAxisConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a matplotlib figure and axes for the given chart config.</span>
 
 <span class="sd">        This is used by ChartResult.mpl_figure and ChartResult.mpl_axes for</span>
 <span class="sd">        lazy access to matplotlib objects for fine-grained customization.</span>
@@ -448,8 +503,8 @@ document.write(`
 <span class="sd">        -------</span>
 <span class="sd">        tuple[Figure, Axes]</span>
 <span class="sd">            The matplotlib Figure and Axes objects.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">chartbook.plotting._types</span> <span class="kn">import</span> <span class="n">DualAxisConfig</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._types</span><span class="w"> </span><span class="kn">import</span> <span class="n">DualAxisConfig</span>
 
         <span class="n">size</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span><span class="o">.</span><span class="n">figure_size_single</span>
 
@@ -457,32 +512,32 @@ document.write(`
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_dual_axis_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 
         <span class="c1"># Dispatch to appropriate build method based on chart type</span>
-        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;line&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"line"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_line_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;bar&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"bar"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_bar_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;scatter&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"scatter"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_scatter_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;pie&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"pie"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_pie_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;area&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">config</span><span class="o">.</span><span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"area"</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_area_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown chart type: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">chart_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown chart type: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">chart_type</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_setup_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_setup_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create and configure a matplotlib figure.&quot;&quot;&quot;</span>
-        <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Create and configure a matplotlib figure."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
         <span class="n">apply_matplotlib_style</span><span class="p">()</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span>
 
-    <span class="k">def</span> <span class="nf">_apply_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">:</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply chart configuration to axes.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">:</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Apply chart configuration to axes."""</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">title</span><span class="p">:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">x_title</span><span class="p">:</span>
@@ -494,70 +549,70 @@ document.write(`
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">y_range</span><span class="p">:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">y_range</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_apply_overlays</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_overlays</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">ax</span><span class="p">:</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
         <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply overlays to the axes.&quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">chartbook.plotting._overlays</span> <span class="kn">import</span> <span class="n">apply_overlays_matplotlib</span>
+<span class="w">        </span><span class="sd">"""Apply overlays to the axes."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._overlays</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_overlays_matplotlib</span>
 
         <span class="n">apply_overlays_matplotlib</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">x_col</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_annotations</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_annotations</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">fig</span><span class="p">:</span> <span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span>
-        <span class="n">ax</span><span class="p">:</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
+        <span class="n">fig</span><span class="p">:</span> <span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add caption, note, and source annotations.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Add caption, note, and source annotations."""</span>
         <span class="n">annotations</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">caption</span><span class="p">:</span>
             <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">caption</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">note</span><span class="p">:</span>
-            <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Note: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">note</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Note: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">note</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">source</span><span class="p">:</span>
-            <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">annotations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Source: </span><span class="si">{</span><span class="n">config</span><span class="o">.</span><span class="n">source</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">annotations</span><span class="p">:</span>
-            <span class="n">annotation_text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">annotations</span><span class="p">)</span>
+            <span class="n">annotation_text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">annotations</span><span class="p">)</span>
             <span class="n">fig</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
                 <span class="mf">0.5</span><span class="p">,</span>
                 <span class="o">-</span><span class="mf">0.05</span><span class="p">,</span>
                 <span class="n">annotation_text</span><span class="p">,</span>
-                <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
-                <span class="n">va</span><span class="o">=</span><span class="s2">&quot;top&quot;</span><span class="p">,</span>
+                <span class="n">ha</span><span class="o">=</span><span class="s2">"center"</span><span class="p">,</span>
+                <span class="n">va</span><span class="o">=</span><span class="s2">"top"</span><span class="p">,</span>
                 <span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span>
                 <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
                 <span class="n">wrap</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_save_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fig</span><span class="p">:</span> <span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save figure to file.&quot;&quot;&quot;</span>
-        <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fig</span><span class="p">:</span> <span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Save figure to file."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
         <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
         <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_get_colors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span> <span class="n">n_series</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get colors for the chart series.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_colors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span> <span class="n">n_series</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Get colors for the chart series."""</span>
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">color</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">color</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                 <span class="k">return</span> <span class="p">[</span><span class="n">config</span><span class="o">.</span><span class="n">color</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_series</span>
             <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">color</span><span class="p">)[:</span><span class="n">n_series</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">get_config</span><span class="p">()</span><span class="o">.</span><span class="n">color_palette</span><span class="p">[:</span><span class="n">n_series</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">_build_line_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_line_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a line chart figure without saving.&quot;&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a line chart figure without saving."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
         <span class="n">colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_colors</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
 
@@ -575,28 +630,28 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_line">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_line">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_line</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_line</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a line chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a line chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_line_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_build_bar_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_bar_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a bar chart figure without saving.&quot;&quot;&quot;</span>
-        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a bar chart figure without saving."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
         <span class="n">colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_colors</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
@@ -618,7 +673,7 @@ document.write(`
 
         <span class="c1"># Set x-tick labels</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">config</span><span class="o">.</span><span class="n">x</span><span class="p">],</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">config</span><span class="o">.</span><span class="n">x</span><span class="p">],</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
@@ -630,27 +685,27 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_bar">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_bar">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_bar</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_bar</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a bar chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a bar chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_bar_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_build_scatter_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_scatter_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a scatter chart figure without saving.&quot;&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a scatter chart figure without saving."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
 
         <span class="n">y_col</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Scatter uses first y column</span>
@@ -689,27 +744,27 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_scatter">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_scatter">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_scatter</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_scatter</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a scatter chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a scatter chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_scatter_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_build_pie_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_pie_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a pie chart figure without saving.&quot;&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a pie chart figure without saving."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
 
         <span class="n">names_col</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">names</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">x</span>
@@ -720,11 +775,11 @@ document.write(`
             <span class="n">df</span><span class="p">[</span><span class="n">values_col</span><span class="p">],</span>
             <span class="n">labels</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">names_col</span><span class="p">],</span>
             <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span>
-            <span class="n">autopct</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%1.1f%%</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">autopct</span><span class="o">=</span><span class="s2">"</span><span class="si">%1.1f%%</span><span class="s2">"</span><span class="p">,</span>
             <span class="n">startangle</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;equal&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">"equal"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">title</span><span class="p">:</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
@@ -734,27 +789,27 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_pie">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_pie">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_pie</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_pie</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a pie chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a pie chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_pie_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_build_area_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_area_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build an area chart figure without saving.&quot;&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build an area chart figure without saving."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
         <span class="n">colors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_colors</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
 
@@ -786,27 +841,27 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_area">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_area">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_area</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_area</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;ChartConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"ChartConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an area chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create an area chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_area_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_build_dual_axis_figure</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_dual_axis_figure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;DualAxisConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"DualAxisConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">,</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a dual-axis chart figure without saving.&quot;&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="s2">"matplotlib.figure.Figure"</span><span class="p">,</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build a dual-axis chart figure without saving."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_figure</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
         <span class="n">ax2</span> <span class="o">=</span> <span class="n">ax1</span><span class="o">.</span><span class="n">twinx</span><span class="p">()</span>
 
@@ -847,10 +902,10 @@ document.write(`
         <span class="c1"># Combine legends</span>
         <span class="n">lines1</span><span class="p">,</span> <span class="n">labels1</span> <span class="o">=</span> <span class="n">ax1</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
         <span class="n">lines2</span><span class="p">,</span> <span class="n">labels2</span> <span class="o">=</span> <span class="n">ax2</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
-        <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">lines1</span> <span class="o">+</span> <span class="n">lines2</span><span class="p">,</span> <span class="n">labels1</span> <span class="o">+</span> <span class="n">labels2</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">lines1</span> <span class="o">+</span> <span class="n">lines2</span><span class="p">,</span> <span class="n">labels1</span> <span class="o">+</span> <span class="n">labels2</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">"best"</span><span class="p">)</span>
 
         <span class="c1"># Apply overlays to left axis</span>
-        <span class="kn">from</span> <span class="nn">chartbook.plotting._overlays</span> <span class="kn">import</span> <span class="n">apply_overlays_matplotlib</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._overlays</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_overlays_matplotlib</span>
 
         <span class="n">apply_overlays_matplotlib</span><span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
 
@@ -858,46 +913,46 @@ document.write(`
 
 <div class="viewcode-block" id="MatplotlibBackend.create_dual_axis">
 <a class="viewcode-back" href="../../../../apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend.create_dual_axis">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_dual_axis</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_dual_axis</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
-        <span class="n">config</span><span class="p">:</span> <span class="s2">&quot;DualAxisConfig&quot;</span><span class="p">,</span>
-        <span class="n">overlay</span><span class="p">:</span> <span class="s2">&quot;OverlayConfig&quot;</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="s2">"DualAxisConfig"</span><span class="p">,</span>
+        <span class="n">overlay</span><span class="p">:</span> <span class="s2">"OverlayConfig"</span><span class="p">,</span>
         <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dual-axis chart and save to file.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a dual-axis chart and save to file."""</span>
         <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_dual_axis_figure</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">overlay</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_figure</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_plot_series_on_axis</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_plot_series_on_axis</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">ax</span><span class="p">:</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">,</span>
-        <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+        <span class="n">ax</span><span class="p">:</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span>
         <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">y_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">chart_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">colors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot series on the given axis based on chart type.&quot;&quot;&quot;</span>
-        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="w">        </span><span class="sd">"""Plot series on the given axis based on chart type."""</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">y_col</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">y_cols</span><span class="p">):</span>
             <span class="n">color</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="k">else</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-            <span class="k">if</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;line&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"line"</span><span class="p">:</span>
                 <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">x_col</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">y_col</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;bar&quot;</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"bar"</span><span class="p">:</span>
                 <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
                 <span class="n">width</span> <span class="o">=</span> <span class="mf">0.8</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_cols</span><span class="p">)</span>
                 <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_cols</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">width</span>
                 <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">offset</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="n">y_col</span><span class="p">],</span> <span class="n">width</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
                 <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-                <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">x_col</span><span class="p">],</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;scatter&quot;</span><span class="p">:</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">x_col</span><span class="p">],</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">45</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"scatter"</span><span class="p">:</span>
                 <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">x_col</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">y_col</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">&quot;area&quot;</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">chart_type</span> <span class="o">==</span> <span class="s2">"area"</span><span class="p">:</span>
                 <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span>
                     <span class="n">df</span><span class="p">[</span><span class="n">x_col</span><span class="p">],</span> <span class="n">df</span><span class="p">[</span><span class="n">y_col</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span>
                 <span class="p">)</span>
@@ -941,7 +996,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>
@@ -965,8 +1020,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,73 +15,74 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=55ac272d"></script>
-    <script src="../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/documenting-a-pipeline';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Catalogs and Data Access" href="catalogs-and-data.html" />
-    <link rel="prev" title="Getting Started" href="../getting-started.html" />
+    <link rel="next" title="Depending on Another Pipeline" href="depending-on-pipelines.html" />
+    <link rel="prev" title="Vocabulary" href="vocabulary.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,7 +90,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -98,17 +97,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -121,15 +120,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,8 +144,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -154,7 +155,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -168,7 +169,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -181,15 +183,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,8 +207,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -230,21 +234,17 @@ document.write(`
     
     
     <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -255,12 +255,17 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="how-the-build-works.html">How the Build Works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
@@ -271,6 +276,13 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -279,21 +291,63 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/overview.html">Design: start here</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -302,9 +356,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -401,24 +460,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -441,15 +499,22 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layout">Layout</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-metadata">Project metadata</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts">Charts</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes">Dataframes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks">Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models">Models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#depending-on-another-pipeline">Depending on another pipeline</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-and-custom-pages">Notes and custom pages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asking-the-manifest-for-a-path">Asking the manifest for a path</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-an-asset-is-named">How an asset is named</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-project-paths-from-code">Finding project paths from code</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-your-work">Checking your work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-provenance-panel">The provenance panel</a></li>
 </ul>
             </nav>
         </div>
@@ -463,14 +528,14 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="documenting-a-pipeline">
 <h1>Documenting a Pipeline<a class="headerlink" href="#documenting-a-pipeline" title="Link to this heading">#</a></h1>
-<p>A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook doesn’t run the pipeline; you build the artifacts however you like (<code class="docutils literal notranslate"><span class="pre">doit</span></code>, <code class="docutils literal notranslate"><span class="pre">make</span></code>, plain scripts) and <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> describes what they are, where they live, and how they fit together. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> then renders that description into a website.</p>
+<p>A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook is not the tool that builds them; you build the artifacts however you like (<code class="docutils literal notranslate"><span class="pre">doit</span></code>, <code class="docutils literal notranslate"><span class="pre">make</span></code>, plain scripts), and <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> describes what they are, where they live, how they fit together, and the command that builds them. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> then renders that description into a website, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs the command.</p>
 <p>This page covers the describing. For the field-by-field reference, see <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration Guide</span></a>.</p>
 <section id="layout">
 <h2>Layout<a class="headerlink" href="#layout" title="Link to this heading">#</a></h2>
 <p>The conventional layout (what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> scaffolds):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>my-pipeline/
-├── chartbook.toml     # the manifest — this page&#39;s subject
-├── README.md          # required; becomes the site&#39;s front page
+├── chartbook.toml     # the manifest — this page's subject
+├── README.md          # required; becomes the site's front page
 ├── dodo.py            # or any other way of running your pipeline
 ├── src/               # code that produces the artifacts
 ├── _data/             # parquet files ([dataframes] point here)
@@ -485,31 +550,33 @@ document.write(`
 </section>
 <section id="project-metadata">
 <h2>Project metadata<a class="headerlink" href="#project-metadata" title="Link to this heading">#</a></h2>
-<p>Every <code class="docutils literal notranslate"><span class="pre">[project]</span></code> field is optional with sensible defaults (<code class="docutils literal notranslate"><span class="pre">name</span></code> defaults to the directory name, <code class="docutils literal notranslate"><span class="pre">copyright</span></code> to the current year, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code> to the first contributor; the pipeline <code class="docutils literal notranslate"><span class="pre">id</span></code>’s scope is inferred from the git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote when <code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> are unset):</p>
+<p>Every <code class="docutils literal notranslate"><span class="pre">[project]</span></code> field is optional with sensible defaults (<code class="docutils literal notranslate"><span class="pre">name</span></code> defaults to the directory name, <code class="docutils literal notranslate"><span class="pre">copyright</span></code> to the current year, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code> to the first contributor; the pipeline’s <code class="docutils literal notranslate"><span class="pre">id</span></code>, when unset, comes from its <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> (or else its git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote) and its folder, as <a class="reference internal" href="../reference/configuration.html#pipeline-identity"><span class="std std-ref">Pipeline Identity</span></a> says):</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Yield Curve&quot;</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Zero-coupon yield curve estimates and repo rates&quot;</span>
-<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jane Doe&quot;</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Yield Curve"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Zero-coupon yield curve estimates and repo rates"</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Jane Doe"</span>
+
+<span class="k">[scripts]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"""</span>
 <span class="s2">conda activate myenv</span>
 <span class="s2">doit</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">"""</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">build</span></code> records how to regenerate the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines. It’s displayed on the pipeline’s page (and reserved for a future <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">build</span></code>, under <code class="docutils literal notranslate"><span class="pre">[scripts]</span></code>, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines (on Windows it is a batch file, where a line that runs another batch file, such as <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span></code>, must begin with <code class="docutils literal notranslate"><span class="pre">call</span></code>, or nothing after it runs). It is shown on the pipeline’s page, and it is run: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs it in the pipeline’s directory, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> runs it and then renders the site, which <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> does alone. Make it the command that builds the pipeline, not a note about the environment. <code class="docutils literal notranslate"><span class="pre">build</span></code> under <code class="docutils literal notranslate"><span class="pre">[project]</span></code>, the old place, is still read and means the same thing; give it in one place. See <a class="reference internal" href="../reference/configuration.html#scripts"><span class="std std-ref">[scripts]</span></a> in the reference and <a class="reference internal" href="../reference/cli.html#chartbook-run"><span class="std std-ref">chartbook run</span></a>.</p>
 </section>
 <section id="charts">
 <h2>Charts<a class="headerlink" href="#charts" title="Link to this heading">#</a></h2>
 <p>A chart is an HTML file plus an entry describing it. The HTML usually comes from <a class="reference internal" href="plotting.html"><span class="doc">Plotting</span></a>, but any HTML works — ChartBook embeds it in an iframe.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.repo_rates]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Repo Rates&quot;</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SOFR and EFFR overnight rates&quot;</span>
-<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;repo_public&quot;</span><span class="w">                     </span><span class="c1"># which [dataframes.*] entry feeds it</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/repo_rates.html&quot;</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/repo_rates.md&quot;</span>
-<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Repo&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Short Term Funding&quot;</span><span class="p">]</span>
-<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Repo Rates"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"SOFR and EFFR overnight rates"</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"repo_public"</span><span class="w">                     </span><span class="c1"># which [dataframes.*] entry feeds it</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/repo_rates.html"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/charts/repo_rates.md"</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Repo"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Short Term Funding"</span><span class="p">]</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Daily"</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Percent"</span>
 </pre></div>
 </div>
 <p>Two rules:</p>
@@ -517,65 +584,205 @@ document.write(`
 <li><p><code class="docutils literal notranslate"><span class="pre">dataframe</span></code> names the entry in <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> that feeds the chart; referencing a missing one is an error.</p></li>
 <li><p>Exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> (a markdown file) or <code class="docutils literal notranslate"><span class="pre">docs</span></code> (inline markdown) supplies the write-up.</p></li>
 </ul>
-<p>The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Fields you leave out simply don’t appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration Guide</span></a>.</p>
+<p>The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Under its title it says how fresh it is — “Chart updated 2 days ago · Data updated 2 days ago” — so a reader can tell a stale chart from a current one without asking. (When the pipeline’s code last changed is on the pipeline’s front page.) Fields you leave out simply don’t appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration Guide</span></a>.</p>
 </section>
 <section id="dataframes">
 <h2>Dataframes<a class="headerlink" href="#dataframes" title="Link to this heading">#</a></h2>
 <p>A dataframe is a parquet artifact plus provenance:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.repo_public]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Public Repo Data&quot;</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Overnight repo rates and volumes&quot;</span>
-<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FRED&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Office of Financial Research&quot;</span><span class="p">]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/repo_public.parquet&quot;</span>
-<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;date&quot;</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/repo_public.md&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Public Repo Data"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Overnight repo rates and volumes"</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"FRED"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Office of Financial Research"</span><span class="p">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/repo_public.parquet"</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"date"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/repo_public.md"</span>
 </pre></div>
 </div>
-<p>The same <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>/<code class="docutils literal notranslate"><span class="pre">docs</span></code> rule applies. The generated page shows your write-up, a <strong>glimpse</strong> (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — <code class="docutils literal notranslate"><span class="pre">providers</span></code>, <code class="docutils literal notranslate"><span class="pre">license</span></code>, <code class="docutils literal notranslate"><span class="pre">access_types</span></code>, <code class="docutils literal notranslate"><span class="pre">pull_method</span></code>, and friends — exist for governance-minded catalogs; see the reference.</p>
+<p>The same <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>/<code class="docutils literal notranslate"><span class="pre">docs</span></code> rule applies. The generated page shows when the data was last updated, your write-up, a <strong>glimpse</strong> (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — <code class="docutils literal notranslate"><span class="pre">providers</span></code>, <code class="docutils literal notranslate"><span class="pre">license</span></code>, <code class="docutils literal notranslate"><span class="pre">access_types</span></code>, <code class="docutils literal notranslate"><span class="pre">pull_method</span></code>, and friends — exist for governance-minded catalogs; see the reference.</p>
 <p>For hive-partitioned datasets, <code class="docutils literal notranslate"><span class="pre">path</span></code> takes a glob:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/market_data/**/*.parquet&quot;</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/market_data/**/*.parquet"</span>
 </pre></div>
 </div>
 <p>Glob-path dataframes load as polars LazyFrames only, with partition columns appearing automatically; see <a class="reference internal" href="catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+<p>A dataframe can also be a table, or a query, in a database the pipeline names:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[sources.local]</span>
+<span class="n">backend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"duckdb"</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"duckdb:///./_data/local.duckdb"</span>
+
+<span class="k">[dataframes.slopes]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Yield Curve Slopes"</span>
+<span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local"</span>
+<span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"The 10-year yield less the 2-year, computed when read."</span>
+</pre></div>
+</div>
+<p>It gets the same page, with its columns and first rows read from the engine, and <code class="docutils literal notranslate"><span class="pre">data.load(&quot;slopes&quot;)</span></code> runs the query. <a class="reference internal" href="../reference/configuration.html#sources"><span class="std std-ref">[sources]</span></a> has every field. The <code class="docutils literal notranslate"><span class="pre">yield_curve</span></code> example has one.</p>
 </section>
 <section id="notebooks">
 <h2>Notebooks<a class="headerlink" href="#notebooks" title="Link to this heading">#</a></h2>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notebooks.exploration]</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Exploratory analysis of curve-fitting residuals&quot;</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;_output/01_exploration.ipynb&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Exploratory analysis of curve-fitting residuals"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"_output/01_exploration.ipynb"</span>
 <span class="n">publishable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 </pre></div>
 </div>
 <p>Notebooks render as pages, pre-executed — ChartBook does not run them. The title comes from the notebook’s first <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">Heading</span></code>; set <code class="docutils literal notranslate"><span class="pre">name</span></code> to override. <code class="docutils literal notranslate"><span class="pre">publishable</span> <span class="pre">=</span> <span class="pre">true</span></code> includes the notebook when you run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code>.</p>
 </section>
+<section id="models">
+<h2>Models<a class="headerlink" href="#models" title="Link to this heading">#</a></h2>
+<p>If the pipeline trains a model, declare it, and it gets a page of its own: its write-up, its scores, and links to the data it was trained on.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Rate Forecaster"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Forecasts the 10-year Treasury yield one month ahead."</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_models/rate_forecaster.joblib"</span>
+<span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"treasury_rates"</span><span class="p">]</span>
+<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/rate_forecaster_metrics.json"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/models/rate_forecaster.md"</span>
+</pre></div>
+</div>
+<p>Your training code writes the model file and a small JSON file of scores; ChartBook reads both and never looks inside the model. <a class="reference internal" href="../reference/configuration.html"><span class="doc">Configuration Guide</span></a> has every field, and the <code class="docutils literal notranslate"><span class="pre">yield_curve</span></code> example trains a small one end to end.</p>
+<p><strong>Versions.</strong> When a build of the model is ready, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--snapshot</span></code> keeps it as a version, named by the start of its hash. Give the one in use a label, and have the code that uses it ask for the label:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster.aliases]</span>
+<span class="n">champion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"7f3a9c2e41b0"</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rate_forecaster@champion"</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Promoting a newer version is changing that one line. See <a class="reference internal" href="../reference/configuration.html#model-versions"><span class="std std-ref">Versions and labels</span></a>.</p>
+</section>
+<section id="depending-on-another-pipeline">
+<h2>Depending on another pipeline<a class="headerlink" href="#depending-on-another-pipeline" title="Link to this heading">#</a></h2>
+<p>A pipeline that uses another pipeline’s data declares it in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, pins a <strong>snapshot</strong>
+of it with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, and reads the pinned copy by name. It does not read the other
+pipeline’s folder, except, with a loud warning, before there is any snapshot of it. <a class="reference internal" href="depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a> has the whole of it: snapshots, pins, the
+lockfile, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, and a diagram.</p>
+</section>
 <section id="notes-and-custom-pages">
 <h2>Notes and custom pages<a class="headerlink" href="#notes-and-custom-pages" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> entries add standalone markdown documents to the site:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notes.methodology]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span>
 </pre></div>
 </div>
 <p>And any markdown placed in <code class="docutils literal notranslate"><span class="pre">docs_src/site/</span></code> merges into the site automatically (that’s the default <code class="docutils literal notranslate"><span class="pre">site_dir</span></code>; auto-generated pages live in a separate <code class="docutils literal notranslate"><span class="pre">cb/</span></code> directory, so nothing collides). Write-ups and site pages are MyST markdown — regular markdown plus admonitions, math, and cross-references; see the <a class="reference external" href="https://myst-parser.readthedocs.io/en/latest/syntax/typography.html">MyST syntax guide</a>.</p>
 </section>
+<section id="asking-the-manifest-for-a-path">
+<h2>Asking the manifest for a path<a class="headerlink" href="#asking-the-manifest-for-a-path" title="Link to this heading">#</a></h2>
+<p>Once <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> says where a dataframe or chart lives, your code does not have to say it again. <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> returns the <code class="docutils literal notranslate"><span class="pre">path</span></code> declared for a dataframe of the current pipeline, and <code class="docutils literal notranslate"><span class="pre">assets.path()</span></code> does the same for anything the pipeline declares:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># dodo.py — declaring what each task reads and writes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span><span class="p">,</span> <span class="n">data</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">task_merge</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"file_dep"</span><span class="p">:</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"treasury_rates"</span><span class="p">)],</span>
+        <span class="s2">"targets"</span><span class="p">:</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">)],</span>
+        <span class="s2">"actions"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"python src/merge.py"</span><span class="p">],</span>
+    <span class="p">}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">task_chart</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"file_dep"</span><span class="p">:</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">)],</span>
+        <span class="s2">"targets"</span><span class="p">:</span> <span class="p">[</span><span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"chart/rates_over_time"</span><span class="p">)],</span>
+        <span class="s2">"actions"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"python src/chart.py"</span><span class="p">],</span>
+    <span class="p">}</span>
+
+<span class="c1"># src/merge.py — doing the work</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"merged_rates"</span><span class="p">))</span>
+</pre></div>
+</div>
+<section id="how-an-asset-is-named">
+<h3>How an asset is named<a class="headerlink" href="#how-an-asset-is-named" title="Link to this heading">#</a></h3>
+<p>A dataframe is named by its key in <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code>, and nothing more. Any other asset has its kind in front:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>You write</p></th>
+<th class="head"><p>It means</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">merged_rates</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[dataframes.merged_rates]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chart/rates_over_time</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[charts.rates_over_time]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">notebook/analysis</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[notebooks.analysis]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">note/methodology</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[notes.methodology]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[models.rate_forecaster]</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Data is what gets passed around most, so it gets the short spelling. Each kind has its own names: a dataframe and a chart may both be called <code class="docutils literal notranslate"><span class="pre">gdp</span></code>, and they are <code class="docutils literal notranslate"><span class="pre">gdp</span></code> and <code class="docutils literal notranslate"><span class="pre">chart/gdp</span></code>.</p>
+<p>In Python the kind can be an argument instead, which reads better when the name is in a variable. It says what you expect, so it fills in a missing kind and rejects a different one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rates_over_time"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"chart"</span><span class="p">)</span>    <span class="c1"># the same as "chart/rates_over_time"</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"chart/rates_over_time"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"note"</span><span class="p">)</span>   <span class="c1"># error: that names a chart</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">data.path(name)</span></code> is <code class="docutils literal notranslate"><span class="pre">assets.path(name,</span> <span class="pre">kind=&quot;dataframe&quot;)</span></code>. It answers for dataframes only, so a mistyped name cannot hand back a chart’s HTML where a parquet file was meant. <code class="docutils literal notranslate"><span class="pre">models.path(name)</span></code> is the same for models.</p>
+<p>The enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is found by walking up from the calling file (then from the working directory), so the call works from a script, a <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.</p>
+<p>Asking for a name the manifest does not declare fails on the spot, with the table to add:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>No dataframe named 'merged_rates' is declared in /work/repo/chartbook.toml.
+
+To register it, add a table to that file, for example:
+
+    [dataframes.merged_rates]
+    path = "./_data/merged_rates.parquet"
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code> gives the same answer on the command line, which is how Make, R, Stata or a shell script reach it:</p>
+<div class="highlight-makefile notranslate"><div class="highlight"><pre><span></span><span class="nv">TREASURY</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>chartbook<span class="w"> </span>path<span class="w"> </span>treasury_rates<span class="k">)</span>
+<span class="nv">MERGED</span><span class="w">   </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>chartbook<span class="w"> </span>path<span class="w"> </span>merged_rates<span class="k">)</span>
+<span class="nv">CHART</span><span class="w">    </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>chartbook<span class="w"> </span>path<span class="w"> </span>chart/rates_over_time<span class="k">)</span>
+
+<span class="nf">$(MERGED)</span><span class="o">:</span><span class="w"> </span><span class="k">$(</span><span class="nv">TREASURY</span><span class="k">)</span>
+<span class="w">	</span>Rscript<span class="w"> </span>src/merge.R
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is a convenience, never a requirement. A pipeline that writes straight to <code class="docutils literal notranslate"><span class="pre">_data/merged_rates.parquet</span></code> — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> and <code class="docutils literal notranslate"><span class="pre">assets.path()</span></code> only save you from stating it twice.</p>
+</div>
+<p>These names are the local end of a longer address, <code class="docutils literal notranslate"><span class="pre">scope/pipeline:kind/name#part&#64;rev</span></code>. With a pipeline in front, <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code>, it reaches another pipeline’s asset, as pinned. With <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>, <code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;champion</span></code>, it reaches a version of a model. <code class="docutils literal notranslate"><span class="pre">#</span></code> names one column, <code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code>, so that it can be documented; it does not load the column, which is for polars or SQL to do. <a class="reference internal" href="../design/references.html"><span class="doc">Design: references</span></a> has the whole grammar.</p>
+<p>For files that are <em>not</em> assets — a partial download, a cache between two steps — <code class="docutils literal notranslate"><span class="pre">data.scratch()</span></code> gives you a throwaway directory instead:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tmp</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">scratch</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"raw_download.csv"</span>     <span class="c1"># &lt;pipeline&gt;/_data/_scratch/raw_download.csv</span>
+</pre></div>
+</div>
+<p>It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. (Avoid declaring a dataframe whose <code class="docutils literal notranslate"><span class="pre">path</span></code> is a glob over all of <code class="docutils literal notranslate"><span class="pre">_data/</span></code>, such as <code class="docutils literal notranslate"><span class="pre">./_data/**/*.parquet</span></code>; it would sweep scratch files in.)</p>
+<p>A name with a pipeline in front, <code class="docutils literal notranslate"><span class="pre">data.path(&quot;fed_yield_curve:treasury_rates&quot;)</span></code>, is another pipeline’s asset: the pinned copy of it, as described under “Depending on another pipeline” above. That path is for reading only. To find a dataframe through a catalog instead, from a notebook that belongs to no pipeline, use <code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code> (<a class="reference internal" href="catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>).</p>
+</section>
+</section>
 <section id="finding-project-paths-from-code">
 <h2>Finding project paths from code<a class="headerlink" href="#finding-project-paths-from-code" title="Link to this heading">#</a></h2>
-<p>Pipeline scripts often need paths that work from any working directory, including notebooks. <code class="docutils literal notranslate"><span class="pre">chartbook.env</span></code> helps:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">chartbook</span>
+<p>Pipeline scripts often need paths that work from any working directory, including notebooks. For files the manifest does not declare, <code class="docutils literal notranslate"><span class="pre">chartbook.env</span></code> helps:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">chartbook</span>
 
 <span class="n">BASE_DIR</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_project_root</span><span class="p">()</span>   <span class="c1"># searches upward for .git / pyproject.toml / .env</span>
-<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;_data&quot;</span>
-<span class="n">API_KEY</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;FRED_API_KEY&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># .env file or environment</span>
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">"_data"</span>
+<span class="n">API_KEY</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"FRED_API_KEY"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span>  <span class="c1"># .env file or environment</span>
 </pre></div>
 </div>
 </section>
 <section id="checking-your-work">
 <h2>Checking your work<a class="headerlink" href="#checking-your-work" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> is strict by default: if a <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> points at a file that doesn’t exist, the build fails and names both the missing file and the manifest entry referencing it. <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> downgrades this to a warning that skips the affected pipeline. Two more inspection tools:</p>
+<p>While you are writing, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span> <span class="pre">-f</span> <span class="pre">--watch</span></code> rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. (<a class="reference internal" href="how-the-build-works.html"><span class="doc">How the Build Works</span></a> explains what it skips.)</p>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> is strict by default: if a <code class="docutils literal notranslate"><span class="pre">path</span></code> or <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> points at a file that doesn’t exist, the build fails and names both the missing file and the manifest entry referencing it. The exception is a lone pipeline (not a catalog, where it is an error) that has built none of its data, charts, notebooks and models yet, as a new project or a fresh clone has not: its site is rendered with each of them shown as not built, and the command warns, listing them. Given <code class="docutils literal notranslate"><span class="pre">--strict</span></code>, that is an error after all, which is what CI wants after a build; and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, which has just run the build, makes no such exception. In a catalog, <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> downgrades a missing file to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:</p>
 <ul class="simple">
 <li><p>Unknown <code class="docutils literal notranslate"><span class="pre">[project]</span></code> keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code> scans your <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> targets and writes <code class="docutils literal notranslate"><span class="pre">data_glimpses.md</span></code> — schema, null rates, sample rows, and summary stats for every data file your tasks produce.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code> writes <code class="docutils literal notranslate"><span class="pre">data_glimpses.md</span></code> — schema, null rates, sample rows, and summary stats for every dataframe declared in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, whatever tool builds them.</p></li>
 </ul>
 <p>Once the pipeline builds cleanly, register it in a catalog: <a class="reference internal" href="catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+</section>
+<section id="the-provenance-panel">
+<h2>The provenance panel<a class="headerlink" href="#the-provenance-panel" title="Link to this heading">#</a></h2>
+<p>Every dataframe, chart and model page carries a <strong>Provenance</strong> section, before its manifest sections, written from the build’s <code class="docutils literal notranslate"><span class="pre">index.json</span></code> and nothing else: what the asset is and where it is; its content hash, size, rows and columns; which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot of which commit, and whether that has moved since a model was trained; and what is made from it. It is the answer to “which data, exactly, is behind this page”, for a reader and for an auditor, and it changes only when the index does.</p>
+<p>The pipeline’s own page answers the same question for the whole pipeline. Under <strong>Dependencies</strong> it lists each pipeline in its <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, as declared, and what <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins it to: the snapshot’s commit and when it was made, or, for one pinned from its repository (a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency), that repository’s commit; a dependency with no pin yet says so. In a catalog that shows the other pipeline, each entry links its page, in the snapshot pinned when the catalog has that version.</p>
 </section>
 </section>
 
@@ -591,20 +798,20 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../getting-started.html"
+       href="vocabulary.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Getting Started</p>
+        <p class="prev-next-title">Vocabulary</p>
       </div>
     </a>
     <a class="right-next"
-       href="catalogs-and-data.html"
+       href="depending-on-pipelines.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Catalogs and Data Access</p>
+        <p class="prev-next-title">Depending on Another Pipeline</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -615,7 +822,8 @@ document.write(`
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -623,15 +831,22 @@ document.write(`
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layout">Layout</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-metadata">Project metadata</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts">Charts</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes">Dataframes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks">Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models">Models</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#depending-on-another-pipeline">Depending on another pipeline</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-and-custom-pages">Notes and custom pages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asking-the-manifest-for-a-path">Asking the manifest for a path</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-an-asset-is-named">How an asset is named</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-project-paths-from-code">Finding project paths from code</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#checking-your-work">Checking your work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-provenance-panel">The provenance panel</a></li>
 </ul>
   </nav></div>
 
@@ -680,8 +895,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

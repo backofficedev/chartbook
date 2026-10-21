@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -15,71 +14,72 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=d1237063"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/identity';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,7 +87,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -95,17 +94,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -118,15 +117,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -139,8 +141,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -163,7 +164,8 @@ document.write(`
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -176,15 +178,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -197,8 +202,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -225,21 +229,17 @@ document.write(`
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -250,50 +250,99 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -302,9 +351,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -353,24 +407,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -397,55 +450,127 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.identity</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Pipeline identity: scoped names, URL normalization, and reference resolution.</span>
+<span></span><span class="sd">"""Pipeline identity: scoped names, URL normalization, and reference resolution.</span>
 
 <span class="sd">The canonical identity of a pipeline is a scoped name ``scope/name``</span>
 <span class="sd">(e.g. ``ftsfr/crsp_treasury``) or a bare ``name`` for local-only projects.</span>
 <span class="sd">URLs are accepted as *input* wherever a pipeline reference is taken and are</span>
 <span class="sd">normalized to scoped names; they are never stored as identity.</span>
 
+<span class="sd">Two extensions of the grammar are reserved: recognized by the parser, and</span>
+<span class="sd">refused with a "not yet supported" error rather than a grammar error, so</span>
+<span class="sd">that they can be given meaning later without changing what any existing ID</span>
+<span class="sd">means.</span>
+
+<span class="sd">- ``scope/name@rev`` — a pinned revision.</span>
+<span class="sd">- ``registry/scope/name`` — an ID qualified with the registry that resolves</span>
+<span class="sd">  it, Docker-style, e.g. ``charthub.example/acme/rates``.</span>
+
 <span class="sd">See the format design doc (``docs_src/design/toml-format-v2.md``) for the</span>
-<span class="sd">rationale behind this scheme.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">rationale behind this scheme, and "Reserving a future global namespace" in</span>
+<span class="sd">``docs_src/design/asset-graph.md`` for the registry prefix.</span>
+<span class="sd">"""</span>
 
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">import</span> <span class="nn">subprocess</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
 
 <span class="c1">#: Allowed characters for each component of a pipeline ID.</span>
-<span class="n">ID_COMPONENT_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z0-9._-]+$&quot;</span><span class="p">)</span>
+<span class="n">ID_COMPONENT_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9._-]+$"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="UnsupportedRevisionError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.UnsupportedRevisionError">[docs]</a>
-<span class="k">class</span> <span class="nc">UnsupportedRevisionError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a pipeline reference carries an ``@rev`` suffix.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnsupportedRevisionError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a pipeline reference carries an ``@rev`` suffix.</span>
 
 <span class="sd">    The ``scope/name@rev`` grammar is reserved for future version pinning</span>
 <span class="sd">    and is recognized but not yet supported.</span>
-<span class="sd">    &quot;&quot;&quot;</span></div>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="UnsupportedRegistryError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.UnsupportedRegistryError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">UnsupportedRegistryError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a pipeline ID or reference carries a registry prefix.</span>
+
+<span class="sd">    The ``registry/scope/name`` grammar is reserved for a future registry</span>
+<span class="sd">    and is recognized but not yet supported.</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="looks_like_registry">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.looks_like_registry">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">looks_like_registry</span><span class="p">(</span><span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether an ID's leading component names a registry, not a scope.</span>
+
+<span class="sd">    The rule is Docker's: a component containing ``.`` or ``:``, or equal to</span>
+<span class="sd">    ``localhost``, is a host. ``charthub.example`` and ``localhost:5000`` are</span>
+<span class="sd">    registries; ``acme`` is a scope.</span>
+
+<span class="sd">    :param component: The leading component of a three-component ID.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">component</span> <span class="ow">or</span> <span class="s2">":"</span> <span class="ow">in</span> <span class="n">component</span> <span class="ow">or</span> <span class="n">component</span> <span class="o">==</span> <span class="s2">"localhost"</span></div>
+
+
+
+<div class="viewcode-block" id="split_registry">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.split_registry">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">split_registry</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Split a registry prefix off a fully qualified pipeline ID.</span>
+
+<span class="sd">    A registry-qualified ID has exactly three components,</span>
+<span class="sd">    ``registry/scope/name``, and its first looks like a host (see</span>
+<span class="sd">    :func:`looks_like_registry`). Anything else has no registry: a bare</span>
+<span class="sd">    ``name`` and a ``scope/name`` are returned whole, whatever characters the</span>
+<span class="sd">    scope contains, so no ID that was valid before the prefix was reserved</span>
+<span class="sd">    changes meaning.</span>
+
+<span class="sd">    :param pipeline_id: A pipeline ID, or a reference that starts with one</span>
+<span class="sd">        (a trailing ``:asset`` does not affect the split).</span>
+<span class="sd">    :returns: Tuple of (registry or None, the ID without it).</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">pipeline_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">looks_like_registry</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pipeline_id</span></div>
 
 
 
 <div class="viewcode-block" id="validate_pipeline_id">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.validate_pipeline_id">[docs]</a>
-<span class="k">def</span> <span class="nf">validate_pipeline_id</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate a pipeline ID against the ``[scope/]name`` grammar.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_pipeline_id</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Validate a pipeline ID against the ``[scope/]name`` grammar.</span>
 
-<span class="sd">    :param pipeline_id: The candidate ID, e.g. ``&quot;ftsfr/crsp_treasury&quot;``</span>
-<span class="sd">        or a bare ``&quot;crsp_treasury&quot;``.</span>
+<span class="sd">    :param pipeline_id: The candidate ID, e.g. ``"ftsfr/crsp_treasury"``</span>
+<span class="sd">        or a bare ``"crsp_treasury"``.</span>
 <span class="sd">    :returns: The validated ID, unchanged.</span>
+<span class="sd">    :raises UnsupportedRegistryError: If the ID is qualified with a registry</span>
+<span class="sd">        (``registry/scope/name``), which is reserved syntax.</span>
 <span class="sd">    :raises ValueError: If the ID has more than two components or a</span>
 <span class="sd">        component contains disallowed characters.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="n">pipeline_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A pipeline id is a name, like 'acme/rates', not </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r:</span><span class="s2">.40</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="n">registry</span><span class="p">,</span> <span class="n">unqualified</span> <span class="o">=</span> <span class="n">split_registry</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">UnsupportedRegistryError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Pipeline id </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r}</span><span class="s2"> is qualified with the registry "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">registry</span><span class="si">!r}</span><span class="s2">. Registry prefixes are reserved syntax and not yet "</span>
+            <span class="sa">f</span><span class="s2">"supported; use </span><span class="si">{</span><span class="n">unqualified</span><span class="si">!r}</span><span class="s2"> instead."</span>
+        <span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">pipeline_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="ow">and</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="s2">".."</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid pipeline id </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r}</span><span class="s2">. Expected &#39;name&#39; or &#39;scope/name&#39; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;where each component matches [A-Za-z0-9._-]+.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Invalid pipeline id </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r}</span><span class="s2">. Expected 'name' or 'scope/name' "</span>
+            <span class="sa">f</span><span class="s2">"where each component matches [A-Za-z0-9._-]+ and is not '.' or '..'."</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">pipeline_id</span></div>
 
@@ -453,18 +578,18 @@ document.write(`
 
 <div class="viewcode-block" id="split_rev">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.split_rev">[docs]</a>
-<span class="k">def</span> <span class="nf">split_rev</span><span class="p">(</span><span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split an ``@rev`` suffix off a pipeline reference.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">split_rev</span><span class="p">(</span><span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Split an ``@rev`` suffix off a pipeline reference.</span>
 
 <span class="sd">    URLs are passed through untouched (an ``@`` may be part of ssh syntax).</span>
 
 <span class="sd">    :param ref: A pipeline reference, possibly with an ``@rev`` suffix.</span>
 <span class="sd">    :returns: Tuple of (reference without rev, rev or None).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">in</span> <span class="n">ref</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;git@&quot;</span><span class="p">):</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">ref</span> <span class="ow">or</span> <span class="n">ref</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"git@"</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">ref</span><span class="p">,</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="s2">&quot;@&quot;</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">:</span>
-        <span class="n">base</span><span class="p">,</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"@"</span> <span class="ow">in</span> <span class="n">ref</span><span class="p">:</span>
+        <span class="n">base</span><span class="p">,</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"@"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">base</span><span class="p">,</span> <span class="n">rev</span> <span class="ow">or</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="n">ref</span><span class="p">,</span> <span class="kc">None</span></div>
 
@@ -472,53 +597,54 @@ document.write(`
 
 <div class="viewcode-block" id="normalize_ref_to_id">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.normalize_ref_to_id">[docs]</a>
-<span class="k">def</span> <span class="nf">normalize_ref_to_id</span><span class="p">(</span><span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize any accepted pipeline reference form to an ID.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_ref_to_id</span><span class="p">(</span><span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Normalize any accepted pipeline reference form to an ID.</span>
 
 <span class="sd">    Accepted forms:</span>
 
 <span class="sd">    - ``name`` or ``scope/name`` — returned as-is</span>
 <span class="sd">    - ``https://github.com/scope/name`` (or any URL) — reduced to the last</span>
-<span class="sd">      two path segments, with a trailing ``.git`` stripped</span>
+<span class="sd">      two path segments, with a trailing ``.git`` (in any case) stripped</span>
 <span class="sd">    - ``git@github.com:scope/name.git`` — same reduction</span>
 
 <span class="sd">    :param ref: The pipeline reference.</span>
 <span class="sd">    :returns: A bare or scoped pipeline ID.</span>
 <span class="sd">    :raises UnsupportedRevisionError: If the reference carries ``@rev``.</span>
+<span class="sd">    :raises UnsupportedRegistryError: If the reference is qualified with a</span>
+<span class="sd">        registry, e.g. ``charthub.example/acme/rates``.</span>
 <span class="sd">    :raises ValueError: If nothing ID-like can be extracted.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">ref</span><span class="p">,</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">split_rev</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">UnsupportedRevisionError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Pipeline reference </span><span class="si">{</span><span class="n">ref</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;@&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> pins a revision with &#39;@rev&#39;. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Version pinning is reserved syntax and not yet supported; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;use </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> instead.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Pipeline reference </span><span class="si">{</span><span class="n">ref</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">'@'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> pins a revision with '@rev'. "</span>
+            <span class="sa">f</span><span class="s2">"Version pinning is reserved syntax and not yet supported; "</span>
+            <span class="sa">f</span><span class="s2">"use </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> instead."</span>
         <span class="p">)</span>
 
-    <span class="n">candidate</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
     <span class="n">is_url</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;git@&quot;</span><span class="p">):</span>
-        <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"git@"</span><span class="p">):</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">is_url</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">scheme_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z][A-Za-z0-9+.-]*://[^/]+/(.*)$&quot;</span><span class="p">,</span> <span class="n">candidate</span><span class="p">)</span>
+        <span class="n">scheme_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z][A-Za-z0-9+.-]*://[^/]+/(.*)$"</span><span class="p">,</span> <span class="n">candidate</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">scheme_match</span><span class="p">:</span>
             <span class="n">candidate</span> <span class="o">=</span> <span class="n">scheme_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">is_url</span> <span class="o">=</span> <span class="kc">True</span>
 
-    <span class="k">if</span> <span class="n">candidate</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">):</span>
-        <span class="n">candidate</span> <span class="o">=</span> <span class="n">candidate</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">)]</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">_without_git_suffix</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
 
-    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="p">]</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">candidate</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">parts</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot derive a pipeline id from reference </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot derive a pipeline id from reference </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="c1"># Only URLs may carry extra leading path segments; a plain reference</span>
     <span class="c1"># with more than two components is malformed, not truncatable.</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_url</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 
 
@@ -527,132 +653,617 @@ document.write(`
 <span class="n">_git_remote_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
 
 
-<div class="viewcode-block" id="get_git_remote_url">
-<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.get_git_remote_url">[docs]</a>
-<span class="k">def</span> <span class="nf">get_git_remote_url</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the git ``origin`` remote URL for a directory, or None.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_git_environment</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""This process's environment without what tells git where a repository is.</span>
 
-<span class="sd">    :param base_dir: Directory inside (or at the root of) a git repository.</span>
-<span class="sd">    :returns: The remote URL string, or None if unavailable.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
-    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_git_remote_cache</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_git_remote_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+<span class="sd">    A ``GIT_DIR`` exported by a hook or a shell would otherwise make git</span>
+<span class="sd">    answer for that repository, whatever folder it is asked about.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 
-    <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GIT_LOCATION_VARIABLES</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">GIT_LOCATION_VARIABLES</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ask_git</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""What git prints for a question about a directory, stripped; None if it fails or there is no git."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;-C&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="s2">&quot;--get&quot;</span><span class="p">,</span> <span class="s2">&quot;remote.origin.url&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-C"</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span>
             <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+            <span class="n">env</span><span class="o">=</span><span class="n">_git_environment</span><span class="p">(),</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-            <span class="n">url</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">):</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
 
-    <span class="n">_git_remote_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">url</span>
-    <span class="k">return</span> <span class="n">url</span></div>
+
+<div class="viewcode-block" id="get_git_remote_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.get_git_remote_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_git_remote_url</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the git ``origin`` remote URL for a directory, or None.</span>
+
+<span class="sd">    :param base_dir: Directory inside (or at the root of) a git repository.</span>
+<span class="sd">    :returns: The remote URL string, or None if unavailable.</span>
+<span class="sd">    """</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_git_remote_cache</span><span class="p">:</span>
+        <span class="n">_git_remote_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ask_git</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">"config"</span><span class="p">,</span> <span class="s2">"--get"</span><span class="p">,</span> <span class="s2">"remote.origin.url"</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">_git_remote_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+
+
+<span class="c1"># Cache of repository tops, keyed as the remote lookups are</span>
+<span class="n">_git_top_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_same_folder</span><span class="p">(</span><span class="n">first</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">second</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether two paths are one folder however they are written: a case-insensitive disk may give either spelling."""</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">first</span><span class="p">)</span> <span class="o">==</span> <span class="n">Path</span><span class="p">(</span><span class="n">second</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">samefile</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="is_repository_top">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.is_repository_top">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_repository_top</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a directory is the top folder of a git repository: of a clone, a worktree or a submodule.</span>
+
+<span class="sd">    :param base_dir: The directory.</span>
+<span class="sd">    :returns: False if it is in no repository, or in one's subfolder.</span>
+<span class="sd">    """</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_git_top_cache</span><span class="p">:</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="n">_ask_git</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--show-toplevel"</span><span class="p">)</span>
+        <span class="n">_git_top_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">top</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">if</span> <span class="n">top</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">_git_top_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">top</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_same_folder</span><span class="p">(</span><span class="n">top</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Checkout">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.Checkout">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Checkout</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Where a folder is in git: which repository, and where in it.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        common_dir: The repository's own git folder, which its worktrees share.</span>
+<span class="sd">        first_commit: Its first commit, back from where it is by first</span>
+<span class="sd">            parents: the same in every full clone. Empty in a shallow one.</span>
+<span class="sd">        subfolder: The folder within the repository, with ``/`` between its</span>
+<span class="sd">            parts; empty at the top.</span>
+<span class="sd">        main: Whether this is the repository's main worktree, not one made</span>
+<span class="sd">            with ``git worktree add``.</span>
+<span class="sd">        address: Its ``origin`` remote, reduced by :func:`repository_key`;</span>
+<span class="sd">            empty when it has none or the remote names no host.</span>
+<span class="sd">    """</span>
+
+    <span class="n">common_dir</span><span class="p">:</span> <span class="n">Path</span>
+    <span class="n">first_commit</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">subfolder</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">main</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">address</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="checkout_of">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.checkout_of">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">checkout_of</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Checkout</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Where a folder is in git; None if it is in no repository."""</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="c1"># The prefix is git's own: a path written in another case on a disk that ignores it is still found in the repository</span>
+    <span class="n">answer</span> <span class="o">=</span> <span class="n">_ask_git</span><span class="p">(</span>
+        <span class="n">key</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--show-toplevel"</span><span class="p">,</span> <span class="s2">"--show-prefix"</span><span class="p">,</span> <span class="s2">"--git-common-dir"</span><span class="p">,</span> <span class="s2">"--git-dir"</span><span class="p">,</span> <span class="s2">"--is-shallow-repository"</span>
+    <span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">answer</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">answer</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">common</span><span class="p">,</span> <span class="n">own</span> <span class="o">=</span> <span class="p">((</span><span class="n">Path</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">/</span> <span class="n">line</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">first</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">if</span> <span class="n">lines</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"true"</span><span class="p">:</span>
+        <span class="n">roots</span> <span class="o">=</span> <span class="p">(</span><span class="n">_ask_git</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">"rev-list"</span><span class="p">,</span> <span class="s2">"--max-parents=0"</span><span class="p">,</span> <span class="s2">"--first-parent"</span><span class="p">,</span> <span class="s2">"HEAD"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">roots</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">roots</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="n">Checkout</span><span class="p">(</span>
+        <span class="n">common</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">lines</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">),</span> <span class="n">_same_folder</span><span class="p">(</span><span class="n">common</span><span class="p">,</span> <span class="n">own</span><span class="p">),</span> <span class="n">repository_key</span><span class="p">(</span><span class="n">get_git_remote_url</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="same_pipeline_checked_out">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.same_pipeline_checked_out">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">same_pipeline_checked_out</span><span class="p">(</span><span class="n">first</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Checkout</span><span class="p">],</span> <span class="n">second</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Checkout</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether two folders are one pipeline in two checkouts of one repository, at the same place in it.</span>
+
+<span class="sd">    Two worktrees of one repository share its git folder. Two clones are</span>
+<span class="sd">    one repository as a pin takes one: by the address of their remotes</span>
+<span class="sd">    where both have one, so that two repositories made from one template</span>
+<span class="sd">    (one first commit, two addresses) are two; by their first commit where</span>
+<span class="sd">    either has none.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">second</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">first</span><span class="o">.</span><span class="n">subfolder</span> <span class="o">!=</span> <span class="n">second</span><span class="o">.</span><span class="n">subfolder</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">_same_folder</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">common_dir</span><span class="p">,</span> <span class="n">second</span><span class="o">.</span><span class="n">common_dir</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">first</span><span class="o">.</span><span class="n">address</span> <span class="ow">and</span> <span class="n">second</span><span class="o">.</span><span class="n">address</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">first</span><span class="o">.</span><span class="n">address</span> <span class="o">==</span> <span class="n">second</span><span class="o">.</span><span class="n">address</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">first_commit</span> <span class="ow">and</span> <span class="n">first</span><span class="o">.</span><span class="n">first_commit</span> <span class="o">==</span> <span class="n">second</span><span class="o">.</span><span class="n">first_commit</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="remote_to_web_url">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.remote_to_web_url">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remote_to_web_url</span><span class="p">(</span><span class="n">remote</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Turn a git remote into the web address of the repository it names.</span>
+
+<span class="sd">    A remote is written for git, not for a browser, and may carry things</span>
+<span class="sd">    that must not be published. This reduces it to ``https://host/path``:</span>
+
+<span class="sd">    - ``git@github.com:acme/rates.git`` → ``https://github.com/acme/rates``</span>
+<span class="sd">    - ``ssh://git@gitlab.internal:2222/acme/rates.git`` → ``https://gitlab.internal/acme/rates``</span>
+<span class="sd">    - ``https://user:token@github.com/acme/rates.git`` → ``https://github.com/acme/rates``</span>
+
+<span class="sd">    Credentials embedded in the remote are always dropped. A remote that is</span>
+<span class="sd">    a path on disk has no web address and gives an empty string; a Windows</span>
+<span class="sd">    path with a drive letter, ``C:\\repos\\rates`` or ``C:/repos/rates``, is</span>
+<span class="sd">    one, as git reads it, and not a host ``C``.</span>
+
+<span class="sd">    :param remote: The remote URL, as ``git config remote.origin.url`` prints it.</span>
+<span class="sd">    :returns: A web URL, or ``""`` if the remote does not name a host.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">remote</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">remote</span> <span class="o">=</span> <span class="n">remote</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">_DRIVE_PATH</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">remote</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">""</span>
+
+    <span class="n">scp_like</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^(?:[^@/\s]+@)?([^:/\s]+):(?!/)(.+)$"</span><span class="p">,</span> <span class="n">remote</span><span class="p">)</span>
+    <span class="n">url_like</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">"^(?P&lt;scheme&gt;[A-Za-z][A-Za-z0-9+.-]*)://(?:[^@/]*@)?"</span>
+        <span class="sa">r</span><span class="s2">"(?P&lt;host&gt;[^/:]+)(?P&lt;port&gt;:\d+)?/(?P&lt;path&gt;.+)$"</span><span class="p">,</span>
+        <span class="n">remote</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">url_like</span> <span class="ow">and</span> <span class="n">url_like</span><span class="p">[</span><span class="s2">"scheme"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">"file"</span><span class="p">:</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">url_like</span><span class="p">[</span><span class="s2">"scheme"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">url_like</span><span class="p">[</span><span class="s2">"host"</span><span class="p">],</span> <span class="n">url_like</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">scheme</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"http"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">):</span>
+            <span class="c1"># A web port is part of the address; an ssh or git port is not</span>
+            <span class="n">host</span> <span class="o">+=</span> <span class="n">url_like</span><span class="p">[</span><span class="s2">"port"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">""</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="s2">"https"</span>
+    <span class="k">elif</span> <span class="n">scp_like</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">url_like</span> <span class="ow">and</span> <span class="s2">"://"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">remote</span><span class="p">:</span>
+        <span class="n">scheme</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">"https"</span><span class="p">,</span> <span class="n">scp_like</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">scp_like</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">_without_git_suffix</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scheme</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">path</span> <span class="k">else</span> <span class="s2">""</span></div>
+
+
+
+<span class="c1">#: A Windows path with a drive letter, ``C:\\...`` or ``C:/...``. Git reads a</span>
+<span class="c1">#: one-letter "host" before the colon as a drive, so it names no host here.</span>
+<span class="n">_DRIVE_PATH</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z]:[</span><span class="se">\\</span><span class="s2">/]"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_without_git_suffix</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A repository path with no ``.git`` at its end, however that is spelled: ``Repo.GIT`` is ``Repo``."""</span>
+    <span class="k">return</span> <span class="n">path</span><span class="p">[:</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="s2">".git"</span><span class="p">)]</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".git"</span><span class="p">)</span> <span class="k">else</span> <span class="n">path</span>
+
+
+<span class="c1">#: Hosts whose repository paths ignore case: ``Acme/Rates`` is ``acme/rates``</span>
+<span class="n">_CASE_BLIND_HOSTS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">"github.com"</span><span class="p">,</span> <span class="s2">"gitlab.com"</span><span class="p">,</span> <span class="s2">"bitbucket.org"</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="repository_key">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.repository_key">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">repository_key</span><span class="p">(</span><span class="n">address</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A repository's address, reduced so that the ways of writing one repository give one key.</span>
+
+<span class="sd">    ``git@github.com:Acme/Rates.git``, ``https://github.com/acme/rates/``</span>
+<span class="sd">    and ``http://github.com:443/acme/rates`` are one repository: the scheme</span>
+<span class="sd">    is taken as ``https``, the host in lower case with no default port, the</span>
+<span class="sd">    path with no ``.git`` or final slash, and in lower case for a host that</span>
+<span class="sd">    ignores its case.</span>
+
+<span class="sd">    :returns: The key, or ``""`` for no address or one with no host.</span>
+<span class="sd">    """</span>
+    <span class="n">web</span> <span class="o">=</span> <span class="n">remote_to_web_url</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="k">if</span> <span class="n">address</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^https?://([^/]+)(/.*)?$"</span><span class="p">,</span> <span class="n">web</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">":(80|443)$"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">_without_git_suffix</span><span class="p">((</span><span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="ow">in</span> <span class="n">_CASE_BLIND_HOSTS</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"https://</span><span class="si">{</span><span class="n">host</span><span class="si">}{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<div class="viewcode-block" id="strip_url_credentials">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.strip_url_credentials">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">strip_url_credentials</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Take any user name and password out of a repository URL.</span>
+
+<span class="sd">    For anything that shows or publishes a URL a manifest wrote: an index,</span>
+<span class="sd">    a warning in a CI log. ``https://user:token@host/…`` becomes</span>
+<span class="sd">    ``https://host/…``. An ssh URL keeps its user (``ssh://git@host/…``),</span>
+<span class="sd">    which is part of the address and not a secret, and loses only a</span>
+<span class="sd">    password. A URL with no scheme (``git@host:acme/rates.git``, a path on</span>
+<span class="sd">    disk) is returned as it is.</span>
+
+<span class="sd">    Unlike :func:`remote_to_web_url`, the result is still the address git</span>
+<span class="sd">    fetches from.</span>
+
+<span class="sd">    :param url: The URL as written.</span>
+<span class="sd">    :returns: The URL without credentials.</span>
+<span class="sd">    """</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^(?P&lt;scheme&gt;[A-Za-z][A-Za-z0-9+.-]*)://(?P&lt;user&gt;[^@/]*)@"</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">url</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s2">"user"</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">user</span><span class="si">}</span><span class="s2">@"</span> <span class="k">if</span> <span class="n">match</span><span class="p">[</span><span class="s2">"scheme"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"http"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">match</span><span class="p">[</span><span class="s1">'scheme'</span><span class="p">]</span><span class="si">}</span><span class="s2">://</span><span class="si">{</span><span class="n">keep</span><span class="si">}{</span><span class="n">url</span><span class="p">[</span><span class="n">match</span><span class="o">.</span><span class="n">end</span><span class="p">():]</span><span class="si">}</span><span class="s2">"</span></div>
+
+
+
+<span class="c1">#: A web address safe to set anywhere in a page: http or https, a host, and</span>
+<span class="c1">#: none of the characters that end a link, an attribute or a line in</span>
+<span class="c1">#: Markdown or HTML (no space, quote, angle bracket, parenthesis, square</span>
+<span class="c1">#: bracket, brace, backtick or backslash).</span>
+<span class="n">_WEB_LINK</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&amp;+,;=%-]*)?"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">ASCII</span><span class="p">)</span>
+
+
+<span class="c1">#: Characters that print as nothing: Hangul fillers, the blank Braille pattern</span>
+<span class="n">_BLANKS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="s2">"</span><span class="se">\u115f\u1160\u3164\uffa0\u2800</span><span class="s2">"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="plain_line">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.plain_line">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plain_line</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">longest</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10_000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Text someone else wrote, as one line of what can be seen; empty if nothing can.</span>
+
+<span class="sd">    Characters that do not print (controls, format characters, lone</span>
+<span class="sd">    surrogates) become spaces, and runs of space become one; the text is</span>
+<span class="sd">    otherwise as written. Text with no character that shows (only spaces,</span>
+<span class="sd">    fillers or combining marks) is no text. It is read only as far as the</span>
+<span class="sd">    length kept, so that a long value costs nothing.</span>
+
+<span class="sd">    :param longest: Cut to this many characters.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">kept</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">space</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">isprintable</span><span class="p">():</span>
+            <span class="n">space</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">kept</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">space</span><span class="p">:</span>
+            <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">" "</span><span class="p">)</span>
+            <span class="n">space</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">kept</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kept</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">longest</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">kept</span><span class="p">)</span>
+    <span class="n">shows</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">c</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="ow">and</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_BLANKS</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"M"</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">line</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">line</span> <span class="k">if</span> <span class="n">shows</span> <span class="k">else</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="web_link">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.web_link">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">web_link</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The value if it is a plain web address (``http`` or ``https``), with no credentials; else an empty string.</span>
+
+<span class="sd">    For a link whose text someone else wrote, as a pipeline's snapshot in</span>
+<span class="sd">    the store says where its repository and site are: a ``javascript:``</span>
+<span class="sd">    link, or one that would break out of the page's markup, is no link.</span>
+
+<span class="sd">    :param value: The address as written.</span>
+<span class="sd">    :returns: The address, or ``""``.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2048</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">""</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">address</span> <span class="k">if</span> <span class="n">_WEB_LINK</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span></div>
 
 
 
 <div class="viewcode-block" id="clear_git_remote_cache">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.clear_git_remote_cache">[docs]</a>
-<span class="k">def</span> <span class="nf">clear_git_remote_cache</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Clear the cached git remote lookups (mainly for tests).&quot;&quot;&quot;</span>
-    <span class="n">_git_remote_cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">clear_git_remote_cache</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Clear the cached git remote and repository top lookups (mainly for tests)."""</span>
+    <span class="n">_git_remote_cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">_git_top_cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
 
 
 
-<span class="k">def</span> <span class="nf">_sanitize_component</span><span class="p">(</span><span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coerce an arbitrary string (e.g. a directory name) into an ID component.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_sanitize_component</span><span class="p">(</span><span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fallback</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"pipeline"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Coerce an arbitrary string (e.g. a directory name) into an ID component.</span>
 
 <span class="sd">    Derived components are normalized to lowercase snake_case; explicitly</span>
-<span class="sd">    authored IDs may still use any characters the grammar allows.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">component</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
-    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^a-z0-9_.]&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">sanitized</span><span class="p">)</span>
-    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;_+&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">sanitized</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">sanitized</span> <span class="ow">or</span> <span class="s2">&quot;pipeline&quot;</span>
+<span class="sd">    authored IDs may still use any characters the grammar allows. One with</span>
+<span class="sd">    nothing left but dots (``_.._``) names no component, and is *fallback*.</span>
+<span class="sd">    """</span>
+    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">component</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">" "</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">)</span>
+    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^a-z0-9_.]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">sanitized</span><span class="p">)</span>
+    <span class="n">sanitized</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"_+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">sanitized</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sanitized</span> <span class="k">if</span> <span class="n">sanitized</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span> <span class="k">else</span> <span class="n">fallback</span>
+
+
+<div class="viewcode-block" id="id_from_address">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.id_from_address">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">id_from_address</span><span class="p">(</span><span class="n">address</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The ID a pipeline at the top of the repository at an address derives: ``scope/name``, or a bare ``name``.</span>
+
+<span class="sd">    The address is a repository's web address or its git remote, in any of</span>
+<span class="sd">    the forms git takes (``https://``, ``ssh://``, ``user@host:path``,</span>
+<span class="sd">    ``host:path``), with the host, any user, port and ``.git`` left out:</span>
+<span class="sd">    ``git@github.com:Acme/CRSP-Treasury.git`` is ``acme/crsp_treasury``. The</span>
+<span class="sd">    scope is in lowercase and the name is written as a folder's is</span>
+<span class="sd">    (:func:`_sanitize_component`), so that every way of writing one</span>
+<span class="sd">    address, on every machine, gives one ID. A remote that is a path on</span>
+<span class="sd">    disk names no repository, and gives None; so does a name of nothing but</span>
+<span class="sd">    dots (``_.._``), which names no component.</span>
+<span class="sd">    """</span>
+    <span class="n">scope</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">_address_parts</span><span class="p">(</span><span class="n">address</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scope</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">scope</span> <span class="k">else</span> <span class="n">name</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_address_parts</span><span class="p">(</span><span class="n">address</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""The scope and the name the ID rule takes from a repository's address, each empty if it gives none.</span>
+
+<span class="sd">    None for what names no host: a path on disk (``/srv/rates``,</span>
+<span class="sd">    ``file:///srv/rates``), or a word (``repo_url = "TBD"``).</span>
+<span class="sd">    """</span>
+    <span class="n">web</span> <span class="o">=</span> <span class="n">remote_to_web_url</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">web</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize_ref_to_id</span><span class="p">(</span><span class="n">web</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">scope</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">normalized</span><span class="o">.</span><span class="n">rpartition</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">scope</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">_sanitize_component</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fallback</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span>
+
+
+<span class="c1">#: The file :func:`chartbook.snapshot.materialize` writes in a folder it lays a</span>
+<span class="c1">#: version out in: which pipeline, which commit, when made, and when its code</span>
+<span class="c1">#: last changed. A folder with it is that pipeline at that version, wherever</span>
+<span class="c1">#: it is and whatever it is called.</span>
+<span class="n">VERSION_FILE</span> <span class="o">=</span> <span class="s2">".chartbook-version.json"</span>
+
+
+<span class="c1">#: More than a version file ever needs; a larger one is not read.</span>
+<span class="n">_VERSION_FILE_MAX_BYTES</span> <span class="o">=</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">1024</span>
+
+
+<div class="viewcode-block" id="read_version_file">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.read_version_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_version_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a laid-out version's :data:`VERSION_FILE` says; empty unless the folder is one.</span>
+
+<span class="sd">    A folder is a laid-out version when it has the file and is not a</span>
+<span class="sd">    repository's own folder: no ``.git`` in it, and the file not tracked by</span>
+<span class="sd">    git. A laid-out folder copied to start a new pipeline and committed is</span>
+<span class="sd">    that new pipeline, not the old version. A file too large, or not a JSON</span>
+<span class="sd">    object, is not read.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+    <span class="n">base</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">marker</span> <span class="o">=</span> <span class="n">base</span> <span class="o">/</span> <span class="n">VERSION_FILE</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">marker</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">or</span> <span class="n">marker</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="ow">or</span> <span class="n">marker</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_size</span> <span class="o">&gt;</span> <span class="n">_VERSION_FILE_MAX_BYTES</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">lexists</span><span class="p">(</span><span class="n">base</span> <span class="o">/</span> <span class="s2">".git"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="n">recorded</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">marker</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">RecursionError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recorded</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_tracked_by_git</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">VERSION_FILE</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="n">recorded</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_tracked_by_git</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether git tracks a file in a folder; False where there is no git or no repository."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-C"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">base</span><span class="p">),</span> <span class="s2">"ls-files"</span><span class="p">,</span> <span class="s2">"--error-unmatch"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">,</span> <span class="n">name</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">_git_environment</span><span class="p">(),</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">,</span> <span class="s2">"GIT_LITERAL_PATHSPECS"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">},</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span>
 
 
 <div class="viewcode-block" id="derive_pipeline_id">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.derive_pipeline_id">[docs]</a>
-<span class="k">def</span> <span class="nf">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derive a pipeline&#39;s canonical ID.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Derive a pipeline's canonical ID.</span>
 
 <span class="sd">    Precedence:</span>
 
 <span class="sd">    1. Explicit ``id`` in the ``[project]`` table.</span>
-<span class="sd">    2. Scope from the git ``origin`` remote (or ``repo_url``), name from the</span>
-<span class="sd">       directory name.</span>
-<span class="sd">    3. Bare directory name.</span>
+<span class="sd">    2. The pipeline a laid-out version's :data:`VERSION_FILE` names.</span>
+<span class="sd">    3. With a repository address, ``repo_url`` or else the git ``origin``</span>
+<span class="sd">       remote, the scope from it (:func:`id_from_address`); and the name</span>
+<span class="sd">       from it too when the directory is the top of its git repository,</span>
+<span class="sd">       else the directory's name. So a clone, a git worktree or a renamed</span>
+<span class="sd">       folder of one repository is one pipeline, whatever its folder is</span>
+<span class="sd">       called, and each pipeline in a repository's subfolders is named by</span>
+<span class="sd">       its subfolder. A ``repo_url`` comes first, so a fork whose</span>
+<span class="sd">       manifest names its upstream keeps the upstream's ID.</span>
+<span class="sd">    4. Bare directory name.</span>
+
+<span class="sd">    A name is lowercase snake_case, from the folder or from the remote:</span>
+<span class="sd">    ``first-pipeline`` is ``first_pipeline``; a scope is in lowercase.</span>
 
 <span class="sd">    :param project: The raw ``[project]`` table from chartbook.toml.</span>
-<span class="sd">    :param base_dir: The pipeline&#39;s root directory.</span>
+<span class="sd">    :param base_dir: The pipeline's root directory.</span>
 <span class="sd">    :returns: A validated bare or scoped pipeline ID.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">explicit</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">explicit</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">explicit</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">explicit</span><span class="p">)</span>
+    <span class="n">recorded</span> <span class="o">=</span> <span class="n">read_version_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">recorded</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">recorded</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">recorded</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># not an ID: the folder's own name, as for any folder</span>
 
-    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="c1"># Resolved, because the name comes from the directory's own name and a</span>
+    <span class="c1"># relative "." does not have one</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
     <span class="n">name_part</span> <span class="o">=</span> <span class="n">_sanitize_component</span><span class="p">(</span><span class="n">base_dir</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
-    <span class="n">source_url</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;repo_url&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">get_git_remote_url</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">source_url</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize_ref_to_id</span><span class="p">(</span><span class="n">source_url</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-            <span class="n">normalized</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="n">normalized</span> <span class="ow">and</span> <span class="s2">&quot;/&quot;</span> <span class="ow">in</span> <span class="n">normalized</span><span class="p">:</span>
-            <span class="n">scope</span> <span class="o">=</span> <span class="n">normalized</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scope</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name_part</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="c1"># A repo_url that names no host ("TBD") gives way to the remote</span>
+    <span class="n">written</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"repo_url"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">_address_parts</span><span class="p">(</span><span class="n">written</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">written</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">written</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">parts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">remote</span> <span class="o">=</span> <span class="n">get_git_remote_url</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">_address_parts</span><span class="p">(</span><span class="n">remote</span><span class="p">)</span> <span class="k">if</span> <span class="n">remote</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">parts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">scope</span><span class="p">,</span> <span class="n">repository_name</span> <span class="o">=</span> <span class="n">parts</span>
+        <span class="k">if</span> <span class="n">repository_name</span> <span class="ow">and</span> <span class="n">is_repository_top</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>
+            <span class="c1"># The pipeline is the repository: named as the repository is,</span>
+            <span class="c1"># not as the folder this copy of it happens to be in</span>
+            <span class="n">name_part</span> <span class="o">=</span> <span class="n">repository_name</span>
+        <span class="k">if</span> <span class="n">scope</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">scope</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name_part</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">name_part</span></div>
+    <span class="k">return</span> <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">name_part</span><span class="p">)</span></div>
+
+
+
+<span class="c1">#: A reference in git's short form for a remote, ``[user@]host:path``: a host</span>
+<span class="c1">#: with a dot in it, or a user, so that neither a name with a colon nor a</span>
+<span class="c1">#: registry's port (``localhost:5000/acme/rates``) reads as one</span>
+<span class="n">_SCP_REFERENCE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^(?:[^@/:\s]+@[^:/\s]+|[^@:/\s]*\.[^@:/\s]+):(?!/)(?![0-9]+(?:/|$)).+$"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="in_another_case">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.in_another_case">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">in_another_case</span><span class="p">(</span><span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The one ID among *keys* that a reference names but for the case of its letters; None if none, or several.</span>
+
+<span class="sd">    A scope derived from a remote is in lowercase, so a reference written as</span>
+<span class="sd">    a web page shows its owner (``Acme/rates``) misses it: this is what to</span>
+<span class="sd">    suggest.</span>
+<span class="sd">    """</span>
+    <span class="n">wanted</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="n">wanted</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">ref</span><span class="o">.</span><span class="n">strip</span><span class="p">()})</span>
+    <span class="k">return</span> <span class="n">found</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="match_pipeline_ref">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.match_pipeline_ref">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">match_pipeline_ref</span><span class="p">(</span>
+    <span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"this catalog"</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Match a user-supplied pipeline reference against a set of pipeline IDs.</span>
+
+<span class="sd">    Matching order:</span>
+
+<span class="sd">    1. Exact match on the (possibly scoped) key.</span>
+<span class="sd">    2. URL references are normalized to ``scope/name`` and matched exactly,</span>
+<span class="sd">       as written and then as the ID rule derives one from the address</span>
+<span class="sd">       (:func:`id_from_address`): ``https://github.com/ftsfr/crsp-treasury``</span>
+<span class="sd">       matches ``ftsfr/crsp_treasury``.</span>
+<span class="sd">    3. A bare name matches any key whose name component equals it — but only</span>
+<span class="sd">       if exactly one does; multiple matches raise an error listing the</span>
+<span class="sd">       candidates.</span>
+
+<span class="sd">    Finding nothing is not an error here, so that a caller with somewhere</span>
+<span class="sd">    else to look can go on to it. :func:`resolve_pipeline_ref` is this</span>
+<span class="sd">    function for a caller with nowhere else.</span>
+
+<span class="sd">    :param keys: The pipeline IDs to match against: a catalog's keys, or</span>
+<span class="sd">        those of a ``[dependencies]`` table.</span>
+<span class="sd">    :param ref: The reference to match (bare, scoped, or URL).</span>
+<span class="sd">    :param where: What *keys* are the keys of, to say where a name is</span>
+<span class="sd">        ambiguous.</span>
+<span class="sd">    :returns: The matching key, or None if there is none.</span>
+<span class="sd">    :raises UnsupportedRevisionError: If the reference carries ``@rev``.</span>
+<span class="sd">    :raises UnsupportedRegistryError: If the reference carries a registry</span>
+<span class="sd">        prefix.</span>
+<span class="sd">    :raises KeyError: If a bare name matches more than one key.</span>
+<span class="sd">    """</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
+    <span class="n">stripped</span> <span class="o">=</span> <span class="n">ref</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="c1"># A remote in git's short form, with any user or none</span>
+    <span class="c1"># (`org-123@github.com:acme/rates.git`), is read as its web address</span>
+    <span class="n">scp</span> <span class="o">=</span> <span class="n">_SCP_REFERENCE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">stripped</span><span class="p">)</span>
+    <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize_ref_to_id</span><span class="p">(</span><span class="n">remote_to_web_url</span><span class="p">(</span><span class="n">stripped</span><span class="p">)</span> <span class="k">if</span> <span class="n">scp</span> <span class="k">else</span> <span class="n">ref</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">normalized</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">normalized</span>
+    <span class="c1"># A repository's address names the pipeline at its top as the ID rule</span>
+    <span class="c1"># does: `.../ftsfr/crsp-treasury` is `ftsfr/crsp_treasury`</span>
+    <span class="k">if</span> <span class="n">scp</span> <span class="ow">or</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">stripped</span> <span class="ow">or</span> <span class="n">stripped</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"git@"</span><span class="p">):</span>
+        <span class="n">derived</span> <span class="o">=</span> <span class="n">id_from_address</span><span class="p">(</span><span class="n">stripped</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">derived</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">derived</span>
+
+    <span class="k">if</span> <span class="s2">"/"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">normalized</span><span class="p">:</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">normalized</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Pipeline reference </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> is ambiguous in </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"Matching pipelines: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"Use the scoped form, e.g. </span><span class="si">{</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">."</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
 <div class="viewcode-block" id="resolve_pipeline_ref">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.identity.html#chartbook.identity.resolve_pipeline_ref">[docs]</a>
-<span class="k">def</span> <span class="nf">resolve_pipeline_ref</span><span class="p">(</span><span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a user-supplied pipeline reference against catalog keys.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">resolve_pipeline_ref</span><span class="p">(</span><span class="n">keys</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">ref</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Resolve a user-supplied pipeline reference against catalog keys.</span>
 
-<span class="sd">    Resolution order:</span>
+<span class="sd">    The matching rules are :func:`match_pipeline_ref`'s.</span>
 
-<span class="sd">    1. Exact match on the (possibly scoped) key.</span>
-<span class="sd">    2. URL references are normalized to ``scope/name`` and matched exactly.</span>
-<span class="sd">    3. A bare name matches any key whose name component equals it — but only</span>
-<span class="sd">       if exactly one does; multiple matches raise an error listing the</span>
-<span class="sd">       candidates.</span>
-
-<span class="sd">    :param keys: The catalog&#39;s pipeline keys.</span>
+<span class="sd">    :param keys: The catalog's pipeline keys.</span>
 <span class="sd">    :param ref: The reference to resolve (bare, scoped, or URL).</span>
 <span class="sd">    :returns: The matching catalog key.</span>
 <span class="sd">    :raises UnsupportedRevisionError: If the reference carries ``@rev``.</span>
+<span class="sd">    :raises UnsupportedRegistryError: If the reference carries a registry</span>
+<span class="sd">        prefix.</span>
 <span class="sd">    :raises KeyError: If no key matches, or a bare name is ambiguous.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
-    <span class="n">normalized</span> <span class="o">=</span> <span class="n">normalize_ref_to_id</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
-
-    <span class="k">if</span> <span class="n">normalized</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">normalized</span>
-
-    <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">normalized</span><span class="p">:</span>
-        <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">normalized</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Pipeline reference </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> is ambiguous in this catalog. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Matching pipelines: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Use the scoped form, e.g. </span><span class="si">{</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">.&quot;</span>
-            <span class="p">)</span>
-
-    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;Pipeline </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> not found in catalog. Available pipelines: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-    <span class="p">)</span></div>
+    <span class="n">matched</span> <span class="o">=</span> <span class="n">match_pipeline_ref</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">matched</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="n">in_another_case</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">ref</span><span class="p">)</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">other</span><span class="si">!r}</span><span class="s2">? A scope derived from a remote is in lowercase."</span> <span class="k">if</span> <span class="n">other</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Pipeline </span><span class="si">{</span><span class="n">ref</span><span class="si">!r}</span><span class="s2"> not found in catalog.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"Available pipelines: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">matched</span></div>
 
 </pre></div>
 
@@ -692,7 +1303,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>
@@ -716,8 +1327,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

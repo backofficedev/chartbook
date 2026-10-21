@@ -73,7 +73,7 @@ orphan: true
 ```
 ````
 
-````{py:function} validate_dataframe(df: pandas.DataFrame) -> None
+````{py:function} validate_dataframe(df) -> pandas.DataFrame
 :canonical: chartbook.plotting._validation.validate_dataframe
 
 ```{autodoc2-docstring} chartbook.plotting._validation.validate_dataframe

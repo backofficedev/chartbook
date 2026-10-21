@@ -33,7 +33,29 @@
     ```
 ````
 
+### Data
+
+````{list-table}
+:class: autosummary longtable
+:align: left
+
+* - {py:obj}`ENTRY_POINT_GROUP <chartbook.plotting.backends.ENTRY_POINT_GROUP>`
+  - ```{autodoc2-docstring} chartbook.plotting.backends.ENTRY_POINT_GROUP
+    :summary:
+    ```
+````
+
 ### API
+
+````{py:data} ENTRY_POINT_GROUP
+:canonical: chartbook.plotting.backends.ENTRY_POINT_GROUP
+:value: >
+   'chartbook_plotting'
+
+```{autodoc2-docstring} chartbook.plotting.backends.ENTRY_POINT_GROUP
+```
+
+````
 
 ````{py:function} get_backend(name: str = 'plotly') -> chartbook.plotting.backends._base.PlottingBackend
 :canonical: chartbook.plotting.backends.get_backend
@@ -56,7 +78,7 @@
 ```
 ````
 
-````{py:function} register_backend(backend: chartbook.plotting.backends._base.PlottingBackend, name: str | None = None) -> None
+````{py:function} register_backend(backend, name: str | None = None) -> None
 :canonical: chartbook.plotting.backends.register_backend
 
 ```{autodoc2-docstring} chartbook.plotting.backends.register_backend

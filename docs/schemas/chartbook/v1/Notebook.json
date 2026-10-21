@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Notebook.json",
+  "title": "Notebook record",
+  "description": "A notebook that a pipeline declares in [notebooks].",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "pipeline"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Notebook"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The asset's fully qualified address."
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "notebook"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "string",
+      "description": "The ID of the pipeline that declares the asset."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the asset's content is.",
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "file"
+        },
+        "path": {
+          "type": "string",
+          "description": "As declared in chartbook.toml, relative to the pipeline's root. May be a glob."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        },
+        "modified_at": {
+          "type": "string",
+          "description": "When the file, or the newest file the glob names, was last written, in UTC. Absent when not built."
+        }
+      }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "Hash of the asset's content. Absent when its file has not been built."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the assets this one was made from."
+    },
+    "keep": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

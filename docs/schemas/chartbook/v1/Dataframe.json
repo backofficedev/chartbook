@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Dataframe.json",
+  "title": "Dataframe record",
+  "description": "A table of data that a pipeline declares in [dataframes]. Other fields the manifest declares for it are carried as they are.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "pipeline"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Dataframe"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The asset's fully qualified address."
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "dataframe"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "string",
+      "description": "The ID of the pipeline that declares the asset."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the dataframe's content is: a file, a table in a source, or a query run in a source.",
+      "required": [
+        "kind"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "path": {
+              "type": "string",
+              "description": "As declared in chartbook.toml, relative to the pipeline's root. May be a glob."
+            },
+            "resolved_path": {
+              "type": "string",
+              "description": "Absolute path on the machine that built the index. Absent from a published index."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the file, or the newest file the glob names, was last written, in UTC. Absent when not built."
+            }
+          },
+          "required": [
+            "kind",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "table"
+            },
+            "source": {
+              "type": "string",
+              "description": "The source's name in [sources]."
+            },
+            "backend": {
+              "type": "string",
+              "description": "The source's backend, e.g. duckdb."
+            },
+            "identifier": {
+              "type": "string",
+              "description": "The table, as declared: one to three dot-separated parts."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
+            }
+          },
+          "required": [
+            "kind",
+            "source",
+            "backend",
+            "identifier"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "query"
+            },
+            "source": {
+              "type": "string"
+            },
+            "backend": {
+              "type": "string"
+            },
+            "sql": {
+              "type": "string",
+              "description": "The query, in the source's dialect, as declared."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
+            }
+          },
+          "required": [
+            "kind",
+            "source",
+            "backend",
+            "sql"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "Hash of the asset's content. Absent when its file has not been built."
+    },
+    "definition_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "For a table or query: a hash of its definition (identifier or SQL) and its described columns. A table cannot be content-hashed cheaply, so content_hash is absent and this says what the dataframe is defined as."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "row_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "date_col": {
+      "type": "string"
+    },
+    "columns": {
+      "type": "array",
+      "description": "The physical schema, as data.load() returns it.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "dtype"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dtype": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the assets this one was made from."
+    },
+    "keep": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    },
+    "date_range": {
+      "type": "object",
+      "required": [
+        "first",
+        "last"
+      ],
+      "description": "The first and last date in `date_col`, in ISO 8601 (a date, or a datetime): how far the data reaches. A date or datetime column as it is; a text column parsed as dates, what does not parse left out. Absent without a `date_col`, for a column with no date in it, or when the data cannot be read.",
+      "properties": {
+        "first": {
+          "type": "string"
+        },
+        "last": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

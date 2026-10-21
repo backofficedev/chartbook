@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -16,73 +15,74 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=55ac272d"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.data';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="chartbook.env" href="chartbook.env.html" />
+    <link rel="next" title="chartbook.backends" href="chartbook.backends.html" />
     <link rel="prev" title="API Reference" href="../../reference/api.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,7 +90,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -98,17 +97,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -121,15 +120,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,8 +144,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -154,7 +155,7 @@ document.write(`
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -168,7 +169,8 @@ document.write(`
       
       
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -181,15 +183,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,8 +207,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -230,21 +234,17 @@ document.write(`
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -255,12 +255,17 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
@@ -270,7 +275,14 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -279,21 +291,63 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -302,9 +356,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -401,24 +460,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -441,14 +499,21 @@ document.write(`
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.SCRATCH_DIR"><code class="docutils literal notranslate"><span class="pre">SCRATCH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.connect"><code class="docutils literal notranslate"><span class="pre">connect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_data_path"><code class="docutils literal notranslate"><span class="pre">get_data_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_docs"><code class="docutils literal notranslate"><span class="pre">get_docs()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_docs_path"><code class="docutils literal notranslate"><span class="pre">get_docs_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.load"><code class="docutils literal notranslate"><span class="pre">load()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.path"><code class="docutils literal notranslate"><span class="pre">path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.ref"><code class="docutils literal notranslate"><span class="pre">ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.scratch"><code class="docutils literal notranslate"><span class="pre">scratch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.sql"><code class="docutils literal notranslate"><span class="pre">sql()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -466,27 +531,47 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.data">
 <span id="chartbook-data"></span><h1><a class="reference internal" href="#module-chartbook.data" title="chartbook.data"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a><a class="headerlink" href="#module-chartbook.data" title="Link to this heading">#</a></h1>
-<p>Catalog-aware data loading for chartbook.</p>
-<p>Load dataframes from registered pipelines in a catalog::</p>
+<p>Data access for chartbook: where dataframes live, and loading them.</p>
+<p>This is the front door for <strong>dataframes</strong>. Every function here takes a
+dataframe and nothing else; :mod:<code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code> is the general module,
+for charts, notebooks and notes as well.</p>
+<p>Ask the manifest where a dataframe of the current pipeline belongs, instead
+of repeating its path in code::</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>from chartbook import data
 
-# Load as Polars LazyFrame (default)
-lf = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)
+# The path declared for [dataframes.repo_public] in the enclosing
+# chartbook.toml; works before the file exists, so it can name a target
+df.to_parquet(data.path("repo_public"))
+
+# A throwaway directory for intermediates: _data/_scratch/ in the pipeline
+raw.to_csv(data.scratch() / "raw_download.csv")
+</pre></div>
+</div>
+<p>Load a dataframe by reference: one of this pipeline, or the pinned copy of
+one that belongs to a pipeline declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lf = data.load("repo_public")                    # mine, as it is now
+lf = data.load("yield_curve:fed_yield_curve")    # theirs, as pinned
+path = data.path("yield_curve:fed_yield_curve")  # just the path
+</pre></div>
+</div>
+<p>Load dataframes from registered pipelines in a catalog::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Load as Polars LazyFrame (default)
+lf = data.load(pipeline="yield_curve", dataframe="repo_public")
 
 # Load as Polars eager DataFrame
-df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;polars_eager&quot;)
+df = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars_eager")
 
 # Load as pandas DataFrame
-df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;pandas&quot;)
+df = data.load(pipeline="yield_curve", dataframe="repo_public", format="pandas")
 
 # Get just the data path
-path = data.get_data_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)
+path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")
 
 # Get documentation content
-docs = data.get_docs(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)
+docs = data.get_docs(pipeline="yield_curve", dataframe="repo_public")
 
 # Get path to documentation source
-docs_path = data.get_docs_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)
+docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")
 </pre></div>
 </div>
 <section id="module-contents">
@@ -495,17 +580,43 @@ docs_path = data.get_docs_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.get_data_path" title="chartbook.data.get_data_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_path</span></code></a></p></td>
-<td><p>Get the resolved path to a dataframe’s parquet file.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.connect" title="chartbook.data.connect"><code class="xref py py-obj docutils literal notranslate"><span class="pre">connect</span></code></a></p></td>
+<td><p>The raw connection to one of this pipeline’s <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.get_docs" title="chartbook.data.get_docs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_docs</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.get_data_path" title="chartbook.data.get_data_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_path</span></code></a></p></td>
+<td><p>Get the resolved path to a dataframe’s parquet file, through a catalog.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.get_docs" title="chartbook.data.get_docs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_docs</span></code></a></p></td>
 <td><p>Get the documentation content for a dataframe as a string.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.get_docs_path" title="chartbook.data.get_docs_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_docs_path</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.get_docs_path" title="chartbook.data.get_docs_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_docs_path</span></code></a></p></td>
 <td><p>Get the path to a dataframe’s documentation source.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.load" title="chartbook.data.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a></p></td>
-<td><p>Load a dataframe from a registered pipeline in a catalog.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.load" title="chartbook.data.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a></p></td>
+<td><p>Load a dataframe: by reference, or from a pipeline in a catalog.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.path" title="chartbook.data.path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path</span></code></a></p></td>
+<td><p>Get the path the manifest declares for a dataframe of the current pipeline.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.ref" title="chartbook.data.ref"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ref</span></code></a></p></td>
+<td><p>The name a dataframe goes by in SQL, for a query you run yourself.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.data.scratch" title="chartbook.data.scratch"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scratch</span></code></a></p></td>
+<td><p>Get the current pipeline’s directory for throwaway files.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.sql" title="chartbook.data.sql"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sql</span></code></a></p></td>
+<td><p>Run SQL that names dataframes by their ChartBook references.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.data.SCRATCH_DIR" title="chartbook.data.SCRATCH_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SCRATCH_DIR</span></code></a></p></td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -513,22 +624,83 @@ docs_path = data.get_docs_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot
 </section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.data.SCRATCH_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">SCRATCH_DIR</span></span><a class="headerlink" href="#chartbook.data.SCRATCH_DIR" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
 <dl class="py function">
-<dt class="sig sig-object py" id="chartbook.data.get_data_path">
-<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_data_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_data_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_data_path" title="Link to this definition">#</a></dt>
-<dd><p>Get the resolved path to a dataframe’s parquet file.</p>
-<p>For glob patterns (e.g., <code class="docutils literal notranslate"><span class="pre">**/*.parquet</span></code>), returns a <code class="docutils literal notranslate"><span class="pre">Path</span></code> containing
-the glob pattern characters.</p>
+<dt class="sig sig-object py" id="chartbook.data.connect">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/data.html#connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.connect" title="Link to this definition">#</a></dt>
+<dd><p>The raw connection to one of this pipeline’s <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+con = data.connect(“local”)  # doctest: +SKIP
+con.sql(“select 1”).fetchall()  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>For a DuckDB file that is a <code class="docutils literal notranslate"><span class="pre">duckdb</span></code> connection, opened read-only and
+afresh for each call; close it when you are done, or let it go. For a
+<code class="docutils literal notranslate"><span class="pre">:memory:</span></code> source it is the one connection that source is, for the
+life of the process, and it is writable: such a source holds what you
+put in it, and nothing else. For a Databricks source it is a connection
+of the Databricks SQL connector, signed in as this machine says; close
+it when you are done. Anything ChartBook does not expose is reachable
+here, and the SQL you run with it is between you and the engine.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The pipeline reference — a bare name
+<li><p><strong>source</strong> – The source’s name in <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>.</p></li>
+<li><p><strong>project_dir</strong> – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#LookupError" title="(in Python v3.15)"><strong>LookupError</strong></a> – If the manifest declares no such source.</p></li>
+<li><p><a class="reference internal" href="chartbook.backends.html#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If it cannot be opened.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.data.get_data_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_data_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_data_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_data_path" title="Link to this definition">#</a></dt>
+<dd><p>Get the resolved path to a dataframe’s parquet file, through a catalog.</p>
+<p>For glob patterns (e.g., <code class="docutils literal notranslate"><span class="pre">**/*.parquet</span></code>), returns a <code class="docutils literal notranslate"><span class="pre">Path</span></code> containing
+the glob pattern characters.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">path</span></code> supersedes this inside a pipeline: <code class="docutils literal notranslate"><span class="pre">data.path(&quot;name&quot;)</span></code> for
+its own dataframes, and <code class="docutils literal notranslate"><span class="pre">data.path(&quot;pipeline:name&quot;)</span></code> for the pinned
+copy of a declared dependency’s. This remains the way to find a
+dataframe through a catalog, from a notebook that belongs to no
+pipeline, say. It gives the file by the rules of :func:<code class="docutils literal notranslate"><span class="pre">load</span></code>: in a
+pipeline that declares the other one, its pin; otherwise the file in
+the pipeline’s newest snapshot in the store; with no snapshot, the file
+in the folder the catalog lists, with a</p>
+</dd>
+<dt class="field-even">Class<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">~chartbook.resolve.WorkingVersionWarning</span></code>. Which pipeline the
+call is in is found as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>: from the calling file first,
+then the working directory, so a script in a pipeline’s folder gets
+that pipeline’s pin wherever it is run from.</p>
+</dd>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The pipeline reference — a bare name
 (<code class="docutils literal notranslate"><span class="pre">&quot;crsp_treasury&quot;</span></code>, if unambiguous), a scoped ID
 (<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/crsp_treasury&quot;</span></code>), or a repository URL.</p></li>
-<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
-<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
+<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
+<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
 directory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the global default from
 <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code> is used.</p></li>
+<li><p><strong>project_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Where to look for the pipeline the call is made
+from, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -539,8 +711,13 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured, and the
+store has no snapshot of the pipeline.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotPinnedError" title="chartbook.errors.AssetNotPinnedError"><strong>AssetNotPinnedError</strong></a> – If the dataframe has no copy to read: no
+pin in a batch run, a batch run outside any pipeline, and otherwise
+no snapshot and no folder here.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the pipeline or dataframe is in neither the store
+nor the catalog.</p></li>
 </ul>
 </dd>
 </dl>
@@ -548,7 +725,7 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.data.get_docs">
-<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_docs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_docs" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_docs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_docs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_docs" title="Link to this definition">#</a></dt>
 <dd><p>Get the documentation content for a dataframe as a string.</p>
 <p>Works with both documentation modes:</p>
 <ul class="simple">
@@ -559,11 +736,11 @@ the <code class="docutils literal notranslate"><span class="pre">.md</span></cod
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The pipeline reference — a bare name
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The pipeline reference — a bare name
 (<code class="docutils literal notranslate"><span class="pre">&quot;crsp_treasury&quot;</span></code>, if unambiguous), a scoped ID
 (<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/crsp_treasury&quot;</span></code>), or a repository URL.</p></li>
-<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
-<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
+<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
+<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
 directory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the global default from
 <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code> is used.</p></li>
 </ul>
@@ -572,12 +749,12 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 <dd class="field-even"><p>The documentation content as a string.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
 </ul>
 </dd>
 </dl>
@@ -585,7 +762,7 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.data.get_docs_path">
-<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_docs_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_docs_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_docs_path" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">get_docs_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#get_docs_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.get_docs_path" title="Link to this definition">#</a></dt>
 <dd><p>Get the path to a dataframe’s documentation source.</p>
 <p>For dataframes using <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>, returns the path to the <code class="docutils literal notranslate"><span class="pre">.md</span></code>
 file. For dataframes using <code class="docutils literal notranslate"><span class="pre">docs</span></code> (inline docs), returns the path to
@@ -593,11 +770,11 @@ the <code class="docutils literal notranslate"><span class="pre">chartbook.toml<
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The pipeline reference — a bare name
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The pipeline reference — a bare name
 (<code class="docutils literal notranslate"><span class="pre">&quot;crsp_treasury&quot;</span></code>, if unambiguous), a scoped ID
 (<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/crsp_treasury&quot;</span></code>), or a repository URL.</p></li>
-<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
-<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
+<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
+<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
 directory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the global default from
 <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code> is used.</p></li>
 </ul>
@@ -611,7 +788,7 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
 <li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
 </ul>
 </dd>
 </dl>
@@ -619,61 +796,120 @@ directory.  If <code class="docutils literal notranslate"><span class="pre">None
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.data.load">
-<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'polars'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/data.html#load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.load" title="Link to this definition">#</a></dt>
-<dd><p>Load a dataframe from a registered pipeline in a catalog.</p>
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'polars'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catalog_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/data.html#load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.load" title="Link to this definition">#</a></dt>
+<dd><p>Load a dataframe: by reference, or from a pipeline in a catalog.</p>
+<p><strong>By reference</strong>, with one argument. A dataframe of the pipeline you
+are in is loaded from where its manifest says it is: a parquet file, or
+a table or query in one of its <code class="docutils literal notranslate"><span class="pre">[sources]</span></code>, in which case the source’s
+engine runs it and the frame is fetched whole when it is collected. A
+dataframe of another pipeline is loaded from the copy that
+<code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins, so it does not change until you run
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>:</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+mine = data.load(“term_premium”)  # doctest: +SKIP
+theirs = data.load(“yield_curve:fed_yield_curve”)  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>The other pipeline is declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> and pinned with
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, or by the first read: one declared and not pinned
+is pinned then, to its newest snapshot, and stderr says so. One not
+declared is read from its newest snapshot with an</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Class<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">~chartbook.resolve.UnrecordedReadWarning</span></code>, and one with no
+snapshot from its folder with a</p>
+</dd>
+<dt class="field-even">Class<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">~chartbook.resolve.WorkingVersionWarning</span></code>. Under
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>’s <code class="docutils literal notranslate"><span class="pre">build</span></code> (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH=1</span></code>) only a pin is
+read. Outside any pipeline, the newest snapshot is read and nothing is
+said; in a batch run there, nothing is read, since nothing records it.</p>
+</dd>
+</dl>
+<p><strong>Through a catalog</strong>, with a pipeline and a dataframe. This reads by
+the same rules: its pin, in a pipeline that declares it; otherwise its
+newest snapshot in the store; with no snapshot, the file in the folder
+the catalog lists, as it is now, with a</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Class<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">~chartbook.resolve.WorkingVersionWarning</span></code>:</p>
+</dd>
+</dl>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
+…               catalog_path=“/path/to/catalog”)  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The pipeline reference — a bare name
-(<code class="docutils literal notranslate"><span class="pre">&quot;crsp_treasury&quot;</span></code>, if unambiguous), a scoped ID
-(<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/crsp_treasury&quot;</span></code>), or a repository URL.</p></li>
-<li><p><strong>dataframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The dataframe identifier within the pipeline.</p></li>
-<li><p><strong>format</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Output format — <code class="docutils literal notranslate"><span class="pre">&quot;polars&quot;</span></code> (default, returns LazyFrame),
+<li><p><strong>ref</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><em>AssetRef</em></a><em>]</em><em>]</em>) – A reference to a dataframe: <code class="docutils literal notranslate"><span class="pre">&quot;name&quot;</span></code> for one of the
+current pipeline, <code class="docutils literal notranslate"><span class="pre">&quot;pipeline:name&quot;</span></code> for another pipeline’s. (With
+<em>dataframe</em> also given, this is the pipeline, as it used to be the
+first argument.)</p></li>
+<li><p><strong>dataframe</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>) – The dataframe identifier within <em>pipeline</em>, to load
+through a catalog.</p></li>
+<li><p><strong>format</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – Output format — <code class="docutils literal notranslate"><span class="pre">&quot;polars&quot;</span></code> (default, returns LazyFrame),
 <code class="docutils literal notranslate"><span class="pre">&quot;polars_eager&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;pandas&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;polars-lazyframe&quot;</span></code> (deprecated
 alias for <code class="docutils literal notranslate"><span class="pre">&quot;polars&quot;</span></code>).  Glob patterns in a dataframe’s <code class="docutils literal notranslate"><span class="pre">path</span></code> only
 support <code class="docutils literal notranslate"><span class="pre">&quot;polars&quot;</span></code> (LazyFrame).</p></li>
-<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
-directory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the global default from
+<li><p><strong>catalog_path</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Path to a catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or its parent
+directory, to load through.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, the global default from
 <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code> is used.</p></li>
+<li><p><strong>pipeline</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>) – The pipeline to load from through a catalog — a bare
+name (<code class="docutils literal notranslate"><span class="pre">&quot;crsp_treasury&quot;</span></code>, if unambiguous), a scoped ID
+(<code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/crsp_treasury&quot;</span></code>), or a repository URL.</p></li>
+<li><p><strong>project_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Where to look for the pipeline the call is made
+from, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>. By either form, that pipeline is found
+from the calling file first, then the working directory, so a
+script in a pipeline’s folder reads by that pipeline’s rules
+wherever it is run from.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The loaded dataframe in the requested format.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)">pandas.DataFrame</a> or polars.DataFrame or polars.LazyFrame</p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.6)">pandas.DataFrame</a> or polars.DataFrame or polars.LazyFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If no catalog is configured.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If the pipeline or dataframe is not found.</p></li>
-<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If <em>format</em> is not one of the supported values, or if
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – If the manifest declares no such dataframe.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.DependencyNotDeclaredError" title="chartbook.errors.DependencyNotDeclaredError"><strong>DependencyNotDeclaredError</strong></a> – If a reference names a pipeline that
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not declare, in a batch run, or when it has
+neither a snapshot nor a folder here.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotPinnedError" title="chartbook.errors.AssetNotPinnedError"><strong>AssetNotPinnedError</strong></a> – If another pipeline’s dataframe has no
+copy to read: no pin in a batch run, a batch run outside any
+pipeline, and otherwise no snapshot and no folder here.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError" title="chartbook.errors.CatalogNotConfiguredError"><strong>CatalogNotConfiguredError</strong></a> – If a catalog is needed and none is
+configured, and the store has no snapshot of the pipeline.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the pipeline or dataframe is in neither the store
+nor the catalog.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If the arguments are neither one reference nor a
+pipeline and a dataframe.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>format</em> is not one of the supported values, or if
 a glob path is used with a non-LazyFrame format.</p></li>
 </ul>
 </dd>
 </dl>
 <p><strong>Examples</strong></p>
-<p>Load as a Polars LazyFrame (default):</p>
-<blockquote>
-<div><blockquote>
-<div><blockquote>
-<div><p>from chartbook import data
-lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
-…               catalog_path=“/path/to/catalog”)  # doctest: +SKIP</p>
-</div></blockquote>
-</div></blockquote>
-</div></blockquote>
 <p>Load as a Polars eager DataFrame:</p>
 <blockquote>
 <div><blockquote>
 <div><blockquote>
-<div><p>df = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
-…               format=“polars_eager”,
-…               catalog_path=“/path/to/catalog”)  # doctest: +SKIP</p>
+<div><p>df = data.load(“yield_curve:fed_yield_curve”,
+…               format=“polars_eager”)  # doctest: +SKIP</p>
 </div></blockquote>
 </div></blockquote>
 </div></blockquote>
-<p>Load as a pandas DataFrame:</p>
+<p>Load as a pandas DataFrame, through a catalog:</p>
 <blockquote>
 <div><blockquote>
 <div><blockquote>
@@ -683,6 +919,199 @@ lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
 </div></blockquote>
 </div></blockquote>
 </div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.data.path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.path" title="Link to this definition">#</a></dt>
+<dd><p>Get the path the manifest declares for a dataframe of the current pipeline.</p>
+<p>The enclosing <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is the single source of truth for where
+a dataframe lives, so code can ask for the path rather than repeat it:</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+df.to_parquet(data.path(“merged_rates”))  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>and a build definition can use the same call for what it reads and what
+it writes — <code class="docutils literal notranslate"><span class="pre">file_dep</span></code> and <code class="docutils literal notranslate"><span class="pre">targets</span></code> in a <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code>, say. The path
+is whatever <code class="docutils literal notranslate"><span class="pre">path</span></code> the entry declares, made absolute; nothing checks
+that the file exists, so a target can be named before it is built.</p>
+<p>This is :func:<code class="docutils literal notranslate"><span class="pre">chartbook.assets.path</span></code> with <code class="docutils literal notranslate"><span class="pre">kind=&quot;dataframe&quot;</span></code>: it
+answers for dataframes and nothing else, so a typo cannot hand back a
+chart’s HTML where a parquet file was meant. For a chart, a notebook or
+a note, use :func:<code class="docutils literal notranslate"><span class="pre">chartbook.assets.path</span></code>. Asking for a name that
+<code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> does not declare raises immediately, naming the table
+to add, rather than surfacing later as a missing file.</p>
+<p>This is a convenience, never a requirement. A script that hardcodes the
+same path, in any language, works just as well; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code> on the
+command line gives the same answer to a shell, Make, R or Stata.</p>
+<p>A dataframe of another pipeline is named with the pipeline in front,
+<code class="docutils literal notranslate"><span class="pre">data.path(&quot;fed_yield_curve:treasury_rates&quot;)</span></code>. That pipeline must be
+declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, and the path is the copy that
+<code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins, in the store, not the other pipeline’s working
+directory; see :func:<code class="docutils literal notranslate"><span class="pre">chartbook.assets.path</span></code>. Read it; never write to it.</p>
+<p>The rest of the reference grammar, <code class="docutils literal notranslate"><span class="pre">asset#part</span></code> and <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>, is
+reserved and raises “not yet supported”.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>) – The dataframe’s name: its key in <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code>; or
+<code class="docutils literal notranslate"><span class="pre">&quot;pipeline:name&quot;</span></code> for another pipeline’s.</p></li>
+<li><p><strong>project_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Where to look for the pipeline. The enclosing
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is found by walking up from here. By default the
+search starts at the calling file’s directory, then falls back to the
+current working directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The absolute path declared for the dataframe (it may contain
+glob characters for partitioned data).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – If the manifest declares no such dataframe.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.DependencyNotDeclaredError" title="chartbook.errors.DependencyNotDeclaredError"><strong>DependencyNotDeclaredError</strong></a> – If the reference names a pipeline
+that <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not declare.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotPinnedError" title="chartbook.errors.AssetNotPinnedError"><strong>AssetNotPinnedError</strong></a> – If another pipeline’s dataframe has no
+pinned copy in the store.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.ManifestNotFoundError" title="chartbook.errors.ManifestNotFoundError"><strong>ManifestNotFoundError</strong></a> – If no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> encloses the
+starting directory.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the reference names another kind of asset, uses
+reserved syntax, or the entry has no <code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.data.ref">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">ref</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#ref"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.ref" title="Link to this definition">#</a></dt>
+<dd><p>The name a dataframe goes by in SQL, for a query you run yourself.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+data.ref(“treasury_rates”)  # doctest: +SKIP
+“read_parquet(‘/work/rates/_data/treasury_rates.parquet’)”
+data.ref(“slopes”)  # doctest: +SKIP
+‘(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)’</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>A file is <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>, which DuckDB reads as a table. A table
+in a source is its quoted identifier. A query in a source is the query,
+in parentheses, so it stands where a table would. Paste it into SQL you
+run with :func:<code class="docutils literal notranslate"><span class="pre">connect</span></code>, or with your own tooling.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reference</strong> – The dataframe: a name of this pipeline’s, or
+<code class="docutils literal notranslate"><span class="pre">pipeline:name</span></code> for a pinned one of another’s.</p></li>
+<li><p><strong>project_dir</strong> – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – If the manifest declares no such dataframe.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotPinnedError" title="chartbook.errors.AssetNotPinnedError"><strong>AssetNotPinnedError</strong></a> – If another pipeline’s dataframe has no
+pinned copy.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.data.scratch">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">scratch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/data.html#scratch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.scratch" title="Link to this definition">#</a></dt>
+<dd><p>Get the current pipeline’s directory for throwaway files.</p>
+<p>Use it for intermediates that nothing else depends on: a partial
+download, a cache between two steps, a file you only want to look at.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+tmp = data.scratch() / “raw_download.csv”  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>The directory is <code class="docutils literal notranslate"><span class="pre">_data/_scratch/</span></code> inside the pipeline, created on
+first use. What goes in it is not an asset: it is not declared in the
+manifest, not documented, not published, and it ignores itself in git.
+It is safe to delete at any time. Because it lives inside the project,
+two checkouts or worktrees of the same pipeline each get their own.</p>
+<p>One thing to avoid: a dataframe whose <code class="docutils literal notranslate"><span class="pre">path</span></code> is a glob over all of
+<code class="docutils literal notranslate"><span class="pre">_data/</span></code> (<code class="docutils literal notranslate"><span class="pre">./_data/**/*.parquet</span></code>) would pick up scratch files too.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>project_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The absolute path of the scratch directory, which exists.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.ManifestNotFoundError" title="chartbook.errors.ManifestNotFoundError"><strong>ManifestNotFoundError</strong></a> – If no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> encloses the
+starting directory.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.data.sql">
+<span class="sig-prename descclassname"><span class="pre">chartbook.data.</span></span><span class="sig-name descname"><span class="pre">sql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/data.html#sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.data.sql" title="Link to this definition">#</a></dt>
+<dd><p>Run SQL that names dataframes by their ChartBook references.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import data
+rates = data.sql(
+…     “select Date, SVENY10 from {fed_yield_curve} where Date &gt;= ‘2024-01-01’”
+… )  # doctest: +SKIP
+rates.collect()  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>Each <code class="docutils literal notranslate"><span class="pre">{reference}</span></code> is replaced by what :func:<code class="docutils literal notranslate"><span class="pre">ref</span></code> gives for it, and
+the SQL runs in one engine: the source that the tables and queries in it
+live in, or a fresh in-memory DuckDB of its own when it names only
+files. ChartBook never parses or rewrites the SQL; what is between the
+braces is a reference, and everything else is yours, in that engine’s
+dialect. A literal brace, as in DuckDB’s <code class="docutils literal notranslate"><span class="pre">{'a':</span> <span class="pre">1}</span></code> struct syntax or
+inside a string, is written twice: <code class="docutils literal notranslate"><span class="pre">{{'a':</span> <span class="pre">1}}</span></code>. A warehouse reads
+its own tables only, so a query run in one names no file.</p>
+<p>A dataframe of another pipeline, <code class="docutils literal notranslate"><span class="pre">{fed_yield_curve:treasury_rates}</span></code>,
+is the pinned copy, as everywhere else.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> – The SQL, with references in braces.</p></li>
+<li><p><strong>project_dir</strong> – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Polars LazyFrame. Collect it to run the query. An error that
+only running can find, such as a cast that fails on one value, is
+raised then with DuckDB’s message in it, as Polars’ <code class="docutils literal notranslate"><span class="pre">ComputeError</span></code>
+or as DuckDB’s own exception, by Polars version.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the query has no reference in it, names
+dataframes of two different sources, or names a file alongside a
+source whose engine cannot read one.</p></li>
+<li><p><a class="reference internal" href="chartbook.backends.html#chartbook.backends.BackendError" title="chartbook.backends.BackendError"><strong>chartbook.backends.BackendError</strong></a> – If the engine refuses the SQL
+as it binds it: a name it does not know, or SQL it cannot parse.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -710,11 +1139,11 @@ lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
       </div>
     </a>
     <a class="right-next"
-       href="chartbook.env.html"
+       href="chartbook.backends.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -725,7 +1154,8 @@ lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
             
             
               
-                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -733,14 +1163,21 @@ lf = data.load(pipeline=“yield_curve”, dataframe=“repo_public”,
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.SCRATCH_DIR"><code class="docutils literal notranslate"><span class="pre">SCRATCH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.connect"><code class="docutils literal notranslate"><span class="pre">connect()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_data_path"><code class="docutils literal notranslate"><span class="pre">get_data_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_docs"><code class="docutils literal notranslate"><span class="pre">get_docs()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.get_docs_path"><code class="docutils literal notranslate"><span class="pre">get_docs_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.load"><code class="docutils literal notranslate"><span class="pre">load()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.path"><code class="docutils literal notranslate"><span class="pre">path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.ref"><code class="docutils literal notranslate"><span class="pre">ref()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.scratch"><code class="docutils literal notranslate"><span class="pre">scratch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.data.sql"><code class="docutils literal notranslate"><span class="pre">sql()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -793,8 +1230,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -67,6 +67,10 @@
   - ```{autodoc2-docstring} chartbook.diagnostics.DOCS_FIELDS
     :summary:
     ```
+* - {py:obj}`MODEL_FIELDS <chartbook.diagnostics.MODEL_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.MODEL_FIELDS
+    :summary:
+    ```
 * - {py:obj}`NOTEBOOK_FIELDS <chartbook.diagnostics.NOTEBOOK_FIELDS>`
   - ```{autodoc2-docstring} chartbook.diagnostics.NOTEBOOK_FIELDS
     :summary:
@@ -220,6 +224,17 @@
 
 `````
 
+````{py:data} MODEL_FIELDS
+:canonical: chartbook.diagnostics.MODEL_FIELDS
+:type: list[str]
+:value: >
+   ['name', 'description', 'trained_on', 'docs', 'path']
+
+```{autodoc2-docstring} chartbook.diagnostics.MODEL_FIELDS
+```
+
+````
+
 ````{py:data} NOTEBOOK_FIELDS
 :canonical: chartbook.diagnostics.NOTEBOOK_FIELDS
 :type: list[str]
@@ -253,14 +268,14 @@
 
 ````
 
-````{py:function} build_diagnostics(manifest: dict[str, typing.Any]) -> list[chartbook.diagnostics.DiagnosticRow]
+````{py:function} build_diagnostics(manifest: dict[str, typing.Any], skip_pipelines: collections.abc.Iterable[str] = ()) -> list[chartbook.diagnostics.DiagnosticRow]
 :canonical: chartbook.diagnostics.build_diagnostics
 
 ```{autodoc2-docstring} chartbook.diagnostics.build_diagnostics
 ```
 ````
 
-````{py:function} generate_metadata_diagnostics(manifest: dict[str, typing.Any], docs_build_dir: pathlib.Path) -> list[chartbook.diagnostics.DiagnosticRow]
+````{py:function} generate_metadata_diagnostics(manifest: dict[str, typing.Any], docs_build_dir: pathlib.Path, skip_pipelines: collections.abc.Iterable[str] = ()) -> list[chartbook.diagnostics.DiagnosticRow]
 :canonical: chartbook.diagnostics.generate_metadata_diagnostics
 
 ```{autodoc2-docstring} chartbook.diagnostics.generate_metadata_diagnostics

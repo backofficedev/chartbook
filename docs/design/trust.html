@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: trust, for a build of files on this machine &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/trust';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: keeping costly outputs" href="keep.html" />
+    <link rel="prev" title="Design: the versioned catalog" href="versioned-catalog.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/trust.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: trust, for a build of files on this machine</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-say-and-what-it-allows">What you say, and what it allows</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-you-say-it">How you say it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-record">The record</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-gate-is">Where the gate is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asked-at-a-terminal">Asked at a terminal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing-and-later">Not doing, and later</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-trust-for-a-build-of-files-on-this-machine">
+<h1>Design: trust, for a build of files on this machine<a class="headerlink" href="#design-trust-for-a-build-of-files-on-this-machine" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Decided with the maintainer on 2026-10-18, after the review before 0.2.0 asked where a local
+build’s trust comes from. It says what a build of a pipeline’s folder may do before you have said
+you trust that pipeline, how you say so, and what a record of it looks like. Built with this page,
+2026-10-18: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>, the record, and the gates.</p>
+</div>
+<section id="the-problem">
+<h2>The problem<a class="headerlink" href="#the-problem" title="Link to this heading">#</a></h2>
+<p>A build of a folder trusted its <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> completely. Three things followed. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code> ran a dataframe’s SQL <code class="docutils literal notranslate"><span class="pre">query</span></code> to show its first rows, and DuckDB’s SQL reads any file on the
+machine (<code class="docutils literal notranslate"><span class="pre">read_csv('~/.aws/credentials')</span></code>), so the manifest decided what landed on a page. The
+manifest’s <code class="docutils literal notranslate"><span class="pre">logo</span></code>, <code class="docutils literal notranslate"><span class="pre">favicon</span></code>, <code class="docutils literal notranslate"><span class="pre">site_dir</span></code>, a note’s <code class="docutils literal notranslate"><span class="pre">path</span></code> and a write-up’s <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> could name
+any file on the disk, and the build copied it into the site. And <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> ran the pipeline’s build script, which is code. None of this matters for your own work. It
+matters the day you clone a stranger’s pipeline to look at it, and publish what the build made.</p>
+<p>A build of files from a store already runs as a build of files that are not your own
+(<code class="docutils literal notranslate"><span class="pre">chartbook.config.untrusted_source</span></code>, <a class="reference internal" href="versioned-catalog.html"><span class="doc">Design: the versioned catalog</span></a>): no template from the folder, every
+template in Jinja’s sandbox, only pages and pictures from the site folder, no table or query run, no
+path outside the folder, no notebook run. This page brings a local folder under the same rule until
+you say otherwise.</p>
+</section>
+<section id="what-you-say-and-what-it-allows">
+<h2>What you say, and what it allows<a class="headerlink" href="#what-you-say-and-what-it-allows" title="Link to this heading">#</a></h2>
+<p>You trust a <strong>pipeline</strong> (a folder) or a <strong>repository</strong> (any clone whose <code class="docutils literal notranslate"><span class="pre">origin</span></code> is it), at one of
+two levels:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Level</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code>, <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>none (the default for a folder you did not make)</p></td>
+<td><p>As a build of files from a store: no query run (the glimpse says the query was not read, and why), no template or file from outside the folder, Jinja’s sandbox. The site is still built, with a warning that says how to trust the folder; a manifest that names a file outside the folder stops the render, naming the entry, as it stops a version’s build.</p></td>
+<td><p>Refused, naming the folder, its ID and the command that trusts it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">render</span></code></p></td>
+<td><p>As your own: queries run for glimpses and the index, files the manifest names are read wherever they are.</p></td>
+<td><p>Refused: trusted to render, not to run.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">run</span></code></p></td>
+<td><p>As your own.</p></td>
+<td><p>The build script runs.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">run</span></code> includes <code class="docutils literal notranslate"><span class="pre">render</span></code>. A third level later is a new word in the same file; nothing here depends
+on there being two.</p>
+</section>
+<section id="how-you-say-it">
+<h2>How you say it<a class="headerlink" href="#how-you-say-it" title="Link to this heading">#</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook trust                      # this folder, at "run"</span>
+<span class="go">chartbook trust --render             # this folder, to render only</span>
+<span class="go">chartbook trust ../rates             # another folder</span>
+<span class="go">chartbook trust --repository         # this folder's origin repository: every clone of it</span>
+<span class="go">chartbook trust --members            # in a catalog: the catalog's folder and each member folder here</span>
+<span class="go">chartbook trust --members --render   # the same, to render only</span>
+<span class="go">chartbook trust --list               # what is trusted, and how</span>
+<span class="go">chartbook trust --forget [PATH]      # no longer</span>
+<span class="go">chartbook trust --forget --repository   # no longer, for this folder's repository</span>
+</pre></div>
+</div>
+<p>A folder’s trust covers the folders inside it, so <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">~/GitRepositories/ftsfr</span></code> trusts
+every pipeline under it, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">~</span></code> would trust them all; the command says so when the
+folder has no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>. A repository’s trust covers any folder whose <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote names it
+(<code class="docutils literal notranslate"><span class="pre">chartbook.identity.repository_key</span></code>), wherever it is cloned.</p>
+<p>Three commands record trust without being asked to. A project <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> makes is recorded
+at <code class="docutils literal notranslate"><span class="pre">run</span></code> as it is made: you made it. A catalog <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code> makes has its folder
+recorded at <code class="docutils literal notranslate"><span class="pre">run</span></code>, for the same reason. A folder <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> adds is recorded at
+<code class="docutils literal notranslate"><span class="pre">render</span></code>, unless it is trusted already: adding a folder to your own catalog is asking for it to be
+rendered there, and <code class="docutils literal notranslate"><span class="pre">run</span></code> stays yours to say, since <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> in a catalog runs every
+member’s script. Each says so in one line.</p>
+<p>Two things are trusted without a record. Under <code class="docutils literal notranslate"><span class="pre">CI</span></code> (the environment variable, as the store’s notes
+already use it), the checkout is trusted at <code class="docutils literal notranslate"><span class="pre">run</span></code>: the top of the git repository the working
+directory is in, or the working directory itself. A runner builds its own checkout, and a pull
+request from a fork runs its code in CI whatever ChartBook does. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_TRUST=all</span></code> trusts every
+folder at <code class="docutils literal notranslate"><span class="pre">run</span></code> (the test suite runs so; a container that is nothing but your own code may); it is
+the one value the variable takes, and another is said once, and ignored. A build of files from a
+store (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code>) is never trusted, whatever the record says.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is built in ChartBook’s own copy of its commit, by its own build script: naming
+it in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> is the trust for that, as installing a package is for its code, and the
+pipeline that names it must itself be trusted at <code class="docutils literal notranslate"><span class="pre">run</span></code> for <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> to run at all.</p>
+</section>
+<section id="the-record">
+<h2>The record<a class="headerlink" href="#the-record" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">~/.chartbook/trust.toml</span></code>, this user’s, beside <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, <code class="docutils literal notranslate"><span class="pre">sources.toml</span></code> and <code class="docutils literal notranslate"><span class="pre">machine-id</span></code>.
+Written by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code> and by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code>, whole or not at all; read by every build on
+this machine.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># Pipelines you have trusted (chartbook trust): their queries and build scripts run here, and the</span>
+<span class="c1"># files their manifests name are read wherever they are.</span>
+
+<span class="k">[[pipeline]]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/Users/me/GitRepositories/ftsfr/rates"</span><span class="w">   </span><span class="c1"># resolved; the folders inside it too</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"run"</span><span class="w">                                     </span><span class="c1"># "render" or "run"</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"ftsfr/rates"</span><span class="w">                                </span><span class="c1"># for you to read; nothing goes by it</span>
+<span class="n">repository</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://github.com/ftsfr/rates"</span>
+<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-10-18T22:14:05Z"</span>
+
+<span class="k">[[repository]]</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://github.com/ftsfr/rates"</span><span class="w">            </span><span class="c1"># any clone whose origin remote is this</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"run"</span>
+<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-10-18T22:14:05Z"</span>
+</pre></div>
+</div>
+<p>A folder’s level is the highest of every entry that covers it. The file is read as settings are:
+one that cannot be read stops the command, naming the file; an entry of another shape (a relative
+<code class="docutils literal notranslate"><span class="pre">path</span></code> among them, which would name another folder from each folder a command is run in) is passed
+over with a warning naming the file and the entry (TOML gives no line for a table), and a write
+keeps it as it was. A <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> or <code class="docutils literal notranslate"><span class="pre">repository</span></code> key that is a table rather than an array is passed
+over the same way, and a write refuses to rewrite the file rather than drop it. <code class="docutils literal notranslate"><span class="pre">since</span></code> is written
+as a string, ISO 8601 with <code class="docutils literal notranslate"><span class="pre">Z</span></code>; one written as a TOML date-time is read. The <code class="docutils literal notranslate"><span class="pre">id</span></code> and <code class="docutils literal notranslate"><span class="pre">repository</span></code>
+of a <code class="docutils literal notranslate"><span class="pre">[[pipeline]]</span></code> entry are notes for you; a stranger’s manifest claiming your <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code>
+gains nothing, since the entry is matched by path. A <code class="docutils literal notranslate"><span class="pre">[[repository]]</span></code> entry is matched by the
+folder’s <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote, which you set when you cloned; a folder you did not clone yourself (an
+archive unpacked with its <code class="docutils literal notranslate"><span class="pre">.git/</span></code> inside) may name any repository in its <code class="docutils literal notranslate"><span class="pre">.git/config</span></code>, so trust a
+repository only for clones you made, and trust such a folder by its path.</p>
+</section>
+<section id="where-the-gate-is">
+<h2>Where the gate is<a class="headerlink" href="#where-the-gate-is" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook.config</span></code>: <code class="docutils literal notranslate"><span class="pre">trust_of(folder)</span></code> gives <code class="docutils literal notranslate"><span class="pre">&quot;run&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;render&quot;</span></code> or None, from the record, <code class="docutils literal notranslate"><span class="pre">CI</span></code>,
+<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_TRUST</span></code>; <code class="docutils literal notranslate"><span class="pre">record_trust</span></code>, <code class="docutils literal notranslate"><span class="pre">record_repository_trust</span></code>, <code class="docutils literal notranslate"><span class="pre">forget_trust</span></code>, <code class="docutils literal notranslate"><span class="pre">read_trust</span></code>.
+<code class="docutils literal notranslate"><span class="pre">untrusted_source()</span></code> is unchanged: the environment variable, for a build of files from a store.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span></code> (<code class="docutils literal notranslate"><span class="pre">cli._render_site</span></code>): a pipeline folder with no trust renders as a store build
+renders (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code> is set for the render, before anything is read, and put back after), with
+a warning that says why and how to trust it. A catalog: the catalog’s own folder and every member
+folder on this machine must be trusted at <code class="docutils literal notranslate"><span class="pre">render</span></code>; one that is not is an error that lists them
+and says <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">--members</span></code>. The member folders are read from the catalog’s manifest
+alone (<code class="docutils literal notranslate"><span class="pre">manifest.catalog_member_dirs</span></code>), before any member’s is loaded. Mixing trusted and
+untrusted members in one build is not built: the untrusted mode is the process’s. A member that
+is store-only has no folder and is unaffected.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> (<code class="docutils literal notranslate"><span class="pre">run.run</span></code>, so that the library is gated as the command is):
+every folder whose script would run must be trusted at <code class="docutils literal notranslate"><span class="pre">run</span></code>, else <code class="docutils literal notranslate"><span class="pre">RunError</span></code> with the list and the
+command. The check is made once the order of the run is known, so a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency may be
+fetched into ChartBook’s own cache before an untrusted pipeline is refused; nothing of either
+runs. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> in a catalog applies the render’s gate first, before any member’s script
+runs. <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">build</span></code> as <code class="docutils literal notranslate"><span class="pre">docs</span></code>, before <code class="docutils literal notranslate"><span class="pre">--clean</span></code>, so that a refused build leaves the kept tree.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code> read and copy the files the manifest
+names, so they take the render’s gate and run their work in the same untrusted mode: in a folder
+with no trust, a path outside the folder is refused as the manifest loads, and no query is run.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reads and executes nothing, and is not gated; it says the folder’s level in its
+last line when the level is not <code class="docutils literal notranslate"><span class="pre">run</span></code> (for a catalog, the lowest among its own folder and its
+member folders here).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> records the new project at <code class="docutils literal notranslate"><span class="pre">run</span></code> and says so in one line; <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">init</span></code> records
+the catalog’s folder at <code class="docutils literal notranslate"><span class="pre">run</span></code>, and <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code> each folder added at <code class="docutils literal notranslate"><span class="pre">render</span></code> unless it is
+trusted already. When the record cannot be written (no home folder), each says so and goes on.</p></li>
+<li><p>A catalog’s member folder with no <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is passed over by the gate (the build says the
+entry names no pipeline, as before), and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">--members</span></code> records nothing while there
+is one, naming it: a folder trusted before anything is there would trust whatever is put there.</p></li>
+</ul>
+</section>
+<section id="asked-at-a-terminal">
+<h2>Asked at a terminal<a class="headerlink" href="#asked-at-a-terminal" title="Link to this heading">#</a></h2>
+<p><em>Changed 2026-10-19, at the maintainer’s word</em>: refusing a build until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code> was typed
+was annoying, and the first build of a folder now asks, once, when a person is there to answer.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>ChartBook has not run the code in this folder before:
+  ~/GitRepositories/rates  (acme/rates, github.com/acme/rates)
+Its build command runs on this machine:
+    doit
+  y  it's mine: trust this folder and the folders inside it, and don't ask again
+  r  render its site only, without running its code
+  n  stop
+Trust this folder? [y/r/N]:
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>Who is asked.</strong> A person: stdin and stderr are terminals (a closed one is none), <code class="docutils literal notranslate"><span class="pre">CI</span></code> is not
+set, and this is not a build ChartBook is running (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH</span></code> on, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_DIR</span></code>), nor a
+build of files from a store (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE</span></code>). Everyone else behaves as this
+page says above: a script’s behaviour does not depend on the prompt, and CI never hangs on one.</p></li>
+<li><p><strong>When.</strong> At the first gate a folder meets: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> before the build
+script (<code class="docutils literal notranslate"><span class="pre">cli._ask_before_running</span></code>), <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code>, <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">generate</span></code>, <code class="docutils literal notranslate"><span class="pre">publish</span></code> and
+<code class="docutils literal notranslate"><span class="pre">create-data-glimpses</span></code> at the render’s gate (<code class="docutils literal notranslate"><span class="pre">cli._require_trust_to_render</span></code>). One command asks once
+(<code class="docutils literal notranslate"><span class="pre">cli._trust_answers</span></code>); <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>’s render does not ask again.</p></li>
+<li><p><strong>The answers.</strong> <code class="docutils literal notranslate"><span class="pre">y</span></code> records the folder at <code class="docutils literal notranslate"><span class="pre">run</span></code>, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code> there would; one level, so
+a person need not learn two. Because a yes then lets a later <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> run without asking,
+a question asked while only rendering shows the build command too, and says the trust covers the
+folders inside. <code class="docutils literal notranslate"><span class="pre">r</span></code> renders without running the build command: a folder not trusted at all as a
+build of files from a store, one trusted to render as before. It is offered where there is a site
+to render (not by <code class="docutils literal notranslate"><span class="pre">run</span></code>), and is called “render its site only”, not “safe mode”: notebooks and pages
+still render, and what is held back is code, queries and outside files. Enter, <code class="docutils literal notranslate"><span class="pre">n</span></code>, end of input and
+Ctrl-C stop at once; any other answer is asked again. Enter means stop because the default answer
+should do nothing surprising. The answer is read in short waits, so that Ctrl-C stops even when
+the system hands the interrupt to another of the process’s threads (polars runs its own).</p></li>
+<li><p><strong>What is shown</strong> of a folder is someone else’s text: folded (blank lines, runs of space), with
+any control or format character written as <code class="docutils literal notranslate"><span class="pre">&lt;U+…&gt;</span></code>, ten lines at most, so a manifest cannot pad the
+build command off the screen or reorder it with a right-to-left mark.</p></li>
+<li><p><strong>A catalog</strong> asks once, <code class="docutils literal notranslate"><span class="pre">[y/N]</span></code>, listing the catalog’s own folder and each member folder the
+command needs (for <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, a member trusted to render only too), each with its build
+command; the question says whether their scripts run now. <code class="docutils literal notranslate"><span class="pre">y</span></code> records them all, the catalog’s own
+folder with no ID, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">--members</span></code> records it.</p></li>
+<li><p><strong>Not asked about:</strong> a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency (naming it is the trust, above), a folder trusted already,
+and a build of files from a store.</p></li>
+</ul>
+</section>
+<section id="not-doing-and-later">
+<h2>Not doing, and later<a class="headerlink" href="#not-doing-and-later" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>A prompt that chooses the level (<code class="docutils literal notranslate"><span class="pre">render</span></code> or <code class="docutils literal notranslate"><span class="pre">run</span></code>) or a parent folder: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">--render</span></code>,
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span> <span class="pre">&lt;parent&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">--repository</span></code> say those.</p></li>
+<li><p>No trust by <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code>, since a manifest can say any ID.</p></li>
+<li><p>Telling a clone you made from a folder that arrived with a <code class="docutils literal notranslate"><span class="pre">.git/config</span></code> naming a repository you
+trust: <code class="docutils literal notranslate"><span class="pre">origin</span></code> is taken at its word. The record says to trust a repository only for clones you
+made.</p></li>
+<li><p>Rendering untrusted members of a catalog the store way, beside trusted ones, when the untrusted
+mode is no longer the process’s.</p></li>
+<li><p>Trust carried in a shared store’s notes, or by an organization’s settings file. A machine’s trust
+is its user’s.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="versioned-catalog.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: the versioned catalog</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="keep.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: keeping costly outputs</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-say-and-what-it-allows">What you say, and what it allows</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-you-say-it">How you say it</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-record">The record</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-gate-is">Where the gate is</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#asked-at-a-terminal">Asked at a terminal</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing-and-later">Not doing, and later</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

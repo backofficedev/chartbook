@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: models &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/models';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: data access" href="data-access.html" />
+    <link rel="prev" title="Design: the writer, and what every page shows" href="writer.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/models.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: models</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-model-is-to-chartbook">What a model is, to ChartBook</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-registry-not-an-experiment-tracker">A registry, not an experiment tracker</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-the-manifest">In the manifest</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-metrics-file">The metrics file</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#addressing-a-model">Addressing a model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-models-page">The model’s page</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-the-index">In the index</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#versions">Versions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-gives-an-ml-team">What this gives an ML team</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-worked-example">A worked example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phasing">Phasing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-built">What is built</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing">Not doing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-art">Prior art</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-models">
+<h1>Design: models<a class="headerlink" href="#design-models" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document. It says how a trained model becomes an asset a pipeline can declare,
+document, version and hand to other code. Read <a class="reference internal" href="references.html"><span class="doc">Design: references</span></a> first, since a model is
+addressed in that grammar. New to the project? Start with <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>.</p>
+<p>Status: <strong>direction accepted 2026-10-12; the first slice, declared models, is built.</strong> A
+pipeline can declare a model, ask for its path, check it, and get a page and an index record for
+it. Versions, labels, parts and other pipelines’ models are not built. <a class="reference internal" href="#models-built"><span class="std std-ref">What is built</span></a> says
+exactly what is there. Each section below says whether it is <em>decided</em> or <em>proposed</em>. Proposed
+parts are the author’s best design and still need the maintainer’s review, including the ones
+that are now implemented.</p>
+</div>
+<section id="the-problem">
+<h2>The problem<a class="headerlink" href="#the-problem" title="Link to this heading">#</a></h2>
+<p>A pipeline that trains a model leaves a file behind: a pickle, a <code class="docutils literal notranslate"><span class="pre">.pt</span></code>, a directory of weights.
+Six months later, nobody can answer the questions that matter:</p>
+<ul class="simple">
+<li><p>Where is the model file?</p></li>
+<li><p>What data was it trained on, and which version of that data?</p></li>
+<li><p>What code trained it?</p></li>
+<li><p>How good is it?</p></li>
+<li><p>Which version is the one in use?</p></li>
+</ul>
+<p>ChartBook already answers the first three for dataframes. The maintainer’s direction is that
+<strong>machine-learning operations should be a central use case</strong>, and models are the asset that makes
+it one.</p>
+</section>
+<section id="what-a-model-is-to-chartbook">
+<h2>What a model is, to ChartBook<a class="headerlink" href="#what-a-model-is-to-chartbook" title="Link to this heading">#</a></h2>
+<p><em>Decided.</em> A model is <strong>a file or a directory that a pipeline produces</strong>, declared in
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> like any other asset. ChartBook records where it is, what it was trained on,
+its scores, and (later) its versions. It shows all of that on a page.</p>
+<p>ChartBook does not know what is inside the file. It never imports PyTorch, scikit-learn or any
+other framework, and never loads, runs or serves a model.</p>
+<section id="a-registry-not-an-experiment-tracker">
+<h3>A registry, not an experiment tracker<a class="headerlink" href="#a-registry-not-an-experiment-tracker" title="Link to this heading">#</a></h3>
+<p><em>Decided.</em> Training a model means trying many things: hundreds of runs, most thrown away. Tools
+like MLflow and Weights &amp; Biases record every attempt. ChartBook does not. It records the
+models a pipeline <strong>declares</strong>: the ones worth keeping.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>ChartBook does</p></th>
+<th class="head"><p>ChartBook does not</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Record each declared model: its file, the data it was trained on, the code commit, its scores</p></td>
+<td><p>Log every training run</p></td>
+</tr>
+<tr class="row-odd"><td><p>Keep versions of a declared model, and labels like <code class="docutils literal notranslate"><span class="pre">champion</span></code></p></td>
+<td><p>Compare hyperparameter sweeps</p></td>
+</tr>
+<tr class="row-even"><td><p>Give any program the path to a model, at any version</p></td>
+<td><p>Load a model, or run predictions</p></td>
+</tr>
+<tr class="row-odd"><td><p>Show a page per model: description, scores, lineage</p></td>
+<td><p>Serve a model behind an API</p></td>
+</tr>
+<tr class="row-even"><td><p>Say which models are out of date when their data changes</p></td>
+<td><p>Decide when to retrain</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>These follow from the <a class="reference internal" href="asset-graph.html#not-doing"><span class="std std-ref">not-doing list</span></a>: no required service, no orchestration,
+no run history. A team that wants an experiment tracker uses one, and declares in ChartBook the
+model it finally chose.</p>
+</section>
+</section>
+<section id="in-the-manifest">
+<h2>In the manifest<a class="headerlink" href="#in-the-manifest" title="Link to this heading">#</a></h2>
+<p><em>Decided: the table and its four core fields. Proposed: the rest.</em></p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Rate Forecaster"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Forecasts the 10-year Treasury yield one month ahead."</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_models/rate_forecaster.joblib"</span>
+<span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"treasury_rates"</span><span class="p">]</span>
+<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/rate_forecaster_metrics.json"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/models/rate_forecaster.md"</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Forecast"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Treasury"</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+<td><p>yes</p></td>
+<td><p>The model file, or a directory holding the model’s files. Relative to the pipeline root. <em>Decided</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">trained_on</span></code></p></td>
+<td><p>no</p></td>
+<td><p>A list of <a class="reference internal" href="references.html"><span class="doc">references</span></a> to the data it was trained on. The default kind is dataframe, so <code class="docutils literal notranslate"><span class="pre">&quot;treasury_rates&quot;</span></code> is a local dataframe and <code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span></code> is another pipeline’s. Both work today; see “What is built” for what the second one does and does not do yet. <em>Decided</em></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metrics_path</span></code></p></td>
+<td><p>no</p></td>
+<td><p>A JSON file of scores, written by the training code. See below. <em>Decided</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">docs_path</span></code> or <code class="docutils literal notranslate"><span class="pre">docs</span></code></p></td>
+<td><p>no</p></td>
+<td><p>The model’s write-up (a “model card”): what it is for, how it was built, where it should not be used. Same convention as every other table. <em>Decided</em></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">description</span></code>, <code class="docutils literal notranslate"><span class="pre">tags</span></code></p></td>
+<td><p>no</p></td>
+<td><p>As for dataframes and charts. <em>Proposed</em></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[models.x.aliases]</span></code></p></td>
+<td><p>no</p></td>
+<td><p>Labels that point at a version, such as <code class="docutils literal notranslate"><span class="pre">champion</span> <span class="pre">=</span> <span class="pre">&quot;v3&quot;</span></code>. See “Versions”. <em>Proposed</em></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">trained_on</span></code> becomes the model’s <code class="docutils literal notranslate"><span class="pre">inputs</span></code> in the index, the same field every other asset uses
+for “what was this made from”. The manifest keeps the friendlier word.</p>
+<section id="the-metrics-file">
+<h3>The metrics file<a class="headerlink" href="#the-metrics-file" title="Link to this heading">#</a></h3>
+<p><em>Proposed, and implemented.</em> One flat JSON object, names to numbers. A value may also be a
+string or <code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">false</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"rmse"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.214</span><span class="p">,</span><span class="w"> </span><span class="nt">"mae"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.171</span><span class="p">,</span><span class="w"> </span><span class="nt">"n_train"</span><span class="p">:</span><span class="w"> </span><span class="mi">5120</span><span class="p">,</span><span class="w"> </span><span class="nt">"n_test"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Scores live in a file, not in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, because they are an <em>output</em>. They change every
+time the model is retrained, and the manifest is source that a person edits. ChartBook reads the
+file when it builds, copies the numbers into the index, and shows them on the model’s page.
+Anything that is not such a flat object is reported by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, and a build leaves the
+scores off the page and out of the index (with a warning) instead of failing.</p>
+</section>
+</section>
+<section id="addressing-a-model">
+<h2>Addressing a model<a class="headerlink" href="#addressing-a-model" title="Link to this heading">#</a></h2>
+<p><em>Decided.</em> A model is addressed like every other asset, with <code class="docutils literal notranslate"><span class="pre">model/</span></code> in front:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>model/rate_forecaster                          the model, in this pipeline
+model/rate_forecaster#weights/best.pt          one file inside it, if it is a directory
+model/rate_forecaster@v3                       version 3
+model/rate_forecaster@champion                 the version labelled champion
+ftsfr/fed_yield_curve:model/rate_forecaster    the model, in another pipeline
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span><span class="p">,</span> <span class="n">models</span>
+
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"model/rate_forecaster"</span><span class="p">)</span>       <span class="c1"># works for every kind</span>
+<span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rate_forecaster"</span><span class="p">)</span>             <span class="c1"># models only: the typed front door</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>model/rate_forecaster
+<span class="go">/work/fed_yield_curve/_models/rate_forecaster.joblib</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code> is to models what <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> is to dataframes: the same call with the
+kind fixed, which refuses anything else.</p>
+<p>There is deliberately <strong>no <code class="docutils literal notranslate"><span class="pre">models.load()</span></code></strong>. Loading is one line in the user’s own code, and
+keeping it there keeps every ML framework out of ChartBook:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">joblib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">models</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rate_forecaster"</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Code in any other language gets the path from <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code>, as for dataframes.</p>
+</section>
+<section id="the-models-page">
+<h2>The model’s page<a class="headerlink" href="#the-models-page" title="Link to this heading">#</a></h2>
+<p><em>Proposed, and implemented.</em> One page per model in the generated site, beside the dataframe and
+chart pages, at <code class="docutils literal notranslate"><span class="pre">cb/models/&lt;pipeline&gt;/&lt;model&gt;.html</span></code>:</p>
+<ul class="simple">
+<li><p>the freshness line (“Model updated 2 days ago”), as dataframe pages have;</p></li>
+<li><p>the write-up from <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> or <code class="docutils literal notranslate"><span class="pre">docs</span></code>, if there is one;</p></li>
+<li><p><strong>Scores</strong>: the metrics file as a table;</p></li>
+<li><p><strong>Trained On</strong>: links to each dataframe’s page;</p></li>
+<li><p><strong>Files</strong>: for a directory, each file and its size;</p></li>
+<li><p><strong>Model Manifest</strong>: name, address, description, tags, the declared path, and the command that
+prints its path. The page shows the path as declared, never the absolute path on the machine
+that built the site;</p></li>
+<li><p>once versions exist: a table of versions with their scores, and which labels point where.</p></li>
+</ul>
+<p>A pipeline’s front page lists its models. A catalog gets a “Models” page and a card on its front
+page, but only when some pipeline declares a model, so a catalog without models is unchanged.</p>
+</section>
+<section id="in-the-index">
+<h2>In the index<a class="headerlink" href="#in-the-index" title="Link to this heading">#</a></h2>
+<p><em>Proposed, and implemented.</em> A <code class="docutils literal notranslate"><span class="pre">Model</span></code> record, shaped like the other asset records in
+<a class="reference internal" href="index-schema.html"><span class="doc">Design: the index</span></a> (it has no <code class="docutils literal notranslate"><span class="pre">built_by</span></code> yet, since build records do not exist):</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Model"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:model/rate_forecaster"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"model"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rate_forecaster"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Rate Forecaster"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Forecasts the 10-year Treasury yield one month ahead."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_models/rate_forecaster.joblib"</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/work/fed_yield_curve/_models/rate_forecaster.joblib"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">18234</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"metrics"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"rmse"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.214</span><span class="p">,</span><span class="w"> </span><span class="nt">"mae"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.171</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Forecast"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Treasury"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/models/rate_forecaster.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"built_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>A model that is a directory also carries <code class="docutils literal notranslate"><span class="pre">files</span></code>, a list of <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">&quot;path&quot;,</span> <span class="pre">&quot;size_bytes&quot;,</span> <span class="pre">&quot;content_hash&quot;</span> <span class="pre">}</span></code>, and its own <code class="docutils literal notranslate"><span class="pre">content_hash</span></code> covers all of them (the rule for hashing a
+directory is in <a class="reference internal" href="index-schema.html"><span class="doc">Design: the index</span></a>).</p>
+</section>
+<section id="versions">
+<h2>Versions<a class="headerlink" href="#versions" title="Link to this heading">#</a></h2>
+<div class="warning admonition">
+<p class="admonition-title">Proposed</p>
+<p><em>Decided:</em> a model has versions; an exact version (<code class="docutils literal notranslate"><span class="pre">&#64;v3</span></code>) and a label that moves (<code class="docutils literal notranslate"><span class="pre">&#64;champion</span></code>)
+are both needed; each version records the data, the code and the scores. <em>Proposed:</em> everything
+else in this section. It depends on the store and on build records, which do not exist yet, so
+it is settled when they are built.</p>
+</div>
+<p><em>(Decided by the maintainer, 2026-10-13, and built the same day; <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4d, as
+built”. Two things in this section went another way, and are marked where they are said.
+<strong>A version is made by a snapshot</strong>, not by every build that changes the model. And <strong>a
+version is named by the start of its content hash</strong>, with labels as the names people use, not
+<code class="docutils literal notranslate"><span class="pre">v1</span></code>, <code class="docutils literal notranslate"><span class="pre">v2</span></code>, <code class="docutils literal notranslate"><span class="pre">v3</span></code>. Where this section says “build record”, read “snapshot”: it is what the
+build record became.)</em></p>
+<p><strong>What a version is.</strong> One content hash of the model, together with the build record that
+produced it. The build record (<a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a>) already holds what was asked for: the hash of
+every input (which data), the pipeline’s git commit (which code), the tool versions, and when.
+For a model it also keeps a copy of the metrics.</p>
+<p><strong>When a version is made.</strong> When a build finishes and a declared model’s content hash is one
+that has not been seen before. Rebuilding and getting the same bytes makes no new version.
+<em>(As decided: when a <strong>snapshot</strong> is made and the model’s content hash is one that no earlier
+snapshot of the pipeline had. A build alone makes none.)</em></p>
+<p><strong>Where the bytes go.</strong> Into the store, by content hash, like every other pinned object. The
+file at <code class="docutils literal notranslate"><span class="pre">path</span></code> stays where it is; the store links to it or copies it (<a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a>, “Links,
+not copies”). A team that wants to share model versions points at a shared store. That is the
+same mechanism as a shared build cache, and it needs no server.</p>
+<p><strong>How versions are named.</strong> <code class="docutils literal notranslate"><span class="pre">v1</span></code>, <code class="docutils literal notranslate"><span class="pre">v2</span></code>, <code class="docutils literal notranslate"><span class="pre">v3</span></code>, in the order they first appear, recorded in the
+pipeline’s committed <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> so the numbers are the same on every machine and are never
+reused. <em>(As decided: by the start of the content hash, <code class="docutils literal notranslate"><span class="pre">7f3a9c2e41b0</span></code>: twelve digits, and
+more when two versions would share them. Nothing is recorded to make the names agree between
+machines, because they are worked out from the bytes. See open question 1.)</em></p>
+<p><strong>Labels.</strong> A label is a name that points at a version, written in the manifest:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster.aliases]</span>
+<span class="n">champion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"v3"</span>
+<span class="n">challenger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"v5"</span>
+</pre></div>
+</div>
+<p><em>(As built: <code class="docutils literal notranslate"><span class="pre">champion</span> <span class="pre">=</span> <span class="pre">&quot;7f3a9c2e41b0&quot;</span></code>. A label may not itself look like a version.)</em></p>
+<p>Promoting a model is then a one-line change, reviewed in a pull request like any other. There is
+no “promote” button and no service behind one.</p>
+<p><strong>How a reference resolves.</strong></p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Reference</p></th>
+<th class="head"><p>Resolves to</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code></p></td>
+<td><p>The file at <code class="docutils literal notranslate"><span class="pre">path</span></code>: what you are working on. Local references are live</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;v3</span></code></p></td>
+<td><p>Version 3, in the store</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;champion</span></code></p></td>
+<td><p>The label is looked up, then as above</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">other:model/rate_forecaster</span></code></p></td>
+<td><p>The version this project’s lockfile pins. Cross-pipeline references are pinned</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">other:model/rate_forecaster&#64;champion</span></code></p></td>
+<td><p>The label is looked up when pinning and frozen in the lockfile, so a build is repeatable. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves it</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><em>(Built: the first three rows, with a version written as <code class="docutils literal notranslate"><span class="pre">&#64;7f3a9c2e41b0</span></code>. The fourth was built in
+step 3. The fifth on 2026-10-14: the label is read from the snapshot being pinned, which records
+its manifest’s labels, and written to the lockfile as a record of its own; <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4h,
+as built”.)</em></p>
+<p><strong>Garbage collection.</strong> A recorded version is reachable, so <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code> never collects
+it. <em>(As built, 2026-10-13: a version a label points at is never collected. One no label names
+is kept for 30 days and while it is the newest of its pipeline, then goes with its snapshot.
+<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Clearing old snapshots”. That is the answer to open question 3.)</em></p>
+<section id="what-this-gives-an-ml-team">
+<h3>What this gives an ML team<a class="headerlink" href="#what-this-gives-an-ml-team" title="Link to this heading">#</a></h3>
+<p>In order, the loop this is meant to support:</p>
+<ol class="arabic simple">
+<li><p><strong>Train.</strong> The pipeline’s own code writes the model file and the metrics file.</p></li>
+<li><p><strong>Record.</strong> The build notices a new model, makes version <code class="docutils literal notranslate"><span class="pre">v4</span></code>, and records the data hashes,
+the code commit and the scores.</p></li>
+<li><p><strong>Compare.</strong> The model’s page lists every version with its scores.</p></li>
+<li><p><strong>Promote.</strong> Someone changes <code class="docutils literal notranslate"><span class="pre">champion</span> <span class="pre">=</span> <span class="pre">&quot;v3&quot;</span></code> to <code class="docutils literal notranslate"><span class="pre">champion</span> <span class="pre">=</span> <span class="pre">&quot;v4&quot;</span></code> in a pull request.</p></li>
+<li><p><strong>Use.</strong> Serving code, in any language, asks for <code class="docutils literal notranslate"><span class="pre">model/rate_forecaster&#64;champion</span></code> and gets a
+path. It never hardcodes a file name.</p></li>
+<li><p><strong>Audit.</strong> For the model in use, the page shows exactly which data and which commit made it.</p></li>
+<li><p><strong>Retrain.</strong> When upstream data changes, the model’s inputs no longer match, so it shows as
+out of date. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> and a rebuild make <code class="docutils literal notranslate"><span class="pre">v5</span></code>. <em>(Built 2026-10-14: the model’s page
+says “Out of date” and which inputs moved, the index record has <code class="docutils literal notranslate"><span class="pre">stale_inputs</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns.)</em></p></li>
+</ol>
+<p>Everything outside that loop belongs to another tool: experiment tracking (MLflow, Weights &amp;
+Biases), serving (whatever the team runs), scheduling (cron, CI, an orchestrator), feature
+stores.</p>
+</section>
+</section>
+<section id="a-worked-example">
+<h2>A worked example<a class="headerlink" href="#a-worked-example" title="Link to this heading">#</a></h2>
+<p>Built, in <code class="docutils literal notranslate"><span class="pre">examples/yield_curve</span></code>. It adds one small model to the pipeline and needs no new
+dependency: the model is a two-number regression fitted with NumPy and saved as JSON.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</strong></p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.term_premium_ar1]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Term Premium AR(1)"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Predicts tomorrow's 10-year minus 2-year spread from today's."</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_models/term_premium_ar1.json"</span>
+<span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"term_premium"</span><span class="p">]</span>
+<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/term_premium_ar1_metrics.json"</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/models/term_premium_ar1.md"</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Yield Curve"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Forecast"</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><strong><code class="docutils literal notranslate"><span class="pre">src/train_term_premium_ar1.py</span></code></strong>, in outline:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span><span class="p">,</span> <span class="n">models</span>
+
+<span class="n">spread</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"term_premium"</span><span class="p">))[</span><span class="s2">"spread_10y_2y"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+<span class="n">train</span><span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="o">...</span>                                       <span class="c1"># first 80%, last 20%</span>
+<span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">values</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">train</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">model_path</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"term_premium_ar1"</span><span class="p">)</span>            <span class="c1"># ask the manifest where it goes</span>
+<span class="n">model_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"intercept"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"slope"</span><span class="p">:</span> <span class="o">...</span><span class="p">}))</span>
+<span class="n">metrics_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"rmse"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"mae"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"n_train"</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span> <span class="s2">"n_test"</span><span class="p">:</span> <span class="o">...</span><span class="p">}))</span>
+</pre></div>
+</div>
+<p><strong><code class="docutils literal notranslate"><span class="pre">dodo.py</span></code></strong> has a task whose <code class="docutils literal notranslate"><span class="pre">file_dep</span></code> is <code class="docutils literal notranslate"><span class="pre">data.path(&quot;term_premium&quot;)</span></code> and whose <code class="docutils literal notranslate"><span class="pre">targets</span></code> are
+<code class="docutils literal notranslate"><span class="pre">assets.path(&quot;model/term_premium_ar1&quot;)</span></code> and the metrics file.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/models/term_premium_ar1.md</span></code></strong> is four short paragraphs: what the model is, what it is
+for (an example, not a forecast to act on), how it was trained, and its limits.</p>
+<p><strong>What you get:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>examples/yield_curve<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>doit
+<span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>model/term_premium_ar1
+<span class="go">/…/examples/yield_curve/_models/term_premium_ar1.json</span>
+<span class="gp">$ </span>chartbook<span class="w"> </span>check
+<span class="go">chartbook.toml: OK (1 pipeline(s), 3 dataframes, 5 charts, 4 notebooks, 1 models)</span>
+</pre></div>
+</div>
+<p>On live data the fitted slope is 0.9988: a daily yield spread is so persistent that the model
+learns “tomorrow equals today”, which is what its write-up says it will. The built site has a
+page for the model with its write-up, a “Trained On” link to the Term Premium dataframe’s page,
+and a table with <code class="docutils literal notranslate"><span class="pre">rmse</span></code>, <code class="docutils literal notranslate"><span class="pre">mae</span></code>, <code class="docutils literal notranslate"><span class="pre">n_train</span></code> and <code class="docutils literal notranslate"><span class="pre">n_test</span></code>. The catalog built over the example has a
+Models page listing it, and <code class="docutils literal notranslate"><span class="pre">index.json</span></code> has its <code class="docutils literal notranslate"><span class="pre">Model</span></code> record.</p>
+<p>A second example, <code class="docutils literal notranslate"><span class="pre">examples/rate_forecast</span></code>, is a separate pipeline whose model is
+<code class="docutils literal notranslate"><span class="pre">trained_on</span> <span class="pre">=</span> <span class="pre">[&quot;yield_curve:fed_yield_curve&quot;]</span></code>. It is the first real cross-pipeline example,
+for models and dataframes alike. <em>(Built 2026-10-12, with step 3d.)</em> It declares
+<code class="docutils literal notranslate"><span class="pre">yield_curve</span></code> in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, pins it, trains on
+<code class="docutils literal notranslate"><span class="pre">data.load(&quot;yield_curve:fed_yield_curve&quot;)</span></code>, and its <code class="docutils literal notranslate"><span class="pre">Model</span></code> record names the bytes it was
+pinned at.</p>
+</section>
+<section id="phasing">
+<h2>Phasing<a class="headerlink" href="#phasing" title="Link to this heading">#</a></h2>
+<p>Each slice is useful by itself. The step numbers are the <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>’s build order.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Slice</p></th>
+<th class="head"><p>Needs</p></th>
+<th class="head"><p>What gets built</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>M1. Declared models</strong> (step 2) — <strong>built</strong></p></td>
+<td><p>The index</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">[models]</span></code> table in the loader, with validation. <code class="docutils literal notranslate"><span class="pre">model</span></code> added to <code class="docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code>, so <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">model/x</span></code> works. <code class="docutils literal notranslate"><span class="pre">chartbook.models.path()</span></code>. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> covers <code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">metrics_path</span></code> and <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> (the first two are build outputs, so <code class="docutils literal notranslate"><span class="pre">--skip-outputs</span></code> skips them). The model page. The <code class="docutils literal notranslate"><span class="pre">Model</span></code> record. Policy support: <code class="docutils literal notranslate"><span class="pre">[policy.required]</span> <span class="pre">models</span> <span class="pre">=</span> <span class="pre">[…]</span></code>. The worked example above. <strong>No versions</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>M2. Parts</strong> (with M1 or soon after) — <em>proposed 2026-10-13: not to be built</em></p></td>
+<td><p>M1</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model/x#file</span></code> resolves to a file inside a directory model. Refuse a part that escapes the directory (<code class="docutils literal notranslate"><span class="pre">..</span></code>). <em>(The maintainer decided that a reference does not select data (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, step 4, “4e”). By the same reasoning a file inside a model is <code class="docutils literal notranslate"><span class="pre">models.path(&quot;x&quot;)</span> <span class="pre">/</span> <span class="pre">&quot;file&quot;</span></code>, and the message for <code class="docutils literal notranslate"><span class="pre">model/x#file</span></code> says so. That extension is the builder’s, and waits on his yes.)</em></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>M3. Cross-pipeline</strong> (step 3) — <strong>built</strong></p></td>
+<td><p>Dependencies, lockfile, store</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">other:model/x</span></code> resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (<code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>). The <code class="docutils literal notranslate"><span class="pre">examples/rate_forecast</span></code> pipeline. A dependency fetched with <code class="docutils literal notranslate"><span class="pre">git</span></code> has only what its repository commits</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>M4. Versions and labels</strong> (step 4) — <strong>built</strong></p></td>
+<td><p>Snapshots</p></td>
+<td><p>A version on each new content hash a snapshot holds, <code class="docutils literal notranslate"><span class="pre">&#64;7f3a9c2e41b0</span></code>, <code class="docutils literal notranslate"><span class="pre">[models.x.aliases]</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;champion</span></code>, the versions table on the page. Staleness: a snapshot records what each model was trained on, and the page, the index and <code class="docutils literal notranslate"><span class="pre">check</span></code> say when those inputs have moved (2026-10-14; <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4i, as built”)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="what-is-built">
+<span id="models-built"></span><h2>What is built<a class="headerlink" href="#what-is-built" title="Link to this heading">#</a></h2>
+<p>Slice M1, in these places:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>What</p></th>
+<th class="head"><p>Where</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>The <code class="docutils literal notranslate"><span class="pre">[models]</span></code> table, validated when the manifest loads</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/manifest.py</span></code>, <code class="docutils literal notranslate"><span class="pre">validate_models()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">model/name</span></code> resolves; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">model/x</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/resolve.py</span></code> (<code class="docutils literal notranslate"><span class="pre">RESOLVABLE_KINDS</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook.models.path()</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook.models.read_metrics()</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/models.py</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>The model’s page, and the lists that link to it</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/writers/sphinx.py</span></code> (<code class="docutils literal notranslate"><span class="pre">model_page()</span></code>), <code class="docutils literal notranslate"><span class="pre">model_manifest.md</span></code> and <code class="docutils literal notranslate"><span class="pre">models.md</span></code> in the two theme directories</p></td>
+</tr>
+<tr class="row-even"><td><p>The <code class="docutils literal notranslate"><span class="pre">Model</span></code> record and its JSON Schema</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/index.py</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook/schemas/chartbook/v1/Model.json</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">check</span></code>: missing model, metrics or write-up; a malformed metrics file; required fields</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/check.py</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook/conf_validation.py</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook/diagnostics.py</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Incremental builds: a model’s files are inputs, its page belongs to its pipeline</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/incremental.py</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>The example</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">examples/yield_curve</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>The tests</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tests/test_models.py</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Training data in a declared dependency: checked, and named by the dependency’s name (step 3a)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">chartbook/check.py</span></code> (<code class="docutils literal notranslate"><span class="pre">check_model_lineage</span></code>), <code class="docutils literal notranslate"><span class="pre">chartbook/index.py</span></code>, <code class="docutils literal notranslate"><span class="pre">tests/test_dependencies.py</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Not built: versions and labels (<code class="docutils literal notranslate"><span class="pre">&#64;v3</span></code>, <code class="docutils literal notranslate"><span class="pre">&#64;champion</span></code>, <code class="docutils literal notranslate"><span class="pre">[models.x.aliases]</span></code>) and parts
+(<code class="docutils literal notranslate"><span class="pre">model/x#file</span></code>). Each is refused with “reserved syntax and not yet supported”.</p>
+<p>Slice M3 is built too, with step 3 of <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, for a dependency that is a directory
+on disk: <code class="docutils literal notranslate"><span class="pre">models.path(&quot;other:rate_forecaster&quot;)</span></code> is the pinned copy of another pipeline’s
+model, and a model’s training data in another pipeline is declared, pinned, read from the
+pinned copy and named by hash. A dependency fetched with <code class="docutils literal notranslate"><span class="pre">git</span></code> works the same way, for what
+its repository commits: a model kept in git can be pinned and read; one that is built and
+git-ignored cannot, until ChartBook can run that pipeline.</p>
+<div class="important admonition">
+<p class="admonition-title">Training data in another pipeline is the point, not an edge case</p>
+<p>Decided by the maintainer, 2026-10-12: a model’s training data <strong>can</strong> be another pipeline’s
+dataframe, and it is allowed now, not held back until dependencies exist.</p>
+<p><code class="docutils literal notranslate"><span class="pre">trained_on</span> <span class="pre">=</span> <span class="pre">[&quot;ftsfr/fed_yield_curve:treasury_rates&quot;]</span></code> loads today. It is <strong>stated lineage</strong>:</p>
+<ul class="simple">
+<li><p>the index records it as an input, by the ID that pipeline has in the build if it is part of
+it, and as written otherwise;</p></li>
+<li><p>the model’s page lists it, and links to the dataframe’s page when the other pipeline is in the
+same catalog;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, run on a catalog, reports a dataframe that the other pipeline does not
+declare. Where the other pipeline cannot be seen, nothing is checked.</p></li>
+</ul>
+<p>What it is not yet: a dependency. Nothing fetches the data, pins a version of it, or records
+which bytes the model was trained on. <strong>Making it one is the reason step 3 exists</strong>, and
+whoever builds step 3 should treat “a model trained on another pipeline’s data, reproducibly”
+as its headline case. When that lands, a <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> that names another pipeline must be backed
+by an entry in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>; until then it is taken on trust.</p>
+<p><em>Since 2026-10-12, the first part of step 3:</em> the other pipeline can be <strong>declared</strong>.</p>
+<ul class="simple">
+<li><p>With <code class="docutils literal notranslate"><span class="pre">&quot;ftsfr/fed_yield_curve&quot;</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">path</span> <span class="pre">=</span> <span class="pre">&quot;../fed_yield_curve&quot;</span> <span class="pre">}</span></code> in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reads that pipeline’s manifest and reports a dataframe it does not declare.
+No catalog is needed.</p></li>
+<li><p>The index writes the input by the dependency’s name: <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code> in the
+manifest is <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:treasury_rates</span></code> in the index.</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> that names a pipeline <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> does not declare still loads, and now
+warns, saying what to add.</p></li>
+</ul>
+<p><em>Later the same day, the rest of step 3 for a dependency on disk:</em></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> freezes the other pipeline’s data, and the training code reads the frozen
+copy with <code class="docutils literal notranslate"><span class="pre">data.load(&quot;fed_yield_curve:treasury_rates&quot;)</span></code>.</p></li>
+<li><p>The model’s record gains <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>: that input’s ID, and the content hash it is pinned
+at. <em>(Decided by the maintainer: a field beside <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, which stays a list of IDs.)</em></p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> that names an undeclared pipeline is now an error, as this box always said it
+would become.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code> says what is pinned, which is what training code is handed. It does not prove
+what one training run read; a build record will. See “3d, as built” in <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>.</p>
+</div>
+<section id="decided-while-building-it">
+<h3>Decided while building it<a class="headerlink" href="#decided-while-building-it" title="Link to this heading">#</a></h3>
+<p>These were open or unstated when the slice was built.</p>
+<p><strong>Decided by the maintainer, 2026-10-12:</strong></p>
+<ol class="arabic simple">
+<li><p><strong>By default <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports a model that does not say what it was trained on.</strong>
+The default policy asks a model for <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">description</span></code>, <code class="docutils literal notranslate"><span class="pre">trained_on</span></code>, a write-up and
+<code class="docutils literal notranslate"><span class="pre">path</span></code>. A catalog can set its own list with <code class="docutils literal notranslate"><span class="pre">[policy.required]</span> <span class="pre">models</span> <span class="pre">=</span> <span class="pre">[…]</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">trained_on</span></code> may name another pipeline’s dataframe, now.</strong> See the box above. (The first
+version of this slice refused it until dependencies existed. That was reversed.)</p></li>
+<li><p><strong>A model’s write-up is strongly recommended, not required.</strong> A model without one loads and
+gets a page; <code class="docutils literal notranslate"><span class="pre">check</span></code> reports it under the default policy. In a policy list the field is
+written <code class="docutils literal notranslate"><span class="pre">docs</span></code>, and is satisfied by either <code class="docutils literal notranslate"><span class="pre">docs</span></code> or <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>.</p></li>
+</ol>
+<p><strong>Proposed: implemented, and waiting on the maintainer’s yes:</strong></p>
+<ol class="arabic simple" start="4">
+<li><p><strong>A metrics value may be a number, a string or true/false.</strong> Nothing nested.</p></li>
+<li><p><strong>A declared model or metrics file that is missing stops a build</strong>, as a missing data file
+does. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span> <span class="pre">--skip-outputs</span></code> does not report them, since training produces them.</p></li>
+<li><p><strong>A model’s key must be a legal name</strong> (<code class="docutils literal notranslate"><span class="pre">[A-Za-z0-9._-]+</span></code>), or the manifest does not load. The
+older tables are not held to that; a new one can be from its first day.</p></li>
+<li><p><strong>A catalog has a Models page only when a pipeline declares a model.</strong></p></li>
+<li><p><strong>The page shows the declared path, not the absolute one.</strong> (The dataframe page shows the
+absolute path; that is older behaviour and was left alone.)</p></li>
+<li><p><strong>A series or a version in <code class="docutils literal notranslate"><span class="pre">trained_on</span></code> is still refused</strong> (<code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code>,
+<code class="docutils literal notranslate"><span class="pre">treasury_rates&#64;v2</span></code>). Each needs the store to mean anything.</p></li>
+</ol>
+<p><strong>Asked, not answered: should a dataframe or a chart still be <em>required</em> to have a write-up?</strong>
+Today the manifest does not load without one, while a model’s is only recommended. The
+maintainer raised making all three the same. The recommendation is to do so: never refuse to
+load a manifest over a missing write-up; put <code class="docutils literal notranslate"><span class="pre">docs</span></code> in the default policy list for dataframes
+and charts as it now is for models; and let a catalog, or a pipeline, drop it. Not done, because
+it loosens something existing projects rely on being checked, and it was a question, not an
+instruction.</p>
+<p>One thing is open and should be settled before models are used in earnest: <strong>hashing a
+directory counts every file, hidden ones included.</strong> A <code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code> appearing in a model’s
+directory changes the model’s hash. That is the rule decided for the index, and the honest one
+(“the directory is the asset”), but for a model with versions it would make a new version out of
+nothing.</p>
+<p><em>Decided by the maintainer, 2026-10-12:</em> a short, fixed list of files that operating systems
+create by themselves is skipped (<code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code>, <code class="docutils literal notranslate"><span class="pre">Thumbs.db</span></code>, <code class="docutils literal notranslate"><span class="pre">desktop.ini</span></code>, <code class="docutils literal notranslate"><span class="pre">._*</span></code>), and every
+other file still counts. It is built with the store (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Answers to the open
+questions”).</p>
+</section>
+</section>
+<section id="not-doing">
+<h2>Not doing<a class="headerlink" href="#not-doing" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>No experiment tracking.</strong> Declared models only. Not every run.</p></li>
+<li><p><strong>No loading or running models.</strong> <code class="docutils literal notranslate"><span class="pre">models.path()</span></code> returns a path. No <code class="docutils literal notranslate"><span class="pre">models.load()</span></code>, no
+<code class="docutils literal notranslate"><span class="pre">predict()</span></code>, no framework imports.</p></li>
+<li><p><strong>No serving.</strong> No endpoints, no containers, no deployment.</p></li>
+<li><p><strong>No training orchestration.</strong> The pipeline’s own <code class="docutils literal notranslate"><span class="pre">build</span></code> trains. ChartBook never decides when.</p></li>
+<li><p><strong>No model-format handling.</strong> No conversion, no ONNX export, no signature inference. The file
+is opaque bytes with a hash.</p></li>
+<li><p><strong>No promotion workflow.</strong> No stages, approvals or buttons. A label is a line in a file under
+version control; the review process is the repository’s.</p></li>
+<li><p><strong>No automatic metric comparison or “best model” selection.</strong> The page shows scores; people
+choose.</p></li>
+</ul>
+</section>
+<section id="prior-art">
+<h2>Prior art<a class="headerlink" href="#prior-art" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>MLflow Model Registry</strong>: registered models, numbered versions, and aliases such as
+<code class="docutils literal notranslate"><span class="pre">&#64;champion</span></code>. The model for versions and labels. Its tracking server and run logging are the
+part deliberately not copied.</p></li>
+<li><p><strong>Hugging Face Hub</strong>: a model is a repository of files with a model card, addressed as
+<code class="docutils literal notranslate"><span class="pre">org/name&#64;revision</span></code>. The model for “a model is a directory with a write-up”, and for <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>.</p></li>
+<li><p><strong>DVC</strong>: large files versioned by content hash beside git, with a cache and link strategies.
+The model for where the bytes live.</p></li>
+<li><p><strong>Model Cards</strong> (Mitchell et al., 2019): what a model’s write-up should say. The suggested
+outline for <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>.</p></li>
+<li><p><strong>Weights &amp; Biases Artifacts</strong>: versioned artifacts with aliases and lineage between them.
+Confirms that versions plus moving labels plus lineage is the useful core.</p></li>
+</ul>
+</section>
+<section id="open-questions">
+<h2>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Version numbers and branches.</strong> Two branches that each retrain will both create <code class="docutils literal notranslate"><span class="pre">v4</span></code> in
+their lockfiles, and the merge conflicts. Options: accept the conflict and renumber on merge;
+or name versions by a short content hash and keep sequential numbers out of it, leaving
+labels as the only human names. Needs a decision before M4. <em>(Decided 2026-10-13: by the
+content hash, with labels.)</em></p></li>
+<li><p><strong>Which builds make a version.</strong> Every new content hash, or only builds on the default
+branch, or only when asked (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>)? Every-hash is simplest and fills the store
+fastest. <em>(Decided 2026-10-13: only when asked, and the asking is a snapshot.)</em></p></li>
+<li><p><strong>Retention.</strong> Versions are never collected. A model retrained nightly makes 365 a year.
+Probably a per-model <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">N</span></code> that spares labelled versions, but nothing is designed.
+<em>(Answered 2026-10-13 without a new field: labelled versions are kept; the rest go with
+their snapshots after 30 days. <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Clearing old snapshots”.)</em></p></li>
+<li><p><strong>Do other kinds get versions?</strong> A dataframe could keep named versions the same way. Nothing
+stops it; nothing has asked for it. Cross-pipeline pins already keep the versions that are
+depended on.</p></li>
+<li><p><strong>Non-numeric metrics.</strong> A confusion matrix or a curve is not a flat number. For now such
+things are charts or dataframes the pipeline declares separately.</p></li>
+<li><p><strong>Models that are not files.</strong> A model held in a registry elsewhere (an MLflow URI, a Hugging
+Face repo). The dataframe design’s typed <code class="docutils literal notranslate"><span class="pre">location</span></code> (<a class="reference internal" href="data-access.html"><span class="doc">Design: data access</span></a>) is the seam; nothing
+is designed.</p></li>
+</ol>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="writer.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: the writer, and what every page shows</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="data-access.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: data access</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-problem">The problem</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-model-is-to-chartbook">What a model is, to ChartBook</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-registry-not-an-experiment-tracker">A registry, not an experiment tracker</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-the-manifest">In the manifest</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-metrics-file">The metrics file</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#addressing-a-model">Addressing a model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-models-page">The model’s page</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#in-the-index">In the index</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#versions">Versions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-gives-an-ml-team">What this gives an ML team</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-worked-example">A worked example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phasing">Phasing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-is-built">What is built</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-doing">Not doing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-art">Prior art</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

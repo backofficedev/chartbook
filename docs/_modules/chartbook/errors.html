@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 
@@ -15,71 +14,72 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
 
-  
-  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
-  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
-<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
-
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
-  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=6c9fa3cd"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/errors';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
   </head>
-  
-  
-  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
-
+  <body data-default-mode="">
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
-
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-primary-sidebar-checkbox"/>
-  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
-  <input type="checkbox"
-          class="sidebar-toggle"
-          id="pst-secondary-sidebar-checkbox"/>
-  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  <div class="search-button__wrapper">
-    <div class="search-button__overlay"></div>
-    <div class="search-button__search-container">
+  
+  <dialog id="pst-search-dialog">
+    
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,7 +87,6 @@
   <input type="search"
          class="form-control"
          name="q"
-         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -95,17 +94,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form></div>
-  </div>
+</form>
+  </dialog>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -118,15 +117,18 @@
       
         <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -139,8 +141,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
       
@@ -163,7 +164,8 @@ document.write(`
       
         
       
-      <div class="bd-sidebar-primary bd-sidebar">
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -176,15 +178,18 @@ document.write(`
         
           <div class="navbar-item">
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script></div>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -197,8 +202,7 @@ document.write(`
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
-            <span class="sr-only">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
         </li>
 </ul></div>
         
@@ -225,21 +229,17 @@ document.write(`
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
- <script>
- document.write(`
-   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="fa-solid fa-magnifying-glass"></i>
-    <span class="search-button__default-text">Search</span>
-    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-   </button>
- `);
- </script></div>
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -250,49 +250,99 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 </ul>
 
     </div>
@@ -301,9 +351,14 @@ document.write(`
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
   </div>
-  
-  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -352,24 +407,23 @@ document.write(`
 
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
   </button>
-`);
-</script>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
 
 
-<script>
-document.write(`
-  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-  </button>
-`);
-</script>
+</button>
 
 </div></div>
       
@@ -396,24 +450,28 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.errors</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;User-friendly error handling for chartbook CLI.</span>
+<span></span><span class="sd">"""User-friendly error handling for chartbook CLI.</span>
 
 <span class="sd">This module provides structured error types and formatting utilities</span>
 <span class="sd">that produce readable, actionable error messages for CLI users.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">difflib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">in_another_case</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_KIND</span><span class="p">,</span> <span class="n">KIND_TABLES</span>
 
 
 <div class="viewcode-block" id="ChartBookError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">ChartBookError</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base error with user-friendly formatting.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ChartBookError</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Base error with user-friendly formatting.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        message: The main error message to display.</span>
@@ -421,7 +479,7 @@ document.write(`
 <span class="sd">        field_name: Name of the field that caused the error.</span>
 <span class="sd">        invalid_value: The invalid value that was provided.</span>
 <span class="sd">        hint: A helpful hint about how to fix the error.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">file_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -431,42 +489,42 @@ document.write(`
 
 <div class="viewcode-block" id="ChartBookError.format_message">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.format_message">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format error for CLI display with colors and structure.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Format error for CLI display with colors and structure.</span>
 
 <span class="sd">        :returns: A formatted string ready for CLI output.</span>
 <span class="sd">        :rtype: str</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Error: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">:</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  File: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;cyan&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  File: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_path</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'cyan'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">field_name</span><span class="p">:</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Field: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field_name</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Field: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field_name</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'yellow'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span><span class="p">:</span>
             <span class="c1"># Truncate long values for readability</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">:</span>
-                <span class="n">display_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span><span class="p">[:</span><span class="mi">50</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;...&quot;</span>
+                <span class="n">display_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span><span class="p">[:</span><span class="mi">50</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"..."</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">display_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Value: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">display_val</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Value: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">display_val</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'yellow'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">:</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Hint: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Hint: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"green"</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ChartBookError.exit_with_message">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.exit_with_message">[docs]</a>
-    <span class="k">def</span> <span class="nf">exit_with_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print formatted message to stderr and exit with code 1.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">exit_with_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Print formatted message to stderr and exit with code 1.</span>
 
 <span class="sd">        :raises SystemExit: Always exits with code 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format_message</span><span class="p">(),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 </div>
@@ -475,8 +533,8 @@ document.write(`
 
 <div class="viewcode-block" id="ValidationError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ValidationError">[docs]</a>
-<span class="k">class</span> <span class="nc">ValidationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a value fails security validation.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ValidationError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a value fails security validation.</span>
 
 <span class="sd">    This exception carries additional context that can be used to generate</span>
 <span class="sd">    user-friendly error messages for the CLI.</span>
@@ -485,16 +543,16 @@ document.write(`
 <span class="sd">        field_name: Name of the field that failed validation.</span>
 <span class="sd">        invalid_value: The value that failed validation.</span>
 <span class="sd">        hint: A helpful hint about how to fix the error.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">field_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">invalid_value</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a ValidationError.</span>
+<span class="w">        </span><span class="sd">"""Initialize a ValidationError.</span>
 
 <span class="sd">        :param message: The error message.</span>
 <span class="sd">        :type message: str</span>
@@ -504,7 +562,7 @@ document.write(`
 <span class="sd">        :type invalid_value: str, optional</span>
 <span class="sd">        :param hint: A helpful hint about how to fix the error.</span>
 <span class="sd">        :type hint: str, optional</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">field_name</span> <span class="o">=</span> <span class="n">field_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">invalid_value</span> <span class="o">=</span> <span class="n">invalid_value</span>
@@ -512,14 +570,14 @@ document.write(`
 
 <div class="viewcode-block" id="ValidationError.to_chartbook_error">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ValidationError.to_chartbook_error">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_chartbook_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartBookError</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert to ChartBookError for CLI display.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_chartbook_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartBookError</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Convert to ChartBookError for CLI display.</span>
 
 <span class="sd">        :param file_path: Path to the file where the error occurred.</span>
 <span class="sd">        :type file_path: Path, optional</span>
 <span class="sd">        :returns: A ChartBookError instance ready for CLI display.</span>
 <span class="sd">        :rtype: ChartBookError</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">ChartBookError</span><span class="p">(</span>
             <span class="n">message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
             <span class="n">file_path</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span>
@@ -533,8 +591,8 @@ document.write(`
 
 <div class="viewcode-block" id="ProjectRootNotFoundError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ProjectRootNotFoundError">[docs]</a>
-<span class="k">class</span> <span class="nc">ProjectRootNotFoundError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when the project root directory cannot be found.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProjectRootNotFoundError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when the project root directory cannot be found.</span>
 
 <span class="sd">    This exception is raised by `get_project_root()` when no marker file</span>
 <span class="sd">    (e.g., .git, pyproject.toml, .env) can be found within the search limit.</span>
@@ -543,9 +601,9 @@ document.write(`
 <span class="sd">        start_path: The directory from which the search started.</span>
 <span class="sd">        markers: The marker files/directories that were searched for.</span>
 <span class="sd">        max_levels: The maximum number of parent directories searched.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">start_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">markers</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
@@ -555,38 +613,231 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="n">markers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_levels</span> <span class="o">=</span> <span class="n">max_levels</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Could not find project root from </span><span class="si">{</span><span class="n">start_path</span><span class="si">}</span><span class="s2">. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Searched </span><span class="si">{</span><span class="n">max_levels</span><span class="si">}</span><span class="s2"> levels for markers: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Set the BASE_DIR environment variable or ensure one of these markers exists.&quot;</span>
+            <span class="sa">f</span><span class="s2">"Could not find project root from </span><span class="si">{</span><span class="n">start_path</span><span class="si">}</span><span class="s2">. "</span>
+            <span class="sa">f</span><span class="s2">"Searched </span><span class="si">{</span><span class="n">max_levels</span><span class="si">}</span><span class="s2"> levels for markers: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span><span class="si">}</span><span class="s2">. "</span>
+            <span class="sa">f</span><span class="s2">"Set the BASE_DIR environment variable or ensure one of these markers exists."</span>
         <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="CatalogNotConfiguredError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError">[docs]</a>
-<span class="k">class</span> <span class="nc">CatalogNotConfiguredError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when no catalog path is configured and none was provided.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CatalogNotConfiguredError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when no catalog path is configured and none was provided.</span>
 
 <span class="sd">    This exception is raised by data loading functions when no catalog_path</span>
 <span class="sd">    argument is given and no default catalog is set in ~/.chartbook/settings.toml.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        settings_path: Path to the settings file that should be configured.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings_path</span> <span class="o">=</span> <span class="n">settings_path</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;No catalog configured. Either pass catalog_path= to data.load() &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;or run &#39;chartbook config&#39; to set a default catalog in </span><span class="si">{</span><span class="n">settings_path</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"No catalog configured. Either pass catalog_path= to data.load() "</span>
+            <span class="sa">f</span><span class="s2">"or run 'chartbook config' to set a default catalog in </span><span class="si">{</span><span class="n">settings_path</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ManifestNotFoundError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.ManifestNotFoundError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ManifestNotFoundError</span><span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when no chartbook.toml encloses the place a lookup started from.</span>
+
+<span class="sd">    A bare asset name resolves against the manifest of the pipeline the</span>
+<span class="sd">    caller is in, found by walking up the directory tree.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        start_dirs: The directories the upward search started from.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_dirs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">start_dirs</span><span class="p">)</span>
+        <span class="n">searched</span> <span class="o">=</span> <span class="s2">" or "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_dirs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"No chartbook.toml found in </span><span class="si">{</span><span class="n">searched</span><span class="si">}</span><span class="s2">, or in any parent "</span>
+            <span class="sa">f</span><span class="s2">"directory. A bare asset name resolves against the chartbook.toml "</span>
+            <span class="sa">f</span><span class="s2">"of the pipeline you are in: run from inside a pipeline, or say "</span>
+            <span class="sa">f</span><span class="s2">"which one with project_dir (--project-dir on the command line)."</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="AssetNotDeclaredError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.AssetNotDeclaredError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AssetNotDeclaredError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a pipeline's chartbook.toml declares no such asset.</span>
+
+<span class="sd">    The manifest is the single source of truth for where assets live, so a</span>
+<span class="sd">    path is only handed out for a name it declares. The message says which</span>
+<span class="sd">    table to add, or, if the name is declared as another kind of asset, how</span>
+<span class="sd">    to refer to that.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name: The asset name that was asked for.</span>
+<span class="sd">        kind: The kind of asset that was asked for.</span>
+<span class="sd">        manifest_path: The chartbook.toml that was searched.</span>
+<span class="sd">        declared: The asset names it does declare, by table.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">manifest_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">declared</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_KIND</span><span class="p">,</span>
+        <span class="n">example_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kind</span> <span class="o">=</span> <span class="n">kind</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manifest_path</span> <span class="o">=</span> <span class="n">manifest_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declared</span> <span class="o">=</span> <span class="n">declared</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="n">KIND_TABLES</span><span class="p">[</span><span class="n">kind</span><span class="p">]</span>
+        <span class="n">kind_of</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">KIND_TABLES</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"No </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> named </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is declared in </span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">."</span><span class="p">]</span>
+
+        <span class="n">other_kinds</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">kind_of</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">table</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">other_kinds</span><span class="p">:</span>
+            <span class="n">other</span> <span class="o">=</span> <span class="n">other_kinds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"It is declared as a </span><span class="si">{</span><span class="n">other</span><span class="si">}</span><span class="s2">: refer to it as </span><span class="si">{</span><span class="n">other</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">'/'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">name</span><span class="si">!r}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"(in Python, chartbook.assets.path(</span><span class="si">{</span><span class="n">other</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">'/'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">name</span><span class="si">!r}</span><span class="s2">))."</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">close</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">declared</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="p">[]),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
+                <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">?"</span><span class="p">)</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"To register it, add a table to that file, for example:"</span><span class="p">,</span> <span class="s2">""</span><span class="p">]</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"    [</span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">'    path = "</span><span class="si">{</span><span class="n">example_path</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s2">"..."</span><span class="si">}</span><span class="s1">"'</span><span class="p">)</span>
+
+        <span class="n">listing</span> <span class="o">=</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">declared</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">names</span>
+        <span class="p">)</span>
+        <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Declared assets: </span><span class="si">{</span><span class="n">listing</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="DependencyNotDeclaredError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.DependencyNotDeclaredError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DependencyNotDeclaredError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a reference names a pipeline that is not a declared dependency.</span>
+
+<span class="sd">    A pipeline may read only from the pipelines its ``[dependencies]``</span>
+<span class="sd">    declares, so that what it depends on can be read off its manifest</span>
+<span class="sd">    without running anything. The message says what to add; and when the</span>
+<span class="sd">    name is a declared or known pipeline's but for the case of its letters</span>
+<span class="sd">    (``Acme/Rates`` for ``acme/rates``), it says so, since a scope derived</span>
+<span class="sd">    from a remote is in lowercase and nothing is matched by guessing.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        reference: The reference that was asked for, as text.</span>
+<span class="sd">        pipeline: The pipeline it names.</span>
+<span class="sd">        manifest_path: The chartbook.toml that does not declare it.</span>
+<span class="sd">        declared: The dependencies it does declare.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">reference</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">manifest_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">declared</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">found_at</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">known</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{},</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        :param found_at: Where the catalog says the pipeline is, as its key</span>
+<span class="sd">            there and its folder relative to the manifest's, if it does.</span>
+<span class="sd">        :param known: Pipeline IDs known here besides the declared keys,</span>
+<span class="sd">            each with the key of the declared dependency it is the ID of</span>
+<span class="sd">            (``rates = { id = "acme/rates" }``, a folder's own ID), or None</span>
+<span class="sd">            for one the lockfile pins or the store has a snapshot of. Only</span>
+<span class="sd">            to suggest from.</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reference</span> <span class="o">=</span> <span class="n">reference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">pipeline</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manifest_path</span> <span class="o">=</span> <span class="n">manifest_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declared</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span>
+
+        <span class="n">known</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">known</span><span class="p">)</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="n">in_another_case</span><span class="p">([</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">,</span> <span class="o">*</span><span class="n">known</span><span class="p">],</span> <span class="n">pipeline</span><span class="p">)</span>
+        <span class="n">declared_as</span> <span class="o">=</span> <span class="n">other</span> <span class="k">if</span> <span class="n">other</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">declared</span> <span class="k">else</span> <span class="n">known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="k">if</span> <span class="n">other</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">pipeline</span><span class="p">):]</span> <span class="k">if</span> <span class="n">reference</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="n">found_at</span><span class="p">:</span>
+            <span class="n">key</span><span class="p">,</span> <span class="n">where</span> <span class="o">=</span> <span class="n">found_at</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">other</span> <span class="ow">or</span> <span class="n">pipeline</span>
+            <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"../</span><span class="si">{</span><span class="n">key</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">reference</span><span class="si">!r}</span><span class="s2"> names an asset of the pipeline "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2">, which is not declared in [dependencies] of "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">manifest_path</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">close</span> <span class="o">=</span> <span class="p">[</span><span class="n">other</span><span class="p">]</span> <span class="k">if</span> <span class="n">other</span> <span class="k">else</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">close</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Did you mean </span><span class="si">{</span><span class="n">close</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">?"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">other</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"An ID is case-sensitive, and a scope derived from a remote is in lowercase."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found_at</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Your catalog has it, as </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">other</span> <span class="ow">and</span> <span class="n">declared_as</span> <span class="o">==</span> <span class="n">other</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"It is declared: read it as </span><span class="si">{</span><span class="n">other</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rest</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">declared_as</span><span class="p">:</span>
+            <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"It is declared as </span><span class="si">{</span><span class="n">declared_as</span><span class="si">!r}</span><span class="s2">: read it as </span><span class="si">{</span><span class="n">declared_as</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rest</span><span class="si">!r}</span><span class="s2"> or </span><span class="si">{</span><span class="n">other</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rest</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span>
+                <span class="s2">""</span><span class="p">,</span>
+                <span class="s2">"To read from another pipeline, say where it is, then pin it:"</span><span class="p">,</span>
+                <span class="s2">""</span><span class="p">,</span>
+                <span class="s2">"    [dependencies]"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s1">'    "</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">" = </span><span class="se">{{</span><span class="s1"> path = "</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s1">" </span><span class="se">}}</span><span class="s1">'</span><span class="p">,</span>
+                <span class="s2">""</span><span class="p">,</span>
+                <span class="s2">"    $ chartbook pin"</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Declared dependencies: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">declared</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'(none)'</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="AssetNotPinnedError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.AssetNotPinnedError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AssetNotPinnedError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when another pipeline's asset has no pinned copy to resolve to.</span>
+
+<span class="sd">    A reference to another pipeline's asset resolves to the copy that</span>
+<span class="sd">    ``chartbook.lock`` pins, in the store, and never to that pipeline's</span>
+<span class="sd">    working directory. So there has to be a pin, and its bytes have to be</span>
+<span class="sd">    in the store. The message says which is missing and what to run.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        asset: The asset's ID, as the lockfile would have it.</span>
+<span class="sd">        reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,</span>
+<span class="sd">            ``"not_built"``, ``"not_in_store"``, ``"not_synced"`` (the</span>
+<span class="sd">            store has the object, and not all of its bytes yet),</span>
+<span class="sd">            ``"no_snapshot"`` (nothing to pin from), ``"working"`` (a batch</span>
+<span class="sd">            run does not read a working folder), ``"in_source"`` (a table</span>
+<span class="sd">            the pinned snapshot did not write out), or ``"no_pipeline"`` (a</span>
+<span class="sd">            batch run outside any pipeline, where nothing records a read).</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">asset</span> <span class="o">=</span> <span class="n">asset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">reason</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="handle_validation_error">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.handle_validation_error">[docs]</a>
-<span class="k">def</span> <span class="nf">handle_validation_error</span><span class="p">(</span><span class="n">error</span><span class="p">:</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle validation error with user-friendly output.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">handle_validation_error</span><span class="p">(</span><span class="n">error</span><span class="p">:</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Handle validation error with user-friendly output.</span>
 
 <span class="sd">    This function converts a ValidationError to a ChartBookError and</span>
 <span class="sd">    displays it to the user before exiting.</span>
@@ -595,7 +846,7 @@ document.write(`
 <span class="sd">    :type error: ValidationError</span>
 <span class="sd">    :param config_path: Path to the configuration file that caused the error.</span>
 <span class="sd">    :type config_path: Path</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">chartbook_error</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">to_chartbook_error</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="n">config_path</span><span class="p">)</span>
     <span class="n">chartbook_error</span><span class="o">.</span><span class="n">exit_with_message</span><span class="p">()</span></div>
 
@@ -604,15 +855,15 @@ document.write(`
 <div class="viewcode-block" id="MissingFile">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingFile">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">MissingFile</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Information about a missing source file.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MissingFile</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Information about a missing source file.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        file_path: The path to the missing file.</span>
-<span class="sd">        file_type: The type of file (e.g., &quot;notebook&quot;, &quot;chart&quot;, &quot;dataframe&quot;).</span>
+<span class="sd">        file_type: The type of file (e.g., "notebook", "chart", "dataframe").</span>
 <span class="sd">        item_id: The ID of the item in chartbook.toml that references this file.</span>
 <span class="sd">        pipeline_id: The pipeline ID that contains this item.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">file_path</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">file_type</span><span class="p">:</span> <span class="nb">str</span>
@@ -623,105 +874,115 @@ document.write(`
 
 <div class="viewcode-block" id="MissingSourceFilesError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError">[docs]</a>
-<span class="k">class</span> <span class="nc">MissingSourceFilesError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when source files referenced in chartbook.toml are not found.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MissingSourceFilesError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when source files referenced in chartbook.toml are not found.</span>
 
 <span class="sd">    This exception carries a list of missing files that can be used to generate</span>
 <span class="sd">    user-friendly error messages for the CLI.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        missing_files: List of MissingFile objects describing each missing file.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        hint: The lines the CLI message ends with, saying what to do.</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MissingFile</span><span class="p">]):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a MissingSourceFilesError.</span>
+    <span class="c1">#: The hint when the caller gives none. It suits a catalog, where</span>
+    <span class="c1">#: --no-strict builds the pipelines that are not named.</span>
+    <span class="n">DEFAULT_HINT</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">"Ensure these files exist or update the paths in chartbook.toml."</span><span class="p">,</span>
+        <span class="s2">"Use --no-strict to skip affected pipelines instead of failing."</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">missing_files</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MissingFile</span><span class="p">],</span> <span class="n">hint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialize a MissingSourceFilesError.</span>
 
 <span class="sd">        :param missing_files: List of MissingFile objects.</span>
 <span class="sd">        :type missing_files: list[MissingFile]</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        :param hint: What to do about them, a line each; the default suits</span>
+<span class="sd">            a catalog.</span>
+<span class="sd">        :type hint: list[str] | None</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span> <span class="o">=</span> <span class="n">missing_files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hint</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">hint</span><span class="p">)</span> <span class="k">if</span> <span class="n">hint</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_HINT</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_format_message</span><span class="p">())</span>
 
-    <span class="k">def</span> <span class="nf">_format_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format a simple message listing the count of missing files.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Format a simple message listing the count of missing files.</span>
 
 <span class="sd">        :returns: A formatted string describing the error.</span>
 <span class="sd">        :rtype: str</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing source file(s) referenced in chartbook.toml&quot;</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing source file(s) referenced in chartbook.toml"</span>
 
 <div class="viewcode-block" id="MissingSourceFilesError.format_cli_message">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.format_cli_message">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_cli_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format a detailed, user-friendly message for CLI output.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_cli_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Format a detailed, user-friendly message for CLI output.</span>
 
 <span class="sd">        :returns: A formatted string ready for CLI display with colors.</span>
 <span class="sd">        :rtype: str</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Error: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="o">+</span> <span class="s2">&quot;Missing source files referenced in chartbook.toml&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;The following files were not found:&quot;</span><span class="p">,</span>
+            <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="o">+</span> <span class="s2">"Missing source files referenced in chartbook.toml"</span><span class="p">,</span>
+            <span class="s2">""</span><span class="p">,</span>
+            <span class="s2">"The following files were not found:"</span><span class="p">,</span>
         <span class="p">]</span>
 
         <span class="k">for</span> <span class="n">mf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">:</span>
             <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;cyan&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="p">),</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'cyan'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
             <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;    Referenced by: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s1">s.</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;in pipeline </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">mf</span><span class="o">.</span><span class="n">pipeline_id</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"    Referenced by: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s1">s.</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s1">'</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'yellow'</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"in pipeline </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">mf</span><span class="o">.</span><span class="n">pipeline_id</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'yellow'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
 
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-            <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Hint: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
-            <span class="o">+</span> <span class="s2">&quot;Ensure these files exist or update the paths in chartbook.toml.&quot;</span>
-        <span class="p">)</span>
-        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;      Use --no-strict to skip affected pipelines instead of failing.&quot;</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+        <span class="n">first</span><span class="p">,</span> <span class="o">*</span><span class="n">rest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hint</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Hint: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"green"</span><span class="p">)</span> <span class="o">+</span> <span class="n">first</span><span class="p">)</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="sa">f</span><span class="s2">"      </span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">rest</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MissingSourceFilesError.format_warnings">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.format_warnings">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format individual warning messages for each missing file.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Format individual warning messages for each missing file.</span>
 
 <span class="sd">        :returns: A list of warning message strings.</span>
 <span class="sd">        :rtype: list[str]</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">warnings</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">mf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Warning: Missing </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2"> file: </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="si">}</span><span class="s2"> &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;(referenced by </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2">s.</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s2"> in pipeline </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="sa">f</span><span class="s2">"Warning: Missing </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2"> file: </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="sa">f</span><span class="s2">"(referenced by </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2">s.</span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s2"> in pipeline </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">)"</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">warnings</span></div>
 
 
 <div class="viewcode-block" id="MissingSourceFilesError.get_pipelines_to_skip">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.get_pipelines_to_skip">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_pipelines_to_skip</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the set of pipeline IDs that have missing files.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pipelines_to_skip</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the set of pipeline IDs that have missing files.</span>
 
 <span class="sd">        :returns: Set of pipeline IDs with at least one missing file.</span>
 <span class="sd">        :rtype: set[str]</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="p">{</span><span class="n">mf</span><span class="o">.</span><span class="n">pipeline_id</span> <span class="k">for</span> <span class="n">mf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">}</span></div>
 
 
 <div class="viewcode-block" id="MissingSourceFilesError.format_skip_warnings">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.format_skip_warnings">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_skip_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format per-pipeline skip warnings grouped by pipeline.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_skip_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Format per-pipeline skip warnings grouped by pipeline.</span>
 
 <span class="sd">        :returns: A list of warning message strings, one header per pipeline</span>
 <span class="sd">            followed by its missing files.</span>
 <span class="sd">        :rtype: list[str]</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
 
         <span class="n">by_pipeline</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">MissingFile</span><span class="p">]]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">mf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_files</span><span class="p">:</span>
@@ -730,24 +991,49 @@ document.write(`
         <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">by_pipeline</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Warning: Skipping pipeline &#39;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">&#39; due to &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing file(s):&quot;</span>
+                <span class="sa">f</span><span class="s2">"Warning: Skipping pipeline '</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">' due to "</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing file(s):"</span>
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">mf</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_type</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">mf</span><span class="o">.</span><span class="n">file_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">warnings</span></div>
 
 
 <div class="viewcode-block" id="MissingSourceFilesError.exit_with_message">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.exit_with_message">[docs]</a>
-    <span class="k">def</span> <span class="nf">exit_with_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print formatted message to stderr and exit with code 1.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">exit_with_message</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Print formatted message to stderr and exit with code 1.</span>
 
 <span class="sd">        :raises SystemExit: Always exits with code 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format_cli_message</span><span class="p">(),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 </div>
+
+
+
+<div class="viewcode-block" id="VersionNotFoundError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.errors.html#chartbook.errors.VersionNotFoundError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VersionNotFoundError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a reference names a version of an asset that cannot be found.</span>
+
+<span class="sd">    A version is made by a snapshot (``chartbook run --snapshot``) and is</span>
+<span class="sd">    named by the start of its content hash, ``model/x@7f3a9c2e41b0``, or by a</span>
+<span class="sd">    label the manifest gives it, ``model/x@champion``.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        asset: The asset's reference, without the revision.</span>
+<span class="sd">        rev: The revision that was asked for.</span>
+<span class="sd">        reason: What is wrong: ``"no_such_version"``, ``"ambiguous"`` or</span>
+<span class="sd">            ``"not_in_store"``.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rev</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">asset</span> <span class="o">=</span> <span class="n">asset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rev</span> <span class="o">=</span> <span class="n">rev</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">reason</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
 
 </pre></div>
 
@@ -787,7 +1073,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>
@@ -811,8 +1097,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
-<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the versioned catalog &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/versioned-catalog';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Design: trust, for a build of files on this machine" href="trust.html" />
+    <link rel="prev" title="Design: stores and backends" href="stores-and-backends.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/versioned-catalog.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the versioned catalog</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-use-cases-this-serves">The use cases this serves</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#index-and-snapshot-the-conclusion">Index and snapshot: the conclusion</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalog-shows-every-version-of-every-pipeline">The catalog shows every version of every pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-the-assistant">For the assistant</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-versioned-catalog">
+<h1>Design: the versioned catalog<a class="headerlink" href="#design-the-versioned-catalog" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A design document, written 2026-10-16 after the maintainer and the last person to work on this
+talked through what an index is for and what a snapshot is for. The conclusion is here, with the
+plan it leads to. Status: <strong>the self-sufficient snapshot (step 1) is built; the rest is proposed.</strong>
+What the maintainer decided is marked <em>decided</em>.</p>
+</div>
+<section id="the-use-cases-this-serves">
+<h2>The use cases this serves<a class="headerlink" href="#the-use-cases-this-serves" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>A project grows and is split into repositories. One depends on the outputs of another, and
+the dependencies diverge: <code class="docutils literal notranslate"><span class="pre">B</span></code> reads <code class="docutils literal notranslate"><span class="pre">A</span></code> at one version while <code class="docutils literal notranslate"><span class="pre">C</span></code> reads <code class="docutils literal notranslate"><span class="pre">A</span></code> at a later one.</p></li>
+<li><p>Depending upstream must be reproducible and show its lineage: which version of what, by
+commit and by hash.</p></li>
+<li><p>One place to browse everything a person is working on, across every pipeline and every
+version of each, with links that follow the real dependencies.</p></li>
+<li><p>An assistant browses the same thing from the command line.</p></li>
+<li><p>While working on one repository, its own site is rebuilt now and then, for the author and
+for collaborators, from whatever is in the folder.</p></li>
+</ol>
+<p>The first two exist: declared dependencies, pins by commit and hash, snapshots in the store, the
+provenance panel. The fifth is today’s pipeline site. The third and fourth are what this page
+plans.</p>
+</section>
+<section id="index-and-snapshot-the-conclusion">
+<h2>Index and snapshot: the conclusion<a class="headerlink" href="#index-and-snapshot-the-conclusion" title="Link to this heading">#</a></h2>
+<p><em>Decided 2026-10-16.</em> The two documents stay two documents, and the record format they share is
+the only merge. They are different acts:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>A <strong>snapshot</strong></p></th>
+<th class="head"><p>An <strong>index</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Is</p></td>
+<td><p>A preservation act: the bytes one pipeline built at one commit, copied into the store, declared ready</p></td>
+<td><p>A description of what a site shows, taken from whatever is in the folders now</p></td>
+</tr>
+<tr class="row-odd"><td><p>Needs</p></td>
+<td><p>Everything committed, the bytes present</p></td>
+<td><p>Nothing committed; a pipeline with missing outputs can be skipped</p></td>
+</tr>
+<tr class="row-even"><td><p>Covers</p></td>
+<td><p>One pipeline, once</p></td>
+<td><p>Many pipelines at once, the catalog’s own facts, and comparisons no one pipeline can make: a model out of date against its inputs now, versions read across commits</p></td>
+</tr>
+<tr class="row-odd"><td><p>Lives</p></td>
+<td><p>In the store</p></td>
+<td><p>Beside the site, and a copy without machine paths travels with it</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Neither is derivable from the other. A snapshot cannot be made from an index: the index has
+hashes and not bytes, no commit, and may describe a half-built folder. An index can almost be
+assembled from snapshots, but only from every pipeline’s snapshots plus the files at those
+commits plus the store, and the result describes what was declared ready rather than what is in
+front of you. That is a different site, and a useful one; it is the catalog below.</p>
+<p>What was wrong before this conversation: a snapshot could not render a site. The index records
+facts and pointers, not the write-ups, notebooks, or chart files, and those came only from a
+checkout. So a version’s site, and a version’s data dictionary as it stood when the data was
+made, lived in git and nowhere else. The maintainer’s point: the snapshot of the data should
+carry the description of the data.</p>
+<p><strong>So a snapshot holds the index of its version.</strong> Not a merge; nesting. A snapshot contains the
+pipeline’s own index at that commit and the small documentation files a writer needs; a site’s
+index is assembled from version indexes plus the comparisons only a site can make. The
+vocabulary page says this now, where it used to say the two “converge”.</p>
+</section>
+<section id="the-catalog-shows-every-version-of-every-pipeline">
+<h2>The catalog shows every version of every pipeline<a class="headerlink" href="#the-catalog-shows-every-version-of-every-pipeline" title="Link to this heading">#</a></h2>
+<p><em>Decided 2026-10-16.</em> A catalog shows every snapshot in the store of every pipeline it knows,
+found by pipeline ID, plus the <strong>working version</strong> of each pipeline whose folder is on this
+machine: the folder as it is, committed or not, built or not, which is what the pipeline’s own
+site shows too. The store is the source of versions; the catalog’s manifest is the source of
+working copies, as it is today. A catalog with no snapshots is today’s catalog, so nothing
+breaks. “Latest” is not a word here: the working version is the working version, and the newest
+snapshot is the newest snapshot.</p>
+<p>What that needs:</p>
+<ol class="arabic simple">
+<li><p><strong>Which versions.</strong> Every snapshot of every pipeline the catalog lists, and the working
+version of each whose folder is present. A snapshot that <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> removes leaves the catalog
+with it: gc is the lifecycle.</p></li>
+<li><p><strong>Pages per version</strong>, each set under a path that carries the pipeline ID and the version:
+the commit’s start and the snapshot’s time, since one commit may have several snapshots when
+a pull script brought other data. Static pages are cheap.</p></li>
+<li><p><strong>Links follow pins.</strong> <code class="docutils literal notranslate"><span class="pre">C</span></code>’s pages link to <code class="docutils literal notranslate"><span class="pre">A</span></code> at the snapshot <code class="docutils literal notranslate"><span class="pre">C</span></code> pinned; <code class="docutils literal notranslate"><span class="pre">B</span></code>’s to the
+other. The link scheme is a function of the writer for this reason.</p></li>
+<li><p><strong>A version list on every pipeline page</strong>: the working version first, then snapshots newest
+first, with the commit and the date, each a link to the same page in that version or to the
+version’s front page where the page does not exist there. Both writers render it as a list; a
+drop-down is theme work.</p></li>
+<li><p><strong>Comparisons stay within a version.</strong> An out-of-date notice compares what a version
+recorded with what it pinned, never with a version it did not pin.</p></li>
+<li><p><strong>Rendering a snapshot costs once.</strong> A snapshot never changes, so its pages are rendered the
+first time a catalog build sees it and kept; only working versions are rendered every build.
+The incremental build is the home for that rule.</p></li>
+<li><p><strong>Search is scoped</strong> to working versions and newest snapshots by default, or every hit is a
+near-duplicate.</p></li>
+<li><p><strong>Diagnostics and policy</strong> apply to working versions; a snapshot’s metadata is history.</p></li>
+</ol>
+<p>A shared store makes a shared catalog: with the S3 store, a team’s catalog is built from the
+bucket, and that is the use case for several machines (<a class="reference internal" href="stores-and-backends.html"><span class="doc">Design: stores and backends</span></a>).</p>
+</section>
+<section id="for-the-assistant">
+<h2>For the assistant<a class="headerlink" href="#for-the-assistant" title="Link to this heading">#</a></h2>
+<p>The catalog’s <code class="docutils literal notranslate"><span class="pre">index.json</span></code> is the assistant’s entry point already. Generated sites should also
+ship an assistant file written from the index, one line per pipeline, dataframe, chart and
+model with where its page is, so that a command-line agent finds its way without scraping.</p>
+</section>
+<section id="the-order-of-work">
+<h2>The order of work<a class="headerlink" href="#the-order-of-work" title="Link to this heading">#</a></h2>
+<ol class="arabic">
+<li><p><strong>The self-sufficient snapshot.</strong> The snapshot carries the pipeline’s own index at that
+commit, in the published form, as an object in the store, and the documentation files a
+writer needs that are not assets: the manifest, the lockfile, the README, every write-up, the
+pipeline’s own site pages, the logo and favicon. Notebooks, notes, charts, dataframes and
+models are assets already. A snapshot can then be laid out as a folder from the store alone
+and a site built from that folder, which is the test. <em>Built 2026-10-16:</em> <code class="docutils literal notranslate"><span class="pre">Snapshot.index</span></code>
+and <code class="docutils literal notranslate"><span class="pre">Snapshot.documents</span></code> in the record, written by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>, kept alive by <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> like the assets; <code class="docutils literal notranslate"><span class="pre">chartbook.snapshot.materialize()</span></code> lays a snapshot out as a folder, and a
+test builds a site from one with the repository gone. As built, after a review and a live run
+on the examples:</p>
+<ul class="simple">
+<li><p><strong>What is taken, and how.</strong> Documents are named by the manifest’s text, so a manifest a
+docs build refuses still keeps them; the index is best-effort for the same reason, and the
+command says in one line why it was left out (it is not tried again at that commit unless
+the bytes change). Only files git tracks are taken, asked of git with literal pathspecs; a
+path must be plain (<code class="docutils literal notranslate"><span class="pre">safe_relative</span></code>: nothing absolute on any system, no <code class="docutils literal notranslate"><span class="pre">..</span></code>, no part named
+<code class="docutils literal notranslate"><span class="pre">.git</span></code>, no <code class="docutils literal notranslate"><span class="pre">:</span></code>), and no file that is a link or under one is taken; each one not kept is
+said. The review found that without these, glob characters, git’s pathspec magic and tracked
+links each reached files outside the folder.</p></li>
+<li><p><strong>A record is untrusted.</strong> A store may be shared, so <code class="docutils literal notranslate"><span class="pre">materialize</span></code> judges every path in a
+record by the same rule, follows no link inside an object, writes no <code class="docutils literal notranslate"><span class="pre">.git</span></code>, and writes
+nothing until every object the record names is there.</p></li>
+<li><p><strong>A laid-out version keeps its identity.</strong> <code class="docutils literal notranslate"><span class="pre">materialize</span></code> writes <code class="docutils literal notranslate"><span class="pre">.chartbook-version.json</span></code>
+(<code class="docutils literal notranslate"><span class="pre">chartbook.identity.VERSION_FILE</span></code>): the pipeline, the commit, when it was made and when its
+code last changed, from its index. A pipeline whose ID came from its folder’s name and its
+git remote keeps that ID in a folder of any name, and its code time is not asked of a git it
+does not have. The live run found both missing.</p></li>
+<li><p><strong>What a build writes and git does not keep</strong> is written back where the snapshot recorded
+it: a model’s scores to its <code class="docutils literal notranslate"><span class="pre">metrics_path</span></code>; a <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> the manifest names is made if none
+of its files were kept. A table or query dataframe is in the store as parquet while the
+manifest names its database, so its page in a laid-out version says it is not built; the
+catalog’s renderer (step 2) will read the parquet instead.</p></li>
+<li><p><strong>Cost.</strong> Making the index hashes every file again, as a docs build would; for large data
+that doubles the hashing a snapshot does. Accepted for an index that says exactly what a
+build of that commit would say.</p></li>
+<li><p><strong>A second review</strong> found more, all fixed with tests and every exploit script rerun: a
+tracked decoy whose name differs from an ignored file’s only by a trailing space or a <code class="docutils literal notranslate"><span class="pre">\</span></code>
+(git’s names are now taken exactly, never put in order, and decoded losslessly); <code class="docutils literal notranslate"><span class="pre">.git</span></code>
+aliases that HFS+ and NTFS make of other names (the rule is now git’s own: case, the
+invisible code points HFS+ drops, trailing dots and spaces, <code class="docutils literal notranslate"><span class="pre">git~1</span></code>), with a last check
+after layout that removes any <code class="docutils literal notranslate"><span class="pre">.git</span></code> and refuses the folder; a store object folder that is
+itself a link (the folder store now refuses one); a file swapped for a link between being
+looked at and being read (a document is opened without following a link and must be the
+very file looked at); and the version file honoured where it does not belong (it is read
+only in a folder that is not a repository’s own and where git does not track it, never
+when too large, and a laid-out version never has git asked about its code time). A named
+file git does not track is now said too.</p></li>
+</ul>
+</li>
+<li><p><strong>The catalog renders snapshots.</strong> Working copies as today, plus the newest snapshot of each
+pipeline, each version at its own path. This proves rendering from the store. <em>Built
+2026-10-16, with every snapshot rather than the newest:</em> a version’s site is built once on a
+machine and kept, so all of them cost what one did. Each Pipeline record of the index lists
+its <code class="docutils literal notranslate"><span class="pre">snapshots</span></code> in the store, newest first. A catalog build lays each one out from the store
+(<code class="docutils literal notranslate"><span class="pre">materialize</span></code>), builds it as the pipeline’s own site in a process of its own, with the site
+tool its manifest names, keeps it under <code class="docutils literal notranslate"><span class="pre">versions/</span></code> in the machine’s cache, keyed by the
+ChartBook version, and copies it into the catalog’s site at
+<code class="docutils literal notranslate"><span class="pre">versions/&lt;pipeline&gt;/&lt;commit&gt;-&lt;made_at&gt;/</span></code>. A version that cannot be built gets a page that says
+why, and a <code class="docutils literal notranslate"><span class="pre">warning:</span></code> line, so a link to it never leads nowhere. A laid-out folder’s Pipeline
+record says <code class="docutils literal notranslate"><span class="pre">from_snapshot</span></code>, and its front page says which snapshot it is. Built otherwise
+than item 4 of the section above: the version list is one catalog page, <code class="docutils literal notranslate"><span class="pre">cb/versions.md</span></code>, every
+pipeline with its working version and its snapshots, the commit, the date, whether <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> built it and which pipeline of the catalog pins it; not a list on each pipeline page,
+because the catalog’s own pages are written on every build and a pipeline’s page is not when
+an incremental build reuses it. Search is scoped by construction: each version is its own site,
+so the catalog’s search finds the working versions only.</p>
+<p><em>After the review, 2026-10-16.</em> Building versions automatically means running a docs build on
+files anyone who can write the store may have written, so a version’s build runs as a build of
+files that are not the user’s own (<code class="docutils literal notranslate"><span class="pre">chartbook.config.untrusted_source</span></code>): every template, a
+project’s own included, renders in Jinja’s sandbox, and a version takes no template from its
+folder at all; its site folder gives only pages and pictures; no page takes in a file
+(<code class="docutils literal notranslate"><span class="pre">file_insertion_enabled</span></code> off) and no picture or download that names a file outside the site is
+copied; notebooks are never run, as in any build; and each version’s build has a time limit.
+Two holes the review found are closed for every build, not only versions’: <code class="docutils literal notranslate"><span class="pre">conf.py</span></code> is
+rendered from the package’s own template, never from the build tree where a site page named
+<code class="docutils literal notranslate"><span class="pre">conf.py.j2</span></code> could stand in for it, and a site page may not be <code class="docutils literal notranslate"><span class="pre">conf.py*</span></code>, <code class="docutils literal notranslate"><span class="pre">_templates/</span></code> or the
+tool’s configuration. A snapshot record is checked when read (a full commit hash, a time as a
+snapshot writes one, a pipeline ID, a plain subdirectory), and <code class="docutils literal notranslate"><span class="pre">.</span></code> and <code class="docutils literal notranslate"><span class="pre">..</span></code> are no longer
+pipeline ID parts, so that no value in a record becomes a path outside the site or the cache;
+the review showed a forged <code class="docutils literal notranslate"><span class="pre">made_at</span></code> could otherwise delete and write folders anywhere. One
+record that cannot be read no longer hides every version; only a catalog’s index lists
+snapshots, so a pipeline’s published index carries no store history; the store is read twice
+per catalog build rather than once per pipeline; the kept sites are keyed by ChartBook’s
+version and a fingerprint of its code, so an edit to ChartBook builds them again; a version
+whose snapshot <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> removed is removed from the site, the incremental build’s tree
+included; and a staging folder a stopped build left is cleared.</p>
+<p><em>After a second review, 2026-10-16.</em> The restrictions above held against forged snapshots, and
+the data path did not: a forged manifest could name a DuckDB query that reads any file of the
+machine, or a dataframe path outside the folder, and the version’s pages showed the rows. In a
+build of files from a store, ChartBook now runs no table and no query at all (DuckDB refuses to
+open; the snapshot holds those rows as parquet, and the page says so), and the manifest loader
+refuses any path in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> or an asset table (<code class="docutils literal notranslate"><span class="pre">path</span></code> and every <code class="docutils literal notranslate"><span class="pre">*_path</span></code>) that is not a
+plain path inside the folder, so that version’s build stops and its page says why. Both
+forgeries were rerun against the fix: neither secret reaches the site.</p>
+</li>
+<li><p><strong>All versions.</strong> Every snapshot, links following pins, the version list, snapshot pages kept
+across builds, search scoped. <em>What remains after step 2:</em> links following pins, so that a
+page of <code class="docutils literal notranslate"><span class="pre">C</span></code> links to <code class="docutils literal notranslate"><span class="pre">A</span></code> at the version <code class="docutils literal notranslate"><span class="pre">C</span></code> pinned, inside a version’s site as in the catalog;
+a catalog entry by pipeline ID alone, for a pipeline whose folder is not on this machine; and
+clearing the kept sites, in the cache, of snapshots <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> removed. <em>Built 2026-10-16, in
+part, after a review:</em> the only input of another pipeline a page has is a model’s training
+data. In a catalog, a model’s “Trained On” links each such input to its page in the snapshot
+that held the bytes it was trained on (the index records it as <code class="docutils literal notranslate"><span class="pre">trained_from</span></code>, from
+<code class="docutils literal notranslate"><span class="pre">trained_with</span></code> and the store), and says when the pin has since moved; failing that, to the
+snapshot the lockfile pins for that input; failing that, to the working version, as before.
+The provenance panel links an input the lockfile pins to its page in the pinned snapshot; it
+linked nothing before. A link leads into a version only when the catalog shows that snapshot,
+and to the page that says why when its site could not be built, so the catalog builds the
+versions’ sites before its own pages. An incremental build regenerates a pipeline’s pages
+when any of this changes. <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> clears the kept site of every snapshot it removes. Not
+built: the same links inside a version’s own site, which is built once and kept, and so
+cannot know which other versions a catalog will show; its pages say the pinned commit and
+date in words. And a catalog entry by ID alone, which is the next step. <em>Built 2026-10-16:</em> a
+<code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> entry with no <code class="docutils literal notranslate"><span class="pre">path</span></code> names a pipeline whose folder is not on this machine; the
+catalog’s index has a Pipeline record for it with <code class="docutils literal notranslate"><span class="pre">location:</span> <span class="pre">{kind:</span> <span class="pre">store}</span></code>, named and
+described from its newest snapshot’s own index, and its <code class="docutils literal notranslate"><span class="pre">snapshots</span></code>; its page links its newest
+version and the Versions page; the manifest keeps it apart from the folder pipelines
+(<code class="docutils literal notranslate"><span class="pre">store_pipelines</span></code>), so <code class="docutils literal notranslate"><span class="pre">check</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span></code>, the incremental plan and the policy pass it by. That
+completes step 3. <em>Built 2026-10-16, after review:</em> what a snapshot says of its pipeline is
+someone else’s text reaching the catalog’s own, trusted build, so the writer shows its name,
+description and maintainer as plain text (each ASCII punctuation character a character
+reference) and its links only when they are plain web addresses; the description is the
+newest snapshot’s, the one the page links. A <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> entry takes only <code class="docutils literal notranslate"><span class="pre">path</span></code> and
+<code class="docutils literal notranslate"><span class="pre">disabled</span></code>, and a folder of the entry’s ID fills it in. A second review found that a page
+title (MkDocs) and Sphinx’s search results decode character references and set the text
+into HTML again, so HTML’s own characters (<code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">&gt;</span> <span class="pre">&amp;</span> <span class="pre">&quot;</span> <span class="pre">'</span></code>, backtick) are replaced by look-alikes
+first; the stored index is read only as a regular file, not through a link, and up to a
+limit. Not changed: a version’s own site is its owner’s pages, raw HTML included, served
+with the catalog, as a listed repository’s pages are; the guide says so. A third review
+(2026-10-16): a character whose normalized form (NFKD) holds one of HTML’s own is replaced
+too, with look-alikes that no normalization turns back, and <code class="docutils literal notranslate"><span class="pre">&amp;</span></code> becomes “and”; other text
+stays as written; a name of blank fillers is no name; the stored index is read up to 8 MiB.
+It also found that the S3 store wrote a file for any key under an object or under
+<code class="docutils literal notranslate"><span class="pre">snapshots/</span></code>, <code class="docutils literal notranslate"><span class="pre">..</span></code> included, outside its cache: a key that is not a plain path is now no
+file. A fourth review found that the fix hid legitimate files named with <code class="docutils literal notranslate"><span class="pre">:</span></code> or <code class="docutils literal notranslate"><span class="pre">\</span></code> on
+systems where those are ordinary (now refused on Windows only), that gc stopped on an object
+of stray keys, and that gc read whatever file a store’s root note named (now only a local
+<code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>). A fifth found that a lockfile on a Windows network drive is noted by a
+network path, which gc then took as gone; a note gc does not read now keeps its pins and is
+never forgotten.</p></li>
+<li><p><strong>An assistant file</strong> for generated sites, written from the index. <em>Built 2026-10-16:</em> it
+is called <code class="docutils literal notranslate"><span class="pre">llms.txt</span></code>, after the <a class="reference external" href="http://llmstxt.org">llmstxt.org</a> convention that agents already look for, and
+sits beside <code class="docutils literal notranslate"><span class="pre">index.json</span></code> at the root of every site. The site’s writer writes it from the
+index: a title and a summary, then a list each of pipelines, dataframes, charts and models,
+each line the name linking its page, the ID, and the description cut to one line. A
+version’s file says which snapshot the site is; a catalog’s lists each pipeline’s versions,
+each linking that version’s own <code class="docutils literal notranslate"><span class="pre">llms.txt</span></code>, or the page that says why its site could not be
+built. Text from a record is one line, with what would start a link escaped, so that the only
+links in it are the writer’s (in CommonMark; a renderer that links bare addresses may link
+one in a description). After review, the same day: the summary is the file’s own words
+only, and a description is in quotation marks after them, since a description at the start
+of a line made headings and lists (a version site’s summary was its owner’s description);
+a version’s file says its names and descriptions are its owner’s; a header says how to use
+an ID; each version is a line of its own, the newest ten, then the versions page.</p></li>
+<li><p><strong>A development build</strong>, later if wanted: a folder with gaps rendered with its assets marked
+not built and its notebooks unexecuted.</p></li>
+</ol>
+</section>
+<section id="what-this-does-not-decide">
+<h2>What this does not decide<a class="headerlink" href="#what-this-does-not-decide" title="Link to this heading">#</a></h2>
+<p>How a version is named on a page (the commit’s start and the date is the proposal); whether a
+snapshot should also carry template overrides from <code class="docutils literal notranslate"><span class="pre">docs_src/_templates</span></code>; whether the version
+list should be a drop-down in each theme; what the assistant file is called (<em>decided
+2026-10-16 when it was built:</em> <code class="docutils literal notranslate"><span class="pre">llms.txt</span></code>).</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="stores-and-backends.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: stores and backends</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="trust.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Design: trust, for a build of files on this machine</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-use-cases-this-serves">The use cases this serves</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#index-and-snapshot-the-conclusion">Index and snapshot: the conclusion</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-catalog-shows-every-version-of-every-pipeline">The catalog shows every version of every pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-the-assistant">For the assistant</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-does-not-decide">What this does not decide</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.incremental &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/incremental';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.incremental</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Incremental builds: regenerate and re-render only what changed.</span>
+
+<span class="sd">A clean build writes every page into an empty directory and has Sphinx read</span>
+<span class="sd">and render all of them. An incremental build keeps the Sphinx project (the</span>
+<span class="sd">``_docs`` directory) from the previous build and saves work in two places:</span>
+
+<span class="sd">1. **Pipelines whose inputs are unchanged are not regenerated.** Each</span>
+<span class="sd">   pipeline gets a *fingerprint*: a hash over the modification time and size</span>
+<span class="sd">   of everything its pages are made from — its ``chartbook.toml``, its</span>
+<span class="sd">   ``src/`` and ``docs_src/`` trees, and every file its manifest declares.</span>
+<span class="sd">   A pipeline whose fingerprint matches the last build is skipped, and the</span>
+<span class="sd">   pages it produced then are left exactly as they are.</span>
+<span class="sd">2. **Pages whose content is unchanged are not touched.** Whatever does get</span>
+<span class="sd">   regenerated is written to a staging directory and synced into the build</span>
+<span class="sd">   tree file by file, comparing content. Sphinx decides what to re-read by</span>
+<span class="sd">   modification time, so a page that is rewritten identically would be</span>
+<span class="sd">   re-read for nothing; a page that is left alone is not.</span>
+
+<span class="sd">The fingerprint is modification-time based. That is the same notion of</span>
+<span class="sd">"changed" the rest of ChartBook uses for now; the build record designed in</span>
+<span class="sd">``docs_src/design/asset-graph.md`` replaces it with content hashes.</span>
+
+<span class="sd">Nothing here schedules or runs a pipeline's own build. This only decides</span>
+<span class="sd">which *documentation pages* need regenerating once asked to build them.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">filecmp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">metadata</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.__about__</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_pipeline_ids</span><span class="p">,</span> <span class="n">get_pipeline_manifest</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span>
+
+<span class="c1">#: Records what the build tree was built from. Lives at its root.</span>
+<span class="n">STATE_FILE</span> <span class="o">=</span> <span class="s2">".chartbook-build-state.json"</span>
+
+<span class="c1">#: Bumped when the state file or the layout of the build tree changes shape,</span>
+<span class="c1">#: so trees written by an older ChartBook are rebuilt rather than trusted.</span>
+<span class="n">STATE_VERSION</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="c1">#: Sphinx's own output and cache, inside the build tree. Never synced over.</span>
+<span class="n">SPHINX_BUILD_DIR</span> <span class="o">=</span> <span class="s2">"_build"</span>
+
+<span class="c1">#: Keeps the kept build tree out of ``git status`` without the project</span>
+<span class="c1">#: having to list it in its own ``.gitignore``.</span>
+<span class="n">GITIGNORE_FILE</span> <span class="o">=</span> <span class="s2">".gitignore"</span>
+
+<span class="c1"># Trees inside a pipeline whose every file can end up on a page</span>
+<span class="n">_SOURCE_TREES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"src"</span><span class="p">,</span> <span class="s2">"docs_src"</span><span class="p">)</span>
+
+<span class="c1"># The packages that turn the generated project into HTML. An upgrade to any</span>
+<span class="c1"># of them can change every rendered page without any source changing.</span>
+<span class="n">_RENDERING_PACKAGES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"sphinx"</span><span class="p">,</span>
+    <span class="s2">"myst-nb"</span><span class="p">,</span>
+    <span class="s2">"myst-parser"</span><span class="p">,</span>
+    <span class="s2">"ablog"</span><span class="p">,</span>
+    <span class="s2">"pydata-sphinx-theme"</span><span class="p">,</span>
+    <span class="s2">"sphinx-book-theme"</span><span class="p">,</span>
+    <span class="s2">"sphinx-design"</span><span class="p">,</span>
+    <span class="s2">"sphinx-copybutton"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rendering_versions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Installed versions of the packages that render the site."""</span>
+    <span class="n">versions</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="n">_RENDERING_PACKAGES</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">versions</span><span class="p">[</span><span class="n">package</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="n">package</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">metadata</span><span class="o">.</span><span class="n">PackageNotFoundError</span><span class="p">:</span>
+            <span class="n">versions</span><span class="p">[</span><span class="n">package</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">versions</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_slug</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Filesystem form of a pipeline ID, as the page generator writes it."""</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stamp</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""A file's (mtime in ns, size), or None if it is not there."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">stat</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_mtime_ns</span><span class="p">,</span> <span class="n">stat</span><span class="o">.</span><span class="n">st_size</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_walk_files</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Every file under a directory, sorted; empty if it does not exist."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span> <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">files</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_noise</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""True for files that change without anything a page shows changing.</span>
+
+<span class="sd">    Editor swap and backup files, Finder metadata and bytecode caches would</span>
+<span class="sd">    otherwise make a watched project look edited when it was only opened.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"~"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"__pycache__"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_walk_inputs</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The files under a directory that count as build inputs, sorted."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+        <span class="n">dirs</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_noise</span><span class="p">(</span><span class="n">d</span><span class="p">)]</span>
+        <span class="n">found</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_noise</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">found</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="pipeline_input_files">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.pipeline_input_files">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pipeline_input_files</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""List every file a pipeline's generated pages are made from.</span>
+
+<span class="sd">    That is: its manifest and README, the trees its write-ups and templates</span>
+<span class="sd">    come from, any template override in its root, and each file an entry in</span>
+<span class="sd">    its manifest declares. A declared file that does not exist yet is</span>
+<span class="sd">    listed all the same, so that its appearing counts as a change.</span>
+
+<span class="sd">    :param pipeline_manifest: One pipeline's loaded manifest.</span>
+<span class="sd">    :returns: Absolute paths, sorted and without duplicates.</span>
+<span class="sd">    """</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">"pipeline_base_dir"</span><span class="p">])</span>
+    <span class="n">readme</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"readme"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"README.md"</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">{</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">"chartbook.toml"</span><span class="p">,</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="n">readme</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">tree</span> <span class="ow">in</span> <span class="n">_SOURCE_TREES</span><span class="p">:</span>
+        <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_walk_inputs</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="n">tree</span><span class="p">))</span>
+    <span class="n">site_dir</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_resolved_site_dir"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">site_dir</span><span class="p">:</span>
+        <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_walk_inputs</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)))</span>
+    <span class="c1"># A Markdown file in the project root can override a page template</span>
+    <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">base_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.md"</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_file</span><span class="p">())</span>
+
+    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"dataframes"</span><span class="p">,</span> <span class="s2">"charts"</span><span class="p">,</span> <span class="s2">"notebooks"</span><span class="p">,</span> <span class="s2">"notes"</span><span class="p">,</span> <span class="s2">"models"</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">"docs_path"</span><span class="p">,</span> <span class="s2">"excel_path"</span><span class="p">,</span> <span class="s2">"metrics_path"</span><span class="p">):</span>
+                <span class="n">declared</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">declared</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">declared</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                    <span class="k">continue</span>
+                <span class="n">declared_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="n">declared</span>
+                <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">declared</span><span class="p">):</span>
+                    <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                        <span class="n">Path</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">declared_path</span><span class="p">),</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">declared_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+                    <span class="c1"># A model may be a directory: every file in it counts</span>
+                    <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_walk_files</span><span class="p">(</span><span class="n">declared_path</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">declared_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="pipeline_fingerprint">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.pipeline_fingerprint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pipeline_fingerprint</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pipeline_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">salt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Hash everything a pipeline's pages depend on.</span>
+
+<span class="sd">    Two builds with the same fingerprint produce the same pages for this</span>
+<span class="sd">    pipeline, so the second need not produce them at all.</span>
+
+<span class="sd">    :param pipeline_id: The pipeline's ID in this build (a catalog's key).</span>
+<span class="sd">    :param pipeline_manifest: Its loaded manifest.</span>
+<span class="sd">    :param salt: What else the pages depend on that is not a file of this</span>
+<span class="sd">        pipeline's: the digest of what its provenance panels say, which</span>
+<span class="sd">        read other pipelines' records in the index.</span>
+<span class="sd">    :returns: A hex digest.</span>
+<span class="sd">    """</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">"pipeline_base_dir"</span><span class="p">])</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pipeline_id</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+    <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\0</span><span class="s2">salt</span><span class="se">\0</span><span class="si">{</span><span class="n">salt</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">pipeline_input_files</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>  <span class="c1"># a declared path outside the project</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\0</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">\0</span><span class="si">{</span><span class="n">_stamp</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">digest</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="global_fingerprint">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.global_fingerprint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">global_fingerprint</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">theme_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Hash what every page depends on, whichever pipeline it belongs to.</span>
+
+<span class="sd">    A change here — an upgrade to ChartBook, Sphinx or a theme, an edited</span>
+<span class="sd">    theme template, a different build option — invalidates the whole build</span>
+<span class="sd">    tree.</span>
+
+<span class="sd">    :param manifest: The top-level loaded manifest.</span>
+<span class="sd">    :param theme_dir: The packaged theme directory pages are rendered with.</span>
+<span class="sd">    :param options: Build options that alter generated pages.</span>
+<span class="sd">    :returns: A hex digest.</span>
+<span class="sd">    """</span>
+    <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">"state_version"</span><span class="p">:</span> <span class="n">STATE_VERSION</span><span class="p">,</span>
+                <span class="s2">"chartbook"</span><span class="p">:</span> <span class="n">__version__</span><span class="p">,</span>
+                <span class="s2">"rendering"</span><span class="p">:</span> <span class="n">_rendering_versions</span><span class="p">(),</span>
+                <span class="s2">"type"</span><span class="p">:</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"project"</span><span class="p">][</span><span class="s2">"type"</span><span class="p">],</span>
+                <span class="s2">"enable_data_download"</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span>
+                    <span class="n">manifest</span><span class="p">[</span><span class="s2">"project"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"enable_data_download"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="s2">"options"</span><span class="p">:</span> <span class="n">options</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">_walk_inputs</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">theme_dir</span><span class="p">)):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">theme_dir</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="n">digest</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\0</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">\0</span><span class="si">{</span><span class="n">_stamp</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">digest</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="pipeline_owned_paths">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.pipeline_owned_paths">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pipeline_owned_paths</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pipeline_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Where in the build tree one pipeline's pages and copied files live.</span>
+
+<span class="sd">    Paths are relative to the build tree's root. A directory stands for</span>
+<span class="sd">    everything beneath it.</span>
+
+<span class="sd">    :param pipeline_id: The pipeline's ID in this build.</span>
+<span class="sd">    :param pipeline_manifest: Its loaded manifest.</span>
+<span class="sd">    """</span>
+    <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+    <span class="n">owned</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"dataframes"</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"models"</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"notebooks"</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"download_chart"</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"download_dataframe"</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"_static"</span><span class="p">)</span> <span class="o">/</span> <span class="n">slug</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"pipelines"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">_README.md"</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">owned</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">"cb"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"charts"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">.md"</span>
+        <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"charts"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">owned</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_pages_exist</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pipeline_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Check the pages a pipeline should already have are really there."""</span>
+    <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">build_dir</span> <span class="o">/</span> <span class="s2">"cb"</span> <span class="o">/</span> <span class="s2">"dataframes"</span> <span class="o">/</span> <span class="n">slug</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.md"</span>
+        <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dataframes"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="p">]</span>
+    <span class="n">expected</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="n">build_dir</span> <span class="o">/</span> <span class="s2">"cb"</span> <span class="o">/</span> <span class="s2">"charts"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">.md"</span>
+        <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"charts"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="p">]</span>
+    <span class="n">expected</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="n">build_dir</span> <span class="o">/</span> <span class="s2">"cb"</span> <span class="o">/</span> <span class="s2">"models"</span> <span class="o">/</span> <span class="n">slug</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">.md"</span>
+        <span class="k">for</span> <span class="n">model_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">page</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">expected</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="BuildPlan">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.BuildPlan">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">BuildPlan</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What one incremental build will regenerate and what it will reuse.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        global_fingerprint: Fingerprint of what every page depends on.</span>
+<span class="sd">        fingerprints: Fingerprint of each pipeline taking part in the build.</span>
+<span class="sd">        regenerate: Pipelines whose pages will be generated this time.</span>
+<span class="sd">        reuse: Pipelines whose pages from the last build are kept as they are.</span>
+<span class="sd">        fresh: True when nothing from a previous build can be trusted and</span>
+<span class="sd">            the build tree must start empty.</span>
+<span class="sd">        reason: Why the build is fresh, for the summary line.</span>
+<span class="sd">        rendered: True when the previous build's sources were rendered by</span>
+<span class="sd">            Sphinx without error, so that an unchanged project needs no</span>
+<span class="sd">            render at all.</span>
+<span class="sd">        code_times: When each reused pipeline's code last changed, as the</span>
+<span class="sd">            previous build recorded it. The build fills in the rest.</span>
+<span class="sd">    """</span>
+
+    <span class="n">global_fingerprint</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">fingerprints</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="n">regenerate</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">reuse</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">fresh</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">rendered</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">code_times</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BuildPlan.preserved_paths">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.BuildPlan.preserved_paths">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">preserved_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Build-tree paths that belong to reused pipelines."""</span>
+        <span class="n">preserved</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">reuse</span><span class="p">:</span>
+            <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+            <span class="n">preserved</span> <span class="o">+=</span> <span class="n">pipeline_owned_paths</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">,</span> <span class="n">pipeline_manifest</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">preserved</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="read_state">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.read_state">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_state</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Load the build tree's state file; None if absent or unreadable."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">STATE_FILE</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"version"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">STATE_VERSION</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+
+
+
+<div class="viewcode-block" id="write_state">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.write_state">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_state</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">plan</span><span class="p">:</span> <span class="n">BuildPlan</span><span class="p">,</span> <span class="n">rendered</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Record what the build tree now reflects.</span>
+
+<span class="sd">    :param rendered: Whether Sphinx has rendered the sources as they now</span>
+<span class="sd">        stand. False until it has finished without error, so a failed or</span>
+<span class="sd">        interrupted render is run again by the next build.</span>
+<span class="sd">    """</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"version"</span><span class="p">:</span> <span class="n">STATE_VERSION</span><span class="p">,</span>
+        <span class="s2">"global"</span><span class="p">:</span> <span class="n">plan</span><span class="o">.</span><span class="n">global_fingerprint</span><span class="p">,</span>
+        <span class="s2">"pipelines"</span><span class="p">:</span> <span class="n">plan</span><span class="o">.</span><span class="n">fingerprints</span><span class="p">,</span>
+        <span class="s2">"code_times"</span><span class="p">:</span> <span class="n">plan</span><span class="o">.</span><span class="n">code_times</span><span class="p">,</span>
+        <span class="s2">"rendered"</span><span class="p">:</span> <span class="n">rendered</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">STATE_FILE</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plan_build">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.plan_build">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plan_build</span><span class="p">(</span>
+    <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">theme_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">skip_pipelines</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">salts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BuildPlan</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Decide which pipelines to regenerate and which to reuse.</span>
+
+<span class="sd">    :param manifest: The top-level loaded manifest.</span>
+<span class="sd">    :param build_dir: The kept build tree (``_docs``).</span>
+<span class="sd">    :param theme_dir: The packaged theme directory for this project type.</span>
+<span class="sd">    :param options: Build options that alter generated pages.</span>
+<span class="sd">    :param skip_pipelines: Pipelines left out of the build altogether (their</span>
+<span class="sd">        source files are missing); they are neither regenerated nor reused.</span>
+<span class="sd">    :param salts: For each pipeline, what else its pages depend on; see</span>
+<span class="sd">        :func:`pipeline_fingerprint`.</span>
+<span class="sd">    """</span>
+    <span class="n">build_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="n">skipped</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">skip_pipelines</span><span class="p">)</span>
+    <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skipped</span><span class="p">]</span>
+    <span class="n">fingerprints</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">pipeline_id</span><span class="p">:</span> <span class="n">pipeline_fingerprint</span><span class="p">(</span>
+            <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span> <span class="p">(</span><span class="n">salts</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span>
+    <span class="p">}</span>
+    <span class="n">current_global</span> <span class="o">=</span> <span class="n">global_fingerprint</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">theme_dir</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
+
+    <span class="n">state</span> <span class="o">=</span> <span class="n">read_state</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="s2">"no previous incremental build"</span>
+    <span class="k">elif</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"global"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">current_global</span><span class="p">:</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="s2">"ChartBook, Sphinx, the theme or the build options changed"</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">reason</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="k">if</span> <span class="n">reason</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">BuildPlan</span><span class="p">(</span><span class="n">current_global</span><span class="p">,</span> <span class="n">fingerprints</span><span class="p">,</span> <span class="n">pipeline_ids</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
+
+    <span class="n">previous</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipelines"</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">regenerate</span><span class="p">,</span> <span class="n">reuse</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="n">same_inputs</span> <span class="o">=</span> <span class="n">previous</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span> <span class="o">==</span> <span class="n">fingerprints</span><span class="p">[</span><span class="n">pipeline_id</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">same_inputs</span> <span class="ow">and</span> <span class="n">_pages_exist</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">pipeline_manifest</span><span class="p">):</span>
+            <span class="n">reuse</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">regenerate</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+    <span class="n">recorded_times</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"code_times"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="n">BuildPlan</span><span class="p">(</span>
+        <span class="n">current_global</span><span class="p">,</span>
+        <span class="n">fingerprints</span><span class="p">,</span>
+        <span class="n">regenerate</span><span class="p">,</span>
+        <span class="n">reuse</span><span class="p">,</span>
+        <span class="n">fresh</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">rendered</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rendered"</span><span class="p">)),</span>
+        <span class="n">code_times</span><span class="o">=</span><span class="p">{</span><span class="n">p</span><span class="p">:</span> <span class="n">recorded_times</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">reuse</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">recorded_times</span><span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="looks_like_build_tree">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.looks_like_build_tree">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">looks_like_build_tree</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Tell whether a directory was written by a ChartBook build."""</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">STATE_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"conf.py"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="s2">"index.md"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="check_build_tree">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.check_build_tree">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_build_tree</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a build directory that holds something that is not a build tree.</span>
+
+<span class="sd">    Called first, before anything is read or hashed, so that the error</span>
+<span class="sd">    comes before the work.</span>
+
+<span class="sd">    :raises ValueError: If *build_dir* holds unrelated files.</span>
+<span class="sd">    """</span>
+    <span class="n">build_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">build_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">build_dir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">looks_like_build_tree</span><span class="p">(</span><span class="n">build_dir</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">build_dir</span><span class="si">}</span><span class="s2"> exists and is not a ChartBook build directory, "</span>
+            <span class="sa">f</span><span class="s2">"so an incremental build will not write into it. Point "</span>
+            <span class="sa">f</span><span class="s2">"--docs-build-dir at an empty or new directory."</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="prepare_build_tree">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.prepare_build_tree">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">prepare_build_tree</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">fresh</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Make the build tree ready to be synced into.</span>
+
+<span class="sd">    A fresh build empties it. A directory holding something that is not a</span>
+<span class="sd">    ChartBook build tree is never emptied; that is an error instead.</span>
+
+<span class="sd">    :raises ValueError: If *build_dir* holds unrelated files.</span>
+<span class="sd">    """</span>
+    <span class="n">build_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="n">check_build_tree</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">build_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">build_dir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">fresh</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">build_dir</span><span class="p">)</span>
+    <span class="n">build_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">gitignore</span> <span class="o">=</span> <span class="n">build_dir</span> <span class="o">/</span> <span class="n">GITIGNORE_FILE</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">gitignore</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="n">gitignore</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"*</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+
+<span class="c1">#: Suffixes of the files Sphinx turns into pages.</span>
+<span class="n">PAGE_SUFFIXES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">".md"</span><span class="p">,</span> <span class="s2">".ipynb"</span><span class="p">,</span> <span class="s2">".rst"</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SyncResult">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.SyncResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SyncResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What a sync changed in the destination tree.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        written: Files copied across, new or changed. Relative paths.</span>
+<span class="sd">        added: The subset of *written* that did not exist before.</span>
+<span class="sd">        deleted: Files removed because the source no longer has them.</span>
+<span class="sd">        unchanged: How many files were identical and left alone.</span>
+<span class="sd">    """</span>
+
+    <span class="n">written</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">added</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">deleted</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">unchanged</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pages_added_or_removed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""True if the set of pages changed, not just what some of them say.</span>
+
+<span class="sd">        Sphinx re-renders a page only when its own source changes, so a page</span>
+<span class="sd">        that appears or disappears leaves every other page's navigation</span>
+<span class="sd">        stale, and Sphinx never deletes the HTML of a page that is gone.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">deleted</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="n">PAGE_SUFFIXES</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">added</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_under</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">ancestors</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""True if a relative path equals, or lies beneath, any of *ancestors*.</span>
+
+<span class="sd">    :param ancestors: Relative paths in POSIX form.</span>
+<span class="sd">    """</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parts</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="s2">"/"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">[:</span><span class="n">n</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ancestors</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="sync_tree">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.sync_tree">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sync_tree</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">destination</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">preserve</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">same</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SyncResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Make *destination* mirror *source*, touching only what differs.</span>
+
+<span class="sd">    A file identical to its counterpart is left alone, modification time</span>
+<span class="sd">    included. A file in *destination* with no counterpart is deleted unless</span>
+<span class="sd">    it is preserved.</span>
+
+<span class="sd">    :param source: The tree to mirror.</span>
+<span class="sd">    :param destination: The tree to update in place.</span>
+<span class="sd">    :param preserve: Paths relative to *destination* to leave alone even</span>
+<span class="sd">        though *source* lacks them. A directory covers everything under it.</span>
+<span class="sd">    :param same: Decides whether two existing files are identical. Defaults</span>
+<span class="sd">        to a byte-for-byte comparison.</span>
+<span class="sd">    """</span>
+    <span class="n">source</span><span class="p">,</span> <span class="n">destination</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+    <span class="n">preserve</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">preserve</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">same</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">same</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">filecmp</span><span class="o">.</span><span class="n">cmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">shallow</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">SyncResult</span><span class="p">()</span>
+
+    <span class="n">wanted</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">src_file</span> <span class="ow">in</span> <span class="n">_walk_files</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+        <span class="n">relative</span> <span class="o">=</span> <span class="n">src_file</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">wanted</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
+        <span class="n">dst_file</span> <span class="o">=</span> <span class="n">destination</span> <span class="o">/</span> <span class="n">relative</span>
+        <span class="n">existed</span> <span class="o">=</span> <span class="n">dst_file</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">existed</span> <span class="ow">and</span> <span class="n">same</span><span class="p">(</span><span class="n">src_file</span><span class="p">,</span> <span class="n">dst_file</span><span class="p">):</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">unchanged</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="n">dst_file</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">src_file</span><span class="p">,</span> <span class="n">dst_file</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">written</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">existed</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">added</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">dst_file</span> <span class="ow">in</span> <span class="n">_walk_files</span><span class="p">(</span><span class="n">destination</span><span class="p">):</span>
+        <span class="n">relative</span> <span class="o">=</span> <span class="n">dst_file</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">destination</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">relative</span> <span class="ow">in</span> <span class="n">wanted</span> <span class="ow">or</span> <span class="n">_is_under</span><span class="p">(</span><span class="n">relative</span><span class="p">,</span> <span class="n">preserve</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">dst_file</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">deleted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
+
+    <span class="c1"># Directories emptied by the deletions above</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">destination</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">root_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">root_path</span> <span class="o">==</span> <span class="n">destination</span> <span class="ow">or</span> <span class="n">_is_under</span><span class="p">(</span>
+            <span class="n">root_path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">destination</span><span class="p">),</span> <span class="n">preserve</span>
+        <span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">root_path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+            <span class="n">root_path</span><span class="o">.</span><span class="n">rmdir</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+
+<div class="viewcode-block" id="same_size_and_not_newer">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.same_size_and_not_newer">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">same_size_and_not_newer</span><span class="p">(</span><span class="n">source_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">destination_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Cheap sameness test for rendered output: same size, and not newer.</span>
+
+<span class="sd">    Used to copy built HTML to the output directory without reading every</span>
+<span class="sd">    file. Sphinx rewrites a page only when it re-renders it, and a copy is</span>
+<span class="sd">    always newer than its source, so an untouched page compares as the same.</span>
+<span class="sd">    """</span>
+    <span class="n">src</span><span class="p">,</span> <span class="n">dst</span> <span class="o">=</span> <span class="n">source_file</span><span class="o">.</span><span class="n">stat</span><span class="p">(),</span> <span class="n">destination_file</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">src</span><span class="o">.</span><span class="n">st_size</span> <span class="o">==</span> <span class="n">dst</span><span class="o">.</span><span class="n">st_size</span> <span class="ow">and</span> <span class="n">src</span><span class="o">.</span><span class="n">st_mtime_ns</span> <span class="o">&lt;=</span> <span class="n">dst</span><span class="o">.</span><span class="n">st_mtime_ns</span></div>
+
+
+
+<div class="viewcode-block" id="snapshot_inputs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.snapshot_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">snapshot_inputs</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Stat everything a build of this project reads.</span>
+
+<span class="sd">    Two snapshots differing means a rebuild might produce something</span>
+<span class="sd">    different. Used by watch mode to notice edits; which pipelines actually</span>
+<span class="sd">    need regenerating is still decided by :func:`plan_build`.</span>
+
+<span class="sd">    :param manifest: The top-level loaded manifest.</span>
+<span class="sd">    :param project_dir: The directory holding its ``chartbook.toml``.</span>
+<span class="sd">    :returns: Mapping of path to (mtime in ns, size), or None if missing.</span>
+<span class="sd">    """</span>
+    <span class="n">project_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">{</span><span class="n">project_dir</span> <span class="o">/</span> <span class="s2">"chartbook.toml"</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"logo"</span><span class="p">,</span> <span class="s2">"favicon"</span><span class="p">):</span>
+        <span class="n">declared</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">declared</span><span class="p">:</span>
+            <span class="n">files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">project_dir</span> <span class="o">/</span> <span class="n">declared</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">):</span>
+        <span class="n">files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">pipeline_input_files</span><span class="p">(</span><span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">):</span> <span class="n">_stamp</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">)}</span></div>
+
+
+
+<div class="viewcode-block" id="describe_changes">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.describe_changes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">describe_changes</span><span class="p">(</span><span class="n">before</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">after</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Name the files that differ between two snapshots, briefly."""</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">path</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">before</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">after</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">before</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">!=</span> <span class="n">after</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">changed</span><span class="p">[:</span><span class="n">limit</span><span class="p">]]</span>
+    <span class="n">more</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">changed</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">" and </span><span class="si">{</span><span class="n">more</span><span class="si">}</span><span class="s2"> more"</span> <span class="k">if</span> <span class="n">more</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="watch">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.watch">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">watch</span><span class="p">(</span>
+    <span class="n">build</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="n">snapshot</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">dict</span><span class="p">],</span>
+    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="nb">print</span><span class="p">,</span>
+    <span class="n">sleep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_polls</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build, then rebuild whenever the project's inputs change.</span>
+
+<span class="sd">    A thin polling loop: no file-system notification service, no server, no</span>
+<span class="sd">    process other than this one. It ends on Ctrl-C.</span>
+
+<span class="sd">    A failed build is reported and the loop carries on, since the commonest</span>
+<span class="sd">    cause is a file caught half-saved.</span>
+
+<span class="sd">    :param build: Runs one build. May raise, or exit, on failure.</span>
+<span class="sd">    :param snapshot: Returns the current state of the inputs (see</span>
+<span class="sd">        :func:`snapshot_inputs`). May raise while a manifest is mid-edit;</span>
+<span class="sd">        the problem is reported once and the loop waits for it to clear.</span>
+<span class="sd">    :param interval: Seconds between checks.</span>
+<span class="sd">    :param echo: Receives progress lines.</span>
+<span class="sd">    :param sleep: Waits between checks. Defaults to ``time.sleep``.</span>
+<span class="sd">    :param max_polls: Stop after this many checks. None means until Ctrl-C.</span>
+<span class="sd">    :returns: The number of builds run, including the first.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_build</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">build</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+            <span class="c1"># The build already printed why it stopped</span>
+            <span class="n">echo</span><span class="p">(</span><span class="s2">"Build failed. Still watching."</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Build failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">. Still watching."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Built in </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">started</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">s."</span><span class="p">)</span>
+
+    <span class="n">unreadable</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">take_snapshot</span><span class="p">(</span><span class="n">previous</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">snapshot</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="c1"># Usually a manifest caught mid-edit. Say so once, since nothing</span>
+            <span class="c1"># can be rebuilt until it loads, and look again at the next poll.</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span> <span class="o">!=</span> <span class="n">unreadable</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]:</span>
+                <span class="n">unreadable</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+                <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot read the project: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">. Waiting for it to be fixed."</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">previous</span>
+        <span class="n">unreadable</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">current</span>
+
+    <span class="k">if</span> <span class="n">sleep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sleep</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">sleep</span>
+
+    <span class="n">builds</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">run_build</span><span class="p">()</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="n">take_snapshot</span><span class="p">({})</span>
+    <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Watching for changes every </span><span class="si">{</span><span class="n">interval</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">s. Press Ctrl-C to stop."</span><span class="p">)</span>
+    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="n">max_polls</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">polls</span> <span class="o">&lt;</span> <span class="n">max_polls</span><span class="p">:</span>
+            <span class="n">sleep</span><span class="p">(</span><span class="n">interval</span><span class="p">)</span>
+            <span class="n">polls</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">take_snapshot</span><span class="p">(</span><span class="n">seen</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="o">==</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Changed: </span><span class="si">{</span><span class="n">describe_changes</span><span class="p">(</span><span class="n">seen</span><span class="p">,</span><span class="w"> </span><span class="n">current</span><span class="p">)</span><span class="si">}</span><span class="s2">. Rebuilding..."</span><span class="p">)</span>
+            <span class="c1"># Recorded before building, so an edit made while the build</span>
+            <span class="c1"># runs still differs at the next poll and is picked up then</span>
+            <span class="n">seen</span> <span class="o">=</span> <span class="n">current</span>
+            <span class="n">run_build</span><span class="p">()</span>
+            <span class="n">builds</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">echo</span><span class="p">(</span><span class="s2">"Stopped watching."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">builds</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

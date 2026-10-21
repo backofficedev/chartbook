@@ -39,6 +39,38 @@
 
 ### API
 
+````{py:exception} AssetNotDeclaredError(name: str, manifest_path: pathlib.Path, declared: dict[str, list[str]], kind: str = DEFAULT_KIND, example_path: typing.Optional[str] = None)
+:canonical: chartbook.errors.AssetNotDeclaredError
+
+Bases: {py:obj}`LookupError`
+
+```{autodoc2-docstring} chartbook.errors.AssetNotDeclaredError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.AssetNotDeclaredError.__init__
+```
+
+````
+
+````{py:exception} AssetNotPinnedError(asset: str, reason: str, message: str)
+:canonical: chartbook.errors.AssetNotPinnedError
+
+Bases: {py:obj}`LookupError`
+
+```{autodoc2-docstring} chartbook.errors.AssetNotPinnedError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.AssetNotPinnedError.__init__
+```
+
+````
+
 ````{py:exception} CatalogNotConfiguredError(settings_path: pathlib.Path)
 :canonical: chartbook.errors.CatalogNotConfiguredError
 
@@ -134,6 +166,38 @@ Bases: {py:obj}`Exception`
 
 `````
 
+````{py:exception} DependencyNotDeclaredError(reference: str, pipeline: str, manifest_path: pathlib.Path, declared: list[str], found_at: typing.Optional[tuple[str, str]] = None, known: typing.Mapping[str, typing.Optional[str]] = {})
+:canonical: chartbook.errors.DependencyNotDeclaredError
+
+Bases: {py:obj}`LookupError`
+
+```{autodoc2-docstring} chartbook.errors.DependencyNotDeclaredError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.DependencyNotDeclaredError.__init__
+```
+
+````
+
+````{py:exception} ManifestNotFoundError(start_dirs: list[pathlib.Path])
+:canonical: chartbook.errors.ManifestNotFoundError
+
+Bases: {py:obj}`FileNotFoundError`
+
+```{autodoc2-docstring} chartbook.errors.ManifestNotFoundError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.ManifestNotFoundError.__init__
+```
+
+````
+
 `````{py:class} MissingFile
 :canonical: chartbook.errors.MissingFile
 
@@ -186,7 +250,7 @@ Bases: {py:obj}`Exception`
 
 `````
 
-`````{py:exception} MissingSourceFilesError(missing_files: list[chartbook.errors.MissingFile])
+`````{py:exception} MissingSourceFilesError(missing_files: list[chartbook.errors.MissingFile], hint: typing.Optional[list[str]] = None)
 :canonical: chartbook.errors.MissingSourceFilesError
 
 Bases: {py:obj}`Exception`
@@ -199,6 +263,16 @@ Bases: {py:obj}`Exception`
 
 ```{autodoc2-docstring} chartbook.errors.MissingSourceFilesError.__init__
 ```
+
+````{py:attribute} DEFAULT_HINT
+:canonical: chartbook.errors.MissingSourceFilesError.DEFAULT_HINT
+:value: >
+   ('Ensure these files exist or update the paths in chartbook.toml.', 'Use --no-strict to skip affecte...
+
+```{autodoc2-docstring} chartbook.errors.MissingSourceFilesError.DEFAULT_HINT
+```
+
+````
 
 ````{py:method} exit_with_message() -> None
 :canonical: chartbook.errors.MissingSourceFilesError.exit_with_message
@@ -281,6 +355,22 @@ Bases: {py:obj}`Exception`
 ````
 
 `````
+
+````{py:exception} VersionNotFoundError(asset: str, rev: str, reason: str, message: str)
+:canonical: chartbook.errors.VersionNotFoundError
+
+Bases: {py:obj}`LookupError`
+
+```{autodoc2-docstring} chartbook.errors.VersionNotFoundError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.VersionNotFoundError.__init__
+```
+
+````
 
 ````{py:function} handle_validation_error(error: chartbook.errors.ValidationError, config_path: pathlib.Path) -> None
 :canonical: chartbook.errors.handle_validation_error
