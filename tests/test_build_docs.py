@@ -6,6 +6,9 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import os
+import re
+import sys
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -69,10 +72,11 @@ class TestRunSphinxBuild:
         # Should not raise
         run_sphinx_build(docs_dir)
 
-        # Verify sphinx-build was called with correct arguments
+        # Verify Sphinx was called with correct arguments: this interpreter's
+        # own Sphinx, not whichever sphinx-build is first on PATH
         mock_run.assert_called_once()
         call_args = mock_run.call_args[0][0]
-        assert "sphinx-build" in call_args
+        assert call_args[:3] == [sys.executable, "-m", "sphinx"]
         assert "-M" in call_args
         assert "html" in call_args
 
@@ -403,6 +407,16 @@ class TestMissingSourceFilesError:
         message = error.format_cli_message()
         assert "--no-strict" in message
 
+    def test_a_hint_given_is_the_hint(self):
+        """A lone pipeline's hint does not offer --no-strict, which it refuses."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a")]
+        message = MissingSourceFilesError(missing, hint=["First line.", "Second line."]).format_cli_message()
+        assert "First line." in message
+        assert "      Second line." in message
+        assert "--no-strict" not in message
+
 
 # Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer
 PLOTLY_MATHJAX2_SCRIPT = (
@@ -592,3 +606,433 @@ class TestMathjax2Pattern:
         """Test that pattern does not match other script tags."""
         other_script = '<script src="https://cdn.example.com/plotly.min.js"></script>'
         assert not MATHJAX2_PATTERN.search(other_script)
+
+
+class TestSmallFixes:
+    """Regressions for bugs found while building P0."""
+
+    def test_no_strict_on_a_single_pipeline_is_a_clean_error(
+        self, pipeline_project, monkeypatch, capsys
+    ):
+        """Used to crash with UnboundLocalError once the only pipeline was skipped."""
+        monkeypatch.chdir(pipeline_project)
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(
+                output_dir=pipeline_project / "docs",
+                project_dir=pipeline_project,
+                strict=False,
+            )
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Skipping pipeline 'test_pipeline'" in err
+        assert "nothing left to build" in err
+
+    def test_importing_chartbook_leaves_shutil_alone(self):
+        """chartbook used to replace shutil.copy2 and friends process-wide."""
+        import subprocess
+
+        code = (
+            "import shutil\n"
+            "before = (shutil.copy2, shutil.copystat, shutil.copymode)\n"
+            "import chartbook, chartbook.utils, chartbook.build_docs\n"
+            "assert before == (shutil.copy2, shutil.copystat, shutil.copymode)\n"
+            "assert shutil.copy2 is not shutil.copy\n"
+        )
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+
+    def test_copy_tree_merges_and_copies_contents(self, tmp_path):
+        from chartbook.utils import copy_file, copy_tree, move_tree
+
+        source = tmp_path / "source"
+        (source / "nested").mkdir(parents=True)
+        (source / "a.txt").write_text("a")
+        (source / "nested" / "b.txt").write_text("b")
+        destination = tmp_path / "destination"
+        destination.mkdir()
+        (destination / "kept.txt").write_text("kept")
+        (destination / "a.txt").write_text("old")
+
+        copy_tree(source, destination)
+        assert (destination / "a.txt").read_text() == "a"
+        assert (destination / "nested" / "b.txt").read_text() == "b"
+        assert (destination / "kept.txt").read_text() == "kept"
+
+        copy_file(source / "a.txt", tmp_path / "copy.txt")
+        assert (tmp_path / "copy.txt").read_text() == "a"
+
+        move_tree(destination, tmp_path / "moved")
+        assert not destination.exists()
+        assert (tmp_path / "moved" / "nested" / "b.txt").read_text() == "b"
+
+    def test_readme_setting_is_honoured_by_the_build(self, pipeline_project, monkeypatch):
+        """project.readme used to be read only by `publish`."""
+        import tomli
+        import tomli_w
+
+        monkeypatch.chdir(pipeline_project)
+        (pipeline_project / "README.md").rename(pipeline_project / "ABOUT.md")
+        (pipeline_project / "ABOUT.md").write_text(
+            "# Test Pipeline\n\nText from the configured readme.\n"
+        )
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["readme"] = "./ABOUT.md"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        assert "Text from the configured readme." in (output_dir / "index.html").read_text()
+
+    def test_pipeline_site_builds_without_dangling_toctree_warnings(
+        self, pipeline_project, monkeypatch
+    ):
+        from chartbook import build_docs
+
+        monkeypatch.chdir(pipeline_project)
+        captured = {}
+        real_run = build_docs.subprocess.run
+
+        def spy(cmd, **kwargs):
+            result = real_run(cmd, **kwargs)
+            captured["stderr"] = result.stderr
+            return result
+
+        monkeypatch.setattr(build_docs.subprocess, "run", spy)
+        generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
+        assert "nonexisting document" not in captured["stderr"]
+
+
+class TestNotBuiltYet:
+    """A pipeline that has built nothing it declares still has a site.
+
+    A project just made by `chartbook init` is one, and so is any fresh
+    clone of a pipeline whose data is git-ignored. `chartbook docs generate` used to
+    stop there, and its hint offered --no-strict, which a lone pipeline
+    refuses.
+    """
+
+    @pytest.fixture
+    def unbuilt(self, pipeline_project, monkeypatch):
+        """The fixture's pipeline, with a notebook and a build script, and none of its outputs."""
+        import tomli
+        import tomli_w
+
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["notebooks"] = {"walkthrough": {"name": "Walkthrough", "path": "_output/walkthrough.ipynb"}}
+        config["models"] = {"forecast": {"name": "Forecast", "path": "_models/forecast.json"}}
+        config["scripts"] = {"build": "true"}
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        monkeypatch.chdir(pipeline_project)
+        return pipeline_project
+
+    def test_its_site_shows_each_output_as_not_built(self, unbuilt, capsys):
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+
+        assert (output_dir / "index.html").is_file()
+        # Where each one's page links, a page that says so
+        notebook = output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html"
+        assert "Not built yet" in notebook.read_text()
+        assert "Not built yet" in (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        # The glimpse is highlighted, a span a word
+        dataframe = re.sub(
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        )
+        assert "Not built yet" in dataframe
+        assert "Error reading file" not in dataframe
+        # No dates to give, rather than "None": the row is left out
+        assert not re.search(r"Data available up to \((min|max)\)\s*None", dataframe)
+        # A model says so in its provenance panel
+        model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text())
+        assert re.search(r"Content\s+not built", model)
+        # The index has the records, without hashes
+        records = {r["id"]: r for r in json.loads((output_dir / "index.json").read_text())["records"]}
+        for asset in (
+            "test_pipeline:dataframe_0",
+            "test_pipeline:chart/chart_0_0",
+            "test_pipeline:notebook/walkthrough",
+            "test_pipeline:model/forecast",
+        ):
+            assert "content_hash" not in records[asset]
+        err = capsys.readouterr().err
+        assert "Warning: test_pipeline has built nothing it declares yet" in err
+        assert "  - notebook: _output/walkthrough.ipynb" in err
+        assert "`chartbook build` runs its build script" in err
+        assert "With --strict, this is an error." in err
+
+    def test_with_strict_it_is_an_error(self, unbuilt, capsys):
+        """`--strict` asked for, as CI does after a build that should have made everything."""
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, strict=True)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Missing source files" in err
+        assert "Ensure these files exist or update the paths in chartbook.toml." in err
+        assert "--no-strict" not in err
+        assert not (unbuilt / "docs").exists()
+
+    def test_with_no_strict_it_is_rendered_too(self, unbuilt):
+        """--no-strict skips a pipeline; one that has built nothing is not skipped, it is shown."""
+        generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, strict=False)
+        assert (unbuilt / "docs" / "index.html").is_file()
+
+    def test_nothing_to_download_from_a_dataframe_not_built(self, unbuilt):
+        """The download row linked to a file the build had not copied: a dead link, and MkDocs warned."""
+        import tomli
+        import tomli_w
+
+        toml_path = unbuilt / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["enable_data_download"] = True
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+        for page in (
+            output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html",
+            output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html",
+        ):
+            assert "Download Data as Parquet" not in page.read_text(), page
+            assert "download_dataframe" not in page.read_text(), page
+
+    def test_in_a_version_from_the_store_it_gives_no_advice(self, unbuilt, monkeypatch):
+        """A version's site is built from the store: it is as it was made, and `chartbook build` builds nothing of it."""
+        from chartbook.config import UNTRUSTED_ENV_VAR
+
+        monkeypatch.setenv(UNTRUSTED_ENV_VAR, "1")
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+        notebook = (output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html").read_text()
+        chart = (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        dataframe = re.sub(
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        )
+        for page in (notebook, chart, dataframe):
+            assert "Not built in this version" in page
+            assert "chartbook build" not in page
+
+    def test_with_no_build_script_it_says_to_build_it(self, unbuilt, capsys):
+        import tomli
+        import tomli_w
+
+        toml_path = unbuilt / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        del config["scripts"]
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert "Build them, then run `chartbook docs generate` again." in capsys.readouterr().err
+
+    def test_after_its_build_script_has_run_it_is_an_error(self, unbuilt, capsys):
+        """`chartbook build` says this: the build has just run, and made none of it."""
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, after_build=True)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Missing source files" in err
+        assert "The build script has just run and did not make" in err
+        # doit's tasks after the `default_tasks` block of the template's dodo.py are not run
+        assert "A task the build tool does not run by default is not built" in err
+        assert "--no-strict" not in err
+        assert not (unbuilt / "docs").exists()
+
+    def test_built_in_part_is_still_an_error_and_the_hint_is_the_build(self, unbuilt, capsys):
+        """One output there means it was built, so what is missing is a mistake."""
+        (unbuilt / "_output" / "walkthrough.ipynb").write_text(
+            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4})
+        )
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "dataframe_0.parquet" in err and "chart_0_0.html" in err
+        assert "`chartbook build` runs the build script" in err
+        # A lone pipeline has nothing left to build once it is skipped
+        assert "--no-strict" not in err
+
+    @pytest.mark.skipif(os.name == "nt" or getattr(os, "geteuid", lambda: 1)() == 0, reason="needs a file its owner cannot read")
+    @pytest.mark.parametrize(
+        "unreadable", ["_output/charts/chart_0_0.html", "_data/test_pipeline/dataframe_0.parquet"]
+    )
+    def test_an_output_that_is_there_and_unreadable_is_an_error(self, pipeline_project, monkeypatch, capsys, unreadable):
+        """It has no hash, as a file that is not there has none, but it is there: the build stops and names it.
+
+        A dataframe's page used to say "Error reading file" with exit 0, and
+        its provenance panel "not built".
+        """
+        monkeypatch.chdir(pipeline_project)
+        output = pipeline_project / unreadable
+        output.chmod(0)
+        try:
+            with pytest.raises(SystemExit) as excinfo:
+                generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
+        finally:
+            output.chmod(0o644)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "These files are there and could not be read:" in err
+        assert unreadable in err
+        assert not (pipeline_project / "docs").exists()
+
+    def test_with_downloads_only_a_file_the_build_copies_is_linked(self, pipeline_project, monkeypatch):
+        """A folder of parts or a glob has no one file to download: the row linked to nothing."""
+        import tomli
+        import tomli_w
+
+        parts = pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet"
+        frame = parts.read_bytes()
+        parts.unlink()
+        parts.mkdir()
+        (parts / "part-0.parquet").write_bytes(frame)
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["enable_data_download"] = True
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        page = (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        assert "Download Data as Parquet" not in page
+        assert "Download Data as Parquet" not in (output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html").read_text()
+
+    def test_a_date_that_cannot_be_read_is_not_shown_as_none(self, pipeline_project, monkeypatch):
+        import tomli
+        import tomli_w
+
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["dataframes"]["dataframe_0"]["date_col"] = "no_such_column"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        page = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text())
+        # The row is left out, rather than saying "None"
+        assert not re.search(r"Data available up to \((min|max)\)\s*None", page)
+
+    def test_a_glob_that_matches_only_folders_is_missing(self, pipeline_project, monkeypatch, capsys):
+        """The index finds no files in it, so neither may the check: it was "not built", exit 0, even with --strict."""
+        import tomli
+        import tomli_w
+
+        (pipeline_project / "_data" / "test_pipeline" / "parts" / "a.parquet").mkdir(parents=True)
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["dataframes"]["dataframe_0"]["path"] = "_data/test_pipeline/parts/*.parquet"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project, strict=True)
+        assert "parts/*.parquet" in capsys.readouterr().err
+
+    def test_a_missing_write_up_is_still_an_error(self, unbuilt, capsys):
+        """Nothing builds a write-up."""
+        (unbuilt / "docs_src" / "charts" / "chart_0_0.md").unlink()
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert "chart_0_0.md" in capsys.readouterr().err
+
+    def test_a_catalog_keeps_its_own_rules(self, catalog_project, monkeypatch, capsys):
+        """A catalog member that has built nothing is skipped by --no-strict, and stops a strict build."""
+        monkeypatch.chdir(catalog_project)
+        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
+            if built.suffix in (".parquet", ".html"):
+                built.unlink()
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=catalog_project / "docs_test", project_dir=Path("."))
+        assert "--no-strict" in capsys.readouterr().err
+
+
+class TestBuiltNothing:
+    """`built_nothing`: every output of one pipeline is missing, and nothing else is."""
+
+    def _missing(self, *files):
+        from chartbook.errors import MissingFile
+
+        return [MissingFile(Path(f"/p/{name}"), kind, name, "p") for kind, name in files]
+
+    def _manifest(self):
+        return {
+            "project": {"type": "pipeline", "id": "p"},
+            "dataframes": {"a": {"path": "a.parquet"}, "q": {"source": "local", "query": "select 1"}},
+            "charts": {"c": {"path": "c.html", "docs_path": "c.md"}},
+            "notebooks": {},
+            "models": {"m": {"path": "m.json", "metrics_path": "m_scores.json"}},
+        }
+
+    def test_all_of_them(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(("dataframe", "a"), ("chart", "c"), ("model", "m"), ("model_metrics", "m"))
+        assert conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_some_of_them(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(("dataframe", "a"), ("chart", "c"), ("model", "m"))
+        assert not conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_with_a_write_up(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(
+            ("dataframe", "a"), ("chart", "c"), ("model", "m"), ("model_metrics", "m"), ("chart_docs", "c")
+        )
+        assert not conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_nothing_missing(self):
+        from chartbook import conf_validation
+
+        assert not conf_validation.built_nothing(self._manifest(), [])
+
+
+class TestAWriteUpIsTextOnThePage:
+    """What the author wrote is what the built page shows.
+
+    The writer keeps Jinja syntax in a write-up as characters
+    (tests/test_writer_sphinx.py); Sphinx, with MyST's `substitution`
+    extension on, then evaluated every `{{ … }}` on the page through a Jinja
+    environment that reaches Python. The extension is off, and this is the
+    check on the built HTML.
+    """
+
+    MARKERS = "WRITEUP-TEST-A: {{ 6+7 }}\n\nWRITEUP-TEST-B: {{ env.srcdir }}\n"
+
+    def _add_markers(self, pipeline_project):
+        import tomli
+
+        manifest = tomli.loads((pipeline_project / "chartbook.toml").read_text())
+        docs_path = next(iter(manifest["dataframes"].values()))["docs_path"]
+        with open(pipeline_project / docs_path, "a", encoding="utf-8") as f:
+            f.write("\n\n" + self.MARKERS)
+        with open(pipeline_project / "README.md", "a", encoding="utf-8") as f:
+            f.write("\n\nREADME-TEST: {{ 6+7 }}\n")
+
+    @staticmethod
+    def _built_html(output_dir):
+        return "\n".join(page.read_text(encoding="utf-8") for page in output_dir.rglob("*.html"))
+
+    def _build(self, pipeline_project, monkeypatch):
+        self._add_markers(pipeline_project)
+        monkeypatch.chdir(pipeline_project)
+        generate_docs(output_dir=pipeline_project / "docs_test", project_dir=Path("."), keep_build_dirs=False)
+        return self._built_html(pipeline_project / "docs_test")
+
+    def test_jinja_in_a_write_up_and_a_readme_is_shown_as_written(self, pipeline_project, monkeypatch):
+        html = self._build(pipeline_project, monkeypatch)
+        assert "WRITEUP-TEST-A: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-B: {{ env.srcdir }}" in html
+        assert "README-TEST: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-A: 13" not in html
+        assert "README-TEST: 13" not in html
+        assert "WRITEUP-TEST-B: /" not in html
+
+    def test_and_in_a_build_of_files_from_a_store(self, pipeline_project, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
+        html = self._build(pipeline_project, monkeypatch)
+        assert "WRITEUP-TEST-A: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-A: 13" not in html
+        assert "WRITEUP-TEST-B: {{ env.srcdir }}" in html

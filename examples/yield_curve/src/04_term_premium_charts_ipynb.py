@@ -24,10 +24,10 @@
 # yield and shorter maturities (1-year, 2-year, and 3-year).
 
 # %%
+from chartbook import assets, data
 from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
-OUTPUT_DIR = BASE_DIR / "_output"
 DATA_DIR = BASE_DIR / "_data"
 
 import load_fed_yield_curve
@@ -53,9 +53,9 @@ print(f"Shape: {df.shape}")
 # %%
 # Calculate term premium measures
 df_premium = pd.DataFrame(index=df.index)
-df_premium["10Y_1Y_Spread"] = df["SVENY10"] - df["SVENY01"]
-df_premium["10Y_2Y_Spread"] = df["SVENY10"] - df["SVENY02"]
-df_premium["10Y_3Y_Spread"] = df["SVENY10"] - df["SVENY03"]
+df_premium["spread_10y_1y"] = df["SVENY10"] - df["SVENY01"]
+df_premium["spread_10y_2y"] = df["SVENY10"] - df["SVENY02"]
+df_premium["spread_10y_3y"] = df["SVENY10"] - df["SVENY03"]
 
 # Display summary statistics
 df_premium.describe()
@@ -69,7 +69,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_1Y_Spread"],
+        y=df_premium["spread_10y_1y"],
         mode="lines",
         name="10Y - 1Y Spread",
         line=dict(width=1),
@@ -87,7 +87,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_1y.html", include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_1y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Chart 2: 10-Year minus 2-Year Spread
@@ -98,7 +98,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_2Y_Spread"],
+        y=df_premium["spread_10y_2y"],
         mode="lines",
         name="10Y - 2Y Spread",
         line=dict(width=1, color="orange"),
@@ -116,7 +116,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_2y.html", include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_2y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Chart 3: 10-Year minus 3-Year Spread
@@ -127,7 +127,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_3Y_Spread"],
+        y=df_premium["spread_10y_3y"],
         mode="lines",
         name="10Y - 3Y Spread",
         line=dict(width=1, color="green"),
@@ -145,22 +145,24 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_3y.html", include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_3y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Save Data
 
 # %%
-# Format column names for export
+# Column names stay code-friendly (spread_10y_1y): letters, digits and
+# underscores, so they work unquoted in SQL and as attribute names. The
+# readable names ("10Y-1Y Spread") are metadata, and live in chartbook.toml
+# under [dataframes.term_premium.series.*].
 df_premium_formatted = df_premium.copy()
-df_premium_formatted.columns = df_premium_formatted.columns.str.replace("_", " ")
 df_premium_formatted.index.name = "date"
 
 # Save to parquet and excel
-filepath = DATA_DIR / "term_premium.parquet"
+filepath = data.path("term_premium")
 df_premium_formatted.to_parquet(filepath)
 
 filepath = DATA_DIR / "term_premium.xlsx"
 df_premium_formatted.to_excel(filepath)
 
-print(f"Data saved to {DATA_DIR / 'term_premium.parquet'}")
+print(f"Data saved to {data.path('term_premium')}")

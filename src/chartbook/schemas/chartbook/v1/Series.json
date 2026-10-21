@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Series.json",
+  "title": "Series record",
+  "description": "One column of a dataframe, given its own address. It needs no storage; the dataframe holds the data.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "dataframe",
+    "column",
+    "declared"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Series"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name",
+        "part"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "dataframe"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "dataframe": {
+      "type": "string",
+      "description": "The ID of the dataframe that holds the column."
+    },
+    "column": {
+      "type": "string",
+      "description": "The column's name in the data."
+    },
+    "declared": {
+      "type": "boolean",
+      "description": "True if a [dataframes.x.series.y] table documents it; false if it is known only from the data."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "units": {
+      "type": "string"
+    },
+    "frequency": {
+      "type": "string"
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

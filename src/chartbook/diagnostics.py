@@ -46,6 +46,15 @@ CHART_FIELDS: list[str] = [
 
 NOTEBOOK_FIELDS: list[str] = []
 
+#: "docs" means a write-up, however it is given: ``docs`` or ``docs_path``.
+MODEL_FIELDS: list[str] = [
+    "name",
+    "description",
+    "trained_on",
+    "docs",
+    "path",
+]
+
 # Mutually exclusive doc fields (exactly one required) for charts and dataframes
 DOCS_FIELDS: tuple[str, str] = ("docs_path", "docs")
 
@@ -56,6 +65,7 @@ DEFAULT_REQUIRED_FIELDS: dict[str, list[str]] = {
     "dataframes": DATAFRAME_FIELDS,
     "charts": CHART_FIELDS,
     "notebooks": NOTEBOOK_FIELDS,
+    "models": MODEL_FIELDS,
 }
 
 # Optional chart fields (not required for diagnostics)
@@ -111,7 +121,17 @@ def _collect_missing_fields(
 ) -> list[str]:
     missing: list[str] = []
     for field in required_fields:
-        if field not in spec or _value_is_missing(spec[field]):
+        if field == "docs":
+            # A write-up counts whichever way it is given
+            if all(_value_is_missing(spec.get(key)) for key in DOCS_FIELDS):
+                missing.append(field)
+        elif field == "path" and not all(
+            _value_is_missing(spec.get(key)) for key in ("table", "query")
+        ):
+            # A dataframe in a source has a table or a query where a file
+            # has a path: the place is given, which is what the rule asks
+            continue
+        elif field not in spec or _value_is_missing(spec[field]):
             missing.append(field)
     return missing
 
@@ -142,6 +162,7 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
     Returns paths relative to the cb/ directory (where diagnostics.md lives):
     - ./charts/{pipeline_id}.{chart_id}.html
     - ./dataframes/{pipeline_id}/{dataframe_id}.html
+    - ./models/{pipeline_id}/{model_id}.html
     - ../index.html (for pipelines, from cb/ up to root)
     """
     pipeline_slug = pipeline_id.replace("/", "--")
@@ -149,6 +170,8 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
         return f"./charts/{pipeline_slug}.{identifier}.html"
     elif object_type == "dataframe":
         return f"./dataframes/{pipeline_slug}/{identifier}.html"
+    elif object_type == "model":
+        return f"./models/{pipeline_slug}/{identifier}.html"
     elif object_type == "pipeline":
         return "../index.html"
     else:
@@ -167,15 +190,24 @@ def get_active_policy(manifest: dict[str, Any]) -> dict[str, Any]:
     return {"mode": "warn", "required": dict(DEFAULT_REQUIRED_FIELDS)}
 
 
-def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
-    """Generate diagnostics rows for all pipelines, dataframes, and charts.
+def build_diagnostics(
+    manifest: dict[str, Any], skip_pipelines: Iterable[str] = ()
+) -> list[DiagnosticRow]:
+    """Generate diagnostics rows for all pipelines, dataframes, charts and models.
 
     Required fields come from the manifest's [policy] section when present
     (catalogs), otherwise from the default lists in this module.
+
+    :param skip_pipelines: Pipelines left out of this build (``--no-strict``
+        skips one whose files are missing): not part of the site, so not in
+        its report either.
     """
 
     diagnostics: list[DiagnosticRow] = []
-    pipeline_ids = get_pipeline_ids(manifest)
+    # Pipelines and their assets by name, as the index lists them, so the
+    # report does not change when a chartbook.toml is reordered
+    skipped = set(skip_pipelines)
+    pipeline_ids = sorted(p for p in get_pipeline_ids(manifest) if p not in skipped)
     required = get_active_policy(manifest)["required"]
 
     for pipeline_id in pipeline_ids:
@@ -196,7 +228,7 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
         )
 
         dataframes = pipeline_manifest.get("dataframes", {})
-        for dataframe_id, dataframe_meta in dataframes.items():
+        for dataframe_id, dataframe_meta in sorted(dataframes.items()):
             dataframe_missing = _collect_missing_fields(
                 dataframe_meta, required["dataframes"]
             )
@@ -217,7 +249,7 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
             )
 
         charts = pipeline_manifest.get("charts", {})
-        for chart_id, chart_meta in charts.items():
+        for chart_id, chart_meta in sorted(charts.items()):
             chart_missing = _collect_missing_fields(chart_meta, required["charts"])
             # Check mutually exclusive doc fields
             chart_missing.extend(
@@ -235,10 +267,26 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
                 )
             )
 
+        for model_id, model_meta in sorted((pipeline_manifest.get("models") or {}).items()):
+            model_missing = _collect_missing_fields(
+                model_meta, required.get("models", [])
+            )
+            diagnostics.append(
+                DiagnosticRow(
+                    object_type="model",
+                    object_name=model_meta.get("name", model_id),
+                    metadata_complete=len(model_missing) == 0,
+                    identifier=model_id,
+                    pipeline_id=pipeline_id,
+                    missing_fields=", ".join(model_missing),
+                    page_link=_build_page_link("model", model_id, pipeline_id),
+                )
+            )
+
         if required.get("notebooks"):
-            for notebook_id, notebook_meta in pipeline_manifest.get(
-                "notebooks", {}
-            ).items():
+            for notebook_id, notebook_meta in sorted(
+                pipeline_manifest.get("notebooks", {}).items()
+            ):
                 notebook_missing = _collect_missing_fields(
                     notebook_meta, required["notebooks"]
                 )
@@ -288,14 +336,14 @@ def write_diagnostics_csv(diagnostics: list[DiagnosticRow], output_path: Path) -
 
 
 def generate_metadata_diagnostics(
-    manifest: dict[str, Any], docs_build_dir: Path
+    manifest: dict[str, Any], docs_build_dir: Path, skip_pipelines: Iterable[str] = ()
 ) -> list[DiagnosticRow]:
     """Create the metadata diagnostics CSV inside the docs build directory.
 
     :returns: The diagnostic rows, so callers can enforce strict policy.
     """
 
-    diagnostics = build_diagnostics(manifest)
+    diagnostics = build_diagnostics(manifest, skip_pipelines)
     diagnostics_dir = docs_build_dir / "_static" / "diagnostics"
     diagnostics_path = diagnostics_dir / "chartbook_metadata_diagnostics.csv"
     write_diagnostics_csv(diagnostics, diagnostics_path)

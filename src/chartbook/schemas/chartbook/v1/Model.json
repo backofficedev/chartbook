@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Model.json",
+  "title": "Model record",
+  "description": "A trained model that a pipeline declares in [models]: a file, or a directory of files. Other fields the manifest declares for it are carried as they are.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "pipeline"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Model"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The asset's fully qualified address."
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "model"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "string",
+      "description": "The ID of the pipeline that declares the asset."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the asset's content is.",
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "file"
+        },
+        "path": {
+          "type": "string",
+          "description": "As declared in chartbook.toml, relative to the pipeline's root. A file or a directory."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        },
+        "modified_at": {
+          "type": "string",
+          "description": "When the file, or the newest file the glob names, was last written, in UTC. Absent when not built."
+        }
+      }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "Hash of the asset's content. Absent when its file has not been built."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "files": {
+      "type": "array",
+      "description": "The files of a model that is a directory, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "size_bytes",
+          "content_hash"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the model's directory, with forward slashes."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+            "description": "Hash of this file."
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the dataframes the model was trained on."
+    },
+    "pinned_inputs": {
+      "type": "object",
+      "description": "For each input that is another pipeline's, the content hash chartbook.lock pins it at, by the input's ID as `inputs` writes it. Absent when none is pinned.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
+    "trained_with": {
+      "type": "object",
+      "description": "The content hash of each input when the model file's bytes were trained, by the input's ID as the lockfile writes it, as the snapshot that first held these bytes recorded it. Absent when no snapshot holds these bytes or none recorded inputs.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
+    "inputs_now": {
+      "type": "object",
+      "description": "The content hash of each `trained_with` input now, keyed as `trained_with` is: a local dataframe as it is in the folder, another pipeline's as chartbook.lock pins it. Missing where it cannot be told (a file not there, a pin gone). Present with `trained_with`, so the record alone says which input moved from what to what.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
+    "stale_inputs": {
+      "type": "array",
+      "description": "The inputs in `trained_with` whose content now differs: a local dataframe as it is in the folder, another pipeline's as chartbook.lock pins it. Empty when the model is up to date; absent with `trained_with`.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "The model's scores, from its metrics file: a flat object.",
+      "additionalProperties": {
+        "type": [
+          "number",
+          "string",
+          "boolean"
+        ]
+      }
+    },
+    "aliases": {
+      "type": "object",
+      "description": "The model's labels, from [models.x.aliases]: each a name that points at a version, by the start of the version's content hash.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(sha256:)?[0-9a-f]{12,64}$"
+      }
+    },
+    "versions": {
+      "type": "array",
+      "description": "The model's versions, oldest first. A version is made by a snapshot: the first one that held those bytes. These are the versions in the store of the machine that built the index.",
+      "items": {
+        "type": "object",
+        "required": [
+          "version",
+          "content_hash",
+          "made_at",
+          "commit"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version's name: the start of its content hash, as `model/x@<version>` takes it."
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          },
+          "made_at": {
+            "type": "string",
+            "description": "When the snapshot that made it was made, in UTC."
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$",
+            "description": "The commit the pipeline was at: which code trained it."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The labels that point at it."
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Its scores, as the metrics file had them when the snapshot was made."
+          },
+          "inputs": {
+            "type": "array",
+            "description": "What the pipeline was pinned to when the snapshot was made: which data."
+          },
+          "trained_on": {
+            "type": "object",
+            "description": "The content hash of each `trained_on` input when this version was first made, by the input's ID: exactly which data made it.",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+            }
+          }
+        }
+      }
+    },
+    "keep": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    },
+    "trained_from": {
+      "type": "object",
+      "description": "In a catalog's index: for each input of another pipeline the model was trained on, the snapshot of that pipeline that held the bytes of `trained_with` (the one the model's pipeline pins, when it holds them, else the newest that does).",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "commit",
+          "made_at"
+        ],
+        "properties": {
+          "commit": {
+            "type": "string"
+          },
+          "made_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

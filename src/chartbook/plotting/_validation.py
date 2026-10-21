@@ -10,14 +10,39 @@ if TYPE_CHECKING:
     import pandas as pd
 
 
-def validate_dataframe(df: "pd.DataFrame") -> None:
-    """Validate that df is a pandas DataFrame."""
+def validate_dataframe(df) -> "pd.DataFrame":
+    """Validate df and return it as a pandas DataFrame.
+
+    A polars DataFrame or LazyFrame, which is what ``data.load()`` returns,
+    is collected and converted here: the plotting backends work on pandas.
+    """
     import pandas as pd
+
+    # Checked by module so that polars is imported only when it is passed
+    if type(df).__module__.split(".")[0] == "polars":
+        import polars as pl
+
+        if isinstance(df, (pl.LazyFrame, pl.DataFrame)):
+            # What pandas would make of these the backends cannot draw: an
+            # unordered Categorical for a category or an enum, a Decimal
+            # object that does not add to a float
+            schema = df.collect_schema() if isinstance(df, pl.LazyFrame) else df.schema
+            df = df.with_columns(
+                [
+                    pl.col(name).cast(pl.String if dtype.base_type() in (pl.Categorical, pl.Enum) else pl.Float64)
+                    for name, dtype in schema.items()
+                    if dtype.base_type() in (pl.Categorical, pl.Enum, pl.Decimal)
+                ]
+            )
+        if isinstance(df, pl.LazyFrame):
+            df = df.collect()
+        if isinstance(df, pl.DataFrame):
+            df = df.to_pandas()
 
     if not isinstance(df, pd.DataFrame):
         raise DataValidationError(
             column=None,
-            message=f"Expected pandas DataFrame, got {type(df).__name__}",
+            message=f"Expected a pandas or polars DataFrame, got {type(df).__name__}",
         )
 
     if df.empty:
@@ -25,6 +50,7 @@ def validate_dataframe(df: "pd.DataFrame") -> None:
             column=None,
             message="DataFrame is empty",
         )
+    return df
 
 
 def validate_columns_exist(
@@ -75,7 +101,13 @@ def validate_datetime_column(df: "pd.DataFrame", column: str) -> None:
 
 
 def validate_chart_id(chart_id: str) -> None:
-    """Validate chart_id is a valid identifier."""
+    """Validate chart_id names the saved files well: ``<chart_id>.html``, ``<chart_id>_wide.pdf`` and so on.
+
+    Refused: an empty id; a character no filename may hold on every
+    platform; ``.`` and ``..``, which are not names; and a leading ``-`` or
+    ``.``, which would make a file read as an option or hidden. Anything
+    else is a name as written.
+    """
     if not chart_id:
         raise DataValidationError(
             column=None,
@@ -89,6 +121,25 @@ def validate_chart_id(chart_id: str) -> None:
         raise DataValidationError(
             column=None,
             message=f"chart_id contains invalid characters: {found_invalid}",
+        )
+
+    if chart_id in (".", ".."):
+        raise DataValidationError(
+            column=None,
+            message=(
+                f"chart_id {chart_id!r} is not a name: the saved files are named "
+                f"<chart_id>.html, <chart_id>.png and so on, so '.' and '..' are refused"
+            ),
+        )
+
+    if chart_id[0] in "-.":
+        raise DataValidationError(
+            column=None,
+            message=(
+                f"chart_id {chart_id!r} starts with {chart_id[0]!r}: a chart id may not start with "
+                f"'-' or '.', since it names the saved files (<chart_id>.html, <chart_id>_wide.pdf) "
+                f"and one so named is read as an option or hidden"
+            ),
         )
 
 

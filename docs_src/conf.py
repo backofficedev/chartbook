@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 project = "chartbook"
 copyright = "2026, Jeremiah Bejarano"
 author = "Jeremiah Bejarano"
-release = "0.1.1"
+release = "0.2.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -136,3 +136,23 @@ html_sidebars = {
         "sbt-sidebar-nav.html",
     ]
 }
+
+
+def _publish_index_schemas(app, exception):
+    """Publish the index's JSON Schemas with the docs, where each "$id" says."""
+    if exception is not None or app.builder.format != "html":
+        return
+    import shutil
+    from pathlib import Path
+
+    import chartbook.index
+
+    shutil.copytree(
+        chartbook.index.SCHEMAS_DIR,
+        Path(app.outdir) / "schemas" / "chartbook",
+        dirs_exist_ok=True,
+    )
+
+
+def setup(app):
+    app.connect("build-finished", _publish_index_schemas)

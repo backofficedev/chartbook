@@ -5,18 +5,23 @@ For data loading:
     from chartbook import data
     df = data.load(pipeline="yield_curve", dataframe="repo_public")
 
+For the path of anything a pipeline declares:
+    from chartbook import assets, models
+    assets.path("chart/yield_curve")
+    models.path("rate_forecaster")
+
 For plotting:
     from chartbook import plotting
     plotting.line(df, chart_id="my_chart", x="date", y="value")
 
 For CLI (install via pipx):
     pipx install chartbook
-    chartbook build
+    chartbook docs generate
 """
 
 import importlib
 
-from . import data, env
+from . import assets, data, env, models
 from .__about__ import __version__
 
 # Lazy import for plotting to avoid requiring plotting dependencies
@@ -35,7 +40,9 @@ def __getattr__(name: str):
 
 __all__ = [
     "__version__",
+    "assets",
     "data",
+    "models",
     "env",
     "plotting",
 ]

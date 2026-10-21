@@ -164,6 +164,19 @@ def filter_recessions_for_range(
     return result
 
 
+def _x_range(x_data: pd.Series) -> tuple:
+    """The least and greatest x, which the recession shading is cut to; None for each when there is no order.
+
+    Worked out only for the shading, so that a chart with none never asks:
+    an x column of an unordered pandas category has no least or greatest.
+    """
+    if len(x_data) == 0:
+        return None, None
+    if isinstance(x_data.dtype, pd.CategoricalDtype) and not x_data.cat.ordered:
+        return None, None
+    return x_data.min(), x_data.max()
+
+
 def apply_overlays_plotly(
     fig: "go.Figure",
     overlay: "OverlayConfig",
@@ -171,14 +184,10 @@ def apply_overlays_plotly(
     x_col: str,
 ) -> None:
     """Apply all overlays to a Plotly figure."""
-    # Determine x-axis range from data
-    x_data = df[x_col]
-    x_min = x_data.min() if len(x_data) > 0 else None
-    x_max = x_data.max() if len(x_data) > 0 else None
-
     # NBER recession shading
     if overlay.nber_recessions:
         try:
+            x_min, x_max = _x_range(df[x_col])
             recessions = get_nber_recessions()
             filtered = filter_recessions_for_range(recessions, x_min, x_max)
 
@@ -348,14 +357,10 @@ def apply_overlays_matplotlib(
     x_col: str,
 ) -> None:
     """Apply all overlays to a matplotlib axes."""
-    # Determine x-axis range from data
-    x_data = df[x_col]
-    x_min = x_data.min() if len(x_data) > 0 else None
-    x_max = x_data.max() if len(x_data) > 0 else None
-
     # NBER recession shading
     if overlay.nber_recessions:
         try:
+            x_min, x_max = _x_range(df[x_col])
             recessions = get_nber_recessions()
             filtered = filter_recessions_for_range(recessions, x_min, x_max)
 

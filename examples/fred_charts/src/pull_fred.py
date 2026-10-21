@@ -53,6 +53,9 @@ def pull_fred(start_date=START_DATE, end_date=END_DATE):
         series.name = series_id
         dfs.append(series)
     df = pd.concat(dfs, axis=1)
+    # Name the date index, so that it is a real column in the parquet file
+    # and chartbook.toml can point at it with date_col = "DATE"
+    df.index.name = "DATE"
     return df
 
 

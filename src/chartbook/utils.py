@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import shutil
@@ -39,27 +40,53 @@ def fix_glimpse_row_count(glimpse_text: str, actual_row_count: int) -> str:
     return re.sub(r"^Rows: \d+", f"Rows: {actual_row_count}", glimpse_text)
 
 
-# --------------------------------------------------------------------
-#  SAFER FILE-COPY PATCHES  - drop these near the top of generator.py
-# --------------------------------------------------------------------
-# This patch allows for safer copying on shared directories.
-def _noop(*_a, **_k):
-    """Do nothing - used to replace chmod/chown/timestamp operations.
+def copy_file(source, destination):
+    """Copy a file's contents, and nothing else, to a destination path.
 
-    :param _a: Positional arguments (ignored).
-    :type _a: Any
-    :param _k: Keyword arguments (ignored).
-    :type _k: Any
+    Permissions, ownership and timestamps are deliberately not carried over.
+    On shared and network drives the calls that set them are often refused,
+    and a build should not fail over metadata.
+
+    :param source: The file to copy.
+    :type source: str or Path
+    :param destination: The file to write (not a directory).
+    :type destination: str or Path
     """
+    shutil.copyfile(source, destination)
 
 
-# 1. Disable metadata copying that needs chmod/chown
-shutil.copymode = _noop  # used by shutil.copy
-shutil.copystat = _noop  # used by shutil.copy2 / copytree
+def copy_tree(source, destination):
+    """Copy a directory tree's contents into a destination, merging with it.
 
-# 2. Make copy2 behave like copy (now metadata-free as well)
-shutil.copy2 = shutil.copy
-# --------------------------------------------------------------------
+    Like :func:`copy_file`, this copies file contents only. Existing files in
+    the destination are overwritten; others are left in place.
+
+    :param source: The directory to copy.
+    :type source: str or Path
+    :param destination: The directory to copy into; created if missing.
+    :type destination: str or Path
+    """
+    source, destination = Path(source), Path(destination)
+    for root, _, files in os.walk(source, followlinks=True):
+        target_dir = destination / Path(root).relative_to(source)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for name in files:
+            shutil.copyfile(Path(root) / name, target_dir / name)
+
+
+def move_tree(source, destination):
+    """Move a directory, falling back to copy-and-delete across file systems.
+
+    :param source: The directory to move.
+    :type source: str or Path
+    :param destination: Where it should end up; must not already exist.
+    :type destination: str or Path
+    """
+    try:
+        os.rename(source, destination)
+    except OSError:
+        copy_tree(source, destination)
+        shutil.rmtree(source)
 
 
 def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
@@ -136,16 +163,59 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
             pass
 
 
-def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB):
+#: How many rows a dataframe's glimpse shows, from the top of the file
+GLIMPSE_ROWS = 5
+
+#: How many significant digits a float in a glimpse may be rounded to: as
+#: many as a float holds for certain. See :func:`_for_display` for when it is
+GLIMPSE_DIGITS = 15
+
+
+def directory_tables(directory) -> list:
+    """The files a reader opens when a dataframe's path is a folder: its parquet parts, sorted.
+
+    The rule is the one a directory pinned from another pipeline is read by
+    (``chartbook.resolve._held``): of the files the index counts
+    (:func:`chartbook.hashing.directory_files`), none under a name starting
+    ``.`` or ``_`` (Spark's ``_SUCCESS``, Hadoop's ``.crc`` files), none that
+    is plainly not a table (a ``README.txt``, a ``schema.json``;
+    :data:`chartbook.resolve.NOT_TABLES`), and of the rest each named
+    ``.parquet`` or that begins or ends as parquet does (Hive's ``000000_0``).
+    Judged from the folder's files on disk; a folder pinned from a store is
+    read as the files its record lists, and its object is checked whole
+    against that list before it is laid out, so the two agree there.
+
+    :param directory: The folder.
+    :type directory: str or Path
+    :returns: The files, absolute as *directory* is, in name order.
+    :rtype: list[Path]
+    """
+    from chartbook import hashing
+    from chartbook.resolve import NOT_TABLES, _is_parquet
+
+    directory = Path(directory)
+    tables = []
+    for file in sorted(hashing.directory_files(directory)):
+        parts = file.relative_to(directory).parts
+        if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
+            continue
+        if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
+            tables.append(file)
+    return tables
+
+
+def get_dataframe_glimpse(filepath):
     """Get a simple glimpse of a dataframe showing columns and data types.
 
-    For files larger than size_threshold_mb, uses memory-efficient loading by only
-    collecting sampled data and correcting the row count in glimpse output.
+    Shows the first :data:`GLIMPSE_ROWS` rows, with floats rounded for
+    display (:func:`glimpse_text`). Only those rows are collected, whatever
+    the size of the file; the row count is the file's own. A folder is read
+    as a reader of it reads it, by its parquet parts
+    (:func:`directory_tables`); one with no part yet is said in a sentence.
 
-    :param filepath: Path to the parquet or CSV file.
+    :param filepath: Path to the parquet or CSV file, a glob of parquet
+        files, or a folder of parquet parts.
     :type filepath: str or Path
-    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold_mb: float
     :returns: The glimpse output as a string, or error message if file cannot be read.
     :rtype: str
     """
@@ -155,42 +225,87 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
         if is_glob_pattern(str(filepath)):
             # Glob/hive-partitioned paths: use scan_parquet directly
             lf = pl.scan_parquet(filepath, hive_partitioning=True)
-            is_large_file = False
+        elif filepath.is_dir():
+            tables = directory_tables(filepath)
+            if not tables:
+                # The folder by its name: the page says where it is, and a
+                # machine's path belongs on no page
+                return f"No parquet file in {filepath.name}/: a folder is shown by its parquet parts, and this one has none yet."
+            lf = pl.scan_parquet(tables, hive_partitioning=True)
+        elif filepath.suffix.lower() == ".csv":
+            lf = pl.scan_csv(filepath)
+        elif filepath.suffix.lower() == ".parquet":
+            lf = pl.scan_parquet(filepath)
         else:
-            # Check file size to determine loading strategy
-            file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-            is_large_file = file_size_mb > size_threshold_mb
-
-            # Load data lazily
-            if filepath.suffix.lower() == ".csv":
-                lf = pl.scan_csv(filepath)
-            elif filepath.suffix.lower() == ".parquet":
-                lf = pl.scan_parquet(filepath)
-            else:
-                return f"Unsupported file type: {filepath.suffix}"
+            return f"Unsupported file type: {filepath.suffix}"
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
         actual_row_count = row_count_df["count"][0]
 
-        # For large files, use head() to avoid full scan; for small files, tail() is fine
-        if is_large_file:
-            sample_df = lf.head(1).collect()
-        else:
-            sample_df = lf.tail(1).collect()
-
-        # Capture the glimpse output
-        output = StringIO()
-        with redirect_stdout(output):
-            sample_df.glimpse()
-
-        glimpse_text = output.getvalue()
+        sample_df = lf.head(GLIMPSE_ROWS).collect()
 
         # Fix row count in glimpse to show actual total rows
-        return fix_glimpse_row_count(glimpse_text, actual_row_count)
+        return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
     except Exception as e:
         return f"Error reading file: {e!s}"
+
+
+def glimpse_text(sample: pl.DataFrame) -> str:
+    """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
+
+    A float that is the noise of a binary fraction is shown as the number it
+    stands for (``3.8499999999999996`` reads ``3.85``; :func:`_for_display`),
+    and every other value as it is. A ``f32`` column is widened to show its
+    digits as written (``1.1``, not ``1.100000023841858``), and is still
+    labelled ``<f32>``; not when a column's name has a line break in it,
+    since the label is put back by the line the column is on.
+    """
+    broken = any("\n" in name or "\r" in name for name in sample.columns)
+    narrow = set() if broken else {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
+    shown = sample.with_columns(pl.col(sorted(narrow)).cast(pl.String).cast(pl.Float64))
+    shown = shown.with_columns(
+        [
+            pl.Series(name, [_for_display(value) for value in shown[name].to_list()], dtype=pl.Float64)
+            for name, dtype in shown.schema.items()
+            if dtype == pl.Float64
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        shown.glimpse()
+    # "Rows: …" and "Columns: …", then one line per column in order. A name
+    # is shown left-aligned and cut at 50 characters, so the type's label
+    # comes after it
+    lines = output.getvalue().split("\n")
+    if len(lines) < sample.width + 2:
+        return "\n".join(lines)
+    for position, name in enumerate(sample.columns):
+        if name in narrow:
+            line = lines[2 + position]
+            at = line.find("<f64>", 2 + min(len(name), 49))
+            if at >= 0:
+                lines[2 + position] = line[:at] + "<f32>" + line[at + len("<f64>") :]
+    return "\n".join(lines)
+
+
+def _for_display(value):
+    """A float as a glimpse shows it: rounded only when what is cut is noise.
+
+    A whole number (a date written as 20240115.0, an ID, ``2**53``) and a
+    value that is not finite are shown as they are. Any other is rounded to
+    :data:`GLIMPSE_DIGITS` significant digits, with Python's formatting,
+    exact at any magnitude, when the result is within two units in the last
+    place of the value: so ``3.8499999999999996`` reads ``3.85`` and
+    ``0.1 + 0.2`` reads ``0.3``, while ``1/3`` keeps all its digits.
+    """
+    if value is None or not math.isfinite(value) or value.is_integer():
+        return value
+    rounded = float(f"{value:.{GLIMPSE_DIGITS}g}")
+    if math.isfinite(rounded) and abs(rounded - value) <= 2 * math.ulp(value):
+        return rounded
+    return value
 
 
 # Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.

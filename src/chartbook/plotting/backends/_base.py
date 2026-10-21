@@ -93,7 +93,13 @@ class PlottingBackend(Protocol):
 
 
 class BaseBackend(ABC):
-    """Abstract base class for plotting backends with common utilities."""
+    """Abstract base class for plotting backends with common utilities.
+
+    The intended starting point for a new backend. Subclass it, implement
+    ``name`` and the five abstract ``create_*`` methods, and you inherit a
+    ``create_dual_axis`` that reports dual-axis charts as unsupported and a
+    ``create_chart`` that routes on ``config.chart_type``.
+    """
 
     @property
     @abstractmethod

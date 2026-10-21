@@ -27,6 +27,14 @@ Search among individual charts (chart haven entries) or browse charts by topic, 
 Browse dataframes that are produced by each pipeline, the dataframes that power the individual charts.
 :::
 
+{% if model_file_list %}
+:::{grid-item-card} 🤖 [Models](cb/models.md)
+:link: cb/models
+:link-type: doc
+Browse the trained models that pipelines produce: what each was trained on, and how it scores.
+:::
+
+{% endif %}
 :::{grid-item-card}  🔌 [Pipelines](cb/pipelines.md)
 :link: cb/pipelines
 :link-type: doc
@@ -39,6 +47,14 @@ Browse the pipelines that power the generated dataframes and charts.
 Information about contributing to this catalog project.
 :::
 
+{% if has_versions %}
+:::{grid-item-card}  🕰️ [Versions](cb/versions.md)
+:link: cb/versions
+:link-type: doc
+Every snapshot of every pipeline in the store, each its own site as it was when its owner declared it ready, and which pipeline pins it.
+:::
+
+{% endif %}
 :::{grid-item-card}  🩺 [Diagnostics](cb/diagnostics.md)
 :link: cb/diagnostics
 :link-type: doc
@@ -53,7 +69,9 @@ View metadata quality reports and download CSV files that flag metadata gaps acr
 
 cb/charts.md
 cb/dataframes.md
-cb/pipelines.md
-cb/diagnostics.md
+{% if model_file_list %}cb/models.md
+{% endif %}cb/pipelines.md
+{% if has_versions %}cb/versions.md
+{% endif %}cb/diagnostics.md
 contributing.md
 ```

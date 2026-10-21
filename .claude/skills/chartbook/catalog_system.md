@@ -8,10 +8,16 @@ How to set up, manage, browse, and load data from ChartBook catalogs.
 
 ```
 ~/.chartbook/
-├── settings.toml        # User settings (catalog path override)
+├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
 ├── chartbook.toml       # Default global catalog
+├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
+├── trust.toml           # Pipelines and repositories this user trusts a build of (chartbook trust); CI trusts the checkout, CHARTBOOK_TRUST=all every folder
+├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
+├── store/               # The store: snapshots and pinned copies, by content hash ([store] url or CHARTBOOK_STORE moves it)
+├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
+├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
-├── docs/                # Rendered catalog HTML (from `catalog build`)
+├── docs/                # Rendered catalog HTML (from `catalog generate`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
 └── _docs_src/           # Temp source dir (auto-cleaned)
 ```
@@ -71,9 +77,9 @@ chartbook catalog add ./my-pipeline --catalog /path/to/catalog/chartbook.toml
 
 **Behavior:**
 - Validates each directory contains a `chartbook.toml` that resolves to a pipeline (an empty file counts — type is inferred)
-- Derives the scoped catalog key (`scope/name`) from an explicit `[project] id` if set, else from the target's git remote plus directory name, falling back to the bare directory name
+- Keys the entry by the pipeline's ID: an explicit `[project] id` if set; else, at the top of a git repository with a remote, the repository's scope and name from the remote (whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the bare folder name
 - Writes the key quoted in TOML when it contains `/`: `[pipelines."ftsfr/crsp_treasury"]`
-- Stores relative paths from the catalog directory in the entry's `path` key
+- Stores relative paths from the catalog directory in the entry's `path` key, worked out between the two folders with any link in their paths followed
 - Detects duplicates by absolute path comparison
 - Re-adding a disabled pipeline automatically re-enables it
 
@@ -132,7 +138,7 @@ The `chartbook.toml` format itself makes nearly all fields optional; a catalog c
 ```toml
 [policy]
 mode = "warn"          # "warn" (default): report on the diagnostics page
-                       # "strict": fail the catalog build on missing fields
+                       # "strict": fail the build on missing fields
 
 [policy.required]
 project    = ["description", "maintainer", "repo_url"]
@@ -140,20 +146,21 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-Without a `[policy]` section, a default warn-only list of recommended fields is reported on the diagnostics page. Policy is enforced only during catalog builds — standalone pipeline builds are always permissive.
+Without a `[policy]` section, a default warn-only list of recommended fields is reported on the diagnostics page. A pipeline may have a `[policy]` of its own, which applies when it is checked or built by itself; inside a catalog, the catalog's policy applies and the pipeline's is ignored. With `mode = "strict"`, the build (a catalog's or a lone pipeline's) fails on a missing required field. `chartbook check` fails on one whatever the mode, and with no policy anywhere it only warns.
 
 ### Build Catalog Documentation
 
 ```bash
-chartbook catalog build              # Build HTML docs to ~/.chartbook/docs/
-chartbook catalog build -f           # Force overwrite existing docs
-chartbook catalog build --strict     # Error on missing files instead of skipping
+chartbook catalog generate           # Render the site to ~/.chartbook/docs/ (incremental: only changed pipelines)
+chartbook catalog generate --clean   # Discard what earlier builds kept and rebuild everything
+chartbook catalog generate -f        # Force overwrite existing docs
+chartbook catalog generate --strict  # Error on missing files instead of skipping
 ```
 
 ### Browse Catalog Documentation
 
 ```bash
-chartbook catalog browse   # Opens ~/.chartbook/docs/index.html in default browser
+chartbook catalog open   # Opens ~/.chartbook/docs/index.html in default browser
 ```
 
 ## Browsing the Catalog (CLI)
@@ -173,8 +180,8 @@ chartbook ls --catalog /path/to/catalog/chartbook.toml
 Catalog: /path/to/catalog/chartbook.toml
 
 [pipeline] acme/sales: Sales Analytics Pipeline
-  [dataframe] acme/sales/sales_data: Sales Transactions
-  [chart] acme/sales/monthly_sales: Monthly Sales Overview
+  [dataframe] acme/sales:sales_data: Sales Transactions
+  [chart] acme/sales:chart/monthly_sales: Monthly Sales Overview
 ```
 
 ### Access Dataframe Metadata
@@ -216,6 +223,10 @@ lf = data.load(pipeline="sales", dataframe="sales_data",
 # Get data file path
 path = data.get_data_path(pipeline="sales", dataframe="sales_data")
 
+# Each of these reads the pipeline's newest snapshot in the store first (its pin, in a
+# pipeline that declares it), and its folder only when it has none, with a
+# WorkingVersionWarning saying so.
+
 # Get documentation content as a string
 docs = data.get_docs(pipeline="sales", dataframe="sales_data")
 
@@ -231,7 +242,7 @@ The `pipeline` argument (and `--pipeline` CLI flag) accepts three forms:
 2. **Scoped name** (`ftsfr/crsp_treasury`) — matches its catalog key exactly
 3. **Repo URL** (`https://github.com/ftsfr/crsp_treasury`) — normalized to a scoped name
 
-An `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is reserved for future version pinning and is rejected with a "not yet supported" error.
+An `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is reserved for future version pinning and is rejected with a "not yet supported" error. So is a registry prefix (e.g. `charthub.example/ftsfr/crsp_treasury`): a leading component that looks like a host, in a three-component ID, is reserved for a future registry.
 
 ### Format Options
 
@@ -288,20 +299,20 @@ os_type = chartbook.env.get_os_type()
 ## Scaffolding New Projects
 
 ```bash
-chartbook init   # Wraps cruft create (cruft ships with chartbook)
+chartbook init   # Renders the template that came with this ChartBook (no network)
 ```
 
-Creates a new pipeline project from the cookiecutter template. Projects can later pull upstream template updates via `cruft update`.
+Creates a new pipeline project from the cookiecutter template that came with the installed ChartBook; its environment files ask for that ChartBook's version or later. Its `.cruft.json` names the template on GitHub and the commit the ChartBook was built from, so the project can later pull upstream template updates via `cruft update`.
 
 ## CLI Build & Publish Reference
 
 ```bash
-chartbook build [OUTPUT_DIR]     # Generate HTML documentation
-chartbook build -f               # Force overwrite existing output
-chartbook build --strict         # Error on missing files
-chartbook build --keep-build-dirs  # Keep temp build directories
-chartbook publish                # Publish to directory
-chartbook create-data-glimpses   # Create data summary report
+chartbook docs generate [OUTPUT_DIR]       # Render the documentation site
+chartbook docs generate -f                 # Force overwrite existing output
+chartbook docs generate --strict           # Error on missing files
+chartbook docs generate --keep-build-dirs  # Keep temp build directories
+chartbook publish                          # Publish to directory
+chartbook create-data-glimpses             # Create data summary report
 ```
 
 ### Build Options

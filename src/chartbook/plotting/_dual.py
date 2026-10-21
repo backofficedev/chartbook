@@ -72,8 +72,8 @@ def dual(
     Combines two different chart types on left and right y-axes sharing
     a common x-axis.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param x: Column name for shared x-axis.
     :type x: str
     :param left_y: Column name(s) for left y-axis.
@@ -159,7 +159,7 @@ def dual(
     ```
     """
     # Validation
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     left_y_cols = _normalize_y(left_y)
     right_y_cols = _normalize_y(right_y)
     validate_columns_exist(df, [x] + left_y_cols + right_y_cols)

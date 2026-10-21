@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Pipeline.json",
+  "title": "Pipeline record",
+  "description": "One pipeline: a project with a chartbook.toml that declares assets.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "name",
+    "location",
+    "assets"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Pipeline"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "scope/name, or a bare name."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "maintainer": {
+      "type": "string"
+    },
+    "contributors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "repo_url": {
+      "type": "string"
+    },
+    "os_compatibility": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the pipeline's source comes from. `value` is a local directory and is absent from a published index.",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "path",
+            "git"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string"
+        },
+        "modified_at": {
+          "type": "string",
+          "description": "When the file, or the newest file the glob names, was last written, in UTC. Absent when not built."
+        }
+      }
+    },
+    "scripts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "The pipelines this one declares in [dependencies]. Absent when the manifest has no such table.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "via",
+          "location"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The pipeline's ID in this index when it is one of its pipelines; otherwise its key in [dependencies]."
+          },
+          "via": {
+            "enum": [
+              "path",
+              "rev",
+              "store"
+            ],
+            "description": "Whether it comes from a local directory, a fetched revision, or the store by its ID alone."
+          },
+          "location": {
+            "type": "object",
+            "description": "Where the dependency's source comes from. For a directory, `path` is as declared and `value` is absolute and absent from a published index.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "path",
+                  "git",
+                  "store"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "rev": {
+                "type": "string",
+                "description": "The revision as [dependencies] declares it: a branch, a tag or a commit. Absent for the repository's default branch."
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "description": "The commit the dependency is pinned at. For a repository, what `rev` meant when it was pinned. For a directory, the commit its snapshot was built from. Present once chartbook.lock has pinned it."
+              },
+              "pipeline": {
+                "type": "string",
+                "description": "For a dependency named by its ID alone: the pipeline's own ID, whose snapshots are looked for in the store (`kind: store`), or whose repository it was got from when the store had none (`kind: git`, with no `url`: each machine works the address out from its `[resolve] default_host`)."
+              },
+              "at": {
+                "type": "string",
+                "description": "For `kind: store`: the start of the commit its snapshots are narrowed to, as [dependencies] declares it (`commit`)."
+              },
+              "repository": {
+                "type": "string",
+                "description": "For `kind: store`, in chartbook.lock: the web address of the repository its snapshots are taken from, as the snapshot it was pinned from, or another of that repository's, records it."
+              },
+              "first_commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "description": "In chartbook.lock, for a dependency named by its ID: the first commit of the repository it was pinned from, whether from its snapshot (`kind: store`) or from its repository (`kind: git`). Later pins and updates keep to that repository."
+              }
+            }
+          },
+          "snapshot": {
+            "type": "string",
+            "description": "For a directory: when the snapshot it is pinned from was made, in UTC. With `location.commit`, it names the snapshot."
+          },
+          "pinned_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the pipeline's assets. Series are listed under their dataframe, not here. For a pipeline a catalog shows from the store alone, those its newest snapshot's own index lists."
+    },
+    "asset_names": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "For a pipeline a catalog shows from the store alone: each asset's name, by ID, as its newest snapshot's own index gives it, as one line of plain text. Absent when none has a name."
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    },
+    "code_changed_at": {
+      "type": "string",
+      "description": "When the pipeline's code last changed, in UTC, as a docs build worked it out: the last commit that touched the source where it is committed and unmodified, else the newest modification time. Present only in an index a docs build writes; an index built from a manifest as loaded leaves it out."
+    },
+    "site_url": {
+      "type": "string",
+      "description": "Where the pipeline's own site is published, as the manifest declares it. Absent from a published index when it is a local file:// path."
+    },
+    "site_dir": {
+      "type": "object",
+      "description": "The folder of pages the pipeline supplies for its own site: `[project] site_dir`, or `docs_src/site/` when that exists. Absent when it supplies none.",
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Relative to the pipeline's root."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        }
+      }
+    },
+    "site_pages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Every Markdown file under `site_dir`, by path relative to it, sorted. The build copies them beside the generated pages; `index_toc.md` at the root, if present, is merged into the front page instead."
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "The snapshots of this pipeline in the store of the machine that built the index, newest first: each a version its owner declared ready. A catalog renders each as its own site, at `versions/<pipeline>/<name>/`. Absent when the store holds none.",
+      "items": {
+        "type": "object",
+        "required": [
+          "commit",
+          "made_at",
+          "name"
+        ],
+        "properties": {
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "made_at": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "The version's folder name: the commit's first seven digits and when the snapshot was made."
+          },
+          "built_by_run": {
+            "type": "boolean",
+            "description": "True when `chartbook run --snapshot` built the bytes in the same command."
+          },
+          "rendered": {
+            "type": "boolean",
+            "description": "Whether the catalog that wrote this index built the snapshot's site; false when it shows the page that says why."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The git tags on the snapshot's commit when it was made: its names."
+          }
+        }
+      }
+    },
+    "from_snapshot": {
+      "type": "object",
+      "description": "Present when the pipeline's folder is a version laid out from the store (`chartbook.snapshot.materialize`): which snapshot it is.",
+      "required": [
+        "commit",
+        "made_at"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "made_at": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

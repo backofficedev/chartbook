@@ -31,8 +31,11 @@ dependencies = [
     "tomli-w>=1.1.0",
     # Data loading
     "packaging",
-    "polars>=1.9.0",
+    # 1.20 has the IO-plugin seam that DuckDB's lazy frames are built on
+    "polars>=1.20",
     "pyarrow",
+    # The local SQL engine: [sources] with backend = "duckdb", and data.sql()
+    "duckdb>=1.4",  # .pl(lazy=True) arrived in 1.4
     "python-decouple>=3.8",
     # Plotting
     "matplotlib>=3.7.0",
@@ -58,31 +61,74 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "sphinx_external_toc>=1.0.1",
-    # Project scaffolding (chartbook init)
+    # Project scaffolding: chartbook init renders with cookiecutter (2.2
+    # reads the template's __prompts__), and a project follows the template
+    # with cruft
+    "cookiecutter>=2.2",
     "cruft",
 ]
 
 [project.optional-dependencies]
-# Deprecated no-op aliases from the old extras layout — every install now
-# includes everything, so these resolve to the same full package. Kept so
-# existing specs like "chartbook[all]" or "chartbook[data]" don't break;
-# remove after one release.
-all = []
-data = []
-plotting = []
-sphinx = []
+# `pip install chartbook` installs everything a pipeline on one machine needs,
+# Sphinx included. The user-facing extras are a kind of store that needs a cloud
+# library the base install does not bring, a warehouse's driver
+# (docs_src/design/stores-and-backends.md) and a second site tool
+# (docs_src/design/writer.md). The old
+# [all], [data], [plotting] and [sphinx] aliases were removed after their one
+# release of notice; see docs_src/reference/stability.md.
+#
+# The store in an S3 bucket: [store] url = "s3://bucket/prefix"
+s3 = [
+    "boto3>=1.28",
+]
+# A source in a Databricks SQL warehouse: [sources.x] backend = "databricks"
+databricks = [
+    "databricks-sql-connector[pyarrow]>=4.0",
+]
+# A site built with MkDocs instead of Sphinx: [project] writer = "mkdocs"
+mkdocs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
+]
 
-# Contributor tooling only (tests + build automation)
+# The contributor toolchain is the `dev` dependency group below, which `uv sync`
+# installs; it is not an extra, since it is nothing a user installs.
+[dependency-groups]
 dev = [
-    "pytest",
-    "colorama",
+    # Build automation: `uv run doit` runs everything in dodo.py
     "doit>=0.36.0",
+    "colorama",
+    # Hatch runs the test matrix (`hatch test --all`, [tool.hatch.envs.hatch-test])
+    # and is the build backend's own tool; `uv build` and `uv publish` do the release
+    "hatch>=1.14",
+    # The suite under `uv run pytest`: what [tool.hatch.envs.hatch-test] gives
+    # each matrix environment, so the two agree (a test keeps them so)
+    "pytest",
+    "ipython",
+    "jsonschema>=4.18",
     "jupytext>=1.16.0",
     "nbconvert>=7.0.0",
+    "numpy",
+    "openpyxl",
+    "requests",
+    "seaborn",
+    "boto3>=1.28",
+    "moto[s3]>=5",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
 ]
 
 [project.scripts]
 chartbook = "chartbook.cli:main"
+
+# A kind of store, found by the scheme of the store's URL (chartbook.store.store_for_url)
+[project.entry-points."chartbook.stores"]
+s3 = "chartbook.stores.s3:S3Store"
+
+[project.entry-points."chartbook.backends"]
+databricks = "chartbook.backends.databricks:DatabricksBackend"
 
 [project.urls]
 Documentation = "https://backofficedev.github.io/chartbook"
@@ -104,18 +150,32 @@ chartbook = ["src/chartbook", "*/chartbook/src/chartbook"]
 tests = ["tests", "*/chartbook/tests"]
 
 [build-system]
-requires = ["hatchling"]
+# license-files as a list (PEP 639, above) is read from hatchling 1.27 on
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-packages = ["src/chartbook"]
-include = ["src/chartbook/data/**"]
-
+# The wheel alone collapses src/: `packages` there ships src/chartbook as
+# chartbook. Set for every target (as it was, with a `sources` remapping),
+# it made the sdist strip src/ too, and a wheel built from that sdist, whose
+# pyproject still points at src/chartbook, had no code in it.
 [tool.hatch.build.targets.wheel]
 packages = ["src/chartbook"]
 
-[tool.hatch.build.targets.wheel.sources]
-src = ""
+# The sdist keeps the source layout, so that a wheel built from it is the
+# wheel built from the checkout: src/chartbook here; pyproject.toml, the
+# README, the licence and hatch_build.py come with every sdist; template/
+# and src/chartbook/built_from.txt are put in by hatch_build.py.
+[tool.hatch.build.targets.sdist]
+include = ["/src/chartbook"]
+
+# hatch_build.py: the project template `chartbook init` renders comes with
+# the package, so the two always match (chartbook.scaffold.find_template):
+# the files git tracks in template/, as chartbook/template in the wheel and
+# template/ in the sdist. And the commit it is at, in
+# chartbook/built_from.txt, for the .cruft.json `chartbook init` writes. Not
+# a force-include here, which would ship whatever is in template/, ignored
+# files too, and copy it into site-packages for an editable install.
+[tool.hatch.build.hooks.custom]
 
 [tool.hatch.envs.hatch-test]
 # Use dev-mode to install local chartbook from src/ (base deps now include
@@ -126,12 +186,21 @@ extra-dependencies = [
     "colorama",
     "doit>=0.36.0",
     "ipython",
+    # Validates generated index records against the published JSON Schemas
+    "jsonschema>=4.18",
     "jupytext",
     "nbconvert",
     "numpy",
     "openpyxl",
     "requests",
     "seaborn",
+    # The S3 store, against a mocked bucket
+    "boto3>=1.28",
+    "moto[s3]>=5",
+    # The MkDocs writer's build test
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
@@ -151,17 +220,14 @@ matrix.sphinx.extra-dependencies = [
     { value = "sphinx~=8.2", if = ["sphinx8"] },
 ]
 
-[tool.hatch.envs.default]
-# Default environment includes dev dependencies
-features = ["dev"]
-
-[tool.hatch.envs.docs]
-
-[tool.hatch.envs.docs.scripts]
-build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"
-
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::Warning"]
+# A passing test's tmp_path is removed when it ends, a failing one's kept to
+# look at: kept whole, the suite's sites and stores filled CI's disk
+tmp_path_retention_policy = "failed"
+markers = [
+    "integration: needs tools that may not be installed (LaTeX); each such test skips itself when they are missing",
+]
 addopts = "--doctest-modules --ignore=examples"
 pythonpath = ["."]
 testpaths = ["tests"]

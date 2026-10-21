@@ -547,6 +547,60 @@ Kept on the table, explicitly out of scope for v2:
   The script semantics of `build` were chosen so this needs no format change.
 - **A global registry** mapping `scope/name` → repo URL + metadata.
 
+## Since this was written
+
+*Added 2026-10-12.* This document specifies the v2 format as designed in July 2026, and that
+format is what the loader implements. Later designs build on it. Nothing below changes a file
+that is valid today.
+
+- **Names inside a pipeline are per table.** `[dataframes.gdp]` and `[charts.gdp]` are two
+  different assets. Each table is its own namespace, and an asset is addressed by its key with
+  its kind in front, unless it is a dataframe: `gdp`, `chart/gdp`, `notebook/analysis`,
+  `note/methodology`. The tables are plural and the kinds are singular. The whole address
+  grammar, including other pipelines' assets, is in {doc}`references`.
+- **Fields that name another asset hold a reference in that grammar.** Today the only one is a
+  chart's `dataframe = "repo_public"`, a local dataframe. Planned ones are a chart's `inputs`
+  ({doc}`index-schema`) and a model's `trained_on` ({doc}`models`).
+- **`[project] repo_url` now does default to the git remote**, as this document always said. The
+  remote is turned into a web URL and any credentials in it are removed.
+- **`[dataframes.x.series.y]` is read** ({ref}`series-addressing`). It documents one column of
+  a dataframe. The loader validates it, and each series is a record in the build's `index.json`.
+- **A pipeline may have its own `[policy]`** *(proposed 2026-10-12)*. "Catalog policy" above says
+  policy is enforced only when a catalog builds and that a pipeline alone is always permissive.
+  In practice a `[policy]` table in a pipeline's manifest was passed through unresolved, and
+  crashed both `build` and `check` with a `KeyError`. It is now resolved the same way as a
+  catalog's, and means: what this pipeline holds itself to when it is checked or built *alone*.
+  Inside a catalog, the catalog's policy applies and the pipeline's is ignored, so the rule
+  "whoever aggregates your work decides" still holds. The alternative fix, refusing the table
+  in a pipeline, was the other option; the maintainer had asked whether a pipeline-level policy
+  makes sense, and this is the answer proposed.
+- **`[policy.required]` has a `models` list**, and a list may contain `docs`, meaning "a
+  write-up, given as `docs` or as `docs_path`".
+- **`[models.x]` is read** ({doc}`models`). It declares a trained model: `path`, `trained_on`,
+  `metrics_path` and a write-up. A manifest with only `[models]` is a pipeline.
+- **`[dependencies]` is read** ({doc}`asset-graph`, "Identity and location"). Each entry names
+  another pipeline and says where it is: `{ path = "../x" }` or
+  `{ git = "https://…", rev = "…" }`. `chartbook check` verifies each `path`, and
+  `chartbook pin` freezes what each has, cloning a `git` one first ({doc}`overview`, step 3).
+  Two things in "Future work" above are not how it was built. `{ rev = "a1b2c3d" }`
+  with no `git` is refused, because working out a repository from an ID needs a default host that
+  is not built. And a `path` dependency is not "unpinned": the asset graph decided that both kinds
+  are pinned. A catalog may not have the table.
+- **Tables that are designed and not yet read by the loader:** `[sources.x]`
+  with a dataframe's `table` and `query` ({doc}`data-access`). A manifest that
+  contains one today loads, and the table is ignored.
+- **`[scripts]` is read, and `build` is executed** (2026-10-13). The `build`
+  field above "generalizes into a table of named commands", in the words of
+  {doc}`asset-graph`: `[scripts]`, with `build` as its one reserved name.
+  `[project] build` is the same thing and is still read; a manifest that
+  gives both, differently, does not load. `chartbook run` executes it. So
+  "today the field is documentation-only", above, is no longer so, and a
+  `build` that holds a note and not a command is now a mistake. The
+  `[project.build]` table floated above as "the natural extension" is not
+  what was built. A catalog may not have `[scripts]`.
+
+{doc}`overview` has the order in which these get built.
+
 ## Open questions
 
 *(none — the entity field de-prefixing question was resolved in favor of
@@ -603,7 +657,7 @@ this repo.
   `name`/`maintainer`/`copyright`; `get_logo_path`/`get_favicon_path` read
   `project.logo`/`favicon`; `site_dir` default-if-exists logic.
 
-**Phase 2 — Consumers** (`markdown_generator.py`, `build_docs.py`,
+**Phase 2 — Consumers** (`writers/sphinx.py` and `sitefiles.py`, then `markdown_generator.py`, `build_docs.py`,
 `publish.py`, `diagnostics.py`, Jinja templates in `docs_src_pipeline/` and
 `docs_src_catalog/`)
 - Templates: `pipeline_manifest.pipeline.pipeline_name` →
@@ -677,3 +731,5 @@ Reference material to rewrite, and where the rationale is preserved:
   linking here.
 - **Cookiecutter repo** (`cookiecutter_chartbook`) — template
   `chartbook.toml` (Jinja preserved), rendered `example/`, and its README.
+  *(2026-10-13: the template now lives in this repository, in `template/`.
+  {doc}`overview`, "The project template, moved in".)*

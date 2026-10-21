@@ -9,23 +9,6 @@ A developer platform for data science teams.
 
 Discover, document, and share data science work across your organization. ChartBook provides a centralized catalog for data pipelines, charts, and documentation—making it easy to find, understand, and reuse analytics work.
 
-## Terminology
-
-ChartBook supports two project types:
-
-- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
-- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
-
-See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together.
-
-## Features
-
-- **Pipeline Catalog** — Organize and discover data pipelines across your team
-- **Documentation Generation** — Build searchable documentation websites from your analytics work
-- **Data Governance** — Track data sources, licenses, and access permissions
-- **Programmatic Data Access** — Load pipeline outputs directly into pandas or polars
-- **Multi-Pipeline Catalogs** — Aggregate multiple pipelines into a single documentation site
-
 ## Installation
 
 ```bash
@@ -34,12 +17,6 @@ pip install chartbook
 
 One install, everything included: data loading, plotting utilities, and the CLI for building documentation.
 
-**Development:**
-
-```bash
-pip install -e ".[dev]"
-```
-
 ## Quick Start
 
 ### Load data from a pipeline
@@ -47,13 +24,49 @@ pip install -e ".[dev]"
 ```python
 from chartbook import data
 
-df = data.load(pipeline="fred_charts", dataframe="interest_rates")
+df = data.load(pipeline="fred_charts", dataframe="fred")
 ```
 
 ### Build documentation
 
 ```bash
-chartbook build
+chartbook docs generate
+chartbook docs generate -f --watch    # rebuild as you edit; refresh the browser
+```
+
+### Check a project in CI
+
+```bash
+chartbook check               # fails on broken paths, expiring licenses, and fields a [policy] requires
+```
+
+### Ask the manifest where a file belongs
+
+```bash
+chartbook path repo_public          # the path chartbook.toml declares for that dataframe
+chartbook path chart/repo_rates     # ...and for that chart
+```
+
+```python
+from chartbook import assets, data
+
+df.to_parquet(data.path("repo_public"))            # a dataframe
+fig.write_html(assets.path("chart/repo_rates"))    # anything else says its kind
+```
+
+### Declare a trained model
+
+```toml
+[models.rate_forecaster]
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["repo_public"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+```
+
+```python
+from chartbook import models
+
+joblib.dump(model, models.path("rate_forecaster"))  # the model gets a page: scores, lineage
 ```
 
 ### Browse your catalog
@@ -66,10 +79,27 @@ chartbook ls
 chartbook ls dataframes
 
 # Get path to a dataframe's parquet file
-chartbook data get-path --pipeline fred_charts --dataframe interest_rates
+chartbook data get-path --pipeline fred_charts --dataframe fred
 ```
 
 See the [documentation](https://backofficedev.github.io/chartbook) for configuration options and detailed guides.
+
+## Terminology
+
+ChartBook supports two project types:
+
+- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
+- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
+
+See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together, and [Vocabulary](https://backofficedev.github.io/chartbook/guide/vocabulary.html) for the words ChartBook uses: a manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows.
+
+## Features
+
+- **Pipeline Catalog** — Organize and discover data pipelines across your team
+- **Documentation Generation** — Build searchable documentation websites from your analytics work
+- **Data Governance** — Track data sources, licenses, and access permissions
+- **Programmatic Data Access** — Load pipeline outputs directly into pandas or polars
+- **Multi-Pipeline Catalogs** — Aggregate multiple pipelines into a single documentation site
 
 ## Documentation
 
@@ -82,6 +112,15 @@ Full documentation is available at [backofficedev.github.io/chartbook](https://b
 ## Contributing
 
 Contributions are welcome. See [CONTRIBUTING](https://backofficedev.github.io/chartbook/contributing.html) for guidelines.
+
+To work on ChartBook itself you need [uv](https://docs.astral.sh/uv/) and nothing else. From a clone:
+
+```bash
+uv sync          # the project, editable, and its dev toolchain, from uv.lock
+uv run doit      # notebooks, docs, examples, the package, then the test matrix
+```
+
+`uv run doit build_package` is the same without the tests, and `uv run doit test` is the suite on one Python.
 
 ## License
 

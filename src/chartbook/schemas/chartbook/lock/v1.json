@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/lock/v1.json",
+  "title": "ChartBook lockfile",
+  "description": "The file `chartbook pin` writes as chartbook.lock: the exact bytes a pipeline depends on. It has the index's envelope without `generated_at` and `generator`, so that pinning twice with nothing changed writes the same file. Its records are the index's records with fields left out: the pipeline's own record, cut down to its dependencies, and one record for each asset of each dependency.",
+  "type": "object",
+  "required": [
+    "schema",
+    "root",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "chartbook/lock/v1"
+    },
+    "root": {
+      "type": "string",
+      "description": "The ID of the pipeline the lockfile belongs to."
+    },
+    "records": {
+      "type": "array",
+      "description": "First the pipeline's own record, then one record per asset of each dependency, sorted by ID. A labelled version of a dependency's model is a record of its own, `dep:model/x@champion`, with `ref.rev` and `label` set and the version's `content_hash`; one without a `content_hash` has `missing`, why the store could not supply it. An asset record with a `content_hash` is a pin; one without is declared by the other pipeline and was not built when this was pinned.",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "version",
+          "id"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "On the Pipeline record: each dependency as in the index's Pipeline record, by its key in [dependencies], with no absolute path. `pinned_hash` is one hash over everything pinned of it, labelled versions included. A directory pinned from a snapshot has the snapshot's commit in `location.commit` and its time in `snapshot`.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "via",
+                "location"
+              ]
+            }
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

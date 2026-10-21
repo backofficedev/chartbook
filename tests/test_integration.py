@@ -5,6 +5,8 @@ These tests exercise the complete workflow from manifest reading through
 documentation generation, verifying that the full pipeline works correctly.
 """
 
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -167,6 +169,10 @@ class TestExampleProjects:
         doit_db = example_path / ".doit-db.sqlite"
         if doit_db.exists():
             doit_db.unlink()
+        # ...and a lockfile, which pins whatever data an earlier build had
+        lockfile = example_path / "chartbook.lock"
+        if lockfile.exists():
+            lockfile.unlink()
 
     @staticmethod
     def _touch_newer_than(target: Path, source: Path):
@@ -309,15 +315,212 @@ class TestExampleProjects:
         assert (example_path / "_output" / "yield_curve_current.html").exists()
         assert (example_path / "docs" / "index.html").exists()
 
-    def test_catalog_example(self):
+    @staticmethod
+    def _snapshot(pipeline_path: Path, env: dict):
+        """Declare a pipeline's build ready, as its owner would.
+
+        A snapshot needs everything in the pipeline's folder to be committed,
+        so this fails if the example has been edited and not committed.
+        """
+        result = subprocess.run(
+            ["chartbook", "snapshot"],
+            cwd=pipeline_path,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env=env,
+        )
+        assert result.returncode == 0, (
+            f"chartbook snapshot failed in {pipeline_path.name}. If you have edited "
+            f"that example, commit it first.\n{result.stderr}\n{result.stdout}"
+        )
+        return result
+
+    def _build_rate_forecast(self, store_dir: Path):
+        """Build the rate_forecast example on yield_curve's mock data.
+
+        A snapshot of yield_curve is made in *store_dir*, a scratch store,
+        and rate_forecast pins that, so that a test never writes to the
+        store of whoever runs it. The lockfile it leaves is removed again:
+        it names objects in a store that is about to be deleted.
+        """
+        yield_curve_path = Path("examples/yield_curve").resolve()
+        example_path = Path("examples/rate_forecast").resolve()
+        env = {**self._get_env_with_pythonpath(), "CHARTBOOK_STORE": str(store_dir)}
+
+        if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
+            self._clean_example_dirs(yield_curve_path)
+            self._setup_mock_data_yield_curve(yield_curve_path)
+            result = subprocess.run(
+                ["doit", "-a"],
+                cwd=yield_curve_path,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                env=env,
+            )
+            assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
+        self._snapshot(yield_curve_path, env)
+
+        self._clean_example_dirs(example_path)
+        result = subprocess.run(
+            ["doit", "-a"],
+            cwd=example_path,
+            capture_output=True,
+            text=True,
+            timeout=600,
+            env=env,
+        )
+        assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
+        return example_path, env
+
+    def test_rate_forecast_example(self, tmp_path):
+        """A model in one pipeline, trained on another's data, through a pin.
+
+        This is the "Done when" of step 3 in docs_src/design/overview.md: it
+        builds with no catalog configured, its model's index record names
+        the exact bytes it was trained on, and editing the upstream's data
+        does not change what it reads until `chartbook update`.
+
+        And of the snapshot model of step 4: what it pins is the build
+        yield_curve's owner declared ready. A rebuild of yield_curve is not
+        seen at all until its owner makes a snapshot of it.
+        """
+        yield_curve_path = Path("examples/yield_curve").resolve()
+        upstream = yield_curve_path / "_data" / "fed_yield_curve.parquet"
+        example_path, env = self._build_rate_forecast(tmp_path / "store")
+        lockfile = example_path / "chartbook.lock"
+        original = upstream.read_bytes() if upstream.exists() else None
+        try:
+            assert (example_path / "_models" / "rate_forecast.json").exists()
+            assert (example_path / "docs" / "index.html").exists()
+
+            # The model's record names the bytes of the dataframe it read
+            built = json.loads((example_path / "docs" / "index.json").read_text())
+            (model,) = [r for r in built["records"] if r["kind"] == "Model"]
+            input_id = "backofficedev/yield_curve:fed_yield_curve"
+            assert model["inputs"] == [input_id]
+            pinned_at = model["pinned_inputs"][input_id]
+            assert pinned_at == "sha256:" + hashlib.sha256(original).hexdigest()
+
+            def run(*command):
+                return subprocess.run(
+                    command, cwd=example_path, capture_output=True, text=True, env=env
+                )
+
+            # ...and what it reads is the pinned copy, not the upstream's file
+            pinned_path = Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip())
+            assert pinned_path.read_bytes() == original
+            assert yield_curve_path not in pinned_path.parents
+
+            # The upstream rewrites its file in place, as pandas does
+            smaller = pd.read_parquet(upstream).iloc[:500]
+            smaller.to_parquet(upstream)
+            assert upstream.read_bytes() != original
+
+            again = run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()
+            assert Path(again) == pinned_path
+            assert pinned_path.read_bytes() == original
+
+            # Nothing here is told: the folder is not read, and its owner
+            # has not declared the new data ready. Not even an update moves.
+            pin = run("chartbook", "pin")
+            assert "changed upstream" not in pin.stdout, pin.stdout + pin.stderr
+            assert "chartbook.lock is unchanged." in run("chartbook", "update").stdout
+
+            # Its owner makes a snapshot. Now this pipeline is told, and stays put.
+            assert "Snapshot made." in self._snapshot(yield_curve_path, env).stdout
+            pin = run("chartbook", "pin")
+            assert "changed upstream" in pin.stdout, pin.stdout + pin.stderr
+            assert Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()) == pinned_path
+
+            # Until `chartbook update`
+            update = run("chartbook", "update")
+            assert update.returncode == 0, update.stdout + update.stderr
+            moved = Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip())
+            assert moved != pinned_path
+            assert len(pd.read_parquet(moved)) == 500
+        finally:
+            if original is not None:
+                upstream.write_bytes(original)
+                self._touch_newer_than(
+                    upstream, yield_curve_path / "src" / "load_fed_yield_curve.py"
+                )
+            if lockfile.exists():
+                lockfile.unlink()
+
+    def test_chartbook_run_pins_and_builds_the_example(self, tmp_path):
+        """`chartbook run` in rate_forecast pins yield_curve's snapshot, and builds.
+
+        From nothing pinned: step 4 in docs_src/design/overview.md. It does
+        not build yield_curve, which is a folder this pipeline depends on
+        and its owner's to build and to declare ready; here the test is its
+        owner. Each example's `build` script is `doit`.
+        """
+        yield_curve_path = Path("examples/yield_curve").resolve()
+        example_path = Path("examples/rate_forecast").resolve()
+        env = {**self._get_env_with_pythonpath(), "CHARTBOOK_STORE": str(tmp_path / "store")}
+        if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
+            self._clean_example_dirs(yield_curve_path)
+            self._setup_mock_data_yield_curve(yield_curve_path)
+        built = subprocess.run(
+            ["chartbook", "run"],
+            cwd=yield_curve_path,
+            capture_output=True,
+            text=True,
+            timeout=900,
+            env=env,
+        )
+        assert built.returncode == 0, f"run failed: {built.stderr}\n{built.stdout}"
+        assert built.stdout.rstrip().endswith("Ran build in 1 pipeline(s).")
+        self._snapshot(yield_curve_path, env)
+
+        self._clean_example_dirs(example_path)
+        lockfile = example_path / "chartbook.lock"
+        try:
+            result = subprocess.run(
+                ["chartbook", "run"],
+                cwd=example_path,
+                capture_output=True,
+                text=True,
+                timeout=900,
+                env=env,
+            )
+            assert result.returncode == 0, f"run failed: {result.stderr}\n{result.stdout}"
+
+            # The pin, then this pipeline. Nothing is run in yield_curve.
+            said = result.stdout
+            pinning = "backofficedev/rate_forecast: pinning what it depends on"
+            itself = "backofficedev/rate_forecast: build\n"
+            assert pinning in said and itself in said, said
+            assert said.index(pinning) < said.index(itself)
+            assert "backofficedev/yield_curve: build" not in said
+            assert said.rstrip().endswith("Ran build in 1 pipeline(s).")
+
+            assert (yield_curve_path / "docs" / "index.html").exists()
+            assert lockfile.exists()
+            assert (example_path / "_models" / "rate_forecast.json").exists()
+            assert (example_path / "docs" / "index.html").exists()
+
+            # Both name their build script, and the index lists it
+            built = json.loads((example_path / "docs" / "index.json").read_text())
+            (pipeline,) = [r for r in built["records"] if r["kind"] == "Pipeline"]
+            assert pipeline["scripts"] == {"build": "doit"}
+        finally:
+            if lockfile.exists():
+                lockfile.unlink()
+
+    def test_catalog_example(self, tmp_path):
         """Test that catalog example builds successfully.
 
-        The catalog references fred_charts and yield_curve pipelines,
-        so we need to run those first to generate the required data files.
+        The catalog references the fred_charts, yield_curve and rate_forecast
+        pipelines, so we need to run those first to generate the required
+        files.
         """
         catalog_path = Path("examples/catalog").resolve()
         fred_charts_path = Path("examples/fred_charts").resolve()
         yield_curve_path = Path("examples/yield_curve").resolve()
+        rate_forecast_path = Path("examples/rate_forecast").resolve()
 
         # Clean up catalog before running
         self._clean_example_dirs(catalog_path)
@@ -350,17 +553,34 @@ class TestExampleProjects:
             )
             assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
 
-        # Now run chartbook build -f on catalog
-        result = subprocess.run(
-            ["chartbook", "build", "-f"],
-            cwd=catalog_path,
-            capture_output=True,
-            text=True,
-            timeout=300,
-            env=self._get_env_with_pythonpath(),
-        )
+        # rate_forecast reads yield_curve's data, so it is built after it
+        self._build_rate_forecast(tmp_path / "store")
+        lockfile = rate_forecast_path / "chartbook.lock"
+        try:
+            # Now render the catalog's site
+            result = subprocess.run(
+                ["chartbook", "docs", "generate", "-f"],
+                cwd=catalog_path,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                env=self._get_env_with_pythonpath(),
+            )
 
-        assert result.returncode == 0, f"chartbook build failed: {result.stderr}"
+            assert result.returncode == 0, f"chartbook docs generate failed: {result.stderr}"
 
-        # Verify outputs exist
-        assert (catalog_path / "docs" / "index.html").exists()
+            # Verify outputs exist
+            assert (catalog_path / "docs" / "index.html").exists()
+
+            # In the catalog's index, the model's input is the ID of the
+            # dataframe's own record, with the bytes it is pinned at
+            built = json.loads((catalog_path / "docs" / "index.json").read_text())
+            (model,) = [
+                r for r in built["records"] if r["id"].endswith(":model/rate_forecast")
+            ]
+            (input_id,) = model["inputs"]
+            (dataframe,) = [r for r in built["records"] if r.get("id") == input_id]
+            assert model["pinned_inputs"] == {input_id: dataframe["content_hash"]}
+        finally:
+            if lockfile.exists():
+                lockfile.unlink()

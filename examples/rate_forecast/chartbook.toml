@@ -1,0 +1,38 @@
+[project]
+requires_chartbook = ">=0.2.0"
+name = "Rate Forecast"
+description = "A small model in one pipeline, trained on data from another."
+contributors = [
+    "Jeremy Bejarano",
+]
+copyright = "2025"
+os_compatibility = [
+    "Windows",
+    "Linux",
+    "MacOS",
+]
+
+# Named commands. `chartbook run` pins what this pipeline depends on, if
+# nothing is pinned yet, and then runs `build`.
+[scripts]
+build = "doit"
+
+# The pipelines this one reads from. The key is this pipeline's own name for
+# the other one; the value says where to find it.
+[dependencies]
+"backofficedev/yield_curve" = { path = "../yield_curve" }
+
+[models.rate_forecast]
+name = "10-Year Rate AR(1)"
+description = "Predicts tomorrow's 10-year zero-coupon Treasury yield from today's."
+path = "./_models/rate_forecast.json"
+# Another pipeline's dataframe: the pipeline's name, a colon, the dataframe's.
+# The scope ("backofficedev/") may be left off, since only one dependency is
+# called yield_curve.
+trained_on = ["yield_curve:fed_yield_curve"]
+metrics_path = "./_output/rate_forecast_metrics.json"
+docs_path = "./docs_src/models/rate_forecast.md"
+tags = [
+    "Yield Curve",
+    "Forecast",
+]

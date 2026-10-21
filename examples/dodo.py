@@ -53,20 +53,54 @@ def task_build_fred_charts():
     }
 
 
+def task_snapshot_yield_curve():
+    """Declare yield_curve's build ready for the pipelines that depend on it"""
+    yield_curve_dir = BASE_DIR / "yield_curve"
+    return {
+        # A snapshot is what rate_forecast pins: it never reads yield_curve's
+        # folder. It needs everything in that folder to be committed. With
+        # nothing new built, it makes no new snapshot.
+        "actions": [f"chartbook snapshot --project-dir {yield_curve_dir}"],
+        "task_dep": ["build_yield_curve"],
+        "verbosity": 2,
+    }
+
+
+def task_build_rate_forecast():
+    """Run doit in rate_forecast directory, which reads yield_curve's data"""
+    rate_forecast_dir = BASE_DIR / "rate_forecast"
+    yield_curve_dir = BASE_DIR / "yield_curve"
+    return {
+        # Its own first task is `chartbook pin`, which pins yield_curve's
+        # snapshot the first time and leaves the pin alone after that
+        "actions": [f"doit -f {rate_forecast_dir / 'dodo.py'}"],
+        "file_dep": [
+            str(rate_forecast_dir / "dodo.py"),
+            str(rate_forecast_dir / "chartbook.toml"),
+            str(yield_curve_dir / "docs" / "index.html"),
+        ],
+        "targets": [str(rate_forecast_dir / "docs" / "index.html")],
+        "task_dep": ["snapshot_yield_curve"],
+        "verbosity": 2,
+    }
+
+
 def task_generate_catalog():
-    """Run chartbook build in catalog directory"""
+    """Render the catalog's site"""
     catalog_dir = BASE_DIR / "catalog"
     yield_curve_dir = BASE_DIR / "yield_curve"
     fred_charts_dir = BASE_DIR / "fred_charts"
+    rate_forecast_dir = BASE_DIR / "rate_forecast"
     return {
-        "actions": [f"cd {catalog_dir} && chartbook build -f"],
+        "actions": [f"cd {catalog_dir} && chartbook docs generate -f"],
         "file_dep": [
             str(catalog_dir / "chartbook.toml"),
             str(yield_curve_dir / "docs" / "index.html"),
             str(fred_charts_dir / "docs" / "index.html"),
+            str(rate_forecast_dir / "docs" / "index.html"),
         ],
         "targets": [str(catalog_dir / "docs" / "index.html")],
-        "task_dep": ["build_yield_curve", "build_fred_charts"],
+        "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
         "verbosity": 2,
     }
 
@@ -79,5 +113,16 @@ def task_copy_docs():
         "file_dep": [str(catalog_dir / "docs" / "index.html")],
         "targets": [str(ROOT_DOCS / "index.html"), str(ROOT_DOCS / ".nojekyll")],
         "task_dep": ["generate_catalog"],
+        "verbosity": 2,
+    }
+
+
+def task_check():
+    """Gate the catalog: required metadata, declared paths, license dates"""
+    catalog_dir = BASE_DIR / "catalog"
+    return {
+        # Checking the catalog checks every member pipeline against its policy
+        "actions": [f"chartbook check --project-dir {catalog_dir}"],
+        "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
         "verbosity": 2,
     }

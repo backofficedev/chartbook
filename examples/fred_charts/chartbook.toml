@@ -1,4 +1,5 @@
 [project]
+requires_chartbook = ">=0.2.0"
 name = "Example Charts from FRED"
 description = "Example Charts from FRED"
 contributors = [
@@ -10,6 +11,8 @@ os_compatibility = [
     "Linux",
     "macOS",
 ]
+
+[scripts]
 build = "doit"
 
 [notebooks.01_example_notebook_interactive]
@@ -39,7 +42,7 @@ tags = [
 ]
 pull_method = "Web API via Python"
 path = "./_data/fred.parquet"
-date_col = "date"
+date_col = "DATE"
 docs_path = "./docs_src/dataframes/fred.md"
 
 [charts.gdp_chart]

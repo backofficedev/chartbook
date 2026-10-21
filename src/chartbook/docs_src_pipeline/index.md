@@ -1,6 +1,11 @@
 # {{pipeline_manifest.project.name}}
 
+{% include "freshness.md" %}
+
 Last updated: {sub-ref}`today`
+{% if version %}
+**A snapshot of this pipeline:** commit `{{ version.short }}`, made {{ version.made }}. Its owner declared it ready; the write-ups, the data dictionary and the data are as they were then.
+{% endif %}
 
 {% if index_toc_content %}
 {{ index_toc_content }}
@@ -45,16 +50,19 @@ cb/charts.md
 {{dataframe_file_list | sort | join("\n")}}
 ```
 
-
+{% if model_file_list %}
 ```{toctree}
 :maxdepth: 1
-:caption: Appendix 💡
-myst_markdown_demos.md
-apidocs/index
+:caption: Pipeline Models 🤖
+{{model_file_list | sort | join("\n")}}
 ```
+{% endif %}
 
+
+
+{% include "pipeline_dependencies.md" %}
 
 ## Pipeline Specs
-{% include "_docs_src/_templates/pipeline_manifest.md" with context %}
+{% include "pipeline_manifest.md" with context %}
 
 {{readme_text}}

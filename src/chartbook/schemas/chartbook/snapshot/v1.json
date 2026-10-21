@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/snapshot/v1.json",
+  "title": "ChartBook snapshot",
+  "description": "The record `chartbook snapshot` writes in the store: what one commit of a pipeline built. It has the index's envelope, with `code` and `made_at` in place of `generated_at` and `generator`. Its records are the index's asset records with fields left out, one for each asset the pipeline declares. The bytes are objects in the same store, under each record's `content_hash`.",
+  "type": "object",
+  "required": [
+    "schema",
+    "root",
+    "code",
+    "made_at",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "chartbook/snapshot/v1"
+    },
+    "root": {
+      "type": "string",
+      "description": "The ID of the pipeline the snapshot is of, as the pipeline named itself when it was made."
+    },
+    "code": {
+      "type": "object",
+      "description": "The code the assets were built from.",
+      "required": [
+        "commit"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "The git commit the pipeline's repository was at, with nothing in the pipeline's folder uncommitted."
+        },
+        "subdirectory": {
+          "type": "string",
+          "description": "The pipeline's folder within its repository, with `/` between its parts. Absent for a pipeline at the top of its repository."
+        }
+      }
+    },
+    "made_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "When the snapshot was made, in UTC. One commit can have several: a pipeline that pulls data from outside builds other bytes on another day. With the commit, this names the snapshot."
+    },
+    "built_with": {
+      "type": "object",
+      "description": "A note of the conditions the snapshot was made under. It is there to explain a difference between two snapshots, and no hash covers it. Nothing of the pipeline's .env is ever recorded.",
+      "properties": {
+        "run": {
+          "type": "boolean",
+          "description": "True when ChartBook ran the pipeline's build in the same command that made the snapshot (`chartbook run --snapshot`). False when the snapshot took its owner's word that what was on disk was built by the commit."
+        },
+        "chartbook": {
+          "type": "string",
+          "description": "The version of ChartBook that made it."
+        },
+        "python": {
+          "type": "string",
+          "description": "The version of Python that ChartBook ran under."
+        },
+        "platform": {
+          "type": "string",
+          "description": "The operating system and machine type."
+        },
+        "lineage": {
+          "type": "string",
+          "enum": [
+            "pins",
+            "deep"
+          ],
+          "description": "How the snapshot's lineage was checked when it was made: `pins` when its own pins were found to account for every dependency (every snapshot made since that check exists); `deep` when, with `chartbook snapshot --deep`, every snapshot upstream was walked and checked by hash as well. Missing on a snapshot made before either check. A note for audit; `chartbook lineage` checks again."
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "What the pipeline itself was pinned to when the snapshot was made: the `dependencies` of its own chartbook.lock, each with the commit and `pinned_hash` it was pinned at. Absent if it has no lockfile.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "via",
+          "location"
+        ]
+      }
+    },
+    "labels": {
+      "type": "object",
+      "description": "The labels the pipeline's `[models.x.aliases]` gave when the snapshot was made, by the model's reference (`model/x`): each label and the first twelve or more hex digits of the version's content hash. `store gc` reads them from the newest snapshot, so a label given on one machine keeps its version on another; `chartbook pin` in a pipeline that depends on this one pins `this:model/x@label` from them. Absent if no label named a version.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{12,}$"
+        }
+      }
+    },
+    "index": {
+      "type": "object",
+      "description": "The pipeline's own index at this commit, in the published form (no path of the machine that made it), as an object in the same store holding one `index.json`: what a docs build of the folder would have written just before the snapshot was made. It keeps the data dictionary of this version with its data. A model's versions in it are those made before this snapshot. Absent when the index could not be built (a manifest a docs build would refuse), and in snapshots made before snapshots carried it.",
+      "required": [
+        "content_hash"
+      ],
+      "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "documents": {
+      "type": "object",
+      "description": "The files a writer needs that are not assets, as one object in the same store, each under its path in the pipeline's folder: the manifest, the lockfile, the README, every `docs_path`, every file under the pipeline's `site_dir`, its logo and favicon; only files git tracks. Only plain paths inside the folder, none a link or under one. With the assets, enough to lay the version out as a folder and build its site from the store alone. Absent when git tracks none of them, and in snapshots made before snapshots carried them.",
+      "required": [
+        "content_hash",
+        "files"
+      ],
+      "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The documents' paths in the pipeline's folder, with `/`, sorted."
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "description": "One record per asset the pipeline declares with a `path`, and per dataframe that is a table or a query in a source (written out as `<name>.parquet` into the store when the source is a DuckDB file; its `location` is the source's), sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "version",
+          "id",
+          "ref",
+          "pipeline",
+          "location"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pipeline": {
+            "type": "string"
+          },
+          "keep": {
+            "type": "boolean",
+            "const": true,
+            "description": "The manifest marks the asset `keep = true`: every version of its bytes is kept in the store, each in the newest snapshot holding it, by `store gc`. Present only when it does."
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The git tags on the snapshot's commit when it was made: the names of that version. A tag made later is not in it."
+    },
+    "repository": {
+      "type": "string",
+      "description": "The repository the snapshot was made in: the web address of its `origin` remote, with no credentials. A dependency named by its ID alone keeps to the repository it was first pinned from."
+    },
+    "first_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "The first commit of the repository the snapshot was made in, back from its commit by first parents: the same in every full clone, with a remote or none. Absent for a shallow clone. With `repository`, it tells one repository from another that gives itself the same pipeline ID."
+    }
+  }
+}

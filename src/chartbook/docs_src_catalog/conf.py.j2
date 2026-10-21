@@ -65,7 +65,6 @@ myst_enable_extensions = [
     "replacements",
     "smartquotes",
     "strikethrough",
-    "substitution",
     "tasklist",
 ]
 myst_url_schemes = ["mailto", "http", "https"]
@@ -101,7 +100,9 @@ exclude_patterns = [
 ## For including date and time in MyST
 # https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html#insert-the-date-and-reading-time
 # today_fmt = '%b %d, %Y'
-today_fmt = "%c"  # Locale’s appropriate date and time representation.
+# The zone is named: UTC from Sphinx 8, as every time on the site is; before
+# it, Sphinx gives the local time, and the offset says so
+today_fmt = "%Y-%m-%d %H:%M:%S %Z"
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -203,7 +204,8 @@ html_logo = "_static/logo.png"
 html_favicon = "_static/favicon.ico"
 html_title = "{{ site_config.title }}"
 html_sourcelink_suffix = ""
-html_last_updated_fmt = "%c"  # to reveal the build date in the pages meta
+html_last_updated_fmt = "%Y-%m-%d %H:%M:%S %Z"  # to reveal the build date in the pages meta
+html_last_updated_use_utc = True  # from Sphinx 8: in UTC, as every time on the site is
 
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -214,12 +216,19 @@ html_static_path = ["_static"]
 html_js_files = [
     "https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js",
     "chartbook-custom.js",
+    "chartbook-freshness.js",
 ]
 
 html_css_files = [
     "custom.css",
     "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css",
 ]
+
+# The themes bundle Font Awesome and switch this on during a build if it is
+# left unset. Sphinx then finds the setting different from the one it cached,
+# takes the whole configuration to have changed, and re-reads every page on
+# every run, which defeats incremental builds. Stating it keeps it stable.
+fontawesome_included = True
 
 # -- Ablog options -----------------------------------------------------------
 blog_path = "cb/charts/index"

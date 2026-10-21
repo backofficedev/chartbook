@@ -1,4 +1,5 @@
 [project]
+requires_chartbook = ">=0.2.0"
 type = "catalog"
 name = "ChartBook Catalog"
 maintainer = "Jeremy Bejarano"
@@ -7,6 +8,9 @@ logo = "./logo.png"
 
 [pipelines."backofficedev/fred_charts"]
 path = "../fred_charts"
+
+[pipelines."backofficedev/rate_forecast"]
+path = "../rate_forecast"
 
 [pipelines."backofficedev/yield_curve"]
 path = "../yield_curve"

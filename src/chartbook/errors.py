@@ -4,11 +4,15 @@ This module provides structured error types and formatting utilities
 that produce readable, actionable error messages for CLI users.
 """
 
+import difflib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Mapping, Optional
 
 import click
+
+from chartbook.identity import in_another_case
+from chartbook.refs import DEFAULT_KIND, KIND_TABLES
 
 
 @dataclass
@@ -164,6 +168,187 @@ class CatalogNotConfiguredError(Exception):
         )
 
 
+class ManifestNotFoundError(FileNotFoundError):
+    """Raised when no chartbook.toml encloses the place a lookup started from.
+
+    A bare asset name resolves against the manifest of the pipeline the
+    caller is in, found by walking up the directory tree.
+
+    Attributes:
+        start_dirs: The directories the upward search started from.
+    """
+
+    def __init__(self, start_dirs: list[Path]):
+        self.start_dirs = list(start_dirs)
+        searched = " or ".join(str(d) for d in self.start_dirs)
+        super().__init__(
+            f"No chartbook.toml found in {searched}, or in any parent "
+            f"directory. A bare asset name resolves against the chartbook.toml "
+            f"of the pipeline you are in: run from inside a pipeline, or say "
+            f"which one with project_dir (--project-dir on the command line)."
+        )
+
+
+class AssetNotDeclaredError(LookupError):
+    """Raised when a pipeline's chartbook.toml declares no such asset.
+
+    The manifest is the single source of truth for where assets live, so a
+    path is only handed out for a name it declares. The message says which
+    table to add, or, if the name is declared as another kind of asset, how
+    to refer to that.
+
+    Attributes:
+        name: The asset name that was asked for.
+        kind: The kind of asset that was asked for.
+        manifest_path: The chartbook.toml that was searched.
+        declared: The asset names it does declare, by table.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        manifest_path: Path,
+        declared: dict[str, list[str]],
+        kind: str = DEFAULT_KIND,
+        example_path: Optional[str] = None,
+    ):
+        self.name = name
+        self.kind = kind
+        self.manifest_path = manifest_path
+        self.declared = declared
+
+        table = KIND_TABLES[kind]
+        kind_of = {t: k for k, t in KIND_TABLES.items()}
+        lines = [f"No {kind} named {name!r} is declared in {manifest_path}."]
+
+        other_kinds = [
+            kind_of[t] for t, names in declared.items() if t != table and name in names
+        ]
+        if other_kinds:
+            other = other_kinds[0]
+            lines.append(
+                f"It is declared as a {other}: refer to it as {other + '/' + name!r} "
+                f"(in Python, chartbook.assets.path({other + '/' + name!r}))."
+            )
+        else:
+            close = difflib.get_close_matches(name, declared.get(table, []), n=1)
+            if close:
+                lines.append(f"Did you mean {close[0]!r}?")
+            lines += ["", "To register it, add a table to that file, for example:", ""]
+            lines.append(f"    [{table}.{name}]")
+            lines.append(f'    path = "{example_path or "..."}"')
+
+        listing = "; ".join(
+            f"{t}: {', '.join(names)}" for t, names in declared.items() if names
+        )
+        lines += ["", f"Declared assets: {listing or '(none)'}"]
+        super().__init__("\n".join(lines))
+
+
+class DependencyNotDeclaredError(LookupError):
+    """Raised when a reference names a pipeline that is not a declared dependency.
+
+    A pipeline may read only from the pipelines its ``[dependencies]``
+    declares, so that what it depends on can be read off its manifest
+    without running anything. The message says what to add; and when the
+    name is a declared or known pipeline's but for the case of its letters
+    (``Acme/Rates`` for ``acme/rates``), it says so, since a scope derived
+    from a remote is in lowercase and nothing is matched by guessing.
+
+    Attributes:
+        reference: The reference that was asked for, as text.
+        pipeline: The pipeline it names.
+        manifest_path: The chartbook.toml that does not declare it.
+        declared: The dependencies it does declare.
+    """
+
+    def __init__(
+        self,
+        reference: str,
+        pipeline: str,
+        manifest_path: Path,
+        declared: list[str],
+        found_at: Optional[tuple[str, str]] = None,
+        known: Mapping[str, Optional[str]] = {},
+    ):
+        """
+        :param found_at: Where the catalog says the pipeline is, as its key
+            there and its folder relative to the manifest's, if it does.
+        :param known: Pipeline IDs known here besides the declared keys,
+            each with the key of the declared dependency it is the ID of
+            (``rates = { id = "acme/rates" }``, a folder's own ID), or None
+            for one the lockfile pins or the store has a snapshot of. Only
+            to suggest from.
+        """
+        self.reference = reference
+        self.pipeline = pipeline
+        self.manifest_path = manifest_path
+        self.declared = list(declared)
+
+        known = dict(known)
+        other = in_another_case([*self.declared, *known], pipeline)
+        declared_as = other if other in self.declared else known.get(other) if other else None
+        rest = reference[len(pipeline):] if reference.startswith(pipeline) else ""
+        if found_at:
+            key, where = found_at
+        else:
+            key = other or pipeline
+            where = f"../{key.rsplit('/', 1)[-1]}"
+        lines = [
+            f"Reference {reference!r} names an asset of the pipeline "
+            f"{pipeline!r}, which is not declared in [dependencies] of "
+            f"{manifest_path}.",
+        ]
+        close = [other] if other else difflib.get_close_matches(pipeline, self.declared, n=1)
+        if close:
+            lines.append(f"Did you mean {close[0]!r}?")
+        if other:
+            lines.append("An ID is case-sensitive, and a scope derived from a remote is in lowercase.")
+        if found_at:
+            lines.append(f"Your catalog has it, as {key!r}.")
+        if other and declared_as == other:
+            lines.append(f"It is declared: read it as {other + rest!r}.")
+        elif declared_as:
+            lines.append(f"It is declared as {declared_as!r}: read it as {declared_as + rest!r} or {other + rest!r}.")
+        else:
+            lines += [
+                "",
+                "To read from another pipeline, say where it is, then pin it:",
+                "",
+                "    [dependencies]",
+                f'    "{key}" = {{ path = "{where}" }}',
+                "",
+                "    $ chartbook pin",
+            ]
+        lines += ["", f"Declared dependencies: {', '.join(self.declared) or '(none)'}"]
+        super().__init__("\n".join(lines))
+
+
+class AssetNotPinnedError(LookupError):
+    """Raised when another pipeline's asset has no pinned copy to resolve to.
+
+    A reference to another pipeline's asset resolves to the copy that
+    ``chartbook.lock`` pins, in the store, and never to that pipeline's
+    working directory. So there has to be a pin, and its bytes have to be
+    in the store. The message says which is missing and what to run.
+
+    Attributes:
+        asset: The asset's ID, as the lockfile would have it.
+        reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,
+            ``"not_built"``, ``"not_in_store"``, ``"not_synced"`` (the
+            store has the object, and not all of its bytes yet),
+            ``"no_snapshot"`` (nothing to pin from), ``"working"`` (a batch
+            run does not read a working folder), ``"in_source"`` (a table
+            the pinned snapshot did not write out), or ``"no_pipeline"`` (a
+            batch run outside any pipeline, where nothing records a read).
+    """
+
+    def __init__(self, asset: str, reason: str, message: str):
+        self.asset = asset
+        self.reason = reason
+        super().__init__(message)
+
+
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """Handle validation error with user-friendly output.
 
@@ -204,15 +389,27 @@ class MissingSourceFilesError(Exception):
 
     Attributes:
         missing_files: List of MissingFile objects describing each missing file.
+        hint: The lines the CLI message ends with, saying what to do.
     """
 
-    def __init__(self, missing_files: list[MissingFile]):
+    #: The hint when the caller gives none. It suits a catalog, where
+    #: --no-strict builds the pipelines that are not named.
+    DEFAULT_HINT = (
+        "Ensure these files exist or update the paths in chartbook.toml.",
+        "Use --no-strict to skip affected pipelines instead of failing.",
+    )
+
+    def __init__(self, missing_files: list[MissingFile], hint: Optional[list[str]] = None):
         """Initialize a MissingSourceFilesError.
 
         :param missing_files: List of MissingFile objects.
         :type missing_files: list[MissingFile]
+        :param hint: What to do about them, a line each; the default suits
+            a catalog.
+        :type hint: list[str] | None
         """
         self.missing_files = missing_files
+        self.hint = list(hint) if hint else list(self.DEFAULT_HINT)
         super().__init__(self._format_message())
 
     def _format_message(self) -> str:
@@ -246,11 +443,9 @@ class MissingSourceFilesError(Exception):
             )
 
         lines.append("")
-        lines.append(
-            click.style("Hint: ", fg="green")
-            + "Ensure these files exist or update the paths in chartbook.toml."
-        )
-        lines.append("      Use --no-strict to skip affected pipelines instead of failing.")
+        first, *rest = self.hint
+        lines.append(click.style("Hint: ", fg="green") + first)
+        lines.extend(f"      {line}" for line in rest)
 
         return "\n".join(lines)
 
@@ -306,3 +501,25 @@ class MissingSourceFilesError(Exception):
         """
         click.echo(self.format_cli_message(), err=True)
         raise SystemExit(1)
+
+
+class VersionNotFoundError(LookupError):
+    """Raised when a reference names a version of an asset that cannot be found.
+
+    A version is made by a snapshot (``chartbook run --snapshot``) and is
+    named by the start of its content hash, ``model/x@7f3a9c2e41b0``, or by a
+    label the manifest gives it, ``model/x@champion``.
+
+    Attributes:
+        asset: The asset's reference, without the revision.
+        rev: The revision that was asked for.
+        reason: What is wrong: ``"no_such_version"``, ``"ambiguous"`` or
+            ``"not_in_store"``.
+    """
+
+    def __init__(self, asset: str, rev: str, reason: str, message: str):
+        self.asset = asset
+        self.rev = rev
+        self.reason = reason
+        super().__init__(message)
+

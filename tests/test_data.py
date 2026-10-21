@@ -86,8 +86,8 @@ def test_load_polars_lazyframe_deprecated(catalog_project):
             catalog_path=catalog_project,
         )
         assert isinstance(lf, pl.LazyFrame)
+        w = [warning for warning in w if issubclass(warning.category, DeprecationWarning)]
         assert len(w) == 1
-        assert issubclass(w[0].category, DeprecationWarning)
         assert "deprecated" in str(w[0].message).lower()
 
 

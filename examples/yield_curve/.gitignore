@@ -9,6 +9,9 @@
 # Exclude _output directory since it's should generated automatically
 /_output/*
 
+# Exclude trained models, which the pipeline produces
+/_models/*
+
 # Exclude PDFs generated from source LaTeX files, which are kept in the reports directory
 /reports/*.pdf
 
@@ -249,3 +252,9 @@ src/z_scratch_project_template.ipynb
 *Thumbs.db
 
 src/z_scratch_pipeline_template.ipynb
+
+# Notebooks that run_notebooks makes from src/*.py and deletes again
+src/*_ipynb.ipynb
+
+# The Markdown chartbook docs generate writes before Sphinx runs; a build makes and removes it
+_docs_src/

@@ -4,11 +4,82 @@
 
 ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
 
-## Installation
+## Quick Start
+
+- [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
+- [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
+
+## Guides
+
+- [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`
+- [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
+- [Keeping Costly Outputs](docs_src/guide/keeping-costly-outputs.md): `keep = true` on an output that cost money or compute (a paid API run's output, a trained model): every version stays in the store, `chartbook restore` puts it back, `chartbook run` stops before remaking it (`--remake`); the doit recipe
+- [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`; every snapshot of every pipeline is its own site under `versions/`, listed on the catalog's Versions page; a `[pipelines]` entry with no path shows a pipeline from the store alone
+- [Reading From a Databricks Warehouse](docs_src/guide/reading-a-warehouse.md) (experimental): `[sources.x] backend = "databricks"` after `pip install chartbook[databricks]`; `DATABRICKS_HOST` + `DATABRICKS_TOKEN`; a token goes only to the host the machine names; lazy reads; a Databricks Free Edition walk-through
+- [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
+- [Writing a Plotting Backend](docs_src/guide/plotting-backends.md): The `PlottingBackend` contract, the `chartbook_plotting` entry-point group, and a complete example
+- [How the Build Works](docs_src/guide/how-the-build-works.md): resolve (the index) → write (a writer: pages from the index and the files it names; Sphinx by default, MkDocs with `[project] writer = "mkdocs"` and `pip install chartbook[mkdocs]`) → build (the site tool); incremental builds (Sphinx); template overrides in the project root
+
+- [Roadmap](docs_src/roadmap.md): what works now (one machine, a store in a shared or synced folder), what is experimental (Databricks), what is next (Delta pins, Snowflake, other warehouses, a database as the store, an MCP server)
+
+## Reference
+
+- [Configuration](docs_src/reference/configuration.md): Complete `chartbook.toml` reference with all fields, types, and defaults
+- [Python API](docs_src/reference/api.md): `from chartbook import data; lf = data.load(pipeline="my_pipeline", dataframe="df_id")` — pipeline accepts a bare name or a scoped name (`myorg/my_pipeline`)
+
+## Key Commands
 
 ```bash
-# One install, everything included: CLI, plotting, data loading, scaffolder
-pip install chartbook
+chartbook init            # Scaffold a new pipeline project
+chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
+chartbook docs generate      # Render the HTML documentation website (was `chartbook docs`)
+chartbook build -f           # Make everything current: run [scripts] build, then render the site
+chartbook docs generate -f   # Force overwrite existing docs
+chartbook docs generate -f --watch  # Rebuild incrementally on every file change
+chartbook docs open          # Open the generated site (was `chartbook browse`)
+chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
+# every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
+# notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
+# and docs/llms.txt: a line per pipeline, dataframe, chart and model with its ID and page link
+# (a catalog's also links each version's own llms.txt); read it first to find your way around a site
+chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
+chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
+chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store (a first read pins it)
+chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
+chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
+chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between two builds, from their index.json: data, pins, versions, labels, staleness
+# A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook check` warns; `chartbook run` retrains
+# In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB, or the warehouse of a databricks source);
+# data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
+chartbook publish            # Stage publishable files to a directory
+chartbook create-data-glimpses  # Create data summary report
+chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first
+chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit; refuses unless its pins account for every dependency
+chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets back on disk from its snapshots; with no names, every `keep = true` asset that is missing; never over a file
+chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
+chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C
+chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
+chartbook pin --frozen       # Write nothing but the store's note for gc; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
+chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
+chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
+chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
+chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
+chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)
+chartbook store info         # Which store this machine uses, what set it, and the cache folder
+chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
+chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)
+chartbook config             # Configure default catalog path
+chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
+chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
+chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
+chartbook catalog generate   # Render the catalog site (was `catalog build`)
+chartbook catalog open       # Open the catalog site in the browser
+chartbook ls                 # List all pipelines, dataframes, charts
+chartbook ls dataframes      # List dataframes only
+chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
+chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 ```
 
 ## Python API
@@ -16,161 +87,37 @@ pip install chartbook
 ```python
 from chartbook import data
 
-# Load dataframe (returns Polars LazyFrame by default) — bare pipeline name
-lf = data.load(pipeline="markets", dataframe="market_data")
-
-# Scoped pipeline name (canonical; required when a bare name is ambiguous)
-lf = data.load(pipeline="acme/markets", dataframe="market_data")
-
-# Load as Polars eager DataFrame
-df = data.load(pipeline="markets", dataframe="market_data", format="polars_eager")
-
-# Load as pandas DataFrame
-df = data.load(pipeline="markets", dataframe="market_data", format="pandas")
-
-# Explicit catalog path (no global config needed)
-lf = data.load(pipeline="markets", dataframe="market_data",
-               catalog_path="/path/to/catalog")
-
-# Get resolved data file path
-path = data.get_data_path(pipeline="markets", dataframe="market_data")
-
-# Get documentation content as string
-docs = data.get_docs(pipeline="markets", dataframe="market_data")
-
-# Get path to documentation source file
-docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
+lf = data.load(pipeline="acme/markets", dataframe="market_data")       # through the catalog: its newest snapshot; Polars LazyFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="pandas")  # a bare name when only one matches
+rates = data.load("fed_yield_curve:treasury_rates")                    # inside a pipeline: a dependency's pinned copy, by reference
+path = data.path("my_dataframe")                                        # inside a pipeline: where its own chartbook.toml puts it
+docs = data.get_docs(pipeline="markets", dataframe="market_data")       # the write-up, as text
 ```
 
-## CLI Commands
+## Minimal Configuration Example
 
-```bash
-chartbook init               # Scaffold a new pipeline project
-chartbook build              # Generate HTML documentation
-chartbook build -f           # Force overwrite existing docs
-chartbook browse             # Open the generated site
-chartbook publish            # Stage publishable files to a directory
-chartbook catalog add <dir>  # Register a pipeline in the catalog
-chartbook catalog build      # Build the catalog site
-chartbook ls                 # List pipelines, dataframes, charts
-chartbook data get-path --pipeline <id> --dataframe <id>  # Parquet path
-chartbook create-data-glimpses     # Create data summary report
-chartbook config             # Configure default catalog path
-```
-
-## Global Configuration
-
-User settings stored in `~/.chartbook/settings.toml`:
-
-```toml
-[catalog]
-path = "/absolute/path/to/catalog/chartbook.toml"
-```
-
-Set via `chartbook config` command. When configured, `data.load()` works without explicit `catalog_path`.
-
-## Project Types
-
-The project type is inferred from structure: a manifest with a `[pipelines]` registry table is a **catalog**; otherwise it is a **pipeline**. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key. The minimal valid pipeline manifest is an empty file.
-
-### Pipeline Project
-```toml
-[project]
-name = "My Pipeline"     # Optional — defaults to the directory name
-```
-
-### Catalog Project (aggregates multiple pipelines)
-
-Catalog keys are scoped pipeline IDs (`scope/name`), quoted because they contain `/`:
+All `[project]` keys are optional (an empty `chartbook.toml` is a valid pipeline manifest). Project type is inferred: a `[pipelines]` registry table means catalog, otherwise pipeline. Each chart and dataframe needs exactly one of `docs_path` (external markdown file) or `docs` (inline markdown).
 
 ```toml
 [project]
-name = "My Catalog"
+name = "My Pipeline"
+description = "Analytics pipeline description"
+maintainer = "Your Name"
 
-[pipelines."acme/sales"]
-path = "../pipelines/sales"
+[charts.my_chart]
+name = "My Chart"
+description = "Chart description"
+dataframe = "my_data"
+path = "./_output/chart.html"
+docs_path = "./docs_src/charts/chart.md"
 
-[pipelines."acme/monthly"]
-path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
-```
-
-Local catalogs can auto-discover members with path patterns instead of explicit entries (`members`, `exclude`, and `disabled` are reserved keys in `[pipelines]`):
-
-```toml
-[pipelines]
-members = ["../my_repos/*"]
-disabled = ["acme/some_pipeline"]
-```
-
-## Configuration Reference
-
-### [project] - Project Metadata (all keys optional)
-```toml
-[project]
-name = "My Pipeline"                 # Default: directory name (doubles as site title)
-description = "Description"
-maintainer = "Your Name"             # Also rendered as site author
-contributors = ["Name1", "Name2"]
-repo_url = "https://..."             # Default: "" (empty); the git remote seeds the id's scope, not this field
-readme = "./README.md"               # Default
-copyright = "2026"                   # Default: current year
-logo = "./assets/logo.png"           # Default: bundled asset
-favicon = "./assets/icon.png"        # Default: bundled asset
-os_compatibility = ["Windows", "Linux"]
-build = """
-doit
-"""                                  # Shell-script semantics (multi-line = one script)
-site_dir = "./docs_src/site/"        # Default when that directory exists
-# id = "myorg/my_pipeline"           # Scoped ID (default: derived from git remote + dirname)
-```
-
-### [charts.chart_id] - Chart Definitions
-```toml
-[charts.revenue_trend]
-name = "Revenue Trend"
-description = "Monthly revenue trends"
-dataframe = "revenue_data"
-path = "./_output/revenue_trend.html"
-docs_path = "./docs_src/charts/revenue_trend.md"  # Or inline: docs = "..."
-tags = ["Revenue", "Monthly"]                 # Optional
-frequency = "Monthly"                         # Optional
-units = "USD Millions"                        # Optional
-date_cleared_by_iv_and_v = "2025-01-15"       # Optional: governance
-last_legal_clearance_date = "2025-01-15"      # Optional: governance
-```
-
-Exactly one of `docs_path` (external markdown file) or `docs` (inline markdown) is required per chart.
-
-### [dataframes.df_id] - Dataframe Definitions
-```toml
-[dataframes.market_data]
-name = "Market Data"
-description = "Daily stock prices"
-sources = ["Bloomberg", "Reuters"]
-path = "./_data/market_data.parquet"
+[dataframes.my_data]
+name = "My Data"
+description = "Data description"
+sources = ["Source"]
+path = "./_data/data.parquet"
 date_col = "date"
-docs_path = "./docs_src/dataframes/market_data.md"  # Or inline: docs = "..."
-tags = ["Market Data", "Equities"]                  # Optional
-providers = ["Bloomberg LP", "Refinitiv"]           # Optional
-access_types = ["Subscription", "Subscription"]     # Optional
-license = "Bloomberg Data License"                  # Optional
-license_expiration = "2025-12-31"                   # Optional
-```
-
-Exactly one of `docs_path` or `docs` is required per dataframe.
-
-### [notes] - Additional Documentation
-```toml
-[notes.methodology]
-path = "./docs_src/methodology.md"
-```
-
-### [notebooks] - Jupyter Notebooks
-The notebook name is inferred from the first `# Heading` in the notebook. Set `name` to override.
-```toml
-[notebooks.analysis]
-description = "Initial data exploration"
-path = "_output/analysis.ipynb"
+docs = "Documentation for this dataset."
 ```
 
 ## Directory Structure
@@ -178,16 +125,18 @@ path = "_output/analysis.ipynb"
 ```
 my-pipeline/
 ├── chartbook.toml      # Configuration
+├── README.md           # Required; becomes the site front page
 ├── _data/              # Parquet data files
 ├── _output/            # Generated HTML charts
 ├── docs_src/           # Markdown documentation
 │   ├── charts/
 │   ├── dataframes/
-│   └── site/           # (Optional) Custom site pages (site_dir default)
+│   └── site/           # Optional custom site pages
 └── src/                # Python source code
 ```
 
-## More Information
+## Optional
 
-- [Full Documentation](llm/llms-full.txt): Complete reference with all fields and examples
+- [Examples](docs_src/examples.md): The bundled example pipelines and catalog
+- [Contributing](docs_src/contributing.md): Development guidelines
 - [Changelog](docs_src/changelog.md): Version history

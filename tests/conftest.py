@@ -11,6 +11,76 @@ from tests.fixtures import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
+    """Point the store and the git cache at scratch directories, for every test.
+
+    Both are per user and live under ``~/.chartbook``. A test that pins,
+    or a command it runs in a subprocess, must never write there. Setting
+    the two environment variables is what a user would do to move them, so
+    code that asks for "this user's store" gets a scratch one. Tests of
+    where the default is clear the variables themselves.
+    """
+    scratch = tmp_path_factory.mktemp("chartbook_home")
+    monkeypatch.setenv("CHARTBOOK_STORE", str(scratch / "store"))
+    monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(scratch / "git"))
+    monkeypatch.setenv("CHARTBOOK_CACHE", str(scratch / "cache"))
+    # The organization's settings file, read where the user's is silent:
+    # a real one on this machine must not reach a test
+    monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
+    # A test is interactive unless it says otherwise, even under `chartbook run`
+    monkeypatch.delenv("CHARTBOOK_BATCH", raising=False)
+    # Every folder a test builds is trusted to run, as the user's own would
+    # be once trusted, and CI's own `CI=true` does not reach a test: the
+    # tests of trust itself (tests/test_trust.py) clear the first and set
+    # the second themselves
+    monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+    monkeypatch.delenv("CI", raising=False)
+    # The name of the machine in a store's notes, which is otherwise made
+    # once and kept under the home folder: a `chartbook` a test runs in a
+    # subprocess, with the real home, must not make one there. A test of
+    # two machines clears it
+    monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
+    # The user-level Claude Code skill, which commands compare with the
+    # package: this machine's own copy, perhaps an old one, must not reach a
+    # test's output (`chartbook check` warns of it)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(scratch / "claude"))
+    # No git housekeeping in the background: `git commit` may start `gc
+    # --auto` or maintenance detached, which goes on writing under
+    # .git/objects after the command returns, and a test that then removes
+    # the repository (shutil.rmtree) races it: "No such file or directory:
+    # 'fb'" on CI, once in many runs. These are git's own environment
+    # settings, read before any config file, so every git a test or a
+    # command it runs starts has them
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "2")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "gc.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "0")
+    monkeypatch.setenv("GIT_CONFIG_KEY_1", "maintenance.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_1", "false")
+    # Nor does the user's own ~/.chartbook (their catalog and settings) reach
+    # a test; a test that moves HOME gets the one under it
+    from pathlib import Path
+
+    from chartbook import config
+
+    from chartbook import backends
+
+    real_home = Path.home()
+
+    def config_dir() -> Path:
+        return Path.home() / ".chartbook" if Path.home() != real_home else scratch / "user" / ".chartbook"
+
+    monkeypatch.setattr(config, "get_global_config_dir", config_dir)
+    monkeypatch.setattr(backends, "get_global_config_dir", config_dir)
+    yield
+    # The scratch store and caches go with their test. Found on CI on
+    # 2026-10-21: the suite's temporary files, every test's stores and sites
+    # kept until the end, filled the runner's disk at 99% of the run
+    import shutil
+
+    shutil.rmtree(scratch, ignore_errors=True)
+
+
 @pytest.fixture
 def pipeline_project(tmp_path):
     """Creates and returns path to a complete pipeline project.

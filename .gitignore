@@ -29,6 +29,7 @@ wheels/
 .pytest_cache/
 .tox/
 .coverage
+.coverage.*
 htmlcov/
 .cache
 
@@ -65,3 +66,6 @@ docs_src/apidocs/
 
 
 _build/
+
+# Scratch / working notes
+_temp/

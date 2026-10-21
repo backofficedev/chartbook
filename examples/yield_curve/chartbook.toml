@@ -1,4 +1,5 @@
 [project]
+requires_chartbook = ">=0.2.0"
 name = "Yield Curve"
 description = "Analyze yield curve"
 contributors = [
@@ -10,7 +11,10 @@ os_compatibility = [
     "Linux",
     "MacOS",
 ]
-build = "module load anaconda3/3.11.4 TeXLive/2023"
+
+# Named commands. `chartbook run` runs `build`.
+[scripts]
+build = "doit"
 
 [notebooks.01_example_notebook_interactive]
 description = "Example notebook for demonstrating how to construct a Chartbook notebook."
@@ -70,8 +74,35 @@ tags = [
 ]
 pull_method = "Web API via Python"
 path = "./_data/fed_yield_curve.parquet"
-date_col = "date"
+date_col = "Date"
 docs_path = "./docs_src/dataframes/fed_yield_curve.md"
+
+# Where a dataframe may live besides a file. `yield_slopes` below is a query
+# that DuckDB runs over a table the pipeline builds (src/build_duckdb.py).
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/yield_curve.duckdb"
+
+[dataframes.yield_slopes]
+name = "Yield Curve Slopes"
+description = "Slopes of the zero-coupon yield curve: the 10-year yield less the 1-, 2- and 3-year yields, as a query over the Fed yield curve."
+sources = [
+    "Federal Reserve Board",
+]
+providers = [
+    "Federal Reserve Board",
+]
+provider_links = [
+    "https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv",
+]
+tags = [
+    "Yield Curve",
+]
+pull_method = "A SQL query over the fed_yield_curve table, run by DuckDB when the dataframe is read"
+source = "local"
+query = "select Date, SVENY10 - SVENY01 as slope_10y_1y, SVENY10 - SVENY02 as slope_10y_2y, SVENY10 - SVENY03 as slope_10y_3y from fed_yield_curve order by Date"
+date_col = "Date"
+docs_path = "./docs_src/dataframes/yield_slopes.md"
 
 [dataframes.term_premium]
 name = "Term Premium"
@@ -93,6 +124,38 @@ pull_method = "Derived from Fed yield curve data"
 path = "./_data/term_premium.parquet"
 date_col = "date"
 docs_path = "./docs_src/dataframes/term_premium.md"
+
+[dataframes.term_premium.series.spread_10y_1y]
+name = "10Y-1Y Spread"
+description = "10-year zero-coupon yield minus the 1-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
+[dataframes.term_premium.series.spread_10y_2y]
+name = "10Y-2Y Spread"
+description = "10-year zero-coupon yield minus the 2-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
+[dataframes.term_premium.series.spread_10y_3y]
+name = "10Y-3Y Spread"
+description = "10-year zero-coupon yield minus the 3-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
+[models.term_premium_ar1]
+name = "Term Premium AR(1)"
+description = "Predicts tomorrow's 10-year minus 2-year spread from today's."
+path = "./_models/term_premium_ar1.json"
+trained_on = [
+    "term_premium",
+]
+metrics_path = "./_output/term_premium_ar1_metrics.json"
+docs_path = "./docs_src/models/term_premium_ar1.md"
+tags = [
+    "Yield Curve",
+    "Forecast",
+]
 
 [charts.repo_rates]
 name = "Repo Rates"
