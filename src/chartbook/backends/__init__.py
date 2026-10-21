@@ -289,7 +289,7 @@ def _ends_in(sql: str) -> tuple:
     string, in which a backslash is literal (DuckDB's rule; Databricks
     escapes with one, which at worst leaves the end inside a string here);
     ``E'…'`` a string with backslash escapes; ``$$…$$`` or ``$tag$…$tag$``
-    a string quoted in dollars; ``"…"`` or ``\`…\``` a quoted identifier;
+    a string quoted in dollars; ``"…"`` or `` `…` `` a quoted identifier;
     ``--`` a comment to the end of its line; ``/* … */`` a comment to its
     close. A ``;`` or a ``--`` inside any of them is part of it.
 
@@ -342,7 +342,7 @@ def subselect(sql: str) -> str:
     comment, or with both (``select … from t; -- note``) still stands where
     a table would: a semicolon that is the last character; and a ``--``
     comment that runs to the end, when its ``--`` is outside every string
-    (``'…'``, ``E'…'``, ``$$…$$``), quoted identifier (``"…"``, ``\`…\```)
+    (``'…'``, ``E'…'``, ``$$…$$``), quoted identifier (``"…"``, `` `…` ``)
     and block comment, as :func:`_ends_in` reads them. Nothing else
     changes: a ``;`` or a ``--`` inside quotes stays, and a comment after a
     quote the scanner takes as left open stays too, which the engine reads

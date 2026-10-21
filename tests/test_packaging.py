@@ -425,3 +425,17 @@ def test_the_hook_and_init_name_the_file_alike(hook):
     assert hook.BUILT_FROM == scaffold.BUILT_FROM
 
 
+
+
+def test_every_module_compiles_without_a_warning():
+    """Found while smoke-testing the 0.2.0 wheel: a docstring held ``\\``` in an ordinary string, and the
+    first import printed "invalid escape sequence" to every user (a SyntaxWarning, which a later Python
+    makes an error). The suite filters warnings, so it is compiled here with them as errors."""
+    import warnings
+
+    for path in sorted((PYPROJECT.parent / "src" / "chartbook").rglob("*.py")):
+        if "{{" in str(path):  # the project template's Jinja, rendered before it is Python
+            continue
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            compile(path.read_text(encoding="utf-8"), str(path), "exec")
