@@ -72,6 +72,13 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
 
     monkeypatch.setattr(config, "get_global_config_dir", config_dir)
     monkeypatch.setattr(backends, "get_global_config_dir", config_dir)
+    yield
+    # The scratch store and caches go with their test. Found on CI on
+    # 2026-10-21: the suite's temporary files, every test's stores and sites
+    # kept until the end, filled the runner's disk at 99% of the run
+    import shutil
+
+    shutil.rmtree(scratch, ignore_errors=True)
 
 
 @pytest.fixture
