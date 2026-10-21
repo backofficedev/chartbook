@@ -439,3 +439,50 @@ def test_every_module_compiles_without_a_warning():
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             compile(path.read_text(encoding="utf-8"), str(path), "exec")
+
+
+def test_every_public_module_is_on_the_api_page():
+    """Found while building the 0.2.0 site: `chartbook.claude_skill` had a page that no table of contents
+    reached ("document isn't included in any toctree"). The API page lists modules by hand; a module is
+    reached when it or a package above it is listed there (a package's page lists its own modules), or
+    when docs_src/conf.py leaves its page out on purpose."""
+    import re
+
+    root = PYPROJECT.parent
+    src = root / "src"
+    listed = set(
+        re.findall(
+            r"^\.\./apidocs/chartbook/([\w.]+)$",
+            (root / "docs_src" / "reference" / "api.md").read_text(),
+            re.M,
+        )
+    )
+    left_out = set(
+        re.findall(
+            r'"apidocs/chartbook/([\w.]+)\.md"',
+            (root / "docs_src" / "conf.py").read_text(),
+        )
+    )
+    modules = []
+    found = {*(src / "chartbook").rglob("*.py"), *(src / "chartbook").rglob("*.pyi")}  # autodoc2 documents a stub too
+    for path in sorted(found):
+        if not all(
+            (d / "__init__.py").is_file()
+            for d in (src / p for p in path.relative_to(src).parents if p != Path("."))
+        ):
+            continue  # not in a package, so autodoc2 writes no page for it
+        parts = path.relative_to(src).with_suffix("").parts
+        parts = parts[:-1] if parts[-1] == "__init__" else parts
+        if len(parts) > 1 and not any(p.startswith("_") for p in parts[1:]):
+            modules.append(".".join(parts))
+    modules = sorted(set(modules))  # a module and its stub are one page
+    assert modules
+    unreached = [
+        m
+        for m in modules
+        if m not in left_out
+        and not any(
+            ".".join(m.split(".")[:i]) in listed for i in range(2, m.count(".") + 2)
+        )
+    ]
+    assert not unreached, f"add to docs_src/reference/api.md: {unreached}"
