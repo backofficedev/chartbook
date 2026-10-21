@@ -17,6 +17,7 @@ chartbook
 ../apidocs/chartbook/chartbook.env
 ../apidocs/chartbook/chartbook.plotting
 ../apidocs/chartbook/chartbook.cli
+../apidocs/chartbook/chartbook.claude_skill
 ../apidocs/chartbook/chartbook.config
 ../apidocs/chartbook/chartbook.identity
 ../apidocs/chartbook/chartbook.incremental
