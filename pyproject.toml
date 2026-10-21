@@ -222,6 +222,9 @@ matrix.sphinx.extra-dependencies = [
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::Warning"]
+# A passing test's tmp_path is removed when it ends, a failing one's kept to
+# look at: kept whole, the suite's sites and stores filled CI's disk
+tmp_path_retention_policy = "failed"
 markers = [
     "integration: needs tools that may not be installed (LaTeX); each such test skips itself when they are missing",
 ]
