@@ -464,16 +464,18 @@ def test_every_public_module_is_on_the_api_page():
         )
     )
     modules = []
-    for path in sorted((src / "chartbook").rglob("*.py")):
+    found = {*(src / "chartbook").rglob("*.py"), *(src / "chartbook").rglob("*.pyi")}  # autodoc2 documents a stub too
+    for path in sorted(found):
         if not all(
             (d / "__init__.py").is_file()
             for d in (src / p for p in path.relative_to(src).parents if p != Path("."))
         ):
-            continue  # not in a package: the project template, rendered before it is Python
+            continue  # not in a package, so autodoc2 writes no page for it
         parts = path.relative_to(src).with_suffix("").parts
         parts = parts[:-1] if parts[-1] == "__init__" else parts
         if len(parts) > 1 and not any(p.startswith("_") for p in parts[1:]):
             modules.append(".".join(parts))
+    modules = sorted(set(modules))  # a module and its stub are one page
     assert modules
     unreached = [
         m
