@@ -380,13 +380,24 @@ def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_stops_the_build(hook, tm
         _run(hook, root, "wheel")
 
 
-def _dodo():
+def _dodo(relative="dodo.py"):
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / "dodo.py")
+    spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / relative)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _tasks(module):
+    """Every task dict a dodo module defines, a generator's one by one."""
+    import inspect
+
+    for name in sorted(dir(module)):
+        if not name.startswith("task_"):
+            continue
+        made = getattr(module, name)()
+        yield from (made if inspect.isgenerator(made) else [made])
 
 
 def test_the_release_build_task_is_a_plain_build():
@@ -399,6 +410,18 @@ def test_the_release_build_task_is_a_plain_build():
 def test_plain_doit_runs_each_suite_once():
     """The matrix includes the default Python, so `test` is not a default task beside `test_all`."""
     assert _dodo().DOIT_CONFIG["default_tasks"] == ["build", "test_all"]
+
+
+@pytest.mark.parametrize("dodo", ["dodo.py", "examples/dodo.py"])
+def test_a_second_run_with_nothing_changed_runs_nothing(dodo):
+    """doit runs a task that declares neither file_dep nor uptodate every time, whatever its task_dep
+    say. The maintainer saw build_examples, build_package, the examples' snapshot and their check run
+    on a clean tree (2026-10-21). Every task that does something says what it depends on; a meta task
+    runs nothing and needs nothing."""
+    for task in _tasks(_dodo(dodo)):
+        if task.get("actions") is None:
+            continue
+        assert task.get("file_dep") or task.get("uptodate"), f"{dodo}: {task['name'] if 'name' in task else task}"
 
 
 def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
