@@ -380,13 +380,24 @@ def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_stops_the_build(hook, tm
         _run(hook, root, "wheel")
 
 
-def _dodo():
+def _dodo(relative="dodo.py"):
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / "dodo.py")
+    spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / relative)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _tasks(module):
+    """Every task dict a dodo module defines, a generator's one by one."""
+    import inspect
+
+    for name in sorted(dir(module)):
+        if not name.startswith("task_"):
+            continue
+        made = getattr(module, name)()
+        yield from (made if inspect.isgenerator(made) else [made])
 
 
 def test_the_release_build_task_is_a_plain_build():
@@ -399,6 +410,47 @@ def test_the_release_build_task_is_a_plain_build():
 def test_plain_doit_runs_each_suite_once():
     """The matrix includes the default Python, so `test` is not a default task beside `test_all`."""
     assert _dodo().DOIT_CONFIG["default_tasks"] == ["build", "test_all"]
+
+
+@pytest.mark.parametrize("dodo", ["dodo.py", "examples/dodo.py"])
+def test_every_task_that_does_something_says_what_it_depends_on(dodo):
+    """doit runs a task that declares neither file_dep nor uptodate every time, whatever its task_dep
+    say. The maintainer saw build_examples, build_package, the examples' snapshot and their check run
+    on a clean tree (2026-10-21). A meta task runs nothing and needs nothing."""
+    for task in _tasks(_dodo(dodo)):
+        if task.get("actions") is None:
+            continue
+        assert task.get("file_dep") or task.get("uptodate"), f"{dodo}: {task['name'] if 'name' in task else task}"
+
+
+def test_the_examples_dodo_builds_every_member_of_its_catalog():
+    """The project's dodo takes what the examples' build makes from the examples' dodo, which names its
+    pipelines; a member added to the catalog without a build task would leave a target that never
+    exists, and the build would run every time, silently."""
+    from chartbook.manifest import catalog_member_dirs
+
+    examples = _dodo("examples/dodo.py")
+    assert set(examples.PIPELINE_DIRS) == set(catalog_member_dirs(examples.CATALOG_DIR).values())
+
+
+def test_unchanged_compares_with_what_the_task_left():
+    """`unchanged` takes its fingerprint when the task is looked at and again after the task ran: a
+    lockfile the build itself writes is up to date on the next run, and one moved by hand runs the
+    task."""
+    from types import SimpleNamespace
+
+    state = {"lock": ""}
+    check = _dodo("examples/dodo.py").unchanged("lock", lambda: state["lock"])
+    task = SimpleNamespace(value_savers=[])
+    assert check(task, {}) is False  # never ran
+    state["lock"] = "written by the build"
+    saved = {}
+    for saver in task.value_savers:
+        saved.update(saver())
+    assert saved == {"lock": "written by the build"}
+    assert check(task, saved) is True
+    state["lock"] = "moved by chartbook update"
+    assert check(task, saved) is False
 
 
 def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
