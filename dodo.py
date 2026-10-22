@@ -16,10 +16,11 @@ build leaves behind (apidocs/, __pycache__/, the examples' _data/) is
 ignored, and so is not a source. `build_examples` and `build_package` run
 another build (the examples' own doit, hatchling), which doit cannot see
 into, so each declares what that build reads and makes, and what is not a
-file and still goes in: the commit, and the store the examples' snapshots
-go to, as a `config_changed`.
+file and still goes in (`unchanged`): the commit, which the package
+records; for the examples, what their own dodo says.
 """
 
+import importlib.util
 import os
 import re
 import shutil
@@ -30,11 +31,7 @@ from pathlib import Path
 
 from colorama import Fore, Style, init
 from doit.reporter import ConsoleReporter
-from doit.tools import config_changed
-
-from chartbook.config import get_store_url, shown_store_url
-from chartbook.manifest import catalog_member_dirs
-from chartbook.resolve import declared_files
+from packaging.version import Version
 
 # Project paths
 PROJECT_ROOT = Path(__file__).parent
@@ -45,7 +42,6 @@ DOCS_OUTPUT = PROJECT_ROOT / "docs"
 SRC_DIR = PROJECT_ROOT / "src"
 TEST_RESULTS_DIR = OUTPUT_DIR / "test-results"
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
-EXAMPLES_CATALOG = EXAMPLES_DIR / "catalog"
 
 # Ensure build directories exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,24 +53,44 @@ def git_files(*paths):
     A file someone is working on and has not committed counts; what a build
     makes, which git ignores, does not.
     """
-    listed = subprocess.run(
-        ["git", "-C", str(PROJECT_ROOT), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--",
-         *(str(path) for path in paths)],
-        capture_output=True, text=True, check=True,
-    ).stdout
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--",
+             *(str(path) for path in paths)],
+            capture_output=True, text=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise RuntimeError(
+            f"git could not list the files under {PROJECT_ROOT}. The project is built in a checkout of the "
+            f"repository, with git installed."
+        ) from e
     # A file deleted and not yet committed is still listed, and is no source
     return sorted(path for path in (PROJECT_ROOT / name for name in listed.split("\0") if name) if path.is_file())
 
 
 def git_head():
-    """The commit the checkout is at; empty where git cannot say (the builds that need it then fail on their own)."""
+    """The commit the checkout is at; empty in a repository with no commit yet."""
     result = subprocess.run(["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def made_by(pipeline_dir):
-    """What an example pipeline's build makes: its site, and every asset its chartbook.toml declares with a path."""
-    return [pipeline_dir / "docs" / "index.html", *(absolute for _, _, absolute in declared_files(pipeline_dir))]
+def unchanged(name, fingerprint):
+    """An uptodate check on what is not a file: *fingerprint()* is compared with what it gave after the
+    task last ran, and the task runs when they differ. Nothing is saved after a failure, so it runs again."""
+
+    def check(task, values):
+        task.value_savers.append(lambda: {name: fingerprint()})
+        return values.get(name) == fingerprint()
+
+    return check
+
+
+def examples_dodo():
+    """The examples' own dodo, loaded for what it says its whole build reads and makes."""
+    spec = importlib.util.spec_from_file_location("examples_dodo", EXAMPLES_DIR / "dodo.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 # Custom reporter: Print PyDoit Text in Green
@@ -231,26 +247,19 @@ def task_sphinx():
 
 def task_build_examples():
     """Build all examples documentation."""
-    # The examples are the pipelines of their catalog (examples/dodo.py builds each)
-    pipelines = catalog_member_dirs(EXAMPLES_CATALOG).values()
+    examples = examples_dodo()
     return {
         # This interpreter's doit, never another on the path
         "actions": [f"{sys.executable} -m doit -f {EXAMPLES_DIR / 'dodo.py'}"],
-        # The examples' own doit knows each step's inputs; this task knows
-        # the whole build's, so that the examples' doit is run when they
-        # change and not otherwise: the examples' sources, chartbook itself
-        # (it renders their sites), and the commit and the store (a snapshot
-        # is made per commit, and the catalog shows every snapshot in the
-        # store). An intermediate the examples' doit alone knows of, removed
-        # by hand, is brought back by running that doit: `uv run doit -f
-        # examples/dodo.py`.
-        "file_dep": git_files(EXAMPLES_DIR, SRC_DIR),
-        "targets": [
-            EXAMPLES_DIR / "docs" / "index.html",
-            EXAMPLES_CATALOG / "docs" / "index.html",
-            *(made for pipeline_dir in pipelines for made in made_by(pipeline_dir)),
-        ],
-        "uptodate": [config_changed({"commit": git_head(), "store": shown_store_url(get_store_url())})],
+        # The examples' doit knows each step's inputs, and says what its
+        # whole build reads and makes; chartbook itself, which renders their
+        # sites, is an input too. So that doit is run when something of
+        # theirs changed, and not otherwise. An intermediate only it knows
+        # of (a pulled _data/ file no chartbook.toml declares), removed by
+        # hand, is brought back by running it: `uv run doit -f examples/dodo.py`.
+        "file_dep": [*git_files(SRC_DIR), *examples.sources()],
+        "targets": examples.outputs(),
+        "uptodate": examples.context(),
         "task_dep": ["sphinx"],
         "verbosity": 2,
     }
@@ -263,8 +272,11 @@ def task_build_package():
     template is at (`hatch_build.py`) and stops where it cannot: build from a
     clean checkout, with git at hand. Publishing is `uv publish`, by hand.
     """
-    about = (SRC_DIR / "chartbook" / "__about__.py").read_text(encoding="utf-8")
-    version = re.search(r'__version__\s*=\s*"([^"]+)"', about).group(1)
+    about = SRC_DIR / "chartbook" / "__about__.py"
+    said = re.search(r'^__version__\s*=\s*"([^"]+)"', about.read_text(encoding="utf-8"), re.MULTILINE)
+    if said is None:
+        raise RuntimeError(f"{about} does not say __version__, so the package's file names cannot be known.")
+    version = str(Version(said.group(1)))  # as hatchling names the files: 0.3.0-rc1 is 0.3.0rc1
     return {
         "actions": ["uv build"],
         # What goes into the package (see pyproject.toml and hatch_build.py),
@@ -281,7 +293,7 @@ def task_build_package():
             PROJECT_ROOT / "dist" / f"chartbook-{version}.tar.gz",
             PROJECT_ROOT / "dist" / f"chartbook-{version}-py3-none-any.whl",
         ],
-        "uptodate": [config_changed({"commit": git_head()})],
+        "uptodate": [unchanged("commit", git_head)],
         "task_dep": ["build_examples"],
         "verbosity": 2,
     }

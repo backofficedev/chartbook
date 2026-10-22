@@ -413,15 +413,44 @@ def test_plain_doit_runs_each_suite_once():
 
 
 @pytest.mark.parametrize("dodo", ["dodo.py", "examples/dodo.py"])
-def test_a_second_run_with_nothing_changed_runs_nothing(dodo):
+def test_every_task_that_does_something_says_what_it_depends_on(dodo):
     """doit runs a task that declares neither file_dep nor uptodate every time, whatever its task_dep
     say. The maintainer saw build_examples, build_package, the examples' snapshot and their check run
-    on a clean tree (2026-10-21). Every task that does something says what it depends on; a meta task
-    runs nothing and needs nothing."""
+    on a clean tree (2026-10-21). A meta task runs nothing and needs nothing."""
     for task in _tasks(_dodo(dodo)):
         if task.get("actions") is None:
             continue
         assert task.get("file_dep") or task.get("uptodate"), f"{dodo}: {task['name'] if 'name' in task else task}"
+
+
+def test_the_examples_dodo_builds_every_member_of_its_catalog():
+    """The project's dodo takes what the examples' build makes from the examples' dodo, which names its
+    pipelines; a member added to the catalog without a build task would leave a target that never
+    exists, and the build would run every time, silently."""
+    from chartbook.manifest import catalog_member_dirs
+
+    examples = _dodo("examples/dodo.py")
+    assert set(examples.PIPELINE_DIRS) == set(catalog_member_dirs(examples.CATALOG_DIR).values())
+
+
+def test_unchanged_compares_with_what_the_task_left():
+    """`unchanged` takes its fingerprint when the task is looked at and again after the task ran: a
+    lockfile the build itself writes is up to date on the next run, and one moved by hand runs the
+    task."""
+    from types import SimpleNamespace
+
+    state = {"lock": ""}
+    check = _dodo("examples/dodo.py").unchanged("lock", lambda: state["lock"])
+    task = SimpleNamespace(value_savers=[])
+    assert check(task, {}) is False  # never ran
+    state["lock"] = "written by the build"
+    saved = {}
+    for saver in task.value_savers:
+        saved.update(saver())
+    assert saved == {"lock": "written by the build"}
+    assert check(task, saved) is True
+    state["lock"] = "moved by chartbook update"
+    assert check(task, saved) is False
 
 
 def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
