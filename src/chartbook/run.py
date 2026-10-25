@@ -618,30 +618,44 @@ def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lo
         raise RunError(f"{step.id}: {error}") from None
 
 
-def _snapshot_first(loop, steps: list, script: str) -> str:
+def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> str:
     """Under --snapshot, what to do when a pin the run would make is of a snapshot a pipeline of the run will replace.
 
     The walk before the run takes the snapshot the store has now: the run
     cannot know which one a pin will take once it has made more. If that
     one leads back and the pipeline has since dropped the dependency, its
-    new snapshot first breaks the cycle.
+    new snapshot first breaks the cycle. Said only where it would: the
+    pipeline has no snapshot at its commit yet (one that has may be given
+    back unchanged), and the pin takes its newest (not narrowed to a
+    commit, a revision or a repository).
     """
+    import shlex
+
     snapshotted = {
         step.id: step for step in steps
         if step.source == "asked" and step.directory is not None and script in step.scripts
     }
-    named = [
-        edge.dependency for edge in [*loop.way_in, *loop.edges]
-        if "this run would pin its snapshot at" in edge.where and edge.dependency in snapshotted
-    ]
-    if not named:
-        return ""
-    first = snapshotted[named[0]]
-    return (
-        f"\nThe pin of {first.id} is of the snapshot the store has of it now, which this run would replace "
-        f"with --snapshot. If {first.id} no longer depends on what leads back here, make its new snapshot "
-        f"first (`chartbook run --snapshot --project-dir {first.directory}`), and run this again."
-    )
+    for edge in [*loop.way_in, *loop.edges]:
+        member = snapshotted.get(edge.dependency)
+        declarer = snapshotted.get(edge.pipeline)
+        if member is None or declarer is None or "this run would pin its snapshot at" not in edge.where:
+            continue
+        try:
+            entry = (_read_manifest(declarer.directory).get("dependencies") or {}).get(edge.key)
+            code = snapshots.code_of(member.directory)
+            there_already = snapshots.find(store if store is not None else default_store(), code.commit, code.subdirectory)
+        except Exception:  # noqa: BLE001 - nothing to say then
+            continue
+        if not isinstance(entry, dict) or any(entry.get(narrowed) for narrowed in ("commit", "rev", "repository")):
+            continue
+        if there_already:
+            continue
+        return (
+            f"\nThe pin of {member.id} is of the snapshot the store has of it now, which this run would replace "
+            f"with --snapshot. If {member.id} no longer depends on what leads back here, make its new snapshot "
+            f"first (`chartbook run --snapshot --project-dir {shlex.quote(str(member.directory))}`), and run this again."
+        )
+    return ""
 
 
 def _cycle_said(loop) -> str:
@@ -956,7 +970,7 @@ def run(
             loop = _cycle(step, store, git_cache, would_be, shared, members)
             if loop is not None:
                 raise RunError(
-                    f"{step.id}: {_cycle_said(loop)}{_snapshot_first(loop, steps, script) if snapshot else ''}"
+                    f"{step.id}: {_cycle_said(loop)}{_snapshot_first(loop, steps, script, store) if snapshot else ''}"
                     f"\nNothing was pinned or built."
                 )
         # The pins' own walks below come after builds that may make snapshots

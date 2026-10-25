@@ -787,6 +787,12 @@ class TestWhatTheThirdReviewFound:
         assert _around(found) == [("acme/fred", "acme/ref"), ("acme/ref", "acme/x"), ("acme/x", "acme/fred")]
         with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
             run.run(fred, echo=lambda line: None)
+        # The pin stays where it was when the default host moves, or is unset: so does the walk
+        for settings in ({"resolve": {"default_host": str(tmp_path / "elsewhere")}}, {}):
+            config.get_global_settings_path().write_text(tomli_w.dumps(settings))
+            assert _around(lineage.cycle(fred)) == [("acme/fred", "acme/ref"), ("acme/ref", "acme/x"), ("acme/x", "acme/fred")]
+            with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
+                run.run(fred, echo=lambda line: None)
 
     def test_what_pin_keeps_of_a_dependency_got_from_its_repository(self):
         clone = {"location": {"kind": "git", "pipeline": "acme/rates", "commit": "a" * 40}}
@@ -931,8 +937,9 @@ class TestWhatTheFifthReviewFound:
         _declare(p, {"acme/q": {"commit": old}})
         _commit(work)
         before = (_lockfile(p), _lockfile(q), _store_state())
-        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
+        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other") as raised:
             run.run(work, snapshot=True, echo=lambda line: None)
+        assert "make its new snapshot first" not in str(raised.value)  # it would not help
         assert _built(work) == [] and (_lockfile(p), _lockfile(q), _store_state()) == before
 
     def test_a_snapshot_that_is_given_back_is_walked(self, work, tmp_path):
@@ -961,8 +968,9 @@ class TestWhatTheFifthReviewFound:
         snapshot.make(y)  # y no longer depends on p
         lock.update(q)  # q's lockfile now pins it; nothing committed changes
         before = (_lockfile(p), _lockfile(q), _store_state())
-        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
+        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other") as raised:
             run.run(work, snapshot=True, echo=lambda line: None)
+        assert "make its new snapshot first" not in str(raised.value)  # q's snapshot would be given back
         assert _built(work) == [] and (_lockfile(p), _lockfile(q), _store_state()) == before
 
     def test_a_pin_the_store_lacks_is_looked_for_once_per_command(self, chain, work, monkeypatch):

@@ -706,6 +706,8 @@ class _Finder:
             cache = self.git_cache if self.git_cache is not None else default_git_cache()
             # Its working copy, where `chartbook run` builds and pins it, else its checkout
             checkout = cache.files(url, commit) if commit and url else None
+            if checkout is None and entry.get("_store"):
+                checkout = self._clone_of(entry["_store"], commit)  # the default host may have moved since
             if checkout is None or not (checkout / MANIFEST_NAME).is_file():
                 return [(Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}")] if entry.get("_store") else []
             project = snapshot._read_manifest_file(checkout).get("project")
@@ -744,6 +746,49 @@ class _Finder:
 
         cache = self.git_cache if self.git_cache is not None else default_git_cache()
         return cache.files(url, commit) if url and commit else None
+
+    def _clone_of(self, pipeline_id: str, commit: str) -> Optional[Path]:
+        """A copy at a commit, in the git cache, of the repository whose manifest names this ID; None if there is none.
+
+        For one got from its repository by its ID: its lockfile records no
+        address, which is worked out from the default host, and that may
+        have changed since the pin, which stays where it was. A commit and
+        the ID its manifest gives are enough to find it. Working copies
+        come first, as ``chartbook run`` builds and pins one there.
+        """
+        import os
+        import re
+
+        from chartbook.gitcache import CHECKOUTS_DIR, WORK_DIR, default_git_cache
+        from chartbook.resolve import MANIFEST_NAME
+
+        if not (pipeline_id and re.fullmatch(r"[0-9a-f]{40}", commit or "")):
+            return None
+        cache = self.git_cache if self.git_cache is not None else default_git_cache()
+        for top in (Path(cache.root) / WORK_DIR, Path(cache.root) / CHECKOUTS_DIR):
+            # Down the repositories' folders (a repository on this disk is laid out
+            # under its whole path), never into a copy's own files
+            stack = [(top, 0)]
+            while stack:
+                folder, depth = stack.pop()
+                try:
+                    entries = list(os.scandir(folder))
+                except OSError:
+                    continue
+                for found in entries:
+                    if not found.is_dir(follow_symlinks=False):
+                        continue
+                    if found.name == commit:
+                        there = Path(found.path)
+                        try:
+                            project = snapshot._read_manifest_file(there).get("project") if (there / MANIFEST_NAME).is_file() else None
+                        except Exception:  # noqa: BLE001 - a copy whose manifest cannot be read names nothing
+                            project = None
+                        if isinstance(project, dict) and project.get("id") == pipeline_id:
+                            return there
+                    elif depth < 64 and not re.fullmatch(r"[0-9a-f]{40}", found.name):
+                        stack.append((Path(found.path), depth + 1))
+        return None
 
     def _from_snapshot(self, pipeline: str, taken) -> list:
         listed = taken.inputs if isinstance(taken.inputs, list) else []
@@ -791,6 +836,8 @@ class _Finder:
                             checkout = None
                         if checkout is not None:
                             break
+                    if checkout is None:
+                        checkout = self._clone_of(location["pipeline"], _text(location.get("commit")))
                 if checkout is not None and (checkout / MANIFEST_NAME).is_file():
                     project = snapshot._read_manifest_file(checkout).get("project")
                     project = project if isinstance(project, dict) else {}
