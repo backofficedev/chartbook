@@ -597,10 +597,7 @@ def plan(
     return order
 
 
-def _cycle(
-    step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None, members=None,
-    snapshotted_first=None,
-):
+def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None, members=None):
     """The first cycle among the pipelines a step depends on, if there is one (:func:`chartbook.lineage.cycle`).
 
     :param lockfiles: Lockfiles as a pin would write them, by folder, read
@@ -608,8 +605,6 @@ def _cycle(
     :param shared: Shared between walks with nothing written in between,
         so that the store is read once.
     :param members: The run's own pipelines, their folders by ID.
-    :param snapshotted_first: The run's pipelines it snapshots before what
-        depends on them (``--snapshot``).
     :raises RunError: If the step's folder no longer holds a pipeline.
     """
     from chartbook import lineage
@@ -617,10 +612,36 @@ def _cycle(
     try:
         return lineage.cycle(
             step.directory, store, pipeline=step.id, git_cache=git_cache, lockfiles=lockfiles, shared=shared,
-            members=members, snapshotted_first=snapshotted_first,
+            members=members,
         )
     except snapshots.SnapshotError as error:  # the folder changed under the run
         raise RunError(f"{step.id}: {error}") from None
+
+
+def _snapshot_first(loop, steps: list, script: str) -> str:
+    """Under --snapshot, what to do when a pin the run would make is of a snapshot a pipeline of the run will replace.
+
+    The walk before the run takes the snapshot the store has now: the run
+    cannot know which one a pin will take once it has made more. If that
+    one leads back and the pipeline has since dropped the dependency, its
+    new snapshot first breaks the cycle.
+    """
+    snapshotted = {
+        step.id: step for step in steps
+        if step.source == "asked" and step.directory is not None and script in step.scripts
+    }
+    named = [
+        edge.dependency for edge in [*loop.way_in, *loop.edges]
+        if "this run would pin its snapshot at" in edge.where and edge.dependency in snapshotted
+    ]
+    if not named:
+        return ""
+    first = snapshotted[named[0]]
+    return (
+        f"\nThe pin of {first.id} is of the snapshot the store has of it now, which this run would replace "
+        f"with --snapshot. If {first.id} no longer depends on what leads back here, make its new snapshot "
+        f"first (`chartbook run --snapshot --project-dir {first.directory}`), and run this again."
+    )
 
 
 def _cycle_said(loop) -> str:
@@ -869,7 +890,6 @@ def run(
     # pinned of it has to be in the store already, and verify() checks that
     steps = plan(here, git_cache, git=building and not frozen, force=force, store=store)
     commits_before: dict[Path, str] = {}
-    codes_before: dict = {}  # where each pipeline asked for is in git, under --snapshot
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
     for step in steps:
@@ -902,7 +922,6 @@ def run(
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
-                codes_before[step.directory] = code
 
     # Dependencies between pipelines form a directed acyclic graph. Each
     # pipeline the run builds is walked now, before anything is pinned,
@@ -914,7 +933,6 @@ def run(
     members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
     # The store's snapshots, read once for the walks below and the pins' own
     shared: dict = {}
-    fresh: dict = {}
     if building:
         # Every pipeline asked for (a catalog's members, with a build script
         # or not), and each git dependency the run builds
@@ -934,27 +952,13 @@ def run(
                     raise RunError(f"{step.id}: {error}\nNothing was pinned or built.") from None
                 if after is not None:
                     would_be[step.directory] = after
-        # With --snapshot, a pipeline of the run with no snapshot at the
-        # commit it is on gets a new one there before what depends on it
-        # pins it: by ID, the commit it will be at. One that has a snapshot
-        # there may be given that one back (nothing changed), so it is not
-        # counted on to be new
-        if snapshot:
-            the_store = store if store is not None else default_store()
-            for step in steps:
-                code = codes_before.get(step.directory)
-                if step.source != "asked" or code is None or script not in step.scripts:
-                    continue
-                try:
-                    there_already = snapshots.find(the_store, code.commit, code.subdirectory)
-                except (snapshots.SnapshotError, StoreError, OSError, ValueError):
-                    there_already = [None]
-                if not there_already:
-                    fresh[step.id] = code.commit
         for step in walked:
-            loop = _cycle(step, store, git_cache, would_be, shared, members, fresh)
+            loop = _cycle(step, store, git_cache, would_be, shared, members)
             if loop is not None:
-                raise RunError(f"{step.id}: {_cycle_said(loop)}\nNothing was pinned or built.")
+                raise RunError(
+                    f"{step.id}: {_cycle_said(loop)}{_snapshot_first(loop, steps, script) if snapshot else ''}"
+                    f"\nNothing was pinned or built."
+                )
         # The pins' own walks below come after builds that may make snapshots
         shared["may_be_old"] = True
 
@@ -1034,7 +1038,7 @@ def run(
             # lockfiles of the pipelines still to come as they were worked
             # out above, since what was built since may have changed them
             def refuse_a_cycle(after, step=step):
-                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members, fresh)
+                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members)
                 if loop is None:
                     return None
                 into = "lead into" if loop.way_in else "close"

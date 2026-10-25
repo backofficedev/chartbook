@@ -819,12 +819,13 @@ class TestWhatTheThirdReviewFound:
 @posix
 class TestWhatTheFourthReviewFound:
     @pytest.mark.parametrize("named_by", ["id", "path"])
-    def test_a_member_snapshotted_first_is_pinned_at_its_new_snapshot(self, work, named_by):
+    def test_a_member_whose_old_snapshot_leads_back_is_snapshotted_first(self, work, named_by):
         """q's snapshot in the store was made when it depended on p; q now depends on r, and p comes to depend on q.
 
-        With --snapshot, q is snapshotted before p pins it, so p takes that new
-        snapshot and there is no cycle. Without it, p would pin the old one,
-        which leads back to p.
+        The run checks a pin against the snapshot the store has now, even
+        when --snapshot would make a newer one first: it cannot know which
+        one the pin will take. It says so, and once q's new snapshot is
+        made, the run goes through.
         """
         p = _pipeline(work / "p", "acme/p", "ps")
         q = _pipeline(work / "q", "acme/q", "qs")
@@ -842,13 +843,28 @@ class TestWhatTheFourthReviewFound:
         _declare(q, {"acme/r": {}})
         _declare(p, {"acme/q": {}} if named_by == "id" else {"q": {"path": "../q"}})
         _commit(work)
-        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
-            run.run(work, echo=lambda line: None)
-        assert _built(work) == []
+        before = (_lockfile(p), _lockfile(q), _store_state())
+        with pytest.raises(run.RunError) as raised:
+            run.run(work, snapshot=True, echo=lambda line: None)
+        assert str(raised.value).startswith("acme/p: these pipelines depend on each other")
+        assert (
+            f"The pin of acme/q is of the snapshot the store has of it now, which this run would replace with "
+            f"--snapshot. If acme/q no longer depends on what leads back here, make its new snapshot first "
+            f"(`chartbook run --snapshot --project-dir {q}`), and run this again."
+        ) in str(raised.value)
+        assert _built(work) == [] and (_lockfile(p), _lockfile(q), _store_state()) == before
+        assert run.run(q, snapshot=True, echo=lambda line: None).failed is None
         report = run.run(work, snapshot=True, echo=lambda line: None)
         assert report.failed is None, report.reason
-        assert _built(work) == ["r", "q", "p"]
         assert lineage.cycle(p) is None
+
+    def test_the_pin_at_its_turn_is_walked_as_it_is(self, would_be, work, monkeypatch):
+        """The pins' own walks pass over nothing: what a pin takes is what is walked."""
+        fred, rates, forecast = would_be
+        monkeypatch.setattr(lock, "would_pin", lambda *arguments, **keywords: None)
+        report = run.run(fred, snapshot=False, echo=lambda line: None)
+        assert report.reason.startswith("pinning what it depends on would close a cycle: ")
+        assert _lockfile(fred) is None and _built(work) == []
 
     def test_the_store_is_read_once_for_every_walk_of_a_command(self, chain, work, monkeypatch):
         fred, rates, forecast = chain
