@@ -76,7 +76,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
-from chartbook.store import Store, default_store
+from chartbook.store import Store, StoreError, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -597,6 +597,74 @@ def plan(
     return order
 
 
+def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None, members=None):
+    """The first cycle among the pipelines a step depends on, if there is one (:func:`chartbook.lineage.cycle`).
+
+    :param lockfiles: Lockfiles as a pin would write them, by folder, read
+        in place of the files there.
+    :param shared: Shared between walks with nothing written in between,
+        so that the store is read once.
+    :param members: The run's own pipelines, their folders by ID.
+    :raises RunError: If the step's folder no longer holds a pipeline.
+    """
+    from chartbook import lineage
+
+    try:
+        return lineage.cycle(
+            step.directory, store, pipeline=step.id, git_cache=git_cache, lockfiles=lockfiles, shared=shared,
+            members=members,
+        )
+    except snapshots.SnapshotError as error:  # the folder changed under the run
+        raise RunError(f"{step.id}: {error}") from None
+
+
+def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> str:
+    """Under --snapshot, what to do when a pin the run would make is of a snapshot a pipeline of the run will replace.
+
+    The walk before the run takes the snapshot the store has now: the run
+    cannot know which one a pin will take once it has made more. If that
+    one leads back and the pipeline has since dropped the dependency, its
+    new snapshot first breaks the cycle. Said only where it would: the
+    pipeline has no snapshot at its commit yet (one that has may be given
+    back unchanged), and the pin takes its newest (not narrowed to a
+    commit, a revision or a repository).
+    """
+    import shlex
+
+    snapshotted = {
+        step.id: step for step in steps
+        if step.source == "asked" and step.directory is not None and script in step.scripts
+    }
+    for edge in [*loop.way_in, *loop.edges]:
+        member = snapshotted.get(edge.dependency)
+        declarer = snapshotted.get(edge.pipeline)
+        if member is None or declarer is None or "this run would pin its snapshot at" not in edge.where:
+            continue
+        try:
+            entry = (_read_manifest(declarer.directory).get("dependencies") or {}).get(edge.key)
+            code = snapshots.code_of(member.directory)
+            there_already = snapshots.find(store if store is not None else default_store(), code.commit, code.subdirectory)
+        except Exception:  # noqa: BLE001 - nothing to say then
+            continue
+        if not isinstance(entry, dict) or any(entry.get(narrowed) for narrowed in ("commit", "rev", "repository")):
+            continue
+        if there_already:
+            continue
+        return (
+            f"\nThe pin of {member.id} is of the snapshot the store has of it now, which this run would replace "
+            f"with --snapshot. If {member.id} no longer depends on what leads back here, make its new snapshot "
+            f"first (`chartbook run --snapshot --project-dir {shlex.quote(str(member.directory))}`), and run this again."
+        )
+    return ""
+
+
+def _cycle_said(loop) -> str:
+    """What a run says of a cycle: who is in it, and each edge with where it was read."""
+    from chartbook import lineage
+
+    return f"{lineage.cycle_lead(loop)}, so there is no order to build in.\n{lineage.explain_cycle(loop)}"
+
+
 def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
     """Refuse unless every pipeline whose script would run is one the user trusts to run.
 
@@ -813,8 +881,13 @@ def run(
         message: ``chartbook build --remake`` from ``chartbook build``.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, the one
-        asked for has no such script, or a kept asset is missing while the
-        store has it and *remake* is not set.
+        asked for has no such script, a pipeline it builds depends, through
+        what it depends on, on itself, or would once the run pinned what it
+        depends on (found before anything is pinned or run), or a kept
+        asset is missing while the store has it and *remake* is not set. A
+        pin that would still lead into a cycle when its turn comes (a
+        dependency changed by a build earlier in the run) is not written,
+        and the report says so.
     """
     here = Path(project_dir).resolve()
     building = script == BUILD_SCRIPT
@@ -863,6 +936,45 @@ def run(
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
+
+    # Dependencies between pipelines form a directed acyclic graph. Each
+    # pipeline the run builds is walked now, before anything is pinned,
+    # written or run, with the pins the run would make worked out and not
+    # written (lock.would_pin): a cycle a new pin would close is found here
+    # too, and in a catalog no pipeline is built when one is in a cycle
+    would_be: dict = {}
+    # The pipelines of the run, by ID: one named by its ID is walked through its folder
+    members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
+    # The store's snapshots, read once for the walks below and the pins' own
+    shared: dict = {}
+    if building:
+        # Every pipeline asked for (a catalog's members, with a build script
+        # or not), and each git dependency the run builds
+        walked = [
+            step for step in steps
+            if step.directory is not None and step.has_dependencies
+            and not (step.source == "git" and (script not in step.scripts or (step.built and not force)))
+        ]
+        if not frozen:
+            for step in walked:
+                if script not in step.scripts:
+                    continue  # it pins nothing in this run
+                try:
+                    after = lock.would_pin(step.directory, store, git_cache, built_here=set(members))
+                except (lock.LockError, StoreError, ValueError, OSError) as error:
+                    # What its pin would say in its turn, said before anything is built
+                    raise RunError(f"{step.id}: {error}\nNothing was pinned or built.") from None
+                if after is not None:
+                    would_be[step.directory] = after
+        for step in walked:
+            loop = _cycle(step, store, git_cache, would_be, shared, members)
+            if loop is not None:
+                raise RunError(
+                    f"{step.id}: {_cycle_said(loop)}{_snapshot_first(loop, steps, script, store) if snapshot else ''}"
+                    f"\nNothing was pinned or built."
+                )
+        # The pins' own walks below come after builds that may make snapshots
+        shared["may_be_old"] = True
 
     if building and not remake:
         # A costly output that is not on disk while the store has a version
@@ -935,34 +1047,35 @@ def run(
                 break
         elif building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
-            # before it runs. Nothing that is pinned is moved.
+            # before it runs. Nothing that is pinned is moved. A pin that
+            # would lead into a cycle is not written: walked with the
+            # lockfiles of the pipelines still to come as they were worked
+            # out above, since what was built since may have changed them
+            def refuse_a_cycle(after, step=step):
+                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members)
+                if loop is None:
+                    return None
+                into = "lead into" if loop.way_in else "close"
+                return (
+                    f"pinning what it depends on would {into} a cycle: {_cycle_said(loop)}\n"
+                    f"Its lockfile was left as it was, and it was not built"
+                )
+
             pins = lock.pin(
                 step.directory, store, git_cache,
                 built_here={other.id for other in steps if other.source == "asked"},
+                before_writing=refuse_a_cycle,
             )
+            if pins.refused:
+                report.failed, report.exit_code = step, 1
+                report.reason = pins.refused
+                break
+            would_be.pop(step.directory, None)  # written now: its file is what holds
             if on_pin is not None:
                 on_pin(step, pins)
             if pins.problems:
                 report.failed, report.exit_code = step, 1
                 report.reason = "what it depends on could not be pinned"
-                break
-
-        if building and step.has_dependencies:
-            # Dependencies between pipelines form a directed acyclic graph.
-            # One that depends, through what it depends on, on itself is
-            # found out now, with what was just pinned, before its build
-            from chartbook import lineage
-
-            try:
-                loop = lineage.cycle(step.directory, store, pipeline=step.id, git_cache=git_cache)
-            except snapshots.SnapshotError as error:  # the folder changed under the run
-                raise RunError(f"{step.id}: {error}") from None
-            if loop is not None:
-                report.failed, report.exit_code = step, 1
-                report.reason = (
-                    f"{lineage.cycle_lead(loop)}, so there is no order to build in, and it was not "
-                    f"built:\n{lineage.explain_cycle(loop)}"
-                ).rstrip(".")
                 break
 
         if building and snapshot and step.source == "asked":
