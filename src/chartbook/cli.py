@@ -365,13 +365,49 @@ def build(remake, **site):
         _stop_where_a_build_tool_says_chartbook_build(project_dir)
         if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True) == "render":
             click.echo("The build command was not run; only the site is rendered.", err=True)
+            _stop_on_a_cycle(project_dir)
         else:
             _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
             # So what the script did not make is an error, not "not built yet"
             after_build = True
     else:
         click.echo("No `build` script here, so only the site is rendered.")
+        _stop_on_a_cycle(project_dir)
     _render_site(**site, after_build=after_build)
+
+
+def _stop_on_a_cycle(project_dir):
+    """Stop before rendering when a pipeline here depends, through what it depends on, on itself.
+
+    Dependencies between pipelines form a directed acyclic graph, and
+    `chartbook run` refuses a cycle before it builds (:func:`chartbook.lineage.cycle`).
+    Where `chartbook build` runs no build command, nothing has looked yet,
+    so it looks here: at the pipeline, or at each pipeline of a catalog.
+    """
+    from chartbook import lineage
+    from chartbook import run as runner
+    from chartbook.snapshot import SnapshotError
+
+    try:
+        steps = runner.plan(project_dir, git=False)
+    except (runner.RunError, ValueError, OSError):
+        return  # the render says what is wrong
+    for step in steps:
+        if step.source != "asked" or step.directory is None or not step.has_dependencies:
+            continue
+        try:
+            loop = lineage.cycle(step.directory, pipeline=step.id)
+        except (SnapshotError, ValueError, OSError):
+            continue  # `chartbook check` says what is wrong with the manifest
+        if loop is not None:
+            click.echo(
+                click.style("Error: ", fg="red", bold=True)
+                + f"{step.id}: {lineage.cycle_lead(loop)}, so there is no order to build in.\n"
+                + lineage.explain_cycle(loop)
+                + "\nNothing was rendered.",
+                err=True,
+            )
+            raise SystemExit(1)
 
 
 def _stop_where_a_build_tool_says_chartbook_build(project_dir):

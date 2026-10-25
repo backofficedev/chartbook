@@ -947,6 +947,24 @@ def run(
                 report.reason = "what it depends on could not be pinned"
                 break
 
+        if building and step.has_dependencies:
+            # Dependencies between pipelines form a directed acyclic graph.
+            # One that depends, through what it depends on, on itself is
+            # found out now, with what was just pinned, before its build
+            from chartbook import lineage
+
+            try:
+                loop = lineage.cycle(step.directory, store, pipeline=step.id, git_cache=git_cache)
+            except snapshots.SnapshotError as error:  # the folder changed under the run
+                raise RunError(f"{step.id}: {error}") from None
+            if loop is not None:
+                report.failed, report.exit_code = step, 1
+                report.reason = (
+                    f"{lineage.cycle_lead(loop)}, so there is no order to build in, and it was not "
+                    f"built:\n{lineage.explain_cycle(loop)}"
+                ).rstrip(".")
+                break
+
         if building and snapshot and step.source == "asked":
             # Its snapshot will carry its lineage: found out now, with what
             # was just pinned, and not after the build
