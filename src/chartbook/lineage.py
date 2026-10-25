@@ -485,6 +485,7 @@ def cycle(
     lockfiles: Optional[dict] = None,
     shared: Optional[dict] = None,
     members: Optional[dict] = None,
+    snapshotted_first: Optional[set] = None,
 ) -> Optional[Cycle]:
     """The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.
 
@@ -494,13 +495,17 @@ def cycle(
     lineage. The graph is walked from the pipeline's folder, each edge read
     from where it is best known:
 
-    - a ``path`` dependency whose folder is on this machine, and a ``git``
-      dependency fetched at the commit its pin names: that folder's own
+    - a dependency whose folder is on this machine (a ``path`` one, or one
+      named by the ID of a pipeline in *members*): that folder's own
       ``[dependencies]``, so a cycle is found as soon as it is declared,
-      before anything is pinned or snapshotted;
-    - otherwise (one named by its ID alone, or a folder not on this
-      machine): the snapshot its pin names, and what that snapshot recorded
-      it was pinned to, and so on up through the store.
+      and the snapshot its pin names as well, since ``pin`` does not move
+      a pin whatever the folder says now;
+    - a ``git`` dependency, and one named by its ID that was got from its
+      repository: its copy at the commit its pin names, if it is fetched;
+    - any other (named by its ID, or a folder not on this machine): the
+      snapshot its pin names, and what that snapshot recorded it was
+      pinned to (a snapshot, or a clone that is fetched here), and so on
+      up through the store.
 
     A pipeline is known by its ID, so one met as a folder and again as a
     snapshot is one node, and a cycle is a pipeline met again on the way up
@@ -534,6 +539,11 @@ def cycle(
         their IDs. A dependency named by the ID of one is followed through
         its folder, as a ``path`` dependency is: that is what the run
         builds, pins and makes a snapshot of.
+    :param snapshotted_first: The IDs of pipelines ``chartbook run
+        --snapshot`` makes a new snapshot of before what depends on them. A
+        pin of one in *lockfiles* that is not yet written will take that new
+        snapshot, made from its folder, so the one the store has now is not
+        walked for it: its folder is.
     :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.
     :raises ValueError: If the pipeline's own ``[dependencies]`` is malformed.
     """
@@ -541,7 +551,7 @@ def cycle(
 
     directory = Path(project_dir).resolve()
     root = pipeline or snapshot.pipeline_in(directory)
-    finder = _Finder(store, follow_pins, git_cache, lockfiles, shared, members)
+    finder = _Finder(store, follow_pins, git_cache, lockfiles, shared, members, snapshotted_first)
     # The pipeline's own table is read as the command would read it: an
     # error in it is the command's to say, where one upstream is passed over
     validate_dependencies(snapshot._read_manifest_file(directory).get("dependencies") or {}, directory)
@@ -608,7 +618,7 @@ class _Finder:
 
     def __init__(
         self, store: Optional[Store], follow_pins: bool, git_cache=None, lockfiles: Optional[dict] = None,
-        shared: Optional[dict] = None, members: Optional[dict] = None,
+        shared: Optional[dict] = None, members: Optional[dict] = None, snapshotted_first: Optional[set] = None,
     ):
         self.store = store
         self.follow_pins = follow_pins
@@ -619,6 +629,10 @@ class _Finder:
         self.shared = shared if shared is not None else {}
         #: The folders of the pipelines a run builds, by their IDs
         self.members = {pipeline: Path(folder).resolve() for pipeline, folder in (members or {}).items()}
+        #: Pipelines a run snapshots before what depends on them, whose new pins take that snapshot
+        self.fresh = set(snapshotted_first or ())
+        #: Whether this walk read the store itself, rather than taking another walk's reading
+        self.read_here = False
 
     def children(self, pipeline: str, source: object) -> list[tuple[Edge, object, str]]:
         """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place)``.
@@ -722,6 +736,9 @@ class _Finder:
             children.append((Edge(pipeline, named, key, where), there, str(there)))
         # The snapshot its pin names, if the store has it
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
+        if taken is not None and new and taken.pipeline in self.fresh and children:
+            # The run makes a new snapshot of it from its folder, walked above, before this pin takes it
+            taken = None
         if taken is not None:
             at = _text(taken.commit)[:7]
             said = f"{where}; this run would pin its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
@@ -729,6 +746,13 @@ class _Finder:
         elif entry.get("_store") and not children:
             children.append((Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}"))
         return children
+
+    def _clone(self, url: str, commit: str) -> Optional[Path]:
+        """A repository's copy at a commit, if it is fetched here: its working copy, else its checkout."""
+        from chartbook.gitcache import default_git_cache
+
+        cache = self.git_cache if self.git_cache is not None else default_git_cache()
+        return cache.files(url, commit) if url and commit else None
 
     def _from_snapshot(self, pipeline: str, taken) -> list:
         listed = taken.inputs if isinstance(taken.inputs, list) else []
@@ -752,8 +776,27 @@ class _Finder:
         if location.get("kind") == "git":
             # Pinned from a clone, not a snapshot: known by the ID it was
             # named by, else by the key it was declared under, as a folder's
-            # fetched git dependency is named
+            # fetched git dependency is named; walked through the clone if
+            # it is fetched here
+            from chartbook.config import clone_url_for, get_default_host
+            from chartbook.gitcache import local_url
+            from chartbook.identity import derive_pipeline_id
+            from chartbook.resolve import MANIFEST_NAME
+
             named = _text(location.get("pipeline")) or key
+            url = _text(location.get("url"))
+            if url and not (Path(url).is_absolute() or ":" in url):
+                url = ""  # a path relative to a folder the record does not name
+            elif url:
+                url = local_url(url, Path("/"))
+            elif _text(location.get("pipeline")):
+                url = clone_url_for(location["pipeline"], get_default_host()) or ""
+            checkout = self._clone(url, _text(location.get("commit")))
+            if checkout is not None and (checkout / MANIFEST_NAME).is_file():
+                project = snapshot._read_manifest_file(checkout).get("project")
+                project = project if isinstance(project, dict) else {}
+                named = derive_pipeline_id(project, checkout) if project.get("id") else named
+                return Edge(pipeline, named, key, where), checkout, str(checkout)
             return Edge(pipeline, named, key, where), None, f"id:{named}"
         below = self._pinned(_text(location.get("commit")), _text(entry.get("snapshot")))
         if below is not None:
@@ -767,12 +810,22 @@ class _Finder:
         if not (commit and made_at) or not self.follow_pins:
             return None
         if "found" not in self.shared:
-            try:
-                store = self.store if self.store is not None else default_store()
-                self.shared["found"] = snapshot.readable_snapshots(store)[0]
-            except (StoreError, OSError, ValueError):
-                self.shared["found"] = []
-        for taken in self.shared["found"]:
-            if taken.same_moment(commit, made_at) and _text(taken.pipeline):
-                return taken
+            self._read()
+        for attempt in (1, 2):
+            for taken in self.shared["found"]:
+                if taken.same_moment(commit, made_at) and _text(taken.pipeline):
+                    return taken
+            if self.read_here:
+                break
+            # Another walk's reading, which may be older than this pin: read once more
+            self._read()
         return None
+
+    def _read(self) -> None:
+        """Read the store's snapshots, for this walk and those it shares with."""
+        try:
+            store = self.store if self.store is not None else default_store()
+            self.shared["found"] = snapshot.readable_snapshots(store)[0]
+        except (StoreError, OSError, ValueError):
+            self.shared["found"] = []
+        self.read_here = True

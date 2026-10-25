@@ -63,11 +63,13 @@ when they find a cycle, and say who depends on whom and where each dependency wa
 `chartbook check` reports it. A run looks before it pins or builds anything, including at the pins
 it is about to make, so a refused run leaves your lockfile and the store as they were. If what a
 pin would take changes while the run goes on, that pin is refused when its turn comes and is not
-written, though the pipelines before it in the run were built by then.
+written, though the pipelines before it in the run were pinned and built by then, and with
+`--snapshot` snapshotted.
 
-A cycle is found in the folders on your machine as soon as it is declared (in a `git`
-dependency's, once it is fetched), and through the snapshots in the store for a pipeline named by
-its ID. Take one of the dependencies out; where a snapshot records it, that pipeline makes a new
+A cycle is found in the folders on your machine as soon as it is declared, and through the
+snapshot each pin names, since a pin does not move whatever the folder says now. A `git`
+dependency, or one named by its ID and got from its repository, is followed through its copy once
+it is fetched. Take one of the dependencies out; where a snapshot records it, that pipeline makes a new
 snapshot, and the one that pins it runs `chartbook update`.
 
 ## They declare a build ready

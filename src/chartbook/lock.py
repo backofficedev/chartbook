@@ -80,6 +80,7 @@ from chartbook.manifest import (
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
+from chartbook.store import LINKS as STORE_LINKS
 from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
@@ -1208,6 +1209,7 @@ def _sync_now(
         refused = before_writing(after)
         if refused:
             report.refused = refused
+            store.forget_held(report)
             return report
         store.put_held(after, report)
         store = the_store
@@ -2571,14 +2573,27 @@ class _PutLater:
     def __repr__(self) -> str:
         return repr(self._store)
 
-    def put(self, path: Union[str, Path], links: Iterable[str] = ()) -> StoredObject:
+    def put(self, path: Union[str, Path], links: Iterable[str] = STORE_LINKS) -> StoredObject:
         if hashing.find_files(path) is None:
             raise FileNotFoundError(f"Nothing at {path}")
         stand_in = ""
         if self._hold:
-            stand_in = f"held:{len(self.held)}"
+            # No hash a lockfile could hold, however it was written
+            stand_in = f"held:{uuid.uuid4().hex}"
             self.held[stand_in] = (path, tuple(links))
         return StoredObject(content_hash=stand_in, size_bytes=0, path=Path(path), files=(), created=False)
+
+    def forget_held(self, report: "PinReport") -> None:
+        """Let go of what was held, for a pin that was refused: the report names no stand-in."""
+        if not self._hold:
+            return
+        held, self.held = self.held, {}
+        report.events[:] = [
+            dataclasses.replace(
+                event, old=None if event.old in held else event.old, new=None if event.new in held else event.new
+            )
+            for event in report.events
+        ]
 
     def put_held(self, after: "Lock", report: "PinReport") -> None:
         """Put what was held, and give the lockfile and the report the hashes of what was put."""

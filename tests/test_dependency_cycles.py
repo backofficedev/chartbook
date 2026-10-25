@@ -814,3 +814,77 @@ class TestWhatTheThirdReviewFound:
         assert _lockfile(fred) == guarded
         (record,) = lock.read_lock(fred).assets.values()
         assert default_store().has(record["content_hash"])
+
+
+@posix
+class TestWhatTheFourthReviewFound:
+    @pytest.mark.parametrize("named_by", ["id", "path"])
+    def test_a_member_snapshotted_first_is_pinned_at_its_new_snapshot(self, work, named_by):
+        """q's snapshot in the store was made when it depended on p; q now depends on r, and p comes to depend on q.
+
+        With --snapshot, q is snapshotted before p pins it, so p takes that new
+        snapshot and there is no cycle. Without it, p would pin the old one,
+        which leads back to p.
+        """
+        p = _pipeline(work / "p", "acme/p", "ps")
+        q = _pipeline(work / "q", "acme/q", "qs")
+        r = _pipeline(work / "r", "acme/r", "rs")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}})
+        )
+        _repository(work)
+        snapshot.make(p)
+        snapshot.make(r)
+        _declare(q, {"acme/p": {}})
+        lock.pin(q)
+        _commit(work)
+        snapshot.make(q)
+        _declare(q, {"acme/r": {}})
+        _declare(p, {"acme/q": {}} if named_by == "id" else {"q": {"path": "../q"}})
+        _commit(work)
+        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
+            run.run(work, echo=lambda line: None)
+        assert _built(work) == []
+        report = run.run(work, snapshot=True, echo=lambda line: None)
+        assert report.failed is None, report.reason
+        assert _built(work) == ["r", "q", "p"]
+        assert lineage.cycle(p) is None
+
+    def test_the_store_is_read_once_for_every_walk_of_a_command(self, chain, work, monkeypatch):
+        fred, rates, forecast = chain
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}})
+        )
+        reads = []
+        original = lineage._Finder._read
+        monkeypatch.setattr(lineage._Finder, "_read", lambda self: reads.append(1) or original(self))
+        run_checks(load_manifest(work), work)
+        assert len(reads) == 1
+        reads.clear()
+        assert run.run(work, echo=lambda line: None).failed is None
+        assert len(reads) == 1
+
+    def test_a_snapshots_input_got_from_a_clone_is_walked_through_it(self, work, tmp_path):
+        """forecast takes ref from its repository; ref pins fred; fred comes to name forecast by its ID."""
+        fred = _pipeline(work / "fred", "acme/fred", "series")
+        forecast = _pipeline(work / "forecast", "acme/forecast", "outlook")
+        _repository(work)
+        snapshot.make(fred)
+        ref = _git_repository(tmp_path / "ref", "acme/ref", "table", {"acme/fred": {}})
+        _declare(forecast, {"acme/ref": {"git": str(ref)}})
+        lock.pin(forecast)
+        _commit(work)
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        lock.pin(fred)
+        found = lineage.cycle(fred)
+        assert _around(found) == [("acme/fred", "acme/forecast"), ("acme/forecast", "acme/ref"), ("acme/ref", "acme/fred")]
+        assert found.edges[1].where.startswith("recorded by the snapshot of acme/forecast at ")
+
+    def test_a_refused_pin_reports_no_stand_in(self, chain, tmp_path):
+        fred, rates, forecast = chain
+        repository = _git_repository(tmp_path / "ref", "acme/ref", "table")
+        _declare(fred, {"acme/ref": {"git": str(repository)}})
+        report = lock.pin(fred, before_writing=lambda would_be_written: "no")
+        assert report.refused == "no" and report.events
+        assert not any(str(event.new or "").startswith("held:") for event in report.events)

@@ -680,13 +680,16 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
     in_build = get_pipeline_dirs(manifest)
     # A catalog's pipelines, by ID: one named by its ID is walked through its folder
     members = {(_id_at(folder) or key): folder for key, folder in in_build.items()}
+    shared: dict = {}  # the store read once for every pipeline's walk
     for pipeline_id, pipeline_dir in in_build.items():
         dependencies = get_pipeline_manifest(manifest, pipeline_id).get("dependencies") or {}
         if not dependencies:
             continue
         readable = folder_store()
         try:
-            found = lineage.cycle(pipeline_dir, readable, follow_pins=readable is not None, members=members)
+            found = lineage.cycle(
+                pipeline_dir, readable, follow_pins=readable is not None, members=members, shared=shared
+            )
         except (SnapshotError, ValueError, OSError):
             continue  # said by the checks of the manifest itself
         if found is None:

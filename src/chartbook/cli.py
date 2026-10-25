@@ -394,11 +394,12 @@ def _stop_on_a_cycle(project_dir):
     except (runner.RunError, ValueError, OSError):
         return  # the render says what is wrong
     members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
+    shared: dict = {}  # the store read once for every pipeline's walk
     for step in steps:
         if step.source != "asked" or step.directory is None or not step.has_dependencies:
             continue
         try:
-            loop = lineage.cycle(step.directory, pipeline=step.id, members=members)
+            loop = lineage.cycle(step.directory, pipeline=step.id, members=members, shared=shared)
         except (SnapshotError, ValueError, OSError):
             continue  # `chartbook check` says what is wrong with the manifest
         if loop is not None:
