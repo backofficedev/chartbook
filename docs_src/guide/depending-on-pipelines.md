@@ -60,12 +60,13 @@ the other pipeline is there and that it declares that dataframe.
 Dependencies between pipelines form a directed acyclic graph: a pipeline cannot depend, through
 what it depends on, on itself. `chartbook run`, `chartbook build` and `chartbook snapshot` stop
 when they find a cycle, and say who depends on whom and where each dependency was read, and
-`chartbook check` reports it. A run stops before it pins or builds anything, and does not write a
-pin that would close a cycle, so your lockfile is left as it was. A cycle is found in the folders on your machine as soon as it is
-declared (in a `git` dependency's, once it is fetched), and through the snapshots in the store for
-a pipeline named by its ID. Take one of the
-dependencies out; where a snapshot records it, that pipeline makes a new snapshot, and the one that
-pins it runs `chartbook update`.
+`chartbook check` reports it. A run looks before it pins or builds anything, including at the pins
+it is about to make, so a refused run leaves your lockfile and the store as they were.
+
+A cycle is found in the folders on your machine as soon as it is declared (in a `git`
+dependency's, once it is fetched), and through the snapshots in the store for a pipeline named by
+its ID. Take one of the dependencies out; where a snapshot records it, that pipeline makes a new
+snapshot, and the one that pins it runs `chartbook update`.
 
 ## They declare a build ready
 

@@ -597,17 +597,21 @@ def plan(
     return order
 
 
-def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], locked=None):
+def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None):
     """The first cycle among the pipelines a step depends on, if there is one (:func:`chartbook.lineage.cycle`).
 
-    :param locked: The step's lockfile as a pin would write it; the one in
-        its folder by default.
+    :param lockfiles: Lockfiles as a pin would write them, by folder, read
+        in place of the files there.
+    :param shared: Shared between walks with nothing written in between,
+        so that the store is read once.
     :raises RunError: If the step's folder no longer holds a pipeline.
     """
     from chartbook import lineage
 
     try:
-        return lineage.cycle(step.directory, store, pipeline=step.id, git_cache=git_cache, locked=locked)
+        return lineage.cycle(
+            step.directory, store, pipeline=step.id, git_cache=git_cache, lockfiles=lockfiles, shared=shared
+        )
     except snapshots.SnapshotError as error:  # the folder changed under the run
         raise RunError(f"{step.id}: {error}") from None
 
@@ -836,9 +840,12 @@ def run(
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, the one
         asked for has no such script, a pipeline it builds depends, through
-        what it depends on, on itself (found before anything is pinned or
-        run), or a kept asset is missing while the store has it and
-        *remake* is not set.
+        what it depends on, on itself, or would once the run pinned what it
+        depends on (found before anything is pinned or run), or a kept
+        asset is missing while the store has it and *remake* is not set. A
+        pin that would still lead into a cycle when its turn comes (a
+        dependency changed by a build earlier in the run) is not written,
+        and the report says so.
     """
     here = Path(project_dir).resolve()
     building = script == BUILD_SCRIPT
@@ -888,18 +895,32 @@ def run(
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
 
+    # Dependencies between pipelines form a directed acyclic graph. Each
+    # pipeline the run builds is walked now, before anything is pinned,
+    # written or run, with the pins the run would make worked out and not
+    # written (lock.would_pin): a cycle a new pin would close is found here
+    # too, and in a catalog no pipeline is built when one is in a cycle
+    would_be: dict = {}
     if building:
-        # Dependencies between pipelines form a directed acyclic graph. Each
-        # pipeline the run builds is walked now, with its pins as they are,
-        # before anything is pinned, written or run
-        for step in steps:
-            if step.directory is None or not step.has_dependencies or script not in step.scripts:
-                continue
-            if step.source == "git" and step.built and not force:
-                continue  # not built again; what depends on it walks through it
-            loop = _cycle(step, store, git_cache)
+        walked = [
+            step for step in steps
+            if step.directory is not None and step.has_dependencies and script in step.scripts
+            and not (step.source == "git" and step.built and not force)  # not built again; walked through
+        ]
+        if not frozen:
+            built_here = {other.id for other in steps if other.source == "asked"}
+            for step in walked:
+                try:
+                    after = lock.would_pin(step.directory, store, git_cache, built_here=built_here)
+                except Exception:  # noqa: BLE001 - its own pin says what is wrong, in its turn
+                    after = None
+                if after is not None:
+                    would_be[step.directory] = after
+        shared: dict = {}
+        for step in walked:
+            loop = _cycle(step, store, git_cache, would_be, shared)
             if loop is not None:
-                raise RunError(f"{step.id}: {_cycle_said(loop)}\nNothing was built.")
+                raise RunError(f"{step.id}: {_cycle_said(loop)}\nNothing was pinned or built.")
 
     if building and not remake:
         # A costly output that is not on disk while the store has a version
@@ -973,13 +994,17 @@ def run(
         elif building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved. A pin that
-            # would make a cycle (a dependency's newest snapshot was made
-            # from this pipeline) is not written
-            def refuse_a_cycle(would_be, step=step):
-                loop = _cycle(step, store, git_cache, would_be)
-                return None if loop is None else (
-                    f"pinning what it depends on would make a cycle: {_cycle_said(loop)}\n"
-                    f"Nothing was pinned, and it was not built"
+            # would lead into a cycle is not written: walked with the
+            # lockfiles of the pipelines still to come as they were worked
+            # out above, since what was built since may have changed them
+            def refuse_a_cycle(after, step=step):
+                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after})
+                if loop is None:
+                    return None
+                into = "lead into" if loop.way_in else "close"
+                return (
+                    f"pinning what it depends on would {into} a cycle: {_cycle_said(loop)}\n"
+                    f"Its lockfile was left as it was, and it was not built"
                 )
 
             pins = lock.pin(
@@ -991,6 +1016,7 @@ def run(
                 report.failed, report.exit_code = step, 1
                 report.reason = pins.refused
                 break
+            would_be.pop(step.directory, None)  # written now: its file is what holds
             if on_pin is not None:
                 on_pin(step, pins)
             if pins.problems:

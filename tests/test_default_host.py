@@ -401,8 +401,12 @@ class TestWhatTheSecondReviewFound:
         from chartbook import run
 
         forecast = _forecast(host / "forecast", {"acme/forecast": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
-        report = run.run(forecast, echo=lambda *a, **k: None)
-        assert report.failed is not None and "depend on each other" not in (report.reason or "")
+        # Refused before anything is pinned, as every cycle is (tests/test_dependency_cycles.py)
+        with pytest.raises(run.RunError) as raised:
+            run.run(forecast, echo=lambda *a, **k: None)
+        assert str(raised.value).startswith("acme/forecast: it depends on itself, so there is no order to build in.")
+        assert "depend on each other" not in str(raised.value)
+        assert not (forecast / "chartbook.lock").exists()
 
     def test_a_root_folder_host_keeps_its_separator(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")

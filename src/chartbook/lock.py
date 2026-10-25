@@ -80,7 +80,7 @@ from chartbook.manifest import (
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
-from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoreError, default_store
+from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -891,10 +891,10 @@ def _sync_now(
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
     :param before_writing: Called with the lockfile as it would be written,
-        when that is not what it holds now. What it returns, if anything,
-        is why it is not to be written: then neither the lockfile nor the
-        store's note of it is written, and the report's ``refused`` says
-        why.
+        whether or not that is what it holds now. What it returns, if
+        anything, is why it is not to be written: then neither the lockfile
+        nor the store's note of it is written, and the report's ``refused``
+        says why.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -1199,7 +1199,7 @@ def _sync_now(
         after.dependencies.append(listed)
         after.assets.update(records)
 
-    if before_writing is not None and after.to_document() != before.to_document():
+    if before_writing is not None:
         refused = before_writing(after)
         if refused:
             report.refused = refused
@@ -2514,10 +2514,10 @@ def pin(
         pinned from the clone (:func:`clone_instead`).
     :param built_here: The IDs of pipelines a run builds itself (a
         catalog's own), which are never cloned.
-    :param before_writing: Called with the lockfile as it would be written,
-        when that is not what it holds now; what it returns, if anything,
-        is why nothing is written (``chartbook run`` refuses a pin that
-        would make a cycle this way). The report's ``refused`` says it.
+    :param before_writing: Called with the lockfile as it would be written;
+        what it returns, if anything, is why nothing is written
+        (``chartbook run`` refuses a pin that would make a cycle this way).
+        The report's ``refused`` says it.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -2530,6 +2530,84 @@ def pin(
         built_here=built_here,
         before_writing=before_writing,
     )
+
+
+class _HashOnly:
+    """A store read as it is, into which nothing is put: what a pin would put is hashed, and that is all.
+
+    For :func:`would_pin`, which works out a lockfile without writing
+    anything. Every other write is refused, and is never reached there.
+    """
+
+    def __init__(self, store: Store):
+        self._store = store
+
+    def __getattr__(self, name: str):
+        return getattr(self._store, name)
+
+    def put(self, path: Union[str, Path], links: Iterable[str] = ()) -> StoredObject:
+        found = hashing.hash_path(path)
+        if found is None:
+            raise FileNotFoundError(f"Nothing at {path}")
+        return StoredObject(
+            content_hash=found.content_hash, size_bytes=found.size_bytes, path=Path(path), files=(),
+            created=False, entries=found.files,
+        )
+
+    def _refuse(self, *arguments, **keywords):
+        raise StoreError("nothing is written to the store while a pin is only worked out")
+
+    add_root = remove_root = delete = note_origin = _refuse
+
+
+def _has_a_pin(listed: object) -> bool:
+    """Whether a lockfile's entry for a dependency names where it was pinned from, so that `pin` keeps it as it is."""
+    if not isinstance(listed, dict):
+        return False
+    location = listed.get("location")
+    if not isinstance(location, dict) or not location.get("commit"):
+        return False
+    return location.get("kind") == "git" or bool(listed.get("snapshot"))
+
+
+def would_pin(
+    project_dir: Union[str, Path] = ".",
+    store: Optional[Store] = None,
+    git_cache: Optional[GitCache] = None,
+    built_here: Iterable[str] = (),
+) -> Optional[Lock]:
+    """The lockfile as :func:`pin` would write it now, worked out and not written; None if it would pin nothing new.
+
+    Only the dependencies with no pin yet are worked out: one that has a
+    pin keeps it, as ``pin`` keeps it. Nothing is written: not the
+    lockfile, not the store's note of it, and no object (what a pin would
+    put in the store is hashed, not put). A ``git`` dependency may be
+    fetched into the git cache, and one named by its ID cloned there, as
+    ``pin`` would. ``chartbook run`` uses it to find a cycle that a pin
+    would close before anything is pinned or built.
+
+    :raises LockError: If *project_dir* is not a pipeline, or its lockfile
+        cannot be read.
+    :raises ValueError: If its ``[dependencies]`` table is malformed.
+    """
+    project_dir = Path(project_dir).resolve()
+    _, dependencies = _read_pipeline(project_dir)
+    locked = read_lock(project_dir / LOCK_FILE)
+    listed = {entry["id"]: entry for entry in (locked.dependencies if locked is not None else [])}
+    unpinned = {key for key in dependencies if not _has_a_pin(listed.get(key))}
+    if not unpinned:
+        return None
+    worked_out: list = []
+
+    def keep(after: Lock) -> str:
+        worked_out.append(after)
+        return "only worked out"
+
+    _sync(
+        project_dir, _HashOnly(store if store is not None else default_store()), move=None,
+        git_cache=git_cache, only=unpinned, built_here=built_here, before_writing=keep,
+    )
+    return worked_out[0] if worked_out else None
 
 
 def update(
