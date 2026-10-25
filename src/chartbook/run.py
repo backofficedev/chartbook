@@ -76,7 +76,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
-from chartbook.store import Store, default_store
+from chartbook.store import Store, StoreError, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -597,20 +597,22 @@ def plan(
     return order
 
 
-def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None):
+def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None, members=None):
     """The first cycle among the pipelines a step depends on, if there is one (:func:`chartbook.lineage.cycle`).
 
     :param lockfiles: Lockfiles as a pin would write them, by folder, read
         in place of the files there.
     :param shared: Shared between walks with nothing written in between,
         so that the store is read once.
+    :param members: The run's own pipelines, their folders by ID.
     :raises RunError: If the step's folder no longer holds a pipeline.
     """
     from chartbook import lineage
 
     try:
         return lineage.cycle(
-            step.directory, store, pipeline=step.id, git_cache=git_cache, lockfiles=lockfiles, shared=shared
+            step.directory, store, pipeline=step.id, git_cache=git_cache, lockfiles=lockfiles, shared=shared,
+            members=members,
         )
     except snapshots.SnapshotError as error:  # the folder changed under the run
         raise RunError(f"{step.id}: {error}") from None
@@ -901,24 +903,30 @@ def run(
     # written (lock.would_pin): a cycle a new pin would close is found here
     # too, and in a catalog no pipeline is built when one is in a cycle
     would_be: dict = {}
+    # The pipelines of the run, by ID: one named by its ID is walked through its folder
+    members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
     if building:
+        # Every pipeline asked for (a catalog's members, with a build script
+        # or not), and each git dependency the run builds
         walked = [
             step for step in steps
-            if step.directory is not None and step.has_dependencies and script in step.scripts
-            and not (step.source == "git" and step.built and not force)  # not built again; walked through
+            if step.directory is not None and step.has_dependencies
+            and not (step.source == "git" and (script not in step.scripts or (step.built and not force)))
         ]
         if not frozen:
-            built_here = {other.id for other in steps if other.source == "asked"}
             for step in walked:
+                if script not in step.scripts:
+                    continue  # it pins nothing in this run
                 try:
-                    after = lock.would_pin(step.directory, store, git_cache, built_here=built_here)
-                except Exception:  # noqa: BLE001 - its own pin says what is wrong, in its turn
-                    after = None
+                    after = lock.would_pin(step.directory, store, git_cache, built_here=set(members))
+                except (lock.LockError, StoreError, ValueError, OSError) as error:
+                    # What its pin would say in its turn, said before anything is built
+                    raise RunError(f"{step.id}: {error}\nNothing was pinned or built.") from None
                 if after is not None:
                     would_be[step.directory] = after
         shared: dict = {}
         for step in walked:
-            loop = _cycle(step, store, git_cache, would_be, shared)
+            loop = _cycle(step, store, git_cache, would_be, shared, members)
             if loop is not None:
                 raise RunError(f"{step.id}: {_cycle_said(loop)}\nNothing was pinned or built.")
 
@@ -998,7 +1006,7 @@ def run(
             # lockfiles of the pipelines still to come as they were worked
             # out above, since what was built since may have changed them
             def refuse_a_cycle(after, step=step):
-                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after})
+                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, None, members)
                 if loop is None:
                     return None
                 into = "lead into" if loop.way_in else "close"

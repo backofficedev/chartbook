@@ -292,9 +292,26 @@ def _lockfile(folder: Path):
 
 
 def _store_state():
-    """Every file in the store, by path, with its size: objects, snapshots and notes."""
+    """Every file in the store, by path, with a hash of its bytes: objects, snapshots and notes."""
+    import hashlib
+
     root = Path(os.environ["CHARTBOOK_STORE"])
-    return {str(f.relative_to(root)): f.stat().st_size for f in root.rglob("*") if f.is_file()} if root.exists() else {}
+    if not root.exists():
+        return {}
+    return {
+        str(f.relative_to(root)): hashlib.sha256(f.read_bytes()).hexdigest() for f in root.rglob("*") if f.is_file()
+    }
+
+
+def _git_repository(folder: Path, pipeline_id: str, name: str, dependencies=None, build=None) -> Path:
+    """A pipeline in a repository of its own, its data and lockfile committed."""
+    _pipeline(folder, pipeline_id, name, dependencies, build=build)
+    if dependencies:
+        lock.pin(folder)
+    (folder / ".gitignore").write_text("")
+    _git(folder, "init", "--quiet", "-b", "main")
+    _commit(folder)
+    return folder
 
 
 @pytest.fixture
@@ -348,9 +365,11 @@ class TestTheCommands:
         pinned = []
         with pytest.raises(run.RunError) as raised:
             run.run(fred, echo=lambda line: None, on_pin=lambda step, pins: pinned.append(pins))
+        taken = _snapshot_of("acme/forecast")
         assert str(raised.value).startswith(
             "acme/fred: these pipelines depend on each other, so there is no order to build in.\n"
-            f"  acme/fred depends on acme/forecast: declared in {fred / 'chartbook.toml'}\n"
+            f"  acme/fred depends on acme/forecast: declared in {fred / 'chartbook.toml'}; this run would pin "
+            f"its snapshot at {taken.commit[:7]}\n"
             "  acme/forecast depends on acme/rates (as 'rates'): recorded by the snapshot of acme/forecast at "
         )
         assert str(raised.value).endswith("\nNothing was pinned or built.")
@@ -602,17 +621,104 @@ class TestWorkingOutAPin:
         fred, rates, forecast = chain
         assert lock.would_pin(forecast) is None and lock.would_pin(fred) is None
 
-    def test_what_a_pin_would_put_in_the_store_is_hashed_and_not_put(self, chain, tmp_path):
-        """A git dependency's files are put in the store when pinned; worked out, they are only hashed."""
+    def test_what_a_pin_would_put_in_the_store_is_not_read(self, chain, tmp_path):
+        """A git dependency's files are put in the store when pinned; worked out, they are not even read."""
         fred, rates, forecast = chain
-        repository = _pipeline(tmp_path / "ref", "acme/ref", "table", build=None)
-        (repository / ".gitignore").write_text("")
-        _git(repository, "init", "--quiet", "-b", "main")
-        _commit(repository)
+        repository = _git_repository(tmp_path / "ref", "acme/ref", "table")
         _declare(fred, {"acme/ref": {"git": str(repository)}})
         before = _store_state()
         after = lock.would_pin(fred)
+        (entry,) = after.dependencies
+        assert entry["location"]["commit"] == _git(repository, "rev-parse", "HEAD")
         (record,) = after.assets.values()
-        assert record["content_hash"].startswith("sha256:")
-        assert not default_store().has(record["content_hash"]) and _store_state() == before
-        assert lock.pin(fred).written and default_store().has(record["content_hash"])
+        assert not record.get("content_hash") and _store_state() == before
+        assert lock.pin(fred).written
+        (pinned,) = lock.read_lock(fred).assets.values()
+        assert default_store().has(pinned["content_hash"])
+
+    def test_a_pin_with_no_bytes_is_worked_out_again(self, chain):
+        """As `pin` takes the newest snapshot again for an entry that names a snapshot and holds no hash."""
+        fred, rates, forecast = chain
+        path = forecast / "chartbook.lock"
+        document = json.loads(path.read_text())
+        for record in document["records"]:
+            record.pop("content_hash", None)
+        path.write_text(json.dumps(document))
+        assert [entry["id"] for entry in lock.would_pin(forecast).dependencies] == ["rates"]
+
+
+@posix
+class TestWhatTheSecondReviewFound:
+    def test_a_member_named_by_its_id_is_walked_through_its_folder(self, work):
+        """d names m by its ID; m comes to name x, whose snapshot was made from d. With --snapshot, m would be built and snapshotted first."""
+        d = _pipeline(work / "d", "acme/d", "ds")
+        x = _pipeline(work / "x", "acme/x", "xs", {"acme/d": {}})
+        m = _pipeline(work / "m", "acme/m", "ms")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"d": {"path": "d"}, "m": {"path": "m"}}})
+        )
+        _repository(work)
+        snapshot.make(d)
+        lock.pin(x)
+        snapshot.make(x)
+        snapshot.make(m)
+        _declare(d, {"acme/m": {}})
+        lock.pin(d)
+        _declare(m, {"acme/x": {}})
+        _commit(work)
+        before = (_lockfile(d), _lockfile(m), _store_state())
+        for snapshot_too in (True, False):
+            with pytest.raises(run.RunError) as raised:
+                run.run(work, snapshot=snapshot_too, echo=lambda line: None)
+            assert "these pipelines depend on each other" in str(raised.value)
+            assert f"depends on acme/m: declared in {d / 'chartbook.toml'}" in str(raised.value)
+            assert _built(work) == [] and (_lockfile(d), _lockfile(m), _store_state()) == before
+
+    def test_a_refused_pin_puts_no_object_in_the_store(self, would_be, work, tmp_path, monkeypatch):
+        """fred also takes a git dependency in the same pin: its files are held, and not put, when the pin is refused."""
+        fred, rates, forecast = would_be
+        repository = _git_repository(tmp_path / "ref", "acme/ref", "table")
+        _declare(fred, {"acme/forecast": {}, "acme/ref": {"git": str(repository)}})
+        monkeypatch.setattr(lock, "would_pin", lambda *arguments, **keywords: None)
+        before = _store_state()
+        report = run.run(fred, echo=lambda line: None)
+        assert report.reason.startswith("pinning what it depends on would close a cycle: ")
+        assert _lockfile(fred) is None and _store_state() == before
+
+    def test_a_pin_that_cannot_be_worked_out_stops_the_run_before_anything_is_built(self, would_be, work, monkeypatch):
+        fred, rates, forecast = would_be
+        _pipeline(work / "apart", "acme/apart", "a", {"acme/rates": {}})
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}})
+        )
+
+        def unreachable(folder, *arguments, **keywords):
+            if Path(folder).name == "fred":
+                raise lock.LockError("the store cannot be reached")
+            return None
+
+        monkeypatch.setattr(lock, "would_pin", unreachable)
+        with pytest.raises(run.RunError, match=r"^acme/fred: the store cannot be reached\nNothing was pinned or built\.$"):
+            run.run(work, echo=lambda line: None)
+        assert _built(work) == [] and _lockfile(work / "apart") is None
+
+    def test_a_cycle_among_members_without_a_build_script(self, work):
+        """apart builds; b and c have no build script. c depends on b, b on x, and x was made from c."""
+        c = _pipeline(work / "c", "acme/c", "cs", build=None)
+        x = _pipeline(work / "x", "acme/x", "xs", {"acme/c": {}})
+        b = _pipeline(work / "b", "acme/b", "bs", {"acme/x": {}}, build=None)
+        _pipeline(work / "apart", "acme/apart", "a")
+        _repository(work)
+        snapshot.make(c)
+        lock.pin(x)
+        snapshot.make(x)
+        lock.pin(b)
+        _declare(c, {"b": {"path": "../b"}})
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in ("apart", "b", "c")}}
+            )
+        )
+        with pytest.raises(run.RunError, match="these pipelines depend on each other"):
+            run.run(work, echo=lambda line: None)
+        assert _built(work) == []

@@ -892,12 +892,17 @@ def _sync_now(
         user's by default.
     :param before_writing: Called with the lockfile as it would be written,
         whether or not that is what it holds now. What it returns, if
-        anything, is why it is not to be written: then neither the lockfile
-        nor the store's note of it is written, and the report's ``refused``
-        says why.
+        anything, is why it is not to be written: then nothing is written,
+        neither the lockfile, nor the store's note of it, nor any object
+        (what the pin puts in the store is held until then), and the
+        report's ``refused`` says why.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
+    the_store = store
+    if before_writing is not None and not isinstance(store, _PutLater):
+        # What the pin puts in the store is put only once the lockfile may be written
+        store = _PutLater(store)
     root, dependencies = _read_pipeline(project_dir)
     # The store's snapshots, read once for every dependency named by its ID
     read = []
@@ -1204,6 +1209,8 @@ def _sync_now(
         if refused:
             report.refused = refused
             return report
+        store.put_held()
+        store = the_store
 
     # With nothing to lock and no lockfile yet, do not make an empty one; nor
     # for a pin of some dependencies only (the first read of one) that found
@@ -2532,42 +2539,80 @@ def pin(
     )
 
 
-class _HashOnly:
-    """A store read as it is, into which nothing is put: what a pin would put is hashed, and that is all.
+#: What a store does that writes, besides ``put``: refused by :class:`_PutLater`
+_STORE_WRITES = ("add_root", "remove_root", "delete", "note_origin", "write_snapshot", "remove_snapshot")
 
-    For :func:`would_pin`, which works out a lockfile without writing
-    anything. Every other write is refused, and is never reached there.
+
+class _PutLater:
+    """A store read as it is, into which what a pin puts goes only once the lockfile may be written.
+
+    ``put`` hashes what it is given and holds it, and :meth:`put_held` puts
+    it, so that a pin refused by its ``before_writing`` writes no object.
+    With *hash_now* off, ``put`` does not even read the files: the records
+    then carry no hash, which is enough to see where a pin leads
+    (:func:`would_pin`), and nothing is held. Every other write is refused:
+    none is reached before the lockfile is let through.
     """
 
-    def __init__(self, store: Store):
+    def __init__(self, store: Store, hash_now: bool = True):
         self._store = store
+        self._hash_now = hash_now
+        self.held: list = []
 
     def __getattr__(self, name: str):
+        if name in _STORE_WRITES:
+            raise StoreError(f"nothing is written to the store before a lockfile is let through ({name})")
         return getattr(self._store, name)
 
+    def __str__(self) -> str:
+        return str(self._store)
+
+    def __repr__(self) -> str:
+        return repr(self._store)
+
     def put(self, path: Union[str, Path], links: Iterable[str] = ()) -> StoredObject:
+        if not self._hash_now:
+            return StoredObject(content_hash="", size_bytes=0, path=Path(path), files=(), created=False)
         found = hashing.hash_path(path)
         if found is None:
             raise FileNotFoundError(f"Nothing at {path}")
+        self.held.append((path, tuple(links), found.content_hash))
         return StoredObject(
             content_hash=found.content_hash, size_bytes=found.size_bytes, path=Path(path), files=(),
             created=False, entries=found.files,
         )
 
-    def _refuse(self, *arguments, **keywords):
-        raise StoreError("nothing is written to the store while a pin is only worked out")
+    def put_held(self) -> None:
+        """Put what was held, now that the lockfile may be written.
 
-    add_root = remove_root = delete = note_origin = _refuse
+        :raises LockError: If a file changed since it was hashed: the
+            lockfile would name bytes the store does not hold.
+        """
+        for path, links, expected in self.held:
+            stored = self._store.put(path, links=links)
+            if stored.content_hash != expected:
+                raise LockError(
+                    f"{path} changed while it was being pinned ({expected[:19]}… when it was read, "
+                    f"{stored.content_hash[:19]}… now). The lockfile was not written; pin again."
+                )
+        self.held = []
 
 
-def _has_a_pin(listed: object) -> bool:
-    """Whether a lockfile's entry for a dependency names where it was pinned from, so that `pin` keeps it as it is."""
-    if not isinstance(listed, dict):
+def _has_a_pin(listed: object, records: dict) -> bool:
+    """Whether a lockfile's entry for a dependency is a pin that `pin` keeps as it is.
+
+    A ``git`` one is, once it names a commit. Any other is once something of
+    it was pinned with its bytes: one that names a snapshot and holds no
+    hash is pinned again from the newest, as ``pin`` does.
+    """
+    if not isinstance(listed, dict) or not isinstance(listed.get("location"), dict):
         return False
-    location = listed.get("location")
-    if not isinstance(location, dict) or not location.get("commit"):
-        return False
-    return location.get("kind") == "git" or bool(listed.get("snapshot"))
+    if listed["location"].get("kind") == "git":
+        return bool(listed["location"].get("commit"))
+    return any(
+        isinstance(record, dict) and record.get("content_hash") and not (record.get("ref") or {}).get("rev")
+        for record in records.values()
+    )
 
 
 def would_pin(
@@ -2580,11 +2625,12 @@ def would_pin(
 
     Only the dependencies with no pin yet are worked out: one that has a
     pin keeps it, as ``pin`` keeps it. Nothing is written: not the
-    lockfile, not the store's note of it, and no object (what a pin would
-    put in the store is hashed, not put). A ``git`` dependency may be
-    fetched into the git cache, and one named by its ID cloned there, as
-    ``pin`` would. ``chartbook run`` uses it to find a cycle that a pin
-    would close before anything is pinned or built.
+    lockfile, not the store's note of it, and no object. What a pin would
+    put in the store is not even read, so its records carry no hash: the
+    lockfile says where each dependency would be pinned from, which is
+    what ``chartbook run`` walks to find a cycle a pin would close before
+    anything is pinned or built. A ``git`` dependency may be fetched into
+    the git cache, and one named by its ID cloned there, as ``pin`` would.
 
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -2594,7 +2640,10 @@ def would_pin(
     _, dependencies = _read_pipeline(project_dir)
     locked = read_lock(project_dir / LOCK_FILE)
     listed = {entry["id"]: entry for entry in (locked.dependencies if locked is not None else [])}
-    unpinned = {key for key in dependencies if not _has_a_pin(listed.get(key))}
+    unpinned = {
+        key for key in dependencies
+        if not _has_a_pin(listed.get(key), locked.assets_of(key) if locked is not None else {})
+    }
     if not unpinned:
         return None
     worked_out: list = []
@@ -2604,7 +2653,7 @@ def would_pin(
         return "only worked out"
 
     _sync(
-        project_dir, _HashOnly(store if store is not None else default_store()), move=None,
+        project_dir, _PutLater(store if store is not None else default_store(), hash_now=False), move=None,
         git_cache=git_cache, only=unpinned, built_here=built_here, before_writing=keep,
     )
     return worked_out[0] if worked_out else None

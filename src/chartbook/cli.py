@@ -393,11 +393,12 @@ def _stop_on_a_cycle(project_dir):
         steps = runner.plan(project_dir, git=False)
     except (runner.RunError, ValueError, OSError):
         return  # the render says what is wrong
+    members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
     for step in steps:
         if step.source != "asked" or step.directory is None or not step.has_dependencies:
             continue
         try:
-            loop = lineage.cycle(step.directory, pipeline=step.id)
+            loop = lineage.cycle(step.directory, pipeline=step.id, members=members)
         except (SnapshotError, ValueError, OSError):
             continue  # `chartbook check` says what is wrong with the manifest
         if loop is not None:
