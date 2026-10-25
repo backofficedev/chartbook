@@ -61,7 +61,8 @@ Dependencies between pipelines form a directed acyclic graph: a pipeline cannot 
 what it depends on, on itself. `chartbook run`, `chartbook build` and `chartbook snapshot` stop
 when they find a cycle, and say who depends on whom and where each dependency was read, and
 `chartbook check` reports it. A cycle is found in the folders on your machine as soon as it is
-declared, and through the snapshots in the store for a pipeline named by its ID. Take one of the
+declared (in a `git` dependency's, once it is fetched), and through the snapshots in the store for
+a pipeline named by its ID. Take one of the
 dependencies out; where a snapshot records it, that pipeline makes a new snapshot, and the one that
 pins it runs `chartbook update`.
 

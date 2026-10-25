@@ -52,9 +52,33 @@ def _declare(folder: Path, dependencies: dict) -> None:
     (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
 
 
+def _repository(work: Path) -> None:
+    """Make *work* a repository with everything committed; built data, lockfiles and logs ignored."""
+    _git(work, "init", "--quiet", "-b", "main")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n*.log\n")
+    _commit(work)
+
+
 def _built(work: Path) -> list:
     log = work / "order.log"
     return log.read_text().split() if log.exists() else []
+
+
+def _snapshot_of(pipeline: str):
+    found, _ = snapshot.readable_snapshots(default_store())
+    return max((t for t in found if t.pipeline == pipeline), key=lambda t: t.made_at)
+
+
+def _rewrite(taken, change) -> None:
+    """Change a snapshot's record on disk, as anyone who can write to a store could."""
+    os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
+    document = json.loads(taken.path.read_text())
+    change(document)
+    taken.path.write_text(json.dumps(document))
+
+
+def _around(found) -> list:
+    return [(edge.pipeline, edge.dependency) for edge in found.edges]
 
 
 @pytest.fixture
@@ -68,9 +92,7 @@ def chain(work):
     fred = _pipeline(work / "fred", "acme/fred", "series")
     rates = _pipeline(work / "rates", "acme/rates", "treasury", {"fred": {"path": "../fred"}})
     forecast = _pipeline(work / "forecast", "acme/forecast", "outlook", {"rates": {"path": "../rates"}})
-    _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n*.log\n")
-    _commit(work)
+    _repository(work)
     snapshot.make(fred)
     lock.pin(rates)
     snapshot.make(rates)
@@ -78,15 +100,33 @@ def chain(work):
     return fred, rates, forecast
 
 
-def _snapshot_of(pipeline: str):
-    found, _ = snapshot.readable_snapshots(default_store())
-    return max((t for t in found if t.pipeline == pipeline), key=lambda t: t.made_at)
+@pytest.fixture
+def diamond(work):
+    """``r`` depends on ``a`` and ``b`` by path; ``a`` and ``b`` both pin ``c``'s one snapshot, whose record says ``c`` was pinned to an older ``b``.
+
+    So b -> c -> b is a cycle among what r depends on, and c is met twice
+    on the walk from r: first from a, where nothing above it is reachable
+    from it, then from b, where b is.
+    """
+    b = _pipeline(work / "b", "acme/b", "bills")
+    c = _pipeline(work / "c", "acme/c", "curve", {"acme/b": {}})
+    _pipeline(work / "a", "acme/a", "alpha", {"acme/c": {}})
+    r = _pipeline(work / "r", "acme/r", "report", {"a": {"path": "../a"}, "b": {"path": "../b"}})
+    _repository(work)
+    snapshot.make(b)
+    lock.pin(c)
+    snapshot.make(c)
+    _declare(b, {"acme/c": {}})
+    lock.pin(b)
+    lock.pin(work / "a")
+    snapshot.make(work / "a")  # so that r has something of a to pin
+    return r
 
 
 class TestTheWalk:
     def test_a_chain_has_no_cycle(self, chain):
         fred, rates, forecast = chain
-        assert lineage.cycle(forecast) == [] and lineage.cycle(rates) == [] and lineage.cycle(fred) == []
+        assert lineage.cycle(forecast) is None and lineage.cycle(rates) is None and lineage.cycle(fred) is None
 
     def test_a_diamond_is_not_a_cycle(self, work):
         """``top`` depends on ``left`` and ``right``, which both depend on ``base``."""
@@ -96,30 +136,44 @@ class TestTheWalk:
         top = _pipeline(
             work / "top", "acme/top", "t", {"left": {"path": "../left"}, "right": {"path": "../right"}}
         )
-        assert lineage.cycle(top) == []
+        assert lineage.cycle(top) is None
 
     def test_two_folders_that_declare_each_other(self, chain):
         """fred comes to depend on forecast: found in the folders, before anything is pinned or snapshotted."""
         fred, rates, forecast = chain
         _declare(fred, {"forecast": {"path": "../forecast"}})
         found = lineage.cycle(forecast)
-        assert [(edge.pipeline, edge.dependency, edge.key) for edge in found] == [
+        assert [(edge.pipeline, edge.dependency, edge.key) for edge in found.edges] == [
             ("acme/forecast", "acme/rates", "rates"),
             ("acme/rates", "acme/fred", "fred"),
             ("acme/fred", "acme/forecast", "forecast"),
         ]
-        assert found[0].where == f"declared in {forecast / 'chartbook.toml'}"
-        assert found[2].where == f"declared in {fred / 'chartbook.toml'}"
+        assert found.way_in == []
+        assert found.edges[0].where == f"declared in {forecast / 'chartbook.toml'}"
+        assert found.edges[2].where == f"declared in {fred / 'chartbook.toml'}"
         # The same cycle, from wherever it is looked at
-        assert [edge.pipeline for edge in lineage.cycle(fred)] == ["acme/fred", "acme/forecast", "acme/rates"]
+        assert [edge.pipeline for edge in lineage.cycle(fred).edges] == ["acme/fred", "acme/forecast", "acme/rates"]
         assert lineage.cycle_lead(found) == "these pipelines depend on each other"
 
     def test_a_pipeline_that_depends_on_itself(self, chain):
         fred, rates, forecast = chain
         _declare(fred, {"me": {"path": "."}})
-        (edge,) = lineage.cycle(fred)
+        found = lineage.cycle(fred)
+        (edge,) = found.edges
         assert (edge.pipeline, edge.dependency, edge.key) == ("acme/fred", "acme/fred", "me")
-        assert lineage.cycle_lead([edge]) == "acme/fred depends on itself"
+        assert lineage.cycle_lead(found) == "it depends on itself"
+
+    def test_a_cycle_among_what_it_depends_on(self, chain):
+        """fred depends on itself; forecast, above it, is told the way to it."""
+        fred, rates, forecast = chain
+        _declare(fred, {"me": {"path": "."}})
+        found = lineage.cycle(forecast)
+        assert _around(found) == [("acme/fred", "acme/fred")]
+        assert [(edge.pipeline, edge.dependency) for edge in found.way_in] == [
+            ("acme/forecast", "acme/rates"),
+            ("acme/rates", "acme/fred"),
+        ]
+        assert lineage.cycle_lead(found) == "a pipeline it depends on depends on itself"
 
     def test_through_the_store(self, chain):
         """fred names forecast by its ID: no folder of it is looked at, so the cycle is in the snapshots."""
@@ -128,19 +182,57 @@ class TestTheWalk:
         _declare(fred, {"acme/forecast": {}})
         lock.pin(fred)
         found = lineage.cycle(fred)
-        assert [(edge.pipeline, edge.dependency, edge.key) for edge in found] == [
+        assert [(edge.pipeline, edge.dependency, edge.key) for edge in found.edges] == [
             ("acme/fred", "acme/forecast", "acme/forecast"),
             ("acme/forecast", "acme/rates", "rates"),
             ("acme/rates", "acme/fred", "fred"),
         ]
-        assert found[0].where == f"declared in {fred / 'chartbook.toml'}"
-        assert found[1].where == (
+        assert found.edges[0].where == f"declared in {fred / 'chartbook.toml'}"
+        assert found.edges[1].where == (
             f"recorded by the snapshot of acme/forecast at {_snapshot_of('acme/forecast').commit[:7]}, "
             f"made {_snapshot_of('acme/forecast').made_at[:10]}"
         )
-        assert found[2].where.startswith("recorded by the snapshot of acme/rates at ")
+        assert found.edges[2].where.startswith("recorded by the snapshot of acme/rates at ")
         # A walk that may not read the store does not see it
-        assert lineage.cycle(fred, follow_pins=False) == []
+        assert lineage.cycle(fred, follow_pins=False) is None
+
+    def test_a_snapshot_met_twice_is_walked_again_when_something_above_is_reachable_from_it(self, diamond):
+        found = lineage.cycle(diamond)
+        assert _around(found) == [("acme/b", "acme/c"), ("acme/c", "acme/b")]
+        assert [(edge.pipeline, edge.dependency) for edge in found.way_in] == [("acme/r", "acme/b")]
+        assert found.edges[1].where.startswith("recorded by the snapshot of acme/c at ")
+        assert lineage.cycle_lead(found) == "pipelines it depends on depend on each other"
+
+    def test_a_dependency_under_a_shorter_key(self, chain):
+        fred, rates, forecast = chain
+        snapshot.make(forecast)
+        _declare(fred, {"fc": {"id": "acme/forecast"}})
+        lock.pin(fred)
+        found = lineage.cycle(fred)
+        assert (found.edges[0].dependency, found.edges[0].key) == ("acme/forecast", "fc")
+        assert lineage.explain_cycle(found).splitlines()[0] == (
+            f"  acme/fred depends on acme/forecast (as 'fc'): declared in {fred / 'chartbook.toml'}"
+        )
+
+    def test_an_input_pinned_from_a_clone_is_known_by_its_key(self, chain):
+        """A snapshot's input of kind git names no snapshot; the key it was declared under is a pipeline ID."""
+        fred, rates, forecast = chain
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        lock.pin(fred)
+        _rewrite(
+            _snapshot_of("acme/forecast"),
+            lambda d: d.update(inputs=[{"id": "acme/fred", "location": {"kind": "git", "url": "https://example.org/acme/fred"}}]),
+        )
+        assert _around(lineage.cycle(fred)) == [("acme/fred", "acme/forecast"), ("acme/forecast", "acme/fred")]
+
+    def test_the_pipeline_walked_from_may_be_named(self, chain):
+        """As `chartbook run` names a git dependency's working copy by its key."""
+        fred, rates, forecast = chain
+        _declare(fred, {"forecast": {"path": "../forecast"}})
+        found = lineage.cycle(forecast, pipeline="copy-of-forecast")
+        assert [edge.pipeline for edge in found.way_in] == ["copy-of-forecast"]
+        assert [edge.pipeline for edge in found.edges] == ["acme/rates", "acme/fred", "acme/forecast"]
 
     def test_what_is_said_of_the_cycle(self, chain):
         fred, rates, forecast = chain
@@ -153,23 +245,44 @@ class TestTheWalk:
         ]
         assert said.splitlines()[3].startswith("Dependencies between pipelines must form a graph with no cycles.")
 
+
+class TestWhatCannotBeRead:
     def test_a_record_not_as_written_is_passed_over(self, chain):
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
         lock.pin(fred)
-        taken = _snapshot_of("acme/forecast")
-        os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
-        document = json.loads(taken.path.read_text())
-        document["inputs"] = [5, {"id": 7}, {"id": "rates", "location": "nowhere", "snapshot": 3}, "x"]
-        taken.path.write_text(json.dumps(document))
-        assert lineage.cycle(fred) == []
+        _rewrite(
+            _snapshot_of("acme/forecast"),
+            lambda d: d.update(inputs=[5, {"id": 7}, {"id": "rates", "location": "nowhere", "snapshot": 3}, "x"]),
+        )
+        assert lineage.cycle(fred) is None
 
     def test_a_dependency_with_nothing_here_is_passed_over(self, chain):
         """A folder not on this machine and not pinned, and an ID with no snapshot: nothing is known of them."""
         fred, rates, forecast = chain
         _declare(fred, {"elsewhere": {"path": "../not_here"}, "acme/nobody": {}})
-        assert lineage.cycle(forecast) == []
+        assert lineage.cycle(forecast) is None
+
+    def test_a_dependency_whose_manifest_is_broken_does_not_hide_the_others(self, chain):
+        """forecast comes to depend on a folder with a broken manifest too: the cycle through rates is still found."""
+        fred, rates, forecast = chain
+        broken = forecast.parent / "broken"
+        broken.mkdir()
+        (broken / "chartbook.toml").write_text("not = [toml\n")
+        _declare(forecast, {"broken": {"path": "../broken"}, "rates": {"path": "../rates"}})
+        _declare(fred, {"forecast": {"path": "../forecast"}})
+        assert [edge.dependency for edge in lineage.cycle(forecast).edges] == ["acme/rates", "acme/fred", "acme/forecast"]
+
+    def test_a_dependency_folder_that_is_a_catalog_is_passed_over(self, chain):
+        fred, rates, forecast = chain
+        catalog = forecast.parent / "everything"
+        catalog.mkdir()
+        (catalog / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"fred": {"path": "../fred"}}})
+        )
+        _declare(fred, {"all": {"path": "../everything"}})
+        assert lineage.cycle(forecast) is None
 
 
 @posix
@@ -180,7 +293,7 @@ class TestTheCommands:
         report = run.run(forecast, echo=lambda line: None)
         assert report.failed.id == "acme/forecast" and report.exit_code == 1
         assert report.reason.startswith(
-            "these pipelines depend on each other, so there is no order to build them in, and it was not built:\n"
+            "these pipelines depend on each other, so there is no order to build in, and it was not built:\n"
         )
         assert f"acme/fred depends on acme/forecast (as 'forecast'): declared in {fred / 'chartbook.toml'}" in report.reason
         assert _built(work) == []
@@ -191,17 +304,37 @@ class TestTheCommands:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 1, result.output
-        assert "Error: acme/forecast: these pipelines depend on each other, so there is no order to build them in" in result.output
+        assert "Error: acme/forecast: these pipelines depend on each other, so there is no order to build in" in result.output
         assert "Take one of these out of its [dependencies]" in result.output
         assert result.output.rstrip().endswith("Nothing after it was run.")
         assert _built(work) == []
 
+    def test_run_says_when_the_cycle_is_among_what_it_depends_on(self, diamond, work):
+        report = run.run(diamond, echo=lambda line: None)
+        assert report.failed.id == "acme/r"
+        assert report.reason.startswith(
+            "pipelines it depends on depend on each other, so there is no order to build in, and it was not built:\n"
+            f"  acme/r depends on acme/b (as 'b'): declared in {diamond / 'chartbook.toml'}\n"
+            "  acme/b depends on acme/c: declared in "
+        )
+        assert _built(work) == []
+
     def test_a_pipeline_outside_the_cycle_still_builds(self, chain, work):
-        """rates and fred come to depend on each other; forecast, above them, is refused, but fred's own build is not about forecast."""
+        """rates and fred come to depend on each other; forecast, above them, is refused, and so is fred."""
         fred, rates, forecast = chain
         _declare(fred, {"rates": {"path": "../rates"}})
         assert run.run(forecast, echo=lambda line: None).failed.id == "acme/forecast"
         assert run.run(fred, echo=lambda line: None).failed.id == "acme/fred"
+        assert _built(work) == []
+
+    def test_run_frozen_refuses_a_cycle_through_the_store(self, chain, work):
+        fred, rates, forecast = chain
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        lock.pin(fred)
+        report = run.run(fred, frozen=True, echo=lambda line: None)
+        assert report.failed.id == "acme/fred"
+        assert report.reason.startswith("these pipelines depend on each other, so there is no order to build in")
         assert _built(work) == []
 
     def test_snapshot_refuses(self, chain, work):
@@ -212,7 +345,7 @@ class TestTheCommands:
             snapshot.make(forecast)
         assert str(raised.value).startswith(
             "acme/forecast cannot have a snapshot: these pipelines depend on each other, so its lineage "
-            "would lead back to itself.\n  acme/forecast depends on acme/rates"
+            "would carry a cycle.\n  acme/forecast depends on acme/rates"
         )
 
     def test_build_with_no_build_script_stops_before_rendering(self, work, monkeypatch):
@@ -222,7 +355,7 @@ class TestTheCommands:
         result = CliRunner().invoke(main, ["build", "-f"])
         assert result.exit_code == 1, result.output
         assert "No `build` script here, so only the site is rendered." in result.output
-        assert "Error: acme/a: these pipelines depend on each other, so there is no order to build them in." in result.output
+        assert "Error: acme/a: these pipelines depend on each other, so there is no order to build in." in result.output
         assert f"acme/b depends on acme/a (as 'a'): declared in {work / 'b' / 'chartbook.toml'}" in result.output
         assert result.output.rstrip().endswith("Nothing was rendered.")
         assert not (a / "_docs").exists()
@@ -234,10 +367,25 @@ class TestTheCommands:
         assert (problem.file, problem.table, problem.field) == (forecast / "chartbook.toml", "dependencies.rates", "path")
         assert problem.message == (
             "acme/forecast -> acme/rates -> acme/fred -> acme/forecast: these pipelines depend on each "
-            "other, so there is no order to build them in. Take one of these out of its [dependencies]"
+            "other, so there is no order to build in. Take one of these out of its [dependencies]"
         )
 
-    def test_check_says_a_self_dependency_once(self, chain):
+    def test_check_addresses_a_cycle_among_what_it_depends_on_to_the_way_in(self, diamond):
+        (problem,) = [p for p in run_checks(load_manifest(diamond), diamond) if "depend on each other" in p.message]
+        assert (problem.file, problem.table, problem.field) == (diamond / "chartbook.toml", "dependencies.b", "path")
+        assert problem.message == (
+            "acme/b -> acme/c -> acme/b: pipelines this one depends on depend on each other, so there is "
+            "no order to build in. Take one of these out of its [dependencies]"
+        )
+
+    def test_check_reports_a_self_dependency_upstream(self, chain):
+        fred, rates, forecast = chain
+        _declare(fred, {"me": {"path": "."}})
+        (problem,) = [p for p in run_checks(load_manifest(forecast), forecast) if p.table.startswith("dependencies")]
+        assert problem.table == "dependencies.rates"
+        assert problem.message.startswith("acme/fred -> acme/fred: a pipeline this one depends on depends on itself, ")
+
+    def test_check_says_a_pipelines_own_self_dependency_once(self, chain):
         fred, rates, forecast = chain
         _declare(fred, {"me": {"path": "."}})
         problems = [p for p in run_checks(load_manifest(fred), fred) if p.table.startswith("dependencies")]

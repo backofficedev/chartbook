@@ -953,11 +953,14 @@ def run(
             # found out now, with what was just pinned, before its build
             from chartbook import lineage
 
-            loop = lineage.cycle(step.directory, store)
-            if loop:
+            try:
+                loop = lineage.cycle(step.directory, store, pipeline=step.id, git_cache=git_cache)
+            except snapshots.SnapshotError as error:  # the folder changed under the run
+                raise RunError(f"{step.id}: {error}") from None
+            if loop is not None:
                 report.failed, report.exit_code = step, 1
                 report.reason = (
-                    f"{lineage.cycle_lead(loop)}, so there is no order to build them in, and it was not "
+                    f"{lineage.cycle_lead(loop)}, so there is no order to build in, and it was not "
                     f"built:\n{lineage.explain_cycle(loop)}"
                 ).rstrip(".")
                 break

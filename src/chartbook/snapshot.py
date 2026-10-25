@@ -1969,10 +1969,10 @@ def require_acyclic(directory: Union[str, Path], pipeline: str, store: Optional[
     from chartbook.lineage import cycle, cycle_lead, explain_cycle
 
     found = cycle(directory, store)
-    if found:
+    if found is not None:
         raise SnapshotError(
-            f"{pipeline} cannot have a snapshot: {cycle_lead(found)}, so its lineage would lead back to "
-            f"itself.\n{explain_cycle(found)}"
+            f"{pipeline} cannot have a snapshot: {cycle_lead(found)}, so its lineage would carry a cycle.\n"
+            f"{explain_cycle(found)}"
         )
 
 

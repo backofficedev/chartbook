@@ -396,13 +396,13 @@ def _stop_on_a_cycle(project_dir):
         if step.source != "asked" or step.directory is None or not step.has_dependencies:
             continue
         try:
-            loop = lineage.cycle(step.directory)
+            loop = lineage.cycle(step.directory, pipeline=step.id)
         except (SnapshotError, ValueError, OSError):
             continue  # `chartbook check` says what is wrong with the manifest
-        if loop:
+        if loop is not None:
             click.echo(
                 click.style("Error: ", fg="red", bold=True)
-                + f"{step.id}: {lineage.cycle_lead(loop)}, so there is no order to build them in.\n"
+                + f"{step.id}: {lineage.cycle_lead(loop)}, so there is no order to build in.\n"
                 + lineage.explain_cycle(loop)
                 + "\nNothing was rendered.",
                 err=True,
