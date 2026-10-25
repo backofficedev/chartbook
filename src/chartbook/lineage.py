@@ -485,7 +485,7 @@ def cycle(
     lockfiles: Optional[dict] = None,
     shared: Optional[dict] = None,
     members: Optional[dict] = None,
-    snapshotted_first: Optional[set] = None,
+    snapshotted_first: Optional[dict] = None,
 ) -> Optional[Cycle]:
     """The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.
 
@@ -533,17 +533,22 @@ def cycle(
         walks the pins it is about to make before it makes them. A ``git``
         dependency's folder is its working copy, where ``chartbook run``
         builds and pins it.
-    :param shared: A dict that walks made with nothing written in between
-        share, so that the store is read once for all of them.
+    :param shared: A dict that walks share, so that the store is read
+        once for all of them. A caller that writes snapshots between walks
+        sets ``shared["may_be_old"]``: a walk then reads the store again
+        when a pin names a snapshot the reading lacks, once for each.
     :param members: The pipelines of a run or a catalog, their folders by
         their IDs. A dependency named by the ID of one is followed through
         its folder, as a ``path`` dependency is: that is what the run
         builds, pins and makes a snapshot of.
-    :param snapshotted_first: The IDs of pipelines ``chartbook run
-        --snapshot`` makes a new snapshot of before what depends on them. A
-        pin of one in *lockfiles* that is not yet written will take that new
-        snapshot, made from its folder, so the one the store has now is not
-        walked for it: its folder is.
+    :param snapshotted_first: Pipelines of *members* that ``chartbook run
+        --snapshot`` is sure to make a new snapshot of before what depends
+        on them pins them (none is at their commit yet): by ID, that
+        commit. A pin of one in *lockfiles*, not yet written, that would
+        take the newest snapshot of its folder there (not narrowed to a
+        commit, a repository or a revision) takes that new snapshot, made
+        from its folder, so the one the store has now is not walked for
+        it: its folder is.
     :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.
     :raises ValueError: If the pipeline's own ``[dependencies]`` is malformed.
     """
@@ -618,7 +623,7 @@ class _Finder:
 
     def __init__(
         self, store: Optional[Store], follow_pins: bool, git_cache=None, lockfiles: Optional[dict] = None,
-        shared: Optional[dict] = None, members: Optional[dict] = None, snapshotted_first: Optional[set] = None,
+        shared: Optional[dict] = None, members: Optional[dict] = None, snapshotted_first: Optional[dict] = None,
     ):
         self.store = store
         self.follow_pins = follow_pins
@@ -629,8 +634,8 @@ class _Finder:
         self.shared = shared if shared is not None else {}
         #: The folders of the pipelines a run builds, by their IDs
         self.members = {pipeline: Path(folder).resolve() for pipeline, folder in (members or {}).items()}
-        #: Pipelines a run snapshots before what depends on them, whose new pins take that snapshot
-        self.fresh = set(snapshotted_first or ())
+        #: Pipelines a run surely snapshots before what depends on them, by ID: the commit it will be at
+        self.fresh = dict(snapshotted_first or {})
         #: Whether this walk read the store itself, rather than taking another walk's reading
         self.read_here = False
 
@@ -736,8 +741,15 @@ class _Finder:
             children.append((Edge(pipeline, named, key, where), there, str(there)))
         # The snapshot its pin names, if the store has it
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
-        if taken is not None and new and taken.pipeline in self.fresh and children:
-            # The run makes a new snapshot of it from its folder, walked above, before this pin takes it
+        head = self.fresh.get(taken.pipeline) if taken is not None else None
+        if (
+            new and head and children and there == self.members.get(taken.pipeline)
+            and _text(taken.commit) != head
+            and not entry.get("_repository") and not entry.get("rev")
+            and (not entry.get("commit") or head.startswith(str(entry["commit"])))
+        ):
+            # The run makes a new snapshot of it at its commit, from its
+            # folder (walked above), before this pin takes the newest there
             taken = None
         if taken is not None:
             at = _text(taken.commit)[:7]
@@ -784,19 +796,23 @@ class _Finder:
             from chartbook.resolve import MANIFEST_NAME
 
             named = _text(location.get("pipeline")) or key
-            url = _text(location.get("url"))
-            if url and not (Path(url).is_absolute() or ":" in url):
-                url = ""  # a path relative to a folder the record does not name
-            elif url:
-                url = local_url(url, Path("/"))
-            elif _text(location.get("pipeline")):
-                url = clone_url_for(location["pipeline"], get_default_host()) or ""
-            checkout = self._clone(url, _text(location.get("commit")))
-            if checkout is not None and (checkout / MANIFEST_NAME).is_file():
-                project = snapshot._read_manifest_file(checkout).get("project")
-                project = project if isinstance(project, dict) else {}
-                named = derive_pipeline_id(project, checkout) if project.get("id") else named
-                return Edge(pipeline, named, key, where), checkout, str(checkout)
+            try:
+                url = _text(location.get("url"))
+                if url and not (Path(url).is_absolute() or ":" in url):
+                    url = ""  # a path relative to a folder the record does not name
+                elif url:
+                    url = local_url(url, Path("/"))
+                elif _text(location.get("pipeline")):
+                    # Got from its repository by its ID: the one recorded, else the default host's
+                    url = _text(location.get("repository")) or clone_url_for(location["pipeline"], get_default_host()) or ""
+                checkout = self._clone(url, _text(location.get("commit")))
+                if checkout is not None and (checkout / MANIFEST_NAME).is_file():
+                    project = snapshot._read_manifest_file(checkout).get("project")
+                    project = project if isinstance(project, dict) else {}
+                    named = derive_pipeline_id(project, checkout) if project.get("id") else named
+                    return Edge(pipeline, named, key, where), checkout, str(checkout)
+            except Exception:  # noqa: BLE001 - no clone to be found from this record: known by its ID
+                pass
             return Edge(pipeline, named, key, where), None, f"id:{named}"
         below = self._pinned(_text(location.get("commit")), _text(entry.get("snapshot")))
         if below is not None:
@@ -811,15 +827,15 @@ class _Finder:
             return None
         if "found" not in self.shared:
             self._read()
-        for attempt in (1, 2):
+        while True:
             for taken in self.shared["found"]:
                 if taken.same_moment(commit, made_at) and _text(taken.pipeline):
                     return taken
-            if self.read_here:
-                break
-            # Another walk's reading, which may be older than this pin: read once more
+            if self.read_here or not self.shared.get("may_be_old") or (commit, made_at) in self.shared["missing"]:
+                self.shared["missing"].add((commit, made_at))
+                return None
+            # Another walk's reading, made before snapshots this pin may name: read once more
             self._read()
-        return None
 
     def _read(self) -> None:
         """Read the store's snapshots, for this walk and those it shares with."""
@@ -828,4 +844,6 @@ class _Finder:
             self.shared["found"] = snapshot.readable_snapshots(store)[0]
         except (StoreError, OSError, ValueError):
             self.shared["found"] = []
+        #: The pins this reading was found not to have: not read again for
+        self.shared["missing"] = set()
         self.read_here = True

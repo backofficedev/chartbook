@@ -869,6 +869,7 @@ def run(
     # pinned of it has to be in the store already, and verify() checks that
     steps = plan(here, git_cache, git=building and not frozen, force=force, store=store)
     commits_before: dict[Path, str] = {}
+    codes_before: dict = {}  # where each pipeline asked for is in git, under --snapshot
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
     for step in steps:
@@ -901,6 +902,7 @@ def run(
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
+                codes_before[step.directory] = code
 
     # Dependencies between pipelines form a directed acyclic graph. Each
     # pipeline the run builds is walked now, before anything is pinned,
@@ -912,6 +914,7 @@ def run(
     members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
     # The store's snapshots, read once for the walks below and the pins' own
     shared: dict = {}
+    fresh: dict = {}
     if building:
         # Every pipeline asked for (a catalog's members, with a build script
         # or not), and each git dependency the run builds
@@ -931,17 +934,29 @@ def run(
                     raise RunError(f"{step.id}: {error}\nNothing was pinned or built.") from None
                 if after is not None:
                     would_be[step.directory] = after
-        # With --snapshot these get a new snapshot before what depends on
-        # them pins it, so a pin worked out above takes that one, not the
-        # one the store has now
-        fresh = {
-            step.id for step in steps
-            if snapshot and step.source == "asked" and step.directory is not None and script in step.scripts
-        }
+        # With --snapshot, a pipeline of the run with no snapshot at the
+        # commit it is on gets a new one there before what depends on it
+        # pins it: by ID, the commit it will be at. One that has a snapshot
+        # there may be given that one back (nothing changed), so it is not
+        # counted on to be new
+        if snapshot:
+            the_store = store if store is not None else default_store()
+            for step in steps:
+                code = codes_before.get(step.directory)
+                if step.source != "asked" or code is None or script not in step.scripts:
+                    continue
+                try:
+                    there_already = snapshots.find(the_store, code.commit, code.subdirectory)
+                except (snapshots.SnapshotError, StoreError, OSError, ValueError):
+                    there_already = [None]
+                if not there_already:
+                    fresh[step.id] = code.commit
         for step in walked:
             loop = _cycle(step, store, git_cache, would_be, shared, members, fresh)
             if loop is not None:
                 raise RunError(f"{step.id}: {_cycle_said(loop)}\nNothing was pinned or built.")
+        # The pins' own walks below come after builds that may make snapshots
+        shared["may_be_old"] = True
 
     if building and not remake:
         # A costly output that is not on disk while the store has a version
@@ -1019,7 +1034,7 @@ def run(
             # lockfiles of the pipelines still to come as they were worked
             # out above, since what was built since may have changed them
             def refuse_a_cycle(after, step=step):
-                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members)
+                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members, fresh)
                 if loop is None:
                     return None
                 into = "lead into" if loop.way_in else "close"

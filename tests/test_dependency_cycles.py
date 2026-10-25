@@ -888,3 +888,80 @@ class TestWhatTheFourthReviewFound:
         report = lock.pin(fred, before_writing=lambda would_be_written: "no")
         assert report.refused == "no" and report.events
         assert not any(str(event.new or "").startswith("held:") for event in report.events)
+
+
+@posix
+class TestWhatTheFifthReviewFound:
+    def _p_q_r(self, work):
+        """p, q and r in one catalog: q's snapshot in the store was made when q depended on p; q now depends on r."""
+        p = _pipeline(work / "p", "acme/p", "ps")
+        q = _pipeline(work / "q", "acme/q", "qs")
+        r = _pipeline(work / "r", "acme/r", "rs")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}})
+        )
+        _repository(work)
+        snapshot.make(p)
+        snapshot.make(r)
+        _declare(q, {"acme/p": {}})
+        lock.pin(q)
+        _commit(work)
+        old = snapshot.make(q).snapshot.commit
+        _declare(q, {"acme/r": {}})
+        return p, q, r, old
+
+    def test_a_pin_narrowed_to_an_old_commit_takes_the_old_snapshot(self, work):
+        p, q, r, old = self._p_q_r(work)
+        _declare(p, {"acme/q": {"commit": old}})
+        _commit(work)
+        before = (_lockfile(p), _lockfile(q), _store_state())
+        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
+            run.run(work, snapshot=True, echo=lambda line: None)
+        assert _built(work) == [] and (_lockfile(p), _lockfile(q), _store_state()) == before
+
+    def test_a_snapshot_that_is_given_back_is_walked(self, work, tmp_path):
+        """q has a snapshot at its commit already; a run that changes nothing of it gets that one back, which was pinned to y's snapshot made from p."""
+        p = _pipeline(work / "p", "acme/p", "ps")
+        q = _pipeline(work / "q", "acme/q", "qs")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pq"}})
+        )
+        _repository(work)
+        snapshot.make(p)
+        y = _pipeline(tmp_path / "y", "acme/y", "ys", {"acme/p": {}})
+        lock.pin(y)
+        (y / ".gitignore").write_text("_data/\nchartbook.lock\n")
+        _git(y, "init", "--quiet", "-b", "main")
+        _commit(y)
+        snapshot.make(y)
+        _declare(q, {"acme/y": {}})
+        lock.pin(q)
+        _declare(p, {"acme/q": {}})
+        _commit(work)
+        snapshot.make(q, built_by_run=True)  # at the commit the run will be at
+        _declare(y, {})
+        lock.pin(y)
+        _commit(y)
+        snapshot.make(y)  # y no longer depends on p
+        lock.update(q)  # q's lockfile now pins it; nothing committed changes
+        before = (_lockfile(p), _lockfile(q), _store_state())
+        with pytest.raises(run.RunError, match="^acme/p: these pipelines depend on each other"):
+            run.run(work, snapshot=True, echo=lambda line: None)
+        assert _built(work) == [] and (_lockfile(p), _lockfile(q), _store_state()) == before
+
+    def test_a_pin_the_store_lacks_is_looked_for_once_per_command(self, chain, work, monkeypatch):
+        fred, rates, forecast = chain
+        path = forecast / "chartbook.lock"
+        document = json.loads(path.read_text())
+        for record in document["records"]:
+            for entry in record.get("dependencies") or []:
+                entry["snapshot"] = "2001-01-01T00:00:00.000000Z"  # gone from the store
+        path.write_text(json.dumps(document))
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}})
+        )
+        reads = []
+        original = lineage._Finder._read
+        monkeypatch.setattr(lineage._Finder, "_read", lambda self: reads.append(1) or original(self))
+        run_checks(load_manifest(work), work)
+        assert len(reads) == 1
