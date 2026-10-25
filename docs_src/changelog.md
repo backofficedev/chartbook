@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — dependencies between pipelines must form a directed acyclic graph
+
+A pipeline that depends, through what it depends on, on itself has no order to be built in, and its snapshot would carry itself in its lineage. `chartbook run` and `chartbook build` now stop before the build when they find such a cycle, `chartbook snapshot` refuses one, and `chartbook check` reports it, each naming who depends on whom and where that was read: the `chartbook.toml` that declares it, or the snapshot whose record holds it. The graph is walked from the pipeline's folder. A `path` dependency on this machine, and a `git` one fetched at its pinned commit, are followed through that folder's own `[dependencies]`, so a cycle is found as soon as it is declared, before anything is pinned; one named by its ID alone, or a folder not on this machine, through the snapshot its pin names and what that snapshot was pinned to, up through the store. `chartbook check` reads the store for this only when it is a folder on this disk, since a check uses no network. Before, `chartbook run` refused a cycle only among the pipelines of one catalog run. Asked for by the maintainer on 2026-10-25.
+
 ## [0.2.0] - 2026-10-20
 
 ### Read this first: upgrading from 0.1.1

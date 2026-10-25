@@ -646,6 +646,55 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report a pipeline that depends, through what it depends on, on itself.
+
+    Dependencies between pipelines must form a directed acyclic graph:
+    ``chartbook run``, ``chartbook build`` and ``chartbook snapshot`` refuse
+    a cycle, and this says so without building. The graph is walked as
+    :func:`chartbook.lineage.cycle` walks it: through the folders on this
+    machine, and through the pins in the store when the store is a folder
+    on this disk. A check uses no network, so a store at a URL is not read,
+    and a cycle that only its snapshots would show is not seen here. One
+    pipeline that depends on itself directly is reported by
+    :func:`check_dependencies`, not here.
+    """
+    from chartbook import lineage
+    from chartbook.snapshot import SnapshotError
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        store = default_store()
+        follow = isinstance(store, FolderStore)
+    except (StoreError, OSError, ValueError):
+        store, follow = None, False
+    problems = []
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        dependencies = get_pipeline_manifest(manifest, pipeline_id).get("dependencies") or {}
+        if not dependencies:
+            continue
+        try:
+            found = lineage.cycle(pipeline_dir, store if follow else None, follow_pins=follow)
+        except (SnapshotError, ValueError, OSError):
+            continue  # said by the checks of the manifest itself
+        if len(found) < 2:
+            continue
+        first = found[0]
+        entry = dependencies.get(first.key) or {}
+        field = "git" if "git" in entry else "path" if "path" in entry else "id"
+        around = " -> ".join([edge.pipeline for edge in found] + [first.pipeline])
+        problems.append(
+            Problem(
+                pipeline_dir / "chartbook.toml",
+                _dependency_table(first.key),
+                field,
+                f"{around}: these pipelines depend on each other, so there is no order to build them "
+                f"in. Take one of these out of its [dependencies]",
+            )
+        )
+    return problems
+
+
 def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
     """A build tool's task that says ``chartbook build``, as one written before 0.2.0 did to render the site.
 
@@ -1149,6 +1198,7 @@ def run_checks(
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_dependencies(manifest, base_dir),
+        *check_dependency_cycles(manifest, base_dir),
         *check_ids(manifest, base_dir),
         *check_build_tool(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),

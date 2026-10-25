@@ -1957,6 +1957,25 @@ def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[
         )
 
 
+def require_acyclic(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> None:
+    """Refuse a snapshot of a pipeline that depends, through what it depends on, on itself (:func:`chartbook.lineage.cycle`).
+
+    Dependencies between pipelines must form a directed acyclic graph: a
+    snapshot carries its lineage, and this one's would lead back to it.
+
+    :raises SnapshotError: Saying who depends on whom, where each was read,
+        and what to do.
+    """
+    from chartbook.lineage import cycle, cycle_lead, explain_cycle
+
+    found = cycle(directory, store)
+    if found:
+        raise SnapshotError(
+            f"{pipeline} cannot have a snapshot: {cycle_lead(found)}, so its lineage would lead back to "
+            f"itself.\n{explain_cycle(found)}"
+        )
+
+
 def require_committed(
     directory: Union[str, Path], pipeline: str, ignoring: tuple = ()
 ) -> Code:
@@ -2138,6 +2157,7 @@ def make(
 
     store = store if store is not None else default_store()
     require_lineage(directory, pipeline, store)
+    require_acyclic(directory, pipeline, store)
     if deep:
         from chartbook.lineage import walk
 
