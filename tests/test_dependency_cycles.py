@@ -285,18 +285,42 @@ class TestWhatCannotBeRead:
         assert lineage.cycle(forecast) is None
 
 
+def _lockfile(folder: Path):
+    """The bytes of a pipeline's lockfile, or None if it has none."""
+    path = folder / "chartbook.lock"
+    return path.read_bytes() if path.exists() else None
+
+
+@pytest.fixture
+def would_be(chain):
+    """forecast is snapshotted, and fred comes to name it by its ID with nothing of it pinned yet.
+
+    No folder and no pin says anything of a cycle yet; pinning forecast's
+    newest snapshot, which was made from rates, which was made from fred,
+    would make one.
+    """
+    fred, rates, forecast = chain
+    snapshot.make(forecast)
+    _declare(fred, {"acme/forecast": {}})
+    return chain
+
+
 @posix
 class TestTheCommands:
-    def test_run_stops_before_the_build(self, chain, work):
+    def test_run_stops_before_anything_is_pinned_or_built(self, chain, work):
         fred, rates, forecast = chain
         _declare(fred, {"forecast": {"path": "../forecast"}})
-        report = run.run(forecast, echo=lambda line: None)
-        assert report.failed.id == "acme/forecast" and report.exit_code == 1
-        assert report.reason.startswith(
-            "these pipelines depend on each other, so there is no order to build in, and it was not built:\n"
+        before = _lockfile(forecast)
+        with pytest.raises(run.RunError) as raised:
+            run.run(forecast, echo=lambda line: None)
+        said = str(raised.value)
+        assert said.startswith(
+            "acme/forecast: these pipelines depend on each other, so there is no order to build in.\n"
+            f"  acme/forecast depends on acme/rates (as 'rates'): declared in {forecast / 'chartbook.toml'}\n"
         )
-        assert f"acme/fred depends on acme/forecast (as 'forecast'): declared in {fred / 'chartbook.toml'}" in report.reason
-        assert _built(work) == []
+        assert f"acme/fred depends on acme/forecast (as 'forecast'): declared in {fred / 'chartbook.toml'}" in said
+        assert said.endswith("\nNothing was built.")
+        assert _lockfile(forecast) == before and _built(work) == []
 
     def test_run_at_the_terminal(self, chain, work, monkeypatch):
         fred, rates, forecast = chain
@@ -304,38 +328,90 @@ class TestTheCommands:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 1, result.output
-        assert "Error: acme/forecast: these pipelines depend on each other, so there is no order to build in" in result.output
+        assert result.output.startswith(
+            "Error: acme/forecast: these pipelines depend on each other, so there is no order to build in."
+        )
         assert "Take one of these out of its [dependencies]" in result.output
-        assert result.output.rstrip().endswith("Nothing after it was run.")
+        assert result.output.rstrip().endswith("Nothing was built.")
+        assert "pinning" not in result.output and _built(work) == []
+
+    def test_a_pin_that_would_make_a_cycle_is_not_written(self, would_be, work):
+        fred, rates, forecast = would_be
+        assert lineage.cycle(fred) is None  # nothing pinned says so yet
+        pinned = []
+        report = run.run(fred, echo=lambda line: None, on_pin=lambda step, pins: pinned.append(pins))
+        assert report.failed.id == "acme/fred" and report.exit_code == 1
+        assert report.reason.startswith(
+            "pinning what it depends on would make a cycle: these pipelines depend on each other, so there "
+            "is no order to build in.\n"
+            f"  acme/fred depends on acme/forecast: declared in {fred / 'chartbook.toml'}\n"
+            "  acme/forecast depends on acme/rates (as 'rates'): recorded by the snapshot of acme/forecast at "
+        )
+        assert report.reason.endswith("\nNothing was pinned, and it was not built")
+        assert pinned == [] and _built(work) == []
+        assert _lockfile(fred) is None
+        assert default_store().root_of(fred / "chartbook.lock", machine=lock._noted_as()) is None
+
+    def test_a_pin_that_would_make_a_cycle_at_the_terminal(self, would_be, work, monkeypatch):
+        fred, rates, forecast = would_be
+        monkeypatch.chdir(fred)
+        result = CliRunner().invoke(main, ["run"])
+        assert result.exit_code == 1, result.output
+        assert result.output.startswith("Error: acme/fred: pinning what it depends on would make a cycle: ")
+        assert result.output.rstrip().endswith("Nothing was pinned, and it was not built. Nothing after it was run.")
+        assert "Wrote chartbook.lock" not in result.output and _lockfile(fred) is None
+
+    def test_a_catalog_builds_nothing_when_one_of_its_pipelines_is_in_a_cycle(self, would_be, work):
+        """apart comes first and has nothing to do with the cycle: it is not built either."""
+        fred, rates, forecast = would_be
+        lock.pin(fred)  # a pin made before, by `chartbook pin`, which does not refuse it
+        _pipeline(work / "apart", "acme/apart", "a")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}})
+        )
+        with pytest.raises(run.RunError, match=r"^acme/fred: these pipelines depend on each other"):
+            run.run(work, echo=lambda line: None)
         assert _built(work) == []
 
     def test_run_says_when_the_cycle_is_among_what_it_depends_on(self, diamond, work):
-        report = run.run(diamond, echo=lambda line: None)
-        assert report.failed.id == "acme/r"
-        assert report.reason.startswith(
-            "pipelines it depends on depend on each other, so there is no order to build in, and it was not built:\n"
+        with pytest.raises(run.RunError) as raised:
+            run.run(diamond, echo=lambda line: None)
+        assert str(raised.value).startswith(
+            "acme/r: pipelines it depends on depend on each other, so there is no order to build in.\n"
             f"  acme/r depends on acme/b (as 'b'): declared in {diamond / 'chartbook.toml'}\n"
             "  acme/b depends on acme/c: declared in "
         )
-        assert _built(work) == []
+        assert _lockfile(diamond) is None and _built(work) == []
 
-    def test_a_pipeline_outside_the_cycle_still_builds(self, chain, work):
+    def test_a_pipeline_in_the_cycle_and_one_above_it_are_both_refused(self, chain, work):
         """rates and fred come to depend on each other; forecast, above them, is refused, and so is fred."""
         fred, rates, forecast = chain
         _declare(fred, {"rates": {"path": "../rates"}})
-        assert run.run(forecast, echo=lambda line: None).failed.id == "acme/forecast"
-        assert run.run(fred, echo=lambda line: None).failed.id == "acme/fred"
+        with pytest.raises(run.RunError, match="^acme/forecast: pipelines it depends on depend on each other"):
+            run.run(forecast, echo=lambda line: None)
+        with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
+            run.run(fred, echo=lambda line: None)
         assert _built(work) == []
 
-    def test_run_frozen_refuses_a_cycle_through_the_store(self, chain, work):
-        fred, rates, forecast = chain
-        snapshot.make(forecast)
-        _declare(fred, {"acme/forecast": {}})
+    def test_run_frozen_refuses_a_cycle_through_the_store(self, would_be, work):
+        fred, rates, forecast = would_be
         lock.pin(fred)
-        report = run.run(fred, frozen=True, echo=lambda line: None)
-        assert report.failed.id == "acme/fred"
-        assert report.reason.startswith("these pipelines depend on each other, so there is no order to build in")
-        assert _built(work) == []
+        before = _lockfile(fred)
+        with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
+            run.run(fred, frozen=True, echo=lambda line: None)
+        assert _lockfile(fred) == before and _built(work) == []
+
+    def test_build_stops_before_anything_is_pinned_or_built(self, chain, work, monkeypatch):
+        fred, rates, forecast = chain
+        _declare(fred, {"forecast": {"path": "../forecast"}})
+        before = _lockfile(forecast)
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["build", "-f"])
+        assert result.exit_code == 1, result.output
+        assert "Error: acme/forecast: these pipelines depend on each other" in result.output
+        assert result.output.rstrip().endswith("Nothing was built.")
+        assert _lockfile(forecast) == before and _built(work) == []
+        assert not (forecast / "_docs").exists()
 
     def test_snapshot_refuses(self, chain, work):
         fred, rates, forecast = chain
@@ -399,3 +475,30 @@ class TestTheCommands:
         (problem,) = [p for p in run_checks(load_manifest(fred), fred) if "depend on each other" in p.message]
         assert problem.table == 'dependencies."acme/forecast"' and problem.field == "id"
         assert problem.message.startswith("acme/fred -> acme/forecast -> acme/rates -> acme/fred: ")
+
+
+class TestThePinGuard:
+    def test_a_refused_lockfile_is_not_written(self, would_be):
+        fred, rates, forecast = would_be
+        seen = []
+
+        def refuse(would_be_written):
+            seen.append(would_be_written)
+            return "not today"
+
+        report = lock.pin(fred, before_writing=refuse)
+        assert report.refused == "not today" and not report.written
+        assert [entry["id"] for entry in seen[0].dependencies] == ["acme/forecast"]
+        assert _lockfile(fred) is None
+        assert default_store().root_of(fred / "chartbook.lock", machine=lock._noted_as()) is None
+
+    def test_one_let_through_is_written(self, would_be):
+        fred, rates, forecast = would_be
+        report = lock.pin(fred, before_writing=lambda would_be_written: None)
+        assert report.refused == "" and report.written and _lockfile(fred) is not None
+
+    def test_it_is_not_asked_when_nothing_would_change(self, chain):
+        fred, rates, forecast = chain
+        asked = []
+        report = lock.pin(forecast, before_writing=lambda would_be_written: asked.append(1))
+        assert asked == [] and not report.written

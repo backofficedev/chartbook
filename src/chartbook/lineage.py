@@ -482,6 +482,7 @@ def cycle(
     follow_pins: bool = True,
     pipeline: Optional[str] = None,
     git_cache=None,
+    locked: Optional["lock.Lock"] = None,
 ) -> Optional[Cycle]:
     """The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.
 
@@ -520,6 +521,9 @@ def cycle(
         it does.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
+    :param locked: The pipeline's lockfile as it would be written, to walk
+        before it is (``chartbook run`` refuses a pin that would make a
+        cycle); the one in its folder by default.
     :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.
     :raises ValueError: If the pipeline's own ``[dependencies]`` is malformed.
     """
@@ -527,7 +531,7 @@ def cycle(
 
     directory = Path(project_dir).resolve()
     root = pipeline or snapshot.pipeline_in(directory)
-    finder = _Finder(store, follow_pins, git_cache)
+    finder = _Finder(store, follow_pins, git_cache, {directory: locked} if locked is not None else {})
     # The pipeline's own table is read as the command would read it: an
     # error in it is the command's to say, where one upstream is passed over
     validate_dependencies(snapshot._read_manifest_file(directory).get("dependencies") or {}, directory)
@@ -592,10 +596,12 @@ def cycle_lead(found: Cycle) -> str:
 class _Finder:
     """Where each pipeline's dependencies are read from, for :func:`cycle`: folders here, and the store once it is needed."""
 
-    def __init__(self, store: Optional[Store], follow_pins: bool, git_cache=None):
+    def __init__(self, store: Optional[Store], follow_pins: bool, git_cache=None, lockfiles: Optional[dict] = None):
         self.store = store
         self.follow_pins = follow_pins
         self.git_cache = git_cache
+        #: A folder's lockfile as it would be written, read in place of its file
+        self.lockfiles = lockfiles or {}
         self.found: Optional[list] = None
 
     def children(self, pipeline: str, source: object) -> list[tuple[Edge, object, str]]:
@@ -619,10 +625,12 @@ class _Finder:
 
         raw = snapshot._read_manifest_file(folder)
         dependencies = validate_dependencies(raw.get("dependencies") or {}, folder)
-        try:
-            locked = lock.read_lock(folder / lock.LOCK_FILE)
-        except lock.LockError:
-            locked = None  # `chartbook pin` says so; its pins cannot be followed
+        locked = self.lockfiles.get(folder)
+        if locked is None:
+            try:
+                locked = lock.read_lock(folder / lock.LOCK_FILE)
+            except lock.LockError:
+                locked = None  # `chartbook pin` says so; its pins cannot be followed
         pinned = {
             entry["id"]: entry for entry in (locked.dependencies if locked is not None else [])
             if isinstance(entry, dict) and isinstance(entry.get("id"), str)

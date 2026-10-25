@@ -380,7 +380,8 @@ def _stop_on_a_cycle(project_dir):
     """Stop before rendering when a pipeline here depends, through what it depends on, on itself.
 
     Dependencies between pipelines form a directed acyclic graph, and
-    `chartbook run` refuses a cycle before it builds (:func:`chartbook.lineage.cycle`).
+    `chartbook run` refuses a cycle before it pins or builds anything
+    (:func:`chartbook.lineage.cycle`).
     Where `chartbook build` runs no build command, nothing has looked yet,
     so it looks here: at the pipeline, or at each pipeline of a catalog.
     """

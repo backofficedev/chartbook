@@ -399,6 +399,9 @@ class PinReport:
             for this user, as a store a team shares may be for everyone but
             its owner. The lockfile is written all the same; the store's
             ``gc`` goes by the note it has, if any.
+        refused: Why the lockfile was not written, when the caller's
+            ``before_writing`` refused it: neither the lockfile nor the
+            store's note of it was written. Empty otherwise.
     """
 
     lockfile: Path
@@ -407,6 +410,7 @@ class PinReport:
     git: set = field(default_factory=set)
     snapshots: dict = field(default_factory=dict)
     unrooted: str = ""
+    refused: str = ""
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -854,10 +858,11 @@ def _sync(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here)
+        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here, before_writing)
 
 
 def _sync_now(
@@ -868,6 +873,7 @@ def _sync_now(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -884,6 +890,11 @@ def _sync_now(
         catalog's own), which are never cloned.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
+    :param before_writing: Called with the lockfile as it would be written,
+        when that is not what it holds now. What it returns, if anything,
+        is why it is not to be written: then neither the lockfile nor the
+        store's note of it is written, and the report's ``refused`` says
+        why.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -1187,6 +1198,12 @@ def _sync_now(
             listed["pinned_hash"] = overall
         after.dependencies.append(listed)
         after.assets.update(records)
+
+    if before_writing is not None and after.to_document() != before.to_document():
+        refused = before_writing(after)
+        if refused:
+            report.refused = refused
+            return report
 
     # With nothing to lock and no lockfile yet, do not make an empty one; nor
     # for a pin of some dependencies only (the first read of one) that found
@@ -2463,6 +2480,7 @@ def pin(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -2496,6 +2514,10 @@ def pin(
         pinned from the clone (:func:`clone_instead`).
     :param built_here: The IDs of pipelines a run builds itself (a
         catalog's own), which are never cloned.
+    :param before_writing: Called with the lockfile as it would be written,
+        when that is not what it holds now; what it returns, if anything,
+        is why nothing is written (``chartbook run`` refuses a pin that
+        would make a cycle this way). The report's ``refused`` says it.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -2506,6 +2528,7 @@ def pin(
         only=None if only is None else ({only} if isinstance(only, str) else set(only)),
         clone_missing=clone_missing,
         built_here=built_here,
+        before_writing=before_writing,
     )
 
 
