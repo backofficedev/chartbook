@@ -1209,7 +1209,7 @@ def _sync_now(
         if refused:
             report.refused = refused
             return report
-        store.put_held()
+        store.put_held(after, report)
         store = the_store
 
     # With nothing to lock and no lockfile yet, do not make an empty one; nor
@@ -2546,18 +2546,19 @@ _STORE_WRITES = ("add_root", "remove_root", "delete", "note_origin", "write_snap
 class _PutLater:
     """A store read as it is, into which what a pin puts goes only once the lockfile may be written.
 
-    ``put`` hashes what it is given and holds it, and :meth:`put_held` puts
-    it, so that a pin refused by its ``before_writing`` writes no object.
-    With *hash_now* off, ``put`` does not even read the files: the records
-    then carry no hash, which is enough to see where a pin leads
-    (:func:`would_pin`), and nothing is held. Every other write is refused:
-    none is reached before the lockfile is let through.
+    ``put`` reads nothing and holds the path, under a stand-in for its hash;
+    :meth:`put_held` puts each, once a pin's ``before_writing`` lets its
+    lockfile through, and gives the records their hashes from what was put,
+    so that each file is read once and a refused pin writes no object. With
+    *hold* off (:func:`would_pin`), nothing is held: the records carry no
+    hash, which is enough to see where a pin leads. Every other write is
+    refused: none is reached before the lockfile is let through.
     """
 
-    def __init__(self, store: Store, hash_now: bool = True):
+    def __init__(self, store: Store, hold: bool = True):
         self._store = store
-        self._hash_now = hash_now
-        self.held: list = []
+        self._hold = hold
+        self.held: dict = {}
 
     def __getattr__(self, name: str):
         if name in _STORE_WRITES:
@@ -2571,44 +2572,70 @@ class _PutLater:
         return repr(self._store)
 
     def put(self, path: Union[str, Path], links: Iterable[str] = ()) -> StoredObject:
-        if not self._hash_now:
-            return StoredObject(content_hash="", size_bytes=0, path=Path(path), files=(), created=False)
-        found = hashing.hash_path(path)
-        if found is None:
+        if hashing.find_files(path) is None:
             raise FileNotFoundError(f"Nothing at {path}")
-        self.held.append((path, tuple(links), found.content_hash))
-        return StoredObject(
-            content_hash=found.content_hash, size_bytes=found.size_bytes, path=Path(path), files=(),
-            created=False, entries=found.files,
-        )
+        stand_in = ""
+        if self._hold:
+            stand_in = f"held:{len(self.held)}"
+            self.held[stand_in] = (path, tuple(links))
+        return StoredObject(content_hash=stand_in, size_bytes=0, path=Path(path), files=(), created=False)
 
-    def put_held(self) -> None:
-        """Put what was held, now that the lockfile may be written.
+    def put_held(self, after: "Lock", report: "PinReport") -> None:
+        """Put what was held, and give the lockfile and the report the hashes of what was put."""
+        if not self._hold:
+            raise StoreError("a pin that is only worked out is never put in the store")
+        stored = {stand_in: self._store.put(path, links=links) for stand_in, (path, links) in self.held.items()}
+        self.held = {}
+        if not stored:
+            return
+        changed = set()
+        for record in after.assets.values():
+            put = stored.get(record.get("content_hash"))
+            if put is None:
+                continue
+            record["content_hash"], record["size_bytes"] = put.content_hash, put.size_bytes
+            if "files" in record:
+                record["files"] = [
+                    {"path": entry.path, "size_bytes": entry.size_bytes, "content_hash": entry.content_hash}
+                    for entry in put.entries
+                ]
+            changed.add(record.get("pipeline"))
+        for entry in after.dependencies:
+            if entry.get("id") in changed:
+                entry.pop("pinned_hash", None)
+                overall = pinned_hash(after.assets_of(entry["id"]).values())
+                if overall is not None:
+                    entry["pinned_hash"] = overall
+        report.events[:] = [
+            dataclasses.replace(
+                event,
+                old=stored[event.old].content_hash if event.old in stored else event.old,
+                new=stored[event.new].content_hash if event.new in stored else event.new,
+            )
+            for event in report.events
+        ]
 
-        :raises LockError: If a file changed since it was hashed: the
-            lockfile would name bytes the store does not hold.
-        """
-        for path, links, expected in self.held:
-            stored = self._store.put(path, links=links)
-            if stored.content_hash != expected:
-                raise LockError(
-                    f"{path} changed while it was being pinned ({expected[:19]}… when it was read, "
-                    f"{stored.content_hash[:19]}… now). The lockfile was not written; pin again."
-                )
-        self.held = []
 
-
-def _has_a_pin(listed: object, records: dict) -> bool:
+def _has_a_pin(listed: object, records: dict, declared: dict) -> bool:
     """Whether a lockfile's entry for a dependency is a pin that `pin` keeps as it is.
 
-    A ``git`` one is, once it names a commit. Any other is once something of
-    it was pinned with its bytes: one that names a snapshot and holds no
-    hash is pinned again from the newest, as ``pin`` does.
+    As ``pin`` decides it: a ``git`` dependency is pinned once its entry
+    names a commit; one named by its ID and got from its repository, once
+    something of it was pinned from that repository with its bytes
+    (:func:`clone_instead`); any other once something of it was pinned with
+    its bytes. One that names a snapshot and holds no hash is pinned again.
     """
     if not isinstance(listed, dict) or not isinstance(listed.get("location"), dict):
         return False
-    if listed["location"].get("kind") == "git":
-        return bool(listed["location"].get("commit"))
+    location = listed["location"]
+    if "git" in declared:
+        return location.get("kind") == "git" and bool(location.get("commit"))
+    if declared.get("_store") and location.get("kind") == "git":
+        return (
+            bool(location.get("commit"))
+            and location.get("pipeline") == declared["_store"]
+            and any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+        )
     return any(
         isinstance(record, dict) and record.get("content_hash") and not (record.get("ref") or {}).get("rev")
         for record in records.values()
@@ -2642,7 +2669,7 @@ def would_pin(
     listed = {entry["id"]: entry for entry in (locked.dependencies if locked is not None else [])}
     unpinned = {
         key for key in dependencies
-        if not _has_a_pin(listed.get(key), locked.assets_of(key) if locked is not None else {})
+        if not _has_a_pin(listed.get(key), locked.assets_of(key) if locked is not None else {}, dependencies[key])
     }
     if not unpinned:
         return None
@@ -2653,7 +2680,7 @@ def would_pin(
         return "only worked out"
 
     _sync(
-        project_dir, _PutLater(store if store is not None else default_store(), hash_now=False), move=None,
+        project_dir, _PutLater(store if store is not None else default_store(), hold=False), move=None,
         git_cache=git_cache, only=unpinned, built_here=built_here, before_writing=keep,
     )
     return worked_out[0] if worked_out else None

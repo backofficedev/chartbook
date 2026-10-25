@@ -661,63 +661,74 @@ class _Finder:
             # A pin the run would make, and has not: said as such
             new = would_be is not None and pinned.get(key) != filed.get(key)
             try:
-                child = self._declared(pipeline, folder, key, dependencies[key], pinned.get(key) or {}, where, new)
+                children.extend(self._declared(pipeline, folder, key, dependencies[key], pinned.get(key) or {}, where, new))
             except Exception:  # noqa: BLE001 - one that cannot be read here; the others are still followed
                 continue
-            if child is not None:
-                children.append(child)
         return children
 
-    def _declared(self, pipeline: str, folder: Path, key: str, entry: dict, listed: dict, where: str, new: bool = False):
-        """One entry of a folder's ``[dependencies]``, read from its folder if it has one here, else from its pin.
+    def _declared(self, pipeline: str, folder: Path, key: str, entry: dict, listed: dict, where: str, new: bool = False) -> list:
+        """One entry of a folder's ``[dependencies]``, as the edges it gives.
 
-        A dependency named by the ID of a pipeline of the run is read from
-        that pipeline's folder. *new* says the pin is one the run would
-        make, not one in the lockfile.
+        A ``git`` dependency, and one named by its ID that was got from its
+        repository, is read from its copy at the commit its pin names. A
+        dependency whose folder is here (a ``path`` one, or one named by
+        the ID of a pipeline of the run) is read from that folder, and from
+        the snapshot its pin names too: ``pin`` does not move a pin, so the
+        pipeline is built from that snapshot, whatever its folder says now.
+        Any other is read from the snapshot its pin names. *new* says the
+        pin is one the run would make, not one in the lockfile.
         """
+        from chartbook.config import clone_url_for, get_default_host
         from chartbook.gitcache import default_git_cache, local_url
         from chartbook.identity import derive_pipeline_id
         from chartbook.manifest import resolve_project_type
         from chartbook.resolve import MANIFEST_NAME
 
         location = listed.get("location") if isinstance(listed.get("location"), dict) else {}
-        if "git" in entry:
+        if "git" in entry or (entry.get("_store") and location.get("kind") == "git"):
             # Fetched at the commit its pin names, or nothing of it is here
             commit = _text(location.get("commit"))
+            if "git" in entry:
+                url = local_url(entry["git"], folder)
+            else:
+                # Got from its repository by its ID, as `pin` finds that repository
+                url = (entry.get("repository") if entry.get("_repository") else None) or clone_url_for(
+                    entry["_store"], get_default_host()
+                )
             cache = self.git_cache if self.git_cache is not None else default_git_cache()
             # Its working copy, where `chartbook run` builds and pins it, else its checkout
-            checkout = cache.files(local_url(entry["git"], folder), commit) if commit else None
+            checkout = cache.files(url, commit) if commit and url else None
             if checkout is None or not (checkout / MANIFEST_NAME).is_file():
-                return None
+                return [(Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}")] if entry.get("_store") else []
             project = snapshot._read_manifest_file(checkout).get("project")
             project = project if isinstance(project, dict) else {}
             # A checkout's folder is named after a commit, so only an ID the
-            # manifest gives means something; else the key it is declared
-            # under, as `chartbook run` names it
-            named = derive_pipeline_id(project, checkout) if project.get("id") else key
-            return Edge(pipeline, named, key, where), checkout, str(checkout)
+            # manifest gives means something; else the ID it was named by, or
+            # the key it is declared under, as `chartbook run` names it
+            named = derive_pipeline_id(project, checkout) if project.get("id") else (entry.get("_store") or key)
+            return [(Edge(pipeline, named, key, where), checkout, str(checkout))]
+        children = []
         there = (
             Path(entry["_resolved_path"]).resolve() if entry.get("_resolved_path")
             else self.members.get(entry.get("_store")) if entry.get("_store")
             else None
         )
-        if there is not None:
-            if (there / MANIFEST_NAME).is_file():
-                theirs = snapshot._read_manifest_file(there)
-                if resolve_project_type(theirs, source=str(there / MANIFEST_NAME)) != "pipeline":
-                    return None  # a catalog: `chartbook check` says so
-                project = theirs.get("project")
-                named = derive_pipeline_id(project if isinstance(project, dict) else {}, there)
-                return Edge(pipeline, named, key, where), there, str(there)
-        # Named by its ID alone, or a folder not on this machine: the
-        # snapshot its pin names, if the store has it
+        if there is not None and (there / MANIFEST_NAME).is_file():
+            theirs = snapshot._read_manifest_file(there)
+            if resolve_project_type(theirs, source=str(there / MANIFEST_NAME)) != "pipeline":
+                return []  # a catalog: `chartbook check` says so
+            project = theirs.get("project")
+            named = derive_pipeline_id(project if isinstance(project, dict) else {}, there)
+            children.append((Edge(pipeline, named, key, where), there, str(there)))
+        # The snapshot its pin names, if the store has it
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
         if taken is not None:
-            said = f"{where}; this run would pin its snapshot at {_text(taken.commit)[:7]}" if new else where
-            return Edge(pipeline, taken.pipeline, key, said), taken, str(taken.path)
-        if entry.get("_store"):
-            return Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}"
-        return None
+            at = _text(taken.commit)[:7]
+            said = f"{where}; this run would pin its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
+            children.append((Edge(pipeline, taken.pipeline, key, said), taken, str(taken.path)))
+        elif entry.get("_store") and not children:
+            children.append((Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}"))
+        return children
 
     def _from_snapshot(self, pipeline: str, taken) -> list:
         listed = taken.inputs if isinstance(taken.inputs, list) else []

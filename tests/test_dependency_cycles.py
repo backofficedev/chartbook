@@ -187,7 +187,9 @@ class TestTheWalk:
             ("acme/forecast", "acme/rates", "rates"),
             ("acme/rates", "acme/fred", "fred"),
         ]
-        assert found.edges[0].where == f"declared in {fred / 'chartbook.toml'}"
+        assert found.edges[0].where == (
+            f"declared in {fred / 'chartbook.toml'}; pinned to its snapshot at {_snapshot_of('acme/forecast').commit[:7]}"
+        )
         assert found.edges[1].where == (
             f"recorded by the snapshot of acme/forecast at {_snapshot_of('acme/forecast').commit[:7]}, "
             f"made {_snapshot_of('acme/forecast').made_at[:10]}"
@@ -211,7 +213,8 @@ class TestTheWalk:
         found = lineage.cycle(fred)
         assert (found.edges[0].dependency, found.edges[0].key) == ("acme/forecast", "fc")
         assert lineage.explain_cycle(found).splitlines()[0] == (
-            f"  acme/fred depends on acme/forecast (as 'fc'): declared in {fred / 'chartbook.toml'}"
+            f"  acme/fred depends on acme/forecast (as 'fc'): declared in {fred / 'chartbook.toml'}; "
+            f"pinned to its snapshot at {_snapshot_of('acme/forecast').commit[:7]}"
         )
 
     def test_an_input_pinned_from_a_clone_is_known_by_its_key(self, chain):
@@ -722,3 +725,92 @@ class TestWhatTheSecondReviewFound:
         with pytest.raises(run.RunError, match="these pipelines depend on each other"):
             run.run(work, echo=lambda line: None)
         assert _built(work) == []
+
+
+@posix
+class TestWhatTheThirdReviewFound:
+    @pytest.mark.parametrize("named_by", ["id", "path"])
+    def test_a_pinned_snapshot_that_still_carries_a_dependency_the_folder_dropped(self, work, named_by):
+        """a pins b's snapshot, which was made from c, which was made from a; b's folder has since dropped c.
+
+        `pin` does not move a pin, so a is built from that snapshot: the cycle is there whatever b's folder says.
+        """
+        a = _pipeline(work / "a", "acme/a", "as")
+        b = _pipeline(work / "b", "acme/b", "bs")
+        c = _pipeline(work / "c", "acme/c", "cs")
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}})
+        )
+        _repository(work)
+        snapshot.make(a)
+        _declare(c, {"acme/a": {}})
+        lock.pin(c)
+        _commit(work)
+        snapshot.make(c)
+        _declare(b, {"acme/c": {}})
+        lock.pin(b)
+        _commit(work)
+        snapshot.make(b)
+        _declare(a, {"acme/b": {}} if named_by == "id" else {"b": {"path": "../b"}})
+        lock.pin(a)
+        _declare(b, {})
+        _commit(work)
+        before = (_lockfile(a), _lockfile(b), _store_state())
+        for snapshot_too in (False, True):
+            with pytest.raises(run.RunError) as raised:
+                run.run(work, snapshot=snapshot_too, echo=lambda line: None)
+            assert str(raised.value).startswith("acme/a: these pipelines depend on each other")
+            assert f"; pinned to its snapshot at {_snapshot_of('acme/b').commit[:7]}" in str(raised.value)
+            assert _built(work) == [] and (_lockfile(a), _lockfile(b), _store_state()) == before
+        (problem,) = [p for p in run_checks(load_manifest(work), work) if "depend on each other" in p.message]
+        assert problem.file == a / "chartbook.toml"
+
+    def test_a_dependency_got_from_its_repository_is_walked_through_its_clone(self, work, tmp_path, monkeypatch):
+        """fred names ref by its ID; the store has no snapshot of it, so it is cloned from the default host. ref pins x, and x was made from fred."""
+        from chartbook import config
+
+        monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user" / ".chartbook")
+        config.get_global_settings_path().parent.mkdir(parents=True)
+        config.get_global_settings_path().write_text(tomli_w.dumps({"resolve": {"default_host": str(tmp_path / "host")}}))
+        fred = _pipeline(work / "fred", "acme/fred", "series")
+        x = _pipeline(work / "x", "acme/x", "xs", {"acme/fred": {}})
+        _repository(work)
+        snapshot.make(fred)
+        lock.pin(x)
+        snapshot.make(x)
+        _git_repository(tmp_path / "host" / "acme" / "ref", "acme/ref", "table", {"acme/x": {}})
+        _declare(fred, {"acme/ref": {}})
+        lock.pin(fred)
+        (entry,) = lock.read_lock(fred).dependencies
+        assert entry["location"]["kind"] == "git"  # got from its repository
+        found = lineage.cycle(fred)
+        assert _around(found) == [("acme/fred", "acme/ref"), ("acme/ref", "acme/x"), ("acme/x", "acme/fred")]
+        with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
+            run.run(fred, echo=lambda line: None)
+
+    def test_what_pin_keeps_of_a_dependency_got_from_its_repository(self):
+        clone = {"location": {"kind": "git", "pipeline": "acme/rates", "commit": "a" * 40}}
+        by_id, by_git = {"_store": "acme/rates"}, {"git": "https://example.org/acme/rates"}
+        held = {"acme/rates:x": {"content_hash": "sha256:" + "1" * 64}}
+        assert lock._has_a_pin(clone, held, by_id) and lock._has_a_pin(clone, {}, by_git)
+        # Nothing of it pinned with its bytes, or another pipeline's repository: `pin` looks again
+        assert not lock._has_a_pin(clone, {}, by_id)
+        assert not lock._has_a_pin(clone, held, {"_store": "acme/other"})
+
+    def test_a_guarded_pin_reads_a_git_dependencys_files_once_and_writes_what_an_unguarded_one_does(self, chain, tmp_path, monkeypatch):
+        from chartbook import hashing
+
+        fred, rates, forecast = chain
+        repository = _git_repository(tmp_path / "ref", "acme/ref", "table")
+        _declare(fred, {"acme/ref": {"git": str(repository)}})
+        read = []
+        original = hashing._file_hex
+        monkeypatch.setattr(hashing, "_file_hex", lambda path: read.append(Path(path).name) or original(path))
+        assert lock.pin(fred, before_writing=lambda would_be_written: None).written
+        assert read.count("table.parquet") == 1
+        guarded = _lockfile(fred)
+        (fred / "chartbook.lock").unlink()
+        lock.pin(fred)
+        assert _lockfile(fred) == guarded
+        (record,) = lock.read_lock(fred).assets.values()
+        assert default_store().has(record["content_hash"])

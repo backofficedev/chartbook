@@ -62,8 +62,8 @@ what it depends on, on itself. `chartbook run`, `chartbook build` and `chartbook
 when they find a cycle, and say who depends on whom and where each dependency was read, and
 `chartbook check` reports it. A run looks before it pins or builds anything, including at the pins
 it is about to make, so a refused run leaves your lockfile and the store as they were. If what a
-pin would take changes while the run goes on, that pin is refused when its turn comes, and is not
-written.
+pin would take changes while the run goes on, that pin is refused when its turn comes and is not
+written, though the pipelines before it in the run were built by then.
 
 A cycle is found in the folders on your machine as soon as it is declared (in a `git`
 dependency's, once it is fetched), and through the snapshots in the store for a pipeline named by
