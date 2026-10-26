@@ -45,6 +45,11 @@ def _pipeline(folder: Path, pipeline_id: str, name: str, dependencies=None, buil
     return folder
 
 
+def _pin_anyway(folder: Path, **keywords):
+    """Pin past the guard every pin has: how a lockfile from before it, or one edited by hand, can be in a cycle."""
+    return lock.pin(folder, before_writing=lambda would_be_written: None, **keywords)
+
+
 def _declare(folder: Path, dependencies: dict) -> None:
     """Set a pipeline's ``[dependencies]``."""
     manifest = tomli.loads((folder / "chartbook.toml").read_text())
@@ -94,9 +99,9 @@ def chain(work):
     forecast = _pipeline(work / "forecast", "acme/forecast", "outlook", {"rates": {"path": "../rates"}})
     _repository(work)
     snapshot.make(fred)
-    lock.pin(rates)
+    _pin_anyway(rates)
     snapshot.make(rates)
-    lock.pin(forecast)
+    _pin_anyway(forecast)
     return fred, rates, forecast
 
 
@@ -114,11 +119,11 @@ def diamond(work):
     r = _pipeline(work / "r", "acme/r", "report", {"a": {"path": "../a"}, "b": {"path": "../b"}})
     _repository(work)
     snapshot.make(b)
-    lock.pin(c)
+    _pin_anyway(c)
     snapshot.make(c)
     _declare(b, {"acme/c": {}})
-    lock.pin(b)
-    lock.pin(work / "a")
+    _pin_anyway(b)
+    _pin_anyway(work / "a")
     snapshot.make(work / "a")  # so that r has something of a to pin
     return r
 
@@ -180,7 +185,7 @@ class TestTheWalk:
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         found = lineage.cycle(fred)
         assert [(edge.pipeline, edge.dependency, edge.key) for edge in found.edges] == [
             ("acme/fred", "acme/forecast", "acme/forecast"),
@@ -209,7 +214,7 @@ class TestTheWalk:
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"fc": {"id": "acme/forecast"}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         found = lineage.cycle(fred)
         assert (found.edges[0].dependency, found.edges[0].key) == ("acme/forecast", "fc")
         assert lineage.explain_cycle(found).splitlines()[0] == (
@@ -222,7 +227,7 @@ class TestTheWalk:
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         _rewrite(
             _snapshot_of("acme/forecast"),
             lambda d: d.update(inputs=[{"id": "acme/fred", "location": {"kind": "git", "url": "https://example.org/acme/fred"}}]),
@@ -254,7 +259,7 @@ class TestWhatCannotBeRead:
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         _rewrite(
             _snapshot_of("acme/forecast"),
             lambda d: d.update(inputs=[5, {"id": 7}, {"id": "rates", "location": "nowhere", "snapshot": 3}, "x"]),
@@ -310,7 +315,7 @@ def _git_repository(folder: Path, pipeline_id: str, name: str, dependencies=None
     """A pipeline in a repository of its own, its data and lockfile committed."""
     _pipeline(folder, pipeline_id, name, dependencies, build=build)
     if dependencies:
-        lock.pin(folder)
+        _pin_anyway(folder)
     (folder / ".gitignore").write_text("")
     _git(folder, "init", "--quiet", "-b", "main")
     _commit(folder)
@@ -371,8 +376,8 @@ class TestTheCommands:
         taken = _snapshot_of("acme/forecast")
         assert str(raised.value).startswith(
             "acme/fred: these pipelines depend on each other, so there is no order to build in.\n"
-            f"  acme/fred depends on acme/forecast: declared in {fred / 'chartbook.toml'}; this run would pin "
-            f"its snapshot at {taken.commit[:7]}\n"
+            f"  acme/fred depends on acme/forecast: declared in {fred / 'chartbook.toml'}; it would now be pinned "
+            f"to its snapshot at {taken.commit[:7]}\n"
             "  acme/forecast depends on acme/rates (as 'rates'): recorded by the snapshot of acme/forecast at "
         )
         assert str(raised.value).endswith("\nNothing was pinned or built.")
@@ -409,7 +414,7 @@ class TestTheCommands:
         """apart comes first and has nothing to do with the cycle: it is not built either."""
         fred, rates, forecast = would_be
         if pinned_before:
-            lock.pin(fred)  # by `chartbook pin`, which does not refuse it
+            _pin_anyway(fred)  # past the guard, as a lockfile from before it, or edited by hand
         _pipeline(work / "apart", "acme/apart", "a", {"acme/rates": {}})
         (work / "chartbook.toml").write_text(
             tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}})
@@ -432,11 +437,11 @@ class TestTheCommands:
         a = _pipeline(work / "a", "acme/a", "alpha")
         _repository(work)
         snapshot.make(b)
-        lock.pin(x)
+        _pin_anyway(x)
         snapshot.make(x)
         snapshot.make(a)
         _declare(b, {"a": {"path": "../a"}})
-        lock.pin(b)
+        _pin_anyway(b)
         _declare(a, {"acme/x": {}})
         (work / "chartbook.toml").write_text(
             tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}})
@@ -456,10 +461,10 @@ class TestTheCommands:
         x = _pipeline(work / "x", "acme/x", "xs", {"acme/p": {}})
         _repository(work)
         snapshot.make(p)
-        lock.pin(x)
+        _pin_anyway(x)
         snapshot.make(x)
         g = _pipeline(elsewhere, "acme/g", "gold", {"acme/x": {}}, build=f"echo built >> {work / 'g.log'}")
-        lock.pin(g)
+        _pin_anyway(g)
         (g / ".gitignore").write_text("_data/\n")
         _git(g, "init", "--quiet", "-b", "main")
         _commit(g)
@@ -494,7 +499,7 @@ class TestTheCommands:
 
     def test_run_frozen_refuses_a_cycle_through_the_store(self, would_be, work):
         fred, rates, forecast = would_be
-        lock.pin(fred)
+        _pin_anyway(fred)
         before = _lockfile(fred)
         with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
             run.run(fred, frozen=True, echo=lambda line: None)
@@ -570,7 +575,7 @@ class TestTheCommands:
         fred, rates, forecast = chain
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         (problem,) = [p for p in run_checks(load_manifest(fred), fred) if "depend on each other" in p.message]
         assert problem.table == 'dependencies."acme/forecast"' and problem.field == "id"
         assert problem.message.startswith("acme/fred -> acme/forecast -> acme/rates -> acme/fred: ")
@@ -635,7 +640,7 @@ class TestWorkingOutAPin:
         assert entry["location"]["commit"] == _git(repository, "rev-parse", "HEAD")
         (record,) = after.assets.values()
         assert not record.get("content_hash") and _store_state() == before
-        assert lock.pin(fred).written
+        assert _pin_anyway(fred).written
         (pinned,) = lock.read_lock(fred).assets.values()
         assert default_store().has(pinned["content_hash"])
 
@@ -662,11 +667,11 @@ class TestWhatTheSecondReviewFound:
         )
         _repository(work)
         snapshot.make(d)
-        lock.pin(x)
+        _pin_anyway(x)
         snapshot.make(x)
         snapshot.make(m)
         _declare(d, {"acme/m": {}})
-        lock.pin(d)
+        _pin_anyway(d)
         _declare(m, {"acme/x": {}})
         _commit(work)
         before = (_lockfile(d), _lockfile(m), _store_state())
@@ -713,9 +718,9 @@ class TestWhatTheSecondReviewFound:
         _pipeline(work / "apart", "acme/apart", "a")
         _repository(work)
         snapshot.make(c)
-        lock.pin(x)
+        _pin_anyway(x)
         snapshot.make(x)
-        lock.pin(b)
+        _pin_anyway(b)
         _declare(c, {"b": {"path": "../b"}})
         (work / "chartbook.toml").write_text(
             tomli_w.dumps(
@@ -744,15 +749,15 @@ class TestWhatTheThirdReviewFound:
         _repository(work)
         snapshot.make(a)
         _declare(c, {"acme/a": {}})
-        lock.pin(c)
+        _pin_anyway(c)
         _commit(work)
         snapshot.make(c)
         _declare(b, {"acme/c": {}})
-        lock.pin(b)
+        _pin_anyway(b)
         _commit(work)
         snapshot.make(b)
         _declare(a, {"acme/b": {}} if named_by == "id" else {"b": {"path": "../b"}})
-        lock.pin(a)
+        _pin_anyway(a)
         _declare(b, {})
         _commit(work)
         before = (_lockfile(a), _lockfile(b), _store_state())
@@ -776,11 +781,11 @@ class TestWhatTheThirdReviewFound:
         x = _pipeline(work / "x", "acme/x", "xs", {"acme/fred": {}})
         _repository(work)
         snapshot.make(fred)
-        lock.pin(x)
+        _pin_anyway(x)
         snapshot.make(x)
         _git_repository(tmp_path / "host" / "acme" / "ref", "acme/ref", "table", {"acme/x": {}})
         _declare(fred, {"acme/ref": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         (entry,) = lock.read_lock(fred).dependencies
         assert entry["location"]["kind"] == "git"  # got from its repository
         found = lineage.cycle(fred)
@@ -816,7 +821,7 @@ class TestWhatTheThirdReviewFound:
         assert read.count("table.parquet") == 1
         guarded = _lockfile(fred)
         (fred / "chartbook.lock").unlink()
-        lock.pin(fred)
+        _pin_anyway(fred)
         assert _lockfile(fred) == guarded
         (record,) = lock.read_lock(fred).assets.values()
         assert default_store().has(record["content_hash"])
@@ -843,7 +848,7 @@ class TestWhatTheFourthReviewFound:
         snapshot.make(p)
         snapshot.make(r)
         _declare(q, {"acme/p": {}})
-        lock.pin(q)
+        _pin_anyway(q)
         _commit(work)
         snapshot.make(q)
         _declare(q, {"acme/r": {}})
@@ -894,11 +899,11 @@ class TestWhatTheFourthReviewFound:
         snapshot.make(fred)
         ref = _git_repository(tmp_path / "ref", "acme/ref", "table", {"acme/fred": {}})
         _declare(forecast, {"acme/ref": {"git": str(ref)}})
-        lock.pin(forecast)
+        _pin_anyway(forecast)
         _commit(work)
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
-        lock.pin(fred)
+        _pin_anyway(fred)
         found = lineage.cycle(fred)
         assert _around(found) == [("acme/fred", "acme/forecast"), ("acme/forecast", "acme/ref"), ("acme/ref", "acme/fred")]
         assert found.edges[1].where.startswith("recorded by the snapshot of acme/forecast at ")
@@ -926,7 +931,7 @@ class TestWhatTheFifthReviewFound:
         snapshot.make(p)
         snapshot.make(r)
         _declare(q, {"acme/p": {}})
-        lock.pin(q)
+        _pin_anyway(q)
         _commit(work)
         old = snapshot.make(q).snapshot.commit
         _declare(q, {"acme/r": {}})
@@ -952,18 +957,18 @@ class TestWhatTheFifthReviewFound:
         _repository(work)
         snapshot.make(p)
         y = _pipeline(tmp_path / "y", "acme/y", "ys", {"acme/p": {}})
-        lock.pin(y)
+        _pin_anyway(y)
         (y / ".gitignore").write_text("_data/\nchartbook.lock\n")
         _git(y, "init", "--quiet", "-b", "main")
         _commit(y)
         snapshot.make(y)
         _declare(q, {"acme/y": {}})
-        lock.pin(q)
+        _pin_anyway(q)
         _declare(p, {"acme/q": {}})
         _commit(work)
         snapshot.make(q, built_by_run=True)  # at the commit the run will be at
         _declare(y, {})
-        lock.pin(y)
+        _pin_anyway(y)
         _commit(y)
         snapshot.make(y)  # y no longer depends on p
         lock.update(q)  # q's lockfile now pins it; nothing committed changes
@@ -989,3 +994,97 @@ class TestWhatTheFifthReviewFound:
         monkeypatch.setattr(lineage._Finder, "_read", lambda self: reads.append(1) or original(self))
         run_checks(load_manifest(work), work)
         assert len(reads) == 1
+
+
+@posix
+class TestEveryPinRefusesACycle:
+    """`chartbook pin`, `update` and `add`, and a first read, never write a lockfile that would leave the pipeline in a cycle."""
+
+    def test_pin(self, would_be):
+        fred, rates, forecast = would_be
+        before = _store_state()
+        report = lock.pin(fred)
+        assert report.refused.startswith("acme/fred: these pipelines depend on each other, so there is no order to build in.\n")
+        assert "it would now be pinned to its snapshot at" in report.refused
+        assert report.refused.endswith("\nThe lockfile was left as it was.")
+        assert not report.written and _lockfile(fred) is None and _store_state() == before
+
+    def test_the_pin_command(self, would_be, monkeypatch):
+        fred, rates, forecast = would_be
+        monkeypatch.chdir(fred)
+        result = CliRunner().invoke(main, ["pin"])
+        assert result.exit_code == 1, result.output
+        assert result.output.startswith("Error: acme/fred: these pipelines depend on each other")
+        assert "Wrote chartbook.lock" not in result.output and "pinned" not in result.output.split("\n")[0]
+        assert _lockfile(fred) is None
+
+    def test_add_leaves_the_manifest_as_it_was(self, chain, monkeypatch):
+        fred, rates, forecast = chain
+        snapshot.make(forecast)
+        manifest = (fred / "chartbook.toml").read_bytes()
+        monkeypatch.chdir(fred)
+        result = CliRunner().invoke(main, ["add", "acme/forecast"])
+        assert result.exit_code == 1, result.output
+        assert "Error: acme/fred: these pipelines depend on each other" in result.output
+        assert f"{fred / 'chartbook.toml'} is as it was." in result.output
+        assert (fred / "chartbook.toml").read_bytes() == manifest and _lockfile(fred) is None
+
+    def test_update(self, work, monkeypatch):
+        """fred pins forecast's snapshot from before forecast depended on rates; its newer one leads back to fred."""
+        fred = _pipeline(work / "fred", "acme/fred", "series")
+        forecast = _pipeline(work / "forecast", "acme/forecast", "outlook")
+        rates = _pipeline(work / "rates", "acme/rates", "treasury", {"acme/fred": {}})
+        _repository(work)
+        snapshot.make(fred)
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        assert lock.pin(fred).written
+        lock.pin(rates)
+        _commit(work)
+        snapshot.make(rates)
+        _declare(forecast, {"acme/rates": {}})
+        assert lock.pin(forecast).written
+        _commit(work)
+        snapshot.make(forecast)
+        before = (_lockfile(fred), _store_state())
+        report = lock.update(fred)
+        assert "these pipelines depend on each other" in report.refused
+        assert (_lockfile(fred), _store_state()) == before
+        monkeypatch.chdir(fred)
+        result = CliRunner().invoke(main, ["update"])
+        assert result.exit_code == 1 and "Error: acme/fred: these pipelines depend on each other" in result.output
+        assert _lockfile(fred) == before[0]
+
+    def test_a_first_read(self, would_be, monkeypatch):
+        from chartbook import data
+        from chartbook.errors import AssetNotPinnedError
+
+        fred, rates, forecast = would_be
+        monkeypatch.chdir(fred)
+        with pytest.raises(AssetNotPinnedError) as raised:
+            data.load("acme/forecast:outlook")
+        assert raised.value.reason == "cycle"
+        assert str(raised.value).startswith("'acme/forecast:outlook' cannot be pinned: acme/fred: these pipelines depend")
+        assert _lockfile(fred) is None
+
+
+@posix
+class TestAForkOfTheSameId:
+    def test_a_fork_that_depends_on_its_original_is_no_cycle(self, work):
+        """fork and rates both call themselves acme/rates; fork reads its original by path. Two pipelines, one ID."""
+        rates = _pipeline(work / "rates", "acme/rates", "treasury")
+        fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
+        _repository(work)
+        snapshot.make(rates)
+        assert lock.pin(fork).written  # the guard tells them apart
+        assert lineage.cycle(fork) is None
+        assert [p for p in run_checks(load_manifest(fork), fork) if "no order to build in" in p.message] == []
+        assert run.run(fork, echo=lambda line: None).failed is None
+        assert _built(work) == ["fork"]
+
+    def test_a_pipeline_and_its_own_snapshot_are_one(self, chain):
+        """The same pipeline met as its folder and as its snapshot is still one: fred's snapshot leads back to fred."""
+        fred, rates, forecast = chain
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        assert "these pipelines depend on each other" in lock.pin(fred).refused

@@ -2781,8 +2781,12 @@ def _short_hash(content_hash):
     return content_hash
 
 
-def _run_pin(project_dir, dependencies=None):
-    """Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""
+def _run_pin(project_dir, dependencies=None, on_refused=None):
+    """Run a pin, or an update when *dependencies* is given; exit 1 on a problem.
+
+    :param on_refused: Called before exiting when the lockfile was not
+        written because it would leave the pipeline in a cycle.
+    """
     from chartbook import lock
     from chartbook.store import StoreError
 
@@ -2794,6 +2798,12 @@ def _run_pin(project_dir, dependencies=None):
             report = lock.update(project_dir, dependencies)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        raise SystemExit(1)
+    if report.refused:
+        # Nothing was written, so what it would have pinned is not shown as pinned
+        click.echo(click.style("Error: ", fg="red", bold=True) + report.refused, err=True)
+        if on_refused is not None:
+            on_refused()
         raise SystemExit(1)
     _echo_pin_report(report)
     if report.unrooted:
@@ -3012,7 +3022,14 @@ def add_command(pipeline, key, commit, project_dir):
     with open(manifest_file, "w", encoding="utf-8", newline="") as f:
         f.write(changed)
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
-    _run_pin(project_dir)
+
+    def put_back():
+        # A dependency that would leave this pipeline in a cycle is not added either
+        with open(manifest_file, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        click.echo(f"{manifest_file} is as it was.", err=True)
+
+    _run_pin(project_dir, on_refused=put_back)
 
 
 @main.command()

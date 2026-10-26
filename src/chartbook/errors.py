@@ -337,7 +337,9 @@ class AssetNotPinnedError(LookupError):
         reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,
             ``"not_built"``, ``"not_in_store"``, ``"not_synced"`` (the
             store has the object, and not all of its bytes yet),
-            ``"no_snapshot"`` (nothing to pin from), ``"working"`` (a batch
+            ``"no_snapshot"`` (nothing to pin from), ``"cycle"`` (the pin
+            would leave the pipeline in a cycle of dependencies, so it was
+            not written), ``"working"`` (a batch
             run does not read a working folder), ``"in_source"`` (a table
             the pinned snapshot did not write out), or ``"no_pipeline"`` (a
             batch run outside any pipeline, where nothing records a read).

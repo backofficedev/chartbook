@@ -641,7 +641,7 @@ Wrote chartbook.lock.
 | `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 
-A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. Nor does a dependency whose pin would leave this pipeline in a cycle: the pin is refused as `chartbook pin` refuses it, and `chartbook.toml` is put back as it was. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
 
 ## chartbook pin
 
@@ -746,6 +746,8 @@ $ chartbook pin --frozen
 ```
 
 Where `pin` records an asset that was not built and goes on, `--frozen` counts it a problem: the build that follows may need it.
+
+Dependencies between pipelines must form a graph with no cycles. A pin that would leave this pipeline depending, through what it depends on, on itself is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. So do `chartbook update`, `chartbook add` and the first read of a dependency, which pins it. A fork that depends on its original under the same ID is two pipelines, not a cycle.
 
 ## chartbook update
 

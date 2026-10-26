@@ -2007,6 +2007,11 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         except OSError as failure:
             kind, why = "unwritable", str(failure)
         else:
+            if report.refused:
+                # Pinning it would leave this pipeline in a cycle: nothing was written, and nothing is read
+                raise AssetNotPinnedError(
+                    not_pinned.asset, "cycle", f"{not_pinned.asset!r} cannot be pinned: {report.refused}"
+                )
             _pinned_now(report, dependency.id)
             try:
                 return _resolve_pinned(asset, manifest_dir)

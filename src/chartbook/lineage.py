@@ -508,7 +508,11 @@ def cycle(
 
     A pipeline is known by its ID, so one met as a folder and again as a
     snapshot is one node, and a cycle is a pipeline met again on the way up
-    from itself. A folder or a snapshot walked once is not walked again
+    from itself. Two pipelines may share an ID, as a fork that depends on
+    its original does: they are told apart where that can be told, two
+    folders by their place on disk, and a folder and a snapshot, or two
+    snapshots, by their folder in their repository and the repository's
+    address or first commit (:meth:`_Finder.same`). A folder or a snapshot walked once is not walked again
     unless something above it is reachable from it, which is a cycle.
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
@@ -551,7 +555,9 @@ def cycle(
     # The pipeline's own table is read as the command would read it: an
     # error in it is the command's to say, where one upstream is passed over
     validate_dependencies(snapshot._read_manifest_file(directory).get("dependencies") or {}, directory)
-    chain: list[str] = [root]
+    #: The pipelines on the way down, each by its ID and where it was met:
+    #: two may share an ID (a fork that depends on its original)
+    chain: list[tuple[str, object]] = [(root, directory)]
     edges: list[Edge] = []
     #: Every pipeline reachable from each folder or snapshot walked, by what
     #: names that place, once its walk is done
@@ -561,16 +567,19 @@ def cycle(
         below: set = set()
         if len(chain) > DEEPEST:
             return None, below  # not recorded: a shorter way to it may still walk it
-        for edge, child, named in finder.children(chain[-1], source):
-            if edge.dependency in chain:
-                at = chain.index(edge.dependency)
+        for edge, child, named in finder.children(chain[-1][0], source):
+            at = next(
+                (i for i, (met, there) in enumerate(chain) if met == edge.dependency and finder.same(there, child)),
+                None,
+            )
+            if at is not None:
                 return Cycle(edges[at:] + [edge], edges[:at]), below
             below.add(edge.dependency)
             known = reach.get(named)
-            if known is not None and not (known & set(chain)):
+            if known is not None and not (known & {met for met, _ in chain}):
                 below |= known  # walked already, and nothing above here is reachable from it
                 continue
-            chain.append(edge.dependency)
+            chain.append((edge.dependency, child))
             edges.append(edge)
             found, theirs = visit(child, named)
             chain.pop()
@@ -627,6 +636,8 @@ class _Finder:
         self.members = {pipeline: Path(folder).resolve() for pipeline, folder in (members or {}).items()}
         #: Whether this walk read the store itself, rather than taking another walk's reading
         self.read_here = False
+        #: Each folder's place in its repository, worked out once
+        self._placed_folders: dict = {}
 
     def children(self, pipeline: str, source: object) -> list[tuple[Edge, object, str]]:
         """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place)``.
@@ -734,11 +745,55 @@ class _Finder:
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
         if taken is not None:
             at = _text(taken.commit)[:7]
-            said = f"{where}; this run would pin its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
+            said = f"{where}; it would now be pinned to its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
             children.append((Edge(pipeline, taken.pipeline, key, said), taken, str(taken.path)))
         elif entry.get("_store") and not children:
             children.append((Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}"))
         return children
+
+    def same(self, one: object, other: object) -> bool:
+        """Whether two places of the walk, met under one ID, are one pipeline.
+
+        A place is a folder, a snapshot, or None for a pipeline known by its
+        ID alone. Two folders are one only if they are one folder. Otherwise
+        each is placed by its folder in its repository and the repository's
+        address or first commit, and they are one unless that tells them
+        apart: what cannot be told is taken to be one, so that a cycle is
+        never passed over for want of knowing.
+        """
+        if isinstance(one, Path) and isinstance(other, Path):
+            return one.resolve() == other.resolve()
+        first, second = self._placed(one), self._placed(other)
+        if first is None or second is None:
+            return True
+        if first[0] != second[0]:
+            return False  # another folder of a repository
+        return not first[1] or not second[1] or bool(first[1] & second[1])
+
+    def _placed(self, place: object) -> Optional[tuple[str, frozenset]]:
+        """A place's folder in its repository and the repository's names; None if they cannot be told."""
+        if isinstance(place, snapshot.Snapshot):
+            return _text(place.subdirectory), frozenset(snapshot.identity_keys(place))
+        if not isinstance(place, Path):
+            return None
+        key = str(place.resolve())
+        if key not in self._placed_folders:
+            from chartbook.identity import get_git_remote_url, remote_to_web_url, repository_key, web_link
+
+            try:
+                code = snapshot.code_of(place)
+            except snapshot.SnapshotError:
+                self._placed_folders[key] = None
+            else:
+                names = set()
+                address = repository_key(web_link(remote_to_web_url(get_git_remote_url(code.top))))
+                if address:
+                    names.add(("address", address))
+                first = snapshot._first_commit(code.top)
+                if first:
+                    names.add(("first", first))
+                self._placed_folders[key] = (code.subdirectory, frozenset(names))
+        return self._placed_folders[key]
 
     def _clone(self, url: str, commit: str) -> Optional[Path]:
         """A repository's copy at a commit, if it is fetched here: its working copy, else its checkout."""

@@ -61,7 +61,9 @@ Dependencies between pipelines form a directed acyclic graph: a pipeline cannot 
 what it depends on, on itself. `chartbook run`, `chartbook build` and `chartbook snapshot` stop
 when they find a cycle, and say who depends on whom and where each dependency was read, and
 `chartbook check` reports it. A run looks before it pins or builds anything, including at the pins
-it is about to make, so a refused run leaves your lockfile and the store as they were. If what a
+it is about to make, so a refused run leaves your lockfile and the store as they were. `chartbook
+pin`, `chartbook update`, `chartbook add` and the first read of a dependency refuse such a pin too,
+and write nothing. If what a
 pin would take changes while the run goes on, that pin is refused when its turn comes and is not
 written, though the pipelines before it in the run were pinned and built by then, and with
 `--snapshot` snapshotted.

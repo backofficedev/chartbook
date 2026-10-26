@@ -896,17 +896,22 @@ def _sync_now(
         anything, is why it is not to be written: then nothing is written,
         neither the lockfile, nor the store's note of it, nor any object
         (what the pin puts in the store is held until then), and the
-        report's ``refused`` says why.
+        report's ``refused`` says why. By default a lockfile that would
+        leave the pipeline in a cycle of dependencies is refused
+        (:func:`_refuse_a_cycle`); a caller that gives its own guard
+        decides instead.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
     the_store = store
-    if before_writing is not None and not isinstance(store, _PutLater):
+    if not isinstance(store, _PutLater):
         # What the pin puts in the store is put only once the lockfile may be written
         store = _PutLater(store)
     root, dependencies = _read_pipeline(project_dir)
     # The store's snapshots, read once for every dependency named by its ID
     read = []
+    if before_writing is None:
+        before_writing = _refuse_a_cycle(project_dir, root, the_store, git_cache, read)
 
     def snapshots_in_store() -> list:
         if not read:
@@ -2621,14 +2626,46 @@ class _PutLater:
                 overall = pinned_hash(after.assets_of(entry["id"]).values())
                 if overall is not None:
                     entry["pinned_hash"] = overall
-        report.events[:] = [
-            dataclasses.replace(
-                event,
-                old=stored[event.old].content_hash if event.old in stored else event.old,
-                new=stored[event.new].content_hash if event.new in stored else event.new,
+        def as_put(event: PinEvent) -> PinEvent:
+            old = stored[event.old].content_hash if event.old in stored else event.old
+            if event.new not in stored:
+                return dataclasses.replace(event, old=old)
+            new = stored[event.new].content_hash
+            # `update` put the same bytes again: what it took for a move is none
+            status = "kept" if event.status == "moved" and new == old else event.status
+            return dataclasses.replace(event, status=status, old=old, new=new)
+
+        report.events[:] = [as_put(event) for event in report.events]
+
+
+def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list):
+    """The guard a pin has unless its caller gives one: a lockfile that would leave the pipeline in a cycle is not written.
+
+    Dependencies between pipelines must form a directed acyclic graph
+    (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
+    pin``, ``update`` and ``add``, and the first read of a dependency. The
+    walk takes the lockfile as it would be written, and the store's
+    snapshots as the pin read them.
+    """
+
+    def refuse(after: Lock) -> Optional[str]:
+        from chartbook import lineage
+
+        try:
+            found = lineage.cycle(
+                project_dir, store, git_cache=git_cache, lockfiles={project_dir: after},
+                shared={"found": read[0]} if read else None,
             )
-            for event in report.events
-        ]
+        except snapshot.SnapshotError:
+            return None  # no pipeline here: the pin itself said so
+        if found is None:
+            return None
+        return (
+            f"{root}: {lineage.cycle_lead(found)}, so there is no order to build in.\n"
+            f"{lineage.explain_cycle(found)}\nThe lockfile was left as it was."
+        )
+
+    return refuse
 
 
 def _has_a_pin(listed: object, records: dict, declared: dict) -> bool:
