@@ -742,3 +742,11 @@ class TestWhatTheListingTells:
         monkeypatch.setattr(store, "hashes", lambda: iter([stored.content_hash, phantom]))
         plan = lock.plan_gc(store, recent_seconds=0)
         assert [h for h, _ in plan.delete] == [stored.content_hash] and plan.recent == []
+
+
+class TestWhatAnObjectLacks:
+    def test_a_key_the_object_lacks(self, store, client, a_file):
+        stored = store.put(a_file)
+        assert not store.lacks(stored.content_hash, ["rates.parquet"])
+        assert store.lacks(stored.content_hash, ["rates.parquet", "twin.parquet"])
+        assert not store.lacks("sha256:" + "0" * 64, ["rates.parquet"])  # no object: nothing to add a name to

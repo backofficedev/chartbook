@@ -2458,6 +2458,31 @@ def _pin_asset(
         current = None
     same = current is not None and current.content_hash == old
     unsynced = _incomplete(store, had) if store.has(old) else None
+    names = snapshot.files_read(had) or {}
+    # The bytes are one file, as its record and the checkout have them
+    single = not isinstance(had.get("files"), list) and os.path.isfile(absolute)
+    try:
+        lacking = bool(unsynced and same and names) and store.lacks(old, names, single=single)
+    except (OSError, StoreError):
+        lacking = False  # a store that cannot be asked now: said as before
+    if lacking:
+        # The store has these bytes under another name only: two assets with
+        # the same bytes, put back one at a time, or pinned by another
+        # pipeline. The file here is what was pinned, so it is put in again,
+        # which adds the name. A file that is there and still arriving is
+        # not this, and is still said to be
+        try:
+            stored = store.put(absolute, links=PIN_LINKS)
+        except (OSError, StoreError):
+            stored = None  # a store this user cannot write, or the file gone: said as before
+        if stored is not None and isinstance(store, _PutLater):
+            # Put once the lockfile may be written, and said restored then if that makes it whole
+            store.recheck[stored.content_hash] = (asset_id, had)
+        elif stored is not None:
+            unsynced = _incomplete(store, had)
+            if not unsynced:
+                report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
+                return had
     if unsynced:
         report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
     elif store.has(old):
@@ -2561,6 +2586,9 @@ class _PutLater:
         self._store = store
         self._hold = hold
         self.held: dict = {}
+        #: Puts of bytes the store had under another name only, by stand-in:
+        #: the asset and its record, said restored once put if that makes it whole
+        self.recheck: dict = {}
 
     def __getattr__(self, name: str):
         if name in _STORE_WRITES:
@@ -2588,6 +2616,7 @@ class _PutLater:
         if not self._hold:
             return
         held, self.held = self.held, {}
+        self.recheck = {}
         report.events[:] = [
             dataclasses.replace(
                 event, old=None if event.old in held else event.old, new=None if event.new in held else event.new
@@ -2599,8 +2628,27 @@ class _PutLater:
         """Put what was held, and give the lockfile and the report the hashes of what was put."""
         if not self._hold:
             raise StoreError("a pin that is only worked out is never put in the store")
-        stored = {stand_in: self._store.put(path, links=links) for stand_in, (path, links) in self.held.items()}
+        stored = {}
+        for stand_in, (path, links) in self.held.items():
+            if stand_in in self.recheck:
+                try:
+                    stored[stand_in] = self._store.put(path, links=links)
+                except (OSError, StoreError):
+                    pass  # only a name to add: it stays said as not whole
+                continue
+            stored[stand_in] = self._store.put(path, links=links)
         self.held = {}
+        rechecked, self.recheck = self.recheck, {}
+        restored = {
+            asset_id for stand_in, (asset_id, record) in rechecked.items()
+            if stand_in in stored and not _incomplete(self._store, record)
+        }
+        if restored:
+            report.events[:] = [
+                dataclasses.replace(event, status="restored", detail="")
+                if event.status == "unsynced" and event.asset in restored else event
+                for event in report.events
+            ]
         if not stored:
             return
         changed = set()
