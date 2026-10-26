@@ -2083,6 +2083,12 @@ def _inputs(directory: Path) -> list:
     return []
 
 
+def _inputs_key(inputs: object) -> list:
+    """A snapshot's inputs in one order and form, to tell whether two say the same."""
+    listed = inputs if isinstance(inputs, list) else []
+    return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in listed)
+
+
 def _scores(directory: Path, entry) -> Optional[dict]:
     """A model's scores as its metrics file has them now, if it has a readable one."""
     from chartbook.models import read_metrics
@@ -2133,9 +2139,10 @@ def make(
     commit. An asset that is declared and not built is in the record
     without a hash, and in the report.
 
-    If nothing has changed since the newest snapshot at this commit, no
-    new one is made; unless that one took its owner's word and this one
-    follows a build, which is worth recording.
+    If nothing has changed since the newest snapshot at this commit (its
+    bytes, and what the pipeline is pinned to), no new one is made; unless
+    that one took its owner's word and this one follows a build, which is
+    worth recording.
 
     :param project_dir: The pipeline's folder.
     :param store: The store; this user's by default.
@@ -2245,12 +2252,15 @@ def make(
     before = [taken for taken in find(store, code.commit, code.subdirectory) if not made_in_the_future(taken)]
     # The newest record of this commit that says at least as much of its
     # repository as this one would, with nothing newer that holds other
-    # bytes: a clone with a path remote, or a shallow one, reuses its main
-    # checkout's, and the main checkout makes its own once. A newer record
-    # with other bytes would otherwise be the one a pin takes.
+    # bytes or other pins: a clone with a path remote, or a shallow one,
+    # reuses its main checkout's, and the main checkout makes its own once.
+    # A newer record with other bytes, or pinned to other snapshots (a clone
+    # whose own lockfile has moved, with nothing committed), would otherwise
+    # be the one a pin takes. What it was pinned to is part of what a
+    # snapshot says, so one whose pins have moved since is not given back
     same = None
     for taken in before:
-        if taken.content() != snapshot.content():
+        if taken.content() != snapshot.content() or _inputs_key(taken.inputs) != _inputs_key(snapshot.inputs):
             break
         # One made under another ID is not this pipeline's, whose ID has
         # changed since (a remote added, a folder renamed): it gets its own
@@ -2270,7 +2280,8 @@ def make(
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
         if same.built_by_run:
-            # Made again for what the one before lacks: the bytes are still the ones a run built
+            # Made again for what the one before lacks: the bytes are still
+            # the ones a run built, from these same pins
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
