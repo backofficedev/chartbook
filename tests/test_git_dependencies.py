@@ -18,6 +18,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+import tomli
 import tomli_w
 from click.testing import CliRunner
 
@@ -567,6 +568,33 @@ class TestPinning:
         assert _statuses(report) == {"committed": "restored", "ignored": "not_built"}
         assert report.problems == [] and default_store().has(HELLO)
         assert (downstream / LOCK_FILE).read_bytes() == before
+
+    def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
+        """The store lost one object that two assets share: put back for one, it lacked the other's name."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "data" / "twin.parquet").write_bytes(b"hello")  # the same bytes as committed.parquet
+        _commit(upstream, "A twin")
+        lock.pin(downstream, git_cache=cache)
+        before = (downstream / LOCK_FILE).read_bytes()
+        assert default_store().delete(HELLO)
+
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report) == {"committed": "restored", "ignored": "not_built", "twin": "restored"}
+        assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
+        held = Path(default_store().get(HELLO))
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
+
+    def test_a_file_still_arriving_is_still_said_to_be(self, downstream, cache):
+        """Putting the bytes in again adds a missing name; it never changes a file the object has."""
+        lock.pin(downstream, git_cache=cache)
+        held = Path(default_store().get(HELLO)) / "committed.parquet"
+        os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
+        held.write_bytes(b"he")  # as a sync in progress leaves it
+        store_module._found_whole.clear()  # this process may have found it whole before
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and held.read_bytes() == b"he"
 
     def test_a_repository_that_holds_no_pipeline_cannot_be_pinned(self, downstream, upstream, cache):
         (upstream / "chartbook.toml").unlink()

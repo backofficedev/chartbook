@@ -2458,6 +2458,18 @@ def _pin_asset(
         current = None
     same = current is not None and current.content_hash == old
     unsynced = _incomplete(store, had) if store.has(old) else None
+    if unsynced and same:
+        # The store has these bytes, and not as this record has them: under
+        # another name only (two assets with the same bytes, put back one at
+        # a time, or pinned by another pipeline), or not all of them yet.
+        # The file here is what was pinned, so it is put in again, which
+        # adds a name the object lacks and never changes a file it has: a
+        # file that is still arriving is still said to be
+        store.put(absolute, links=PIN_LINKS)
+        unsynced = _incomplete(store, had)
+        if not unsynced:
+            report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
+            return had
     if unsynced:
         report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
     elif store.has(old):
