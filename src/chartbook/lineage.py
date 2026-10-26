@@ -34,7 +34,8 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
+import os
+from typing import Iterable, Optional, Union
 
 import tomli
 
@@ -485,6 +486,7 @@ def cycle(
     lockfiles: Optional[dict] = None,
     shared: Optional[dict] = None,
     members: Optional[dict] = None,
+    through: Optional[Iterable[str]] = None,
 ) -> Optional[Cycle]:
     """The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.
 
@@ -509,10 +511,14 @@ def cycle(
     A pipeline is known by its ID, so one met as a folder and again as a
     snapshot is one node, and a cycle is a pipeline met again on the way up
     from itself. Two pipelines may share an ID, as a fork that reads its
-    original by ``path`` does: a folder, and the snapshot a folder
-    dependency's pin names, stand for that folder, and two of them are one
-    pipeline only if they are one folder; anything known from the store
-    alone is one under its ID (:meth:`_Finder.same`). A folder or a snapshot walked once is not walked again
+    original by ``path`` does. They are told apart only by what the way to
+    each says (:meth:`_Finder.same`): a folder on this machine stands for
+    itself (a copy in the git cache does not); the snapshot a folder
+    dependency's pin names, of that folder's ID, stands for that folder;
+    and an input a snapshot recorded by ``path`` under its own pipeline's
+    ID is another pipeline than the one that recorded it. Anything else is
+    one under its ID, so that a cycle is never passed over for want of
+    knowing. A folder or a snapshot walked once is not walked again
     unless something above it is reachable from it, which is a cycle.
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
@@ -540,6 +546,10 @@ def cycle(
         once for all of them. A caller that writes snapshots between walks
         sets ``shared["may_be_old"]``: a walk then reads the store again
         when a pin names a snapshot the reading lacks, once for each.
+    :param through: The keys of the pipeline's own ``[dependencies]`` to
+        walk from; all of them by default. A pin's guard walks from those it
+        pins or moves: a cycle reached only through what was pinned before
+        is not that pin's doing.
     :param members: The pipelines of a run or a catalog, their folders by
         their IDs. A dependency named by the ID of one is followed through
         its folder, as a ``path`` dependency is: that is what the run
@@ -557,7 +567,8 @@ def cycle(
     validate_dependencies(snapshot._read_manifest_file(directory).get("dependencies") or {}, directory)
     #: The pipelines on the way down, each by its ID and where it was met:
     #: two may share an ID (a fork that depends on its original)
-    chain: list[tuple[str, object]] = [(root, directory)]
+    chain: list[tuple[str, object]] = [(root, finder.folder_token(directory))]
+    walk_from = None if through is None else set(through)
     edges: list[Edge] = []
     #: Every pipeline reachable from each folder or snapshot walked, by what
     #: names that place, once its walk is done
@@ -567,9 +578,11 @@ def cycle(
         below: set = set()
         if len(chain) > DEEPEST:
             return None, below  # not recorded: a shorter way to it may still walk it
-        for edge, child, named in finder.children(chain[-1][0], source):
+        for edge, child, named, token in finder.children(chain[-1][0], source, chain[-1][1]):
+            if walk_from is not None and len(chain) == 1 and edge.key not in walk_from:
+                continue
             at = next(
-                (i for i, (met, there) in enumerate(chain) if met == edge.dependency and finder.same(there, child)),
+                (i for i, (met, there) in enumerate(chain) if met == edge.dependency and finder.same(there, token)),
                 None,
             )
             if at is not None:
@@ -579,7 +592,7 @@ def cycle(
             if known is not None and not (known & {met for met, _ in chain}):
                 below |= known  # walked already, and nothing above here is reachable from it
                 continue
-            chain.append((edge.dependency, child))
+            chain.append((edge.dependency, token))
             edges.append(edge)
             found, theirs = visit(child, named)
             chain.pop()
@@ -592,6 +605,16 @@ def cycle(
 
     found, _ = visit(directory, str(directory))
     return found
+
+
+def _same_folder(one: str, other: str) -> bool:
+    """Whether two paths are one folder, on a disk that may not tell case apart too."""
+    if one == other:
+        return True
+    try:
+        return os.path.samefile(one, other)
+    except OSError:
+        return False
 
 
 def explain_cycle(found: Cycle) -> str:
@@ -636,20 +659,22 @@ class _Finder:
         self.members = {pipeline: Path(folder).resolve() for pipeline, folder in (members or {}).items()}
         #: Whether this walk read the store itself, rather than taking another walk's reading
         self.read_here = False
-        #: The folder here each snapshot a folder dependency's pin names stands for
-        self.folder_of: dict = {}
+        #: The git cache's folder, once asked: a copy in it stands for no folder
+        self._git_root: Optional[Path] = None
 
-    def children(self, pipeline: str, source: object) -> list[tuple[Edge, object, str]]:
-        """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place)``.
+    def children(self, pipeline: str, source: object, token: object = None) -> list[tuple[Edge, object, str, object]]:
+        """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place, which pipeline it is)``.
 
         *source* is the pipeline's folder, the snapshot it was met as, or
         None for one known by its ID alone, which has nothing to read.
+        *token* says which pipeline the source is, as far as the way to it
+        says (:meth:`same`); so does the last of each tuple returned.
         """
         try:
             if isinstance(source, Path):
                 return self._from_folder(pipeline, source)
             if isinstance(source, snapshot.Snapshot):
-                return self._from_snapshot(pipeline, source)
+                return self._from_snapshot(pipeline, source, token)
         except Exception:  # noqa: BLE001 - a folder or a record that is not as it should be: not this walk's to say
             return []
         return []
@@ -720,14 +745,15 @@ class _Finder:
             if checkout is None and entry.get("_store"):
                 checkout = self._clone_of(entry["_store"], commit)  # the default host may have moved since
             if checkout is None or not (checkout / MANIFEST_NAME).is_file():
-                return [(Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}")] if entry.get("_store") else []
+                return [(Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}", None)] if entry.get("_store") else []
             project = snapshot._read_manifest_file(checkout).get("project")
             project = project if isinstance(project, dict) else {}
             # A checkout's folder is named after a commit, so only an ID the
             # manifest gives means something; else the ID it was named by, or
             # the key it is declared under, as `chartbook run` names it
             named = derive_pipeline_id(project, checkout) if project.get("id") else (entry.get("_store") or key)
-            return [(Edge(pipeline, named, key, where), checkout, str(checkout))]
+            # A copy in the git cache stands for no folder: known by its ID
+            return [(Edge(pipeline, named, key, where), checkout, str(checkout), None)]
         children = []
         there = (
             Path(entry["_resolved_path"]).resolve() if entry.get("_resolved_path")
@@ -740,44 +766,93 @@ class _Finder:
                 return []  # a catalog: `chartbook check` says so
             project = theirs.get("project")
             named = derive_pipeline_id(project if isinstance(project, dict) else {}, there)
-            children.append((Edge(pipeline, named, key, where), there, str(there)))
+            children.append((Edge(pipeline, named, key, where), there, str(there), self.folder_token(there)))
         # The snapshot its pin names, if the store has it
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
-        if taken is not None and children:
-            self.folder_of[str(taken.path)] = there  # the pin of a folder here: that folder's snapshot
         if taken is not None:
             at = _text(taken.commit)[:7]
             said = f"{where}; it would now be pinned to its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
-            children.append((Edge(pipeline, taken.pipeline, key, said), taken, str(taken.path)))
+            # The pin of a folder here, a snapshot of that folder's own ID: that folder's snapshot
+            token = children[0][3] if children and children[0][0].dependency == taken.pipeline else None
+            children.append((Edge(pipeline, taken.pipeline, key, said), taken, str(taken.path), token or ("snapshot", str(taken.path))))
         elif entry.get("_store") and not children:
-            children.append((Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}"))
+            children.append((Edge(pipeline, entry["_store"], key, where), None, f"id:{entry['_store']}", None))
         return children
 
-    def same(self, one: object, other: object) -> bool:
-        """Whether two places of the walk, met under one ID, are one pipeline.
+    def folder_token(self, folder: Path) -> object:
+        """Which pipeline a folder is: itself, on this machine; nothing said for a copy in the git cache, which another clone may be."""
+        from chartbook.gitcache import default_git_cache
 
-        A place is a folder, a snapshot, or None for a pipeline known by its
-        ID alone. Two pipelines share an ID only where one is read from the
-        other's folder, as a fork reads its original by ``path`` (named by
-        its ID, a pipeline is this one itself, and refused as such). So a
-        folder stands for itself, and the snapshot a folder dependency's pin
-        names stands for that folder; two of these are one pipeline only if
-        they are one folder. Anything else, known from the store alone, is
-        taken to be one under its ID: a cycle is never passed over for want
-        of knowing.
+        place = Path(folder).resolve()
+        if self._git_root is None:
+            try:
+                cache = self.git_cache if self.git_cache is not None else default_git_cache()
+                self._git_root = Path(cache.root).resolve()
+            except Exception:  # noqa: BLE001 - no git cache: no folder is a copy in it
+                self._git_root = Path("/nonexistent-git-cache")
+        if place == self._git_root or self._git_root in place.parents:
+            return None
+        return ("folder", str(place))
+
+    def same(self, one: object, other: object) -> bool:
+        """Whether two pipelines met under one ID are one, by what the ways to them say.
+
+        Each is a token: ``("folder", path)`` for a folder on this machine,
+        or the snapshot a folder dependency's pin names of that folder's
+        ID, or a snapshot's input read by ``path`` beside such a folder;
+        ``("snapshot", record)`` for a snapshot nothing more is known of;
+        ``("other", token)`` for an input a snapshot recorded by ``path``
+        under its own pipeline's ID (another pipeline than the one that
+        recorded it, as a fork reads its original); None when nothing says.
+        Two are told apart only when that says so: two folders that are not
+        one, or one that is said to be another than the other. Else they
+        are one, so that a cycle is never passed over.
         """
-        first, second = self._folder(one), self._folder(other)
-        if first is not None and second is not None:
-            return first == second
+        if one is None or other is None:
+            return True
+        if one[0] == "other":
+            return not self._known_same(one[1], other)
+        if other[0] == "other":
+            return not self._known_same(other[1], one)
+        if one[0] == "folder" and other[0] == "folder":
+            return _same_folder(one[1], other[1])
         return True
 
-    def _folder(self, place: object) -> Optional[Path]:
-        """The folder a place stands for: itself, or the folder whose pin names a snapshot; None if it is known from the store alone."""
-        if isinstance(place, Path):
-            return place.resolve()
-        if isinstance(place, snapshot.Snapshot):
-            return self.folder_of.get(str(place.path))
-        return None
+    def _recorded_token(self, pipeline: str, location: dict, below, token: object) -> object:
+        """Which pipeline a snapshot's recorded input is, as far as the record and the way to it say.
+
+        An input read by ``path`` is a folder beside the recorder's: where
+        the recorder stands for a folder here, that folder, if it holds a
+        pipeline of the input's ID. Where it does not, an input of the
+        recorder's own ID read by ``path`` from another folder is another
+        pipeline than the recorder, as a fork reads its original. Else it
+        is the snapshot itself.
+        """
+        relative = _text(location.get("path")).strip()
+        if location.get("kind") == "path" and relative.rstrip("/") not in ("", "."):
+            if token is not None and token[0] == "folder" and not Path(relative).is_absolute():
+                there = (Path(token[1]) / relative).resolve()
+                try:
+                    from chartbook.identity import derive_pipeline_id
+                    from chartbook.resolve import MANIFEST_NAME
+
+                    if (there / MANIFEST_NAME).is_file():
+                        project = snapshot._read_manifest_file(there).get("project")
+                        if derive_pipeline_id(project if isinstance(project, dict) else {}, there) == below.pipeline:
+                            return self.folder_token(there) or ("snapshot", str(below.path))
+                except Exception:  # noqa: BLE001 - a folder that cannot be read says nothing
+                    pass
+            elif below.pipeline == pipeline:
+                return ("other", token)
+        return ("snapshot", str(below.path))
+
+    def _known_same(self, one: object, other: object) -> bool:
+        """Whether two tokens are known to be one pipeline."""
+        if one is None or other is None:
+            return False
+        if one[0] == "folder" and other[0] == "folder":
+            return _same_folder(one[1], other[1])
+        return one == other
 
     def _clone(self, url: str, commit: str) -> Optional[Path]:
         """A repository's copy at a commit, if it is fetched here: its working copy, else its checkout."""
@@ -829,20 +904,20 @@ class _Finder:
                         stack.append((Path(found.path), depth + 1))
         return None
 
-    def _from_snapshot(self, pipeline: str, taken) -> list:
+    def _from_snapshot(self, pipeline: str, taken, token: object = None) -> list:
         listed = taken.inputs if isinstance(taken.inputs, list) else []
         where = f"recorded by the snapshot of {pipeline} at {_text(taken.commit)[:7]}, made {_text(taken.made_at)[:10]}"
         children = []
         for entry in listed[:MOST_INPUTS]:
             try:
-                child = self._recorded(pipeline, entry, where)
+                child = self._recorded(pipeline, entry, where, token)
             except Exception:  # noqa: BLE001 - an input not as ChartBook records one; the others are still followed
                 continue
             if child is not None:
                 children.append(child)
         return children
 
-    def _recorded(self, pipeline: str, entry: object, where: str):
+    def _recorded(self, pipeline: str, entry: object, where: str, token: object = None):
         """One input a snapshot recorded: the snapshot it names, if the store has it, else the ID it names."""
         if not isinstance(entry, dict) or not _text(entry.get("id")):
             return None
@@ -881,15 +956,15 @@ class _Finder:
                     project = snapshot._read_manifest_file(checkout).get("project")
                     project = project if isinstance(project, dict) else {}
                     named = derive_pipeline_id(project, checkout) if project.get("id") else named
-                    return Edge(pipeline, named, key, where), checkout, str(checkout)
+                    return Edge(pipeline, named, key, where), checkout, str(checkout), None
             except Exception:  # noqa: BLE001 - no clone to be found from this record: known by its ID
                 pass
-            return Edge(pipeline, named, key, where), None, f"id:{named}"
+            return Edge(pipeline, named, key, where), None, f"id:{named}", None
         below = self._pinned(_text(location.get("commit")), _text(entry.get("snapshot")))
         if below is not None:
-            return Edge(pipeline, below.pipeline, key, where), below, str(below.path)
+            return Edge(pipeline, below.pipeline, key, where), below, str(below.path), self._recorded_token(pipeline, location, below, token)
         if location.get("kind") == "store" and _text(location.get("pipeline")):
-            return Edge(pipeline, location["pipeline"], key, where), None, f"id:{location['pipeline']}"
+            return Edge(pipeline, location["pipeline"], key, where), None, f"id:{location['pipeline']}", None
         return None
 
     def _pinned(self, commit: str, made_at: str):

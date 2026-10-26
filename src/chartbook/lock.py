@@ -913,8 +913,6 @@ def _sync_now(
     root, dependencies = _read_pipeline(project_dir)
     # The store's snapshots, read once for every dependency named by its ID
     read = []
-    if before_writing is None:
-        before_writing = _refuse_a_cycle(project_dir, root, the_store, git_cache, read)
 
     def snapshots_in_store() -> list:
         if not read:
@@ -924,6 +922,8 @@ def _sync_now(
     host: Optional[str] = None  # the default host, read when a dependency is named by its ID
     lock_path = project_dir / LOCK_FILE
     before = read_lock(lock_path) or Lock(root=root)
+    if before_writing is None:
+        before_writing = _refuse_a_cycle(project_dir, root, the_store, git_cache, read, before)
 
     moving: set = set()
     if move is not None:
@@ -2692,28 +2692,33 @@ class _PutLater:
         report.events[:] = [as_put(event) for event in report.events]
 
 
-def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list):
-    """The guard a pin has unless its caller gives one: a lockfile that would make the pipeline's dependencies cyclic is not written.
+def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list, before: "Lock"):
+    """The guard a pin has unless its caller gives one: a lockfile whose new pins close a cycle, or lead into one, is not written.
 
     Dependencies between pipelines must form a directed acyclic graph
     (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
     pin``, ``update`` and ``add``, and the first read of a dependency. The
-    walk takes the lockfile as it would be written, and the store's
-    snapshots as the pin read them. A cycle that is there with the
-    lockfile as it is, declared in folders or pinned before, is not this
-    pin's doing: it is left for ``chartbook run`` and ``chartbook check`` to
-    say, and the pin, a read of another dependency say, is not refused for
-    it.
+    walk goes from the dependencies whose entry the pin makes or changes,
+    with the lockfile as it would be written: one that leads back to this
+    pipeline, or into pipelines that depend on each other, is refused. A
+    cycle reached only through pins made before is not this pin's doing:
+    ``chartbook run`` and ``chartbook check`` say it, and the pin, a read of
+    another dependency say, is not refused for it. A pin that changes no
+    entry walks nothing.
     """
 
     def refuse(after: Lock) -> Optional[str]:
         from chartbook import lineage
 
-        shared = {"found": read[0]} if read else {}
+        filed = {entry.get("id"): entry for entry in before.dependencies}
+        new = {entry.get("id") for entry in after.dependencies if filed.get(entry.get("id")) != entry}
+        if not new:
+            return None
         try:
-            found = lineage.cycle(project_dir, store, git_cache=git_cache, lockfiles={project_dir: after}, shared=shared)
-            if found is not None and lineage.cycle(project_dir, store, git_cache=git_cache, shared=shared) is not None:
-                return None  # cyclic already, whatever this pin does
+            found = lineage.cycle(
+                project_dir, store, git_cache=git_cache, lockfiles={project_dir: after},
+                shared={"found": read[0]} if read else {}, through=new,
+            )
         except snapshot.SnapshotError:
             return None  # no pipeline here: the pin itself said so
         if found is None:

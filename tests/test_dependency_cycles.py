@@ -46,8 +46,14 @@ def _pipeline(folder: Path, pipeline_id: str, name: str, dependencies=None, buil
 
 
 def _pin_anyway(folder: Path, **keywords):
-    """Pin past the guard every pin has: how a lockfile from before it, or one edited by hand, can be in a cycle."""
-    return lock.pin(folder, before_writing=lambda would_be_written: None, **keywords)
+    """Pin, and where the guard every pin has refuses, past it: how a lockfile from before the guard, or one edited by hand, can be in a cycle.
+
+    The guard runs on every setup that has no cycle.
+    """
+    report = lock.pin(folder, **keywords)
+    if report.refused:
+        report = lock.pin(folder, before_writing=lambda would_be_written: None, **keywords)
+    return report
 
 
 def _declare(folder: Path, dependencies: dict) -> None:
@@ -1145,10 +1151,11 @@ class TestWhatTheGuardsReviewFound:
         _repository(work)
         for folder in (b, c, d):
             snapshot.make(folder)
+        _declare(a, {"b": {"path": "../b"}})
+        assert lock.pin(a).written  # pinned before b and c came to depend on each other
         _declare(b, {"c": {"path": "../c"}})
         _declare(c, {"b": {"path": "../b"}})
-        _declare(a, {"b": {"path": "../b"}})
-        assert lock.pin(a).written  # the cycle is b's and c's, there before this pin
+        assert lock.pin(a).refused == "" and not lock.pin(a).written  # nothing new to pin: nothing walked
         _declare(a, {"b": {"path": "../b"}, "acme/d": {}})
         monkeypatch.chdir(a)
         assert data.load("acme/d:ds").collect().height == 1
@@ -1190,3 +1197,117 @@ class TestWhatTheGuardsReviewFound:
         result = CliRunner().invoke(main, ["pin", "--frozen"])
         assert result.exit_code == 1, result.output
         assert "Error: acme/fred: these pipelines depend on each other, so there is no order to build in." in result.output
+
+
+@posix
+class TestWhatTheGuardsSecondReviewFound:
+    def test_a_cycle_through_git_dependencies_back_to_the_root(self, tmp_path):
+        """fred takes ref by git; ref's committed lockfile takes fred by git. A clone in the git cache is no other pipeline."""
+        fred = _git_repository((tmp_path / "fred").resolve(), "acme/fred", "series")
+        ref = _git_repository((tmp_path / "ref").resolve(), "acme/ref", "table", {"acme/fred": {"git": str(fred)}})
+        _declare(fred, {"acme/ref": {"git": str(ref)}})
+        _commit(fred)
+        assert "these pipelines depend on each other" in lock.pin(fred).refused
+        _pin_anyway(fred)
+        assert _around(lineage.cycle(fred)) == [("acme/fred", "acme/ref"), ("acme/ref", "acme/fred")]
+
+    def test_a_cycle_among_git_dependencies(self, tmp_path, work):
+        g = _git_repository((tmp_path / "g").resolve(), "acme/g", "gs")
+        h = _git_repository((tmp_path / "h").resolve(), "acme/h", "hs", {"acme/g": {"git": str(g)}})
+        _declare(g, {"acme/h": {"git": str(h)}})
+        _pin_anyway(g)
+        _commit(g)
+        r = _pipeline(work / "r", "acme/r", "rs", {"acme/g": {"git": str(g)}})
+        assert "pipelines it depends on depend on each other" in lock.pin(r).refused
+        assert _lockfile(r) is None
+
+    def test_a_new_cycle_while_an_older_one_is_there(self, work, monkeypatch):
+        """b and c depend on each other, pinned before; a comes to name d, whose snapshot pinned a."""
+        from chartbook import data
+        from chartbook.errors import AssetNotPinnedError
+
+        a = _pipeline(work / "a", "acme/a", "as")
+        b = _pipeline(work / "b", "acme/b", "bs")
+        c = _pipeline(work / "c", "acme/c", "cs")
+        d = _pipeline(work / "d", "acme/d", "ds", {"acme/a": {}})
+        _repository(work)
+        for folder in (a, b, c):
+            snapshot.make(folder)
+        lock.pin(d)
+        snapshot.make(d)
+        _declare(a, {"b": {"path": "../b"}})
+        assert lock.pin(a).written
+        _declare(b, {"c": {"path": "../c"}})
+        _declare(c, {"b": {"path": "../b"}})
+        _declare(a, {"b": {"path": "../b"}, "acme/d": {}})
+        before = _lockfile(a)
+        assert "these pipelines depend on each other" in lock.pin(a).refused and _lockfile(a) == before
+        monkeypatch.chdir(a)
+        with pytest.raises(AssetNotPinnedError) as raised:
+            data.load("acme/d:ds")
+        assert raised.value.reason == "cycle" and _lockfile(a) == before
+
+    def _fork(self, work):
+        rates = _pipeline(work / "rates", "acme/rates", "treasury")
+        fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
+        _repository(work)
+        snapshot.make(rates)
+        assert lock.pin(fork).written
+        snapshot.make(fork)
+        return rates, fork
+
+    @pytest.mark.parametrize("key", ["f", "zz"])
+    def test_what_reads_a_fork_by_path(self, work, key):
+        """The fork's snapshot records its original's, read by path beside it: another pipeline, whatever the key."""
+        rates, fork = self._fork(work)
+        (rates / "x.txt").write_text("x")
+        _commit(work)
+        snapshot.make(rates)
+        lock.update(fork)  # the fork's lockfile now pins the original's newer snapshot
+        d = _pipeline(work / "d", "acme/d", "ds", {key: {"path": "../fork"}, "a": {"path": "../rates"}})
+        _commit(work)
+        assert lock.pin(d).written and lineage.cycle(d) is None
+
+    def test_what_reads_a_fork_by_its_id(self, work):
+        """The newest snapshot of acme/rates is the fork's: it records its original's, read by path under the same ID."""
+        rates, fork = self._fork(work)
+        d = _pipeline(work / "d", "acme/d", "ds", {"acme/rates": {}})
+        _commit(work)
+        assert lock.pin(d).written and lineage.cycle(d) is None
+
+    def test_a_folder_another_pipeline_now_holds(self, work):
+        """q pinned x's snapshot from x2/; x moved to x/, acme/y took x2/, and x comes to depend on q."""
+        x2 = _pipeline(work / "x2", "acme/x", "xs")
+        q = _pipeline(work / "q", "acme/q", "qs", {"x": {"path": "../x2"}})
+        _repository(work)
+        snapshot.make(x2)
+        assert lock.pin(q).written
+        snapshot.make(q)
+        _git(work, "mv", "x2", "x")
+        _pipeline(work / "x2", "acme/y", "ys")
+        _commit(work)
+        x = work / "x"
+        _declare(x, {"q": {"path": "../q"}})
+        assert "these pipelines depend on each other" in lock.pin(x).refused
+
+    def test_a_read_refused_is_not_walked_again_on_every_read(self, would_be, monkeypatch):
+        from chartbook import data
+        from chartbook.errors import AssetNotPinnedError
+
+        fred, rates, forecast = would_be
+        walks = []
+        original = lineage.cycle
+        monkeypatch.setattr(lineage, "cycle", lambda *a, **k: walks.append(1) or original(*a, **k))
+        monkeypatch.chdir(fred)
+        for _ in range(5):
+            with pytest.raises(AssetNotPinnedError, match="cannot be pinned"):
+                data.load("acme/forecast:outlook")
+        assert len(walks) == 1
+
+    def test_a_pin_that_changes_nothing_walks_nothing(self, chain, monkeypatch):
+        fred, rates, forecast = chain
+        walks = []
+        original = lineage.cycle
+        monkeypatch.setattr(lineage, "cycle", lambda *a, **k: walks.append(1) or original(*a, **k))
+        lock.pin(forecast)
+        assert walks == []

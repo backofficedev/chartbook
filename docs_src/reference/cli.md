@@ -749,7 +749,7 @@ $ chartbook pin --frozen
 
 Where `pin` records an asset that was not built and goes on, `--frozen` counts it a problem: the build that follows may need it.
 
-Dependencies between pipelines must form a graph with no cycles. A pin that would make this pipeline depend, through what it depends on, on itself is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle that is there before the pin, declared in the folders or pinned before, is not the pin's doing and does not stop it: `chartbook run` and `chartbook check` say it, and `chartbook pin --frozen` exits 1. A fork that reads its original under the same ID by `path` is two pipelines, not a cycle.
+Dependencies between pipelines must form a graph with no cycles. A pin whose new or moved entries would lead back to this pipeline, or into pipelines that depend on each other, is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle reached only through pins made before is not the new pin's doing and does not stop it: `chartbook run` and `chartbook check` say it, and `chartbook pin --frozen` exits 1. A fork that reads its original under the same ID by `path` is two pipelines, not a cycle, and so is what reads such a fork.
 
 ## chartbook update
 

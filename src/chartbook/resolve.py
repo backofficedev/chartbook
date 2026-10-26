@@ -1997,7 +1997,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     if (
         tried is not None
         and not retry_unwritable
-        and (not has_snapshots or tried[2] == "unwritable")
+        and (not has_snapshots or tried[2] in ("unwritable", "cycle"))
         and time.monotonic() - tried[0] < _TRY_AGAIN_SECONDS
     ):
         kind, why = tried[2], tried[3]
@@ -2008,7 +2008,9 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
             kind, why = "unwritable", str(failure)
         else:
             if report.refused:
-                # Pinning it would leave this pipeline in a cycle: nothing was written, and nothing is read
+                # Pinning it would make a cycle: nothing was written, and nothing is read. Not
+                # tried again on every read of a loop, for a while
+                _tried[memo] = (time.monotonic(), 0, "cycle", report.refused)
                 raise AssetNotPinnedError(
                     not_pinned.asset, "cycle", f"{not_pinned.asset!r} cannot be pinned: {report.refused}"
                 )
@@ -2030,6 +2032,8 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
                 kind, why = "no_snapshot", no_snapshot[0].detail or "it has no snapshot"
         _tried[memo] = (time.monotonic(), 0, kind, why)
 
+    if kind == "cycle":
+        raise AssetNotPinnedError(not_pinned.asset, "cycle", f"{not_pinned.asset!r} cannot be pinned: {why}")
     if kind == "unwritable":
         # The pipeline's folder cannot be written: read what a pin would take, and say nothing was pinned
         location, newest, reason = _as_a_pin_would_take(real, entry, store, found)
