@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import os
+
 import pytest
 import tomli_w
 
@@ -33,10 +35,11 @@ class TestTheLayers:
 
     def test_the_organization_sets_the_store_and_the_user_keeps_their_own_catalog(self, files, tmp_path):
         user, system = files
-        _write(system, {"store": {"url": str(tmp_path / "shared-store")}, "catalog": {"path": "/org/catalog.toml"}})
-        _write(user, {"catalog": {"path": "/me/catalog.toml"}})
+        mine = tmp_path.resolve() / "me" / "catalog.toml"  # absolute, with its drive on Windows
+        _write(system, {"store": {"url": str(tmp_path / "shared-store")}, "catalog": {"path": str(tmp_path.resolve() / "org" / "catalog.toml")}})
+        _write(user, {"catalog": {"path": str(mine)}})
         assert config.get_store_path() == (tmp_path / "shared-store").resolve()
-        assert config.get_default_catalog_path() == Path("/me/catalog.toml")
+        assert config.get_default_catalog_path() == mine
 
     def test_the_user_overrides_the_organization_key_by_key(self, files, tmp_path):
         user, system = files
@@ -84,11 +87,11 @@ class TestTheStoreIsAUrl:
         user, system = files
         _write(system, {"store": {"url": ""}})
         # The organization's fault is said, and its file ignored
-        with pytest.warns(UserWarning, match=r"etc/settings.toml: \[store\] needs a 'url'.*It is ignored"):
+        with pytest.warns(UserWarning, match=r"etc[/\\]settings.toml: \[store\] needs a 'url'.*It is ignored"):
             assert config.get_store_path() == (user.parent / "store").resolve()
         _write(user, {"store": "nope"})
         # The user's fault is theirs to fix
-        with pytest.raises(ValueError, match=r"\.chartbook/settings.toml: \[store\] must be a table"):
+        with pytest.raises(ValueError, match=r"\.chartbook[/\\]settings.toml: \[store\] must be a table"):
             config.get_store_path()
 
 
@@ -99,7 +102,7 @@ class TestWhatTheReviewFound:
         user, system = files
         _write(system, {"store": {"url": str(tmp_path / "shared-store")}})
         _write(user, {"store": {"path": str(tmp_path / "my-old-store")}})
-        with pytest.warns(UserWarning, match=r"\.chartbook/settings\.toml: \[store\] path is now \[store\] url"):
+        with pytest.warns(UserWarning, match=r"\.chartbook[/\\]settings\.toml: \[store\] path is now \[store\] url"):
             assert config.get_store_path() == (tmp_path / "my-old-store").resolve()
 
     def test_a_faulty_organization_file_is_a_warning_and_ignored(self, files, tmp_path):
@@ -107,6 +110,8 @@ class TestWhatTheReviewFound:
         system.write_text("this = [not toml", encoding="utf-8")
         with pytest.warns(UserWarning, match="is not valid TOML.*It is ignored"):
             assert config.get_store_path() == (user.parent / "store").resolve()
+        if os.name == "nt":
+            return  # chmod does not make a file unreadable on Windows
         system.write_text("", encoding="utf-8")
         system.chmod(0o000)
         try:
@@ -123,7 +128,7 @@ class TestWhatTheReviewFound:
     def test_a_faulty_user_file_names_itself(self, files):
         user, _ = files
         user.write_text("this = [not toml", encoding="utf-8")
-        with pytest.raises(ValueError, match=r"\.chartbook/settings\.toml, the user's settings, is not valid TOML"):
+        with pytest.raises(ValueError, match=r"\.chartbook[/\\]settings\.toml, the user's settings, is not valid TOML"):
             config.get_store_path()
         user.write_text("catalog = 5\n", encoding="utf-8")
         with pytest.raises(ValueError, match=r"\[catalog\] must be a table"):
@@ -167,6 +172,7 @@ class TestWhatTheReviewFound:
         assert "Warning: " in verified.output and "[store] path is now [store] url" in verified.output
         assert "UserWarning" not in verified.output and "config.py" not in verified.output
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows expands ~name to a folder without knowing whether the user exists")
     def test_a_home_of_an_unknown_user_is_a_fault_of_the_file(self, files):
         """Found by a reviewer: `~nosuchuser/store` raised a RuntimeError that nothing caught."""
         user, system = files
@@ -174,7 +180,7 @@ class TestWhatTheReviewFound:
         with pytest.warns(UserWarning, match="names a user this machine does not know.*It is ignored"):
             assert config.get_store_path() == (user.parent / "store").resolve()
         _write(user, {"store": {"url": "~nosuchuser_chartbook/store"}})
-        with pytest.raises(ValueError, match=r"\.chartbook/settings\.toml: .*names a user this machine does not know"):
+        with pytest.raises(ValueError, match=r"\.chartbook[/\\]settings\.toml: .*names a user this machine does not know"):
             config.get_store_path()
 
     def test_a_relative_catalog_path_is_relative_to_its_settings_file(self, files, tmp_path, monkeypatch):

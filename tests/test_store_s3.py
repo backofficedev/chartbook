@@ -228,7 +228,7 @@ class TestTheCache:
         record = f"stores/one/snapshots/{COMMIT}/_top/20261016T000000Z"
         client.put_object(Bucket=BUCKET, Key=f"{record} (1).json", Body=b'{"a": 1}')
         assert sorted((str(root.lockfile), root.copy) for root in store.roots()) == [
-            (str(Path("/somewhere/chartbook.lock")), False), (str(Path("/somewhere/chartbook.lock")), True)
+            (os.path.abspath("/somewhere/chartbook.lock"), False), (os.path.abspath("/somewhere/chartbook.lock"), True)  # with a drive on Windows
         ]
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"), Body=b'{"lock')
         with pytest.raises(StoreError, match="if it is a copy nobody needs"):

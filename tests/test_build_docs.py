@@ -926,7 +926,7 @@ class TestNotBuiltYet:
         monkeypatch.chdir(pipeline_project)
         with pytest.raises(SystemExit):
             generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project, strict=True)
-        assert "parts/*.parquet" in capsys.readouterr().err
+        assert os.path.join("parts", "*.parquet") in capsys.readouterr().err
 
     def test_a_missing_write_up_is_still_an_error(self, unbuilt, capsys):
         """Nothing builds a write-up."""

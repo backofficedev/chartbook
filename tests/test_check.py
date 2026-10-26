@@ -4,6 +4,8 @@ import warnings
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import os
+
 import pytest
 import tomli
 import tomli_w
@@ -354,7 +356,7 @@ class TestProblemFormat:
 
     def test_relative_when_beneath_cwd(self, tmp_path):
         problem = Problem(tmp_path / "a" / "chartbook.toml", "project", "name", "bad")
-        assert problem.format(relative_to=tmp_path).startswith("a/chartbook.toml: ")
+        assert problem.format(relative_to=tmp_path).startswith(os.path.join("a", "chartbook.toml") + ": ")
 
     def test_absolute_when_outside(self, tmp_path):
         elsewhere = tmp_path / "elsewhere" / "chartbook.toml"
@@ -442,7 +444,7 @@ class TestCheckCommand:
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
         assert "required by the catalog policy" in result.output
-        assert "pipeline_a/chartbook.toml: [project] repo_url" in result.output
+        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url" in result.output
         assert "pipeline_b/chartbook.toml: [project] repo_url" in result.output
         assert "in 2 manifest(s)" in result.output
 
@@ -463,7 +465,7 @@ class TestCheckCommand:
         _edit_toml(catalog_project / "pipelines" / "pipeline_a", edit)
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 0, result.output
-        assert "pipeline_a/chartbook.toml: [project] repo_url: recommended" in (
+        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url: recommended" in (
             result.stderr
         )
         assert "pipeline_b/chartbook.toml: [project] repo_url: recommended" in (

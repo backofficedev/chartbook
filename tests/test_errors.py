@@ -27,7 +27,7 @@ class TestChartBookError:
         formatted = error.format_message()
 
         assert "File:" in formatted
-        assert "/path/to/chartbook.toml" in formatted
+        assert str(Path("/path/to/chartbook.toml")) in formatted  # \\path\\to on Windows
 
     def test_format_message_with_field_name(self):
         """Test error message includes field name."""
@@ -90,7 +90,7 @@ class TestChartBookError:
         assert "Error:" in formatted
         assert "Field contains invalid characters" in formatted
         assert "File:" in formatted
-        assert "/project/chartbook.toml" in formatted
+        assert str(Path("/project/chartbook.toml")) in formatted
         assert "Field:" in formatted
         assert "site.title" in formatted
         assert "Value:" in formatted

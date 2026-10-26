@@ -307,7 +307,7 @@ class TestTheRecord:
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            f'[[pipeline]]\npath = "{work}"\nlevel = "run"\nsince = 2026-10-18T22:14:05Z\n\n'
+            f"[[pipeline]]\npath = '{work}'\nlevel = \"run\"\nsince = 2026-10-18T22:14:05Z\n\n"
             f'[[repository]]\nurl = "https://github.com/acme/rates"\nlevel = "run"\nsince = 2026-10-18T17:14:05-05:00\n', encoding="utf-8"
         )
         first, second = config.read_trust()
@@ -322,7 +322,7 @@ class TestTheRecord:
         """Found by a review: `[pipeline]` was warned about, and then dropped by the next write."""
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        written = f'[pipeline]\npath = "{work}"\nlevel = "run"\n'
+        written = f"[pipeline]\npath = '{work}'\nlevel = \"run\"\n"  # '…': a literal string, so a Windows path is as it is
         path.write_text(written, encoding="utf-8")
         with pytest.warns(UserWarning, match=r"\[\[pipeline\]\] is not an array of tables"):
             assert config.read_trust() == []

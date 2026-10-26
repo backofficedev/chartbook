@@ -910,7 +910,7 @@ class TestWhatTheStoreOnlyReviewFound:
         for page in (site / "cb" / "dataframes.html", site / "cb" / "pipelines" / "pipeline_c_README.html"):
             self._no_markup_from_the_store(page)
             # As a browser shows it: one writer leaves the character references in the page as written
-            assert "D ‹script›alert(8)‹/script›" in html.unescape(page.read_text(), encoding="utf-8"), page
+            assert "D ‹script›alert(8)‹/script›" in html.unescape(page.read_text(encoding="utf-8")), page
             assert "\x1b" not in page.read_text(encoding="utf-8")
         listed = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
         assert "[dataframe] pipeline_c:dataframe_0: D <script>alert(8)</script>" in listed and "\x1b" not in listed

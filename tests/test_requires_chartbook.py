@@ -114,7 +114,7 @@ class TestEveryCommandStops:
 
     def test_a_catalog_member_that_needs_a_newer_one_stops_the_catalog_and_names_the_way_out(self, newer, tmp_path):
         catalog = _manifest(tmp_path / "catalog", {"project": {"type": "catalog"}, "pipelines": {"rates": {"path": "../rates"}}})
-        with pytest.raises(ValueError, match=r"rates/chartbook.toml requires ChartBook >=99.0") as error:
+        with pytest.raises(ValueError, match=r"rates[/\\]chartbook.toml requires ChartBook >=99.0") as error:
             load_manifest(catalog)
         assert "`chartbook catalog disable rates`" in str(error.value)
         members = _manifest(tmp_path / "by_members", {"pipelines": {"members": ["../rates"]}})

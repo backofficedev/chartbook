@@ -275,7 +275,7 @@ class TestResolveLocal:
         project = create_pipeline_project(tmp_path / "glob", use_glob_paths=True)
         location = resolve("dataframe_0", start_dirs=[project])
         assert location.path.is_absolute()
-        assert str(location.path).endswith("dataframe_0_hive/**/*.parquet")
+        assert location.path.as_posix().endswith("dataframe_0_hive/**/*.parquet")
 
     def test_declared_path_is_not_followed_through_a_symlink(self, project, tmp_path):
         """The declared path is the asset's location even if it is a link."""

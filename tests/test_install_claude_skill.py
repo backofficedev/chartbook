@@ -49,7 +49,7 @@ class TestInstalling:
         target = _skill_dir(claude_config_dir)
         assert {p.name for p in target.iterdir()} == EXPECTED_FILES  # no stamp file any more
         assert claude_skill.version_of(target) == __version__
-        assert f"Installed 3 skill file(s) to {target} (ChartBook {__version__})" in result.output
+        assert f"Installed 3 skill file(s) to {claude_skill.shown(target)} (ChartBook {__version__})" in result.output
 
     def test_default_falls_back_to_home(self, tmp_path, monkeypatch):
         """Without CLAUDE_CONFIG_DIR, the target is ~/.claude/skills/chartbook."""
@@ -72,7 +72,7 @@ class TestInstalling:
         assert runner.invoke(main, ["install", "claude-skill"]).exit_code == 0
         result = runner.invoke(main, ["install", "claude-skill"])
         assert result.exit_code == 0
-        assert f"already up to date in {_skill_dir(claude_config_dir)} (ChartBook {__version__})" in result.output
+        assert f"already up to date in {claude_skill.shown(_skill_dir(claude_config_dir))} (ChartBook {__version__})" in result.output
         assert "Installed" not in result.output
 
     def test_stale_old_layout_files_removed(self, claude_config_dir):
@@ -143,7 +143,7 @@ class TestUpgrading:
         target = _old_copy(_skill_dir(claude_config_dir))
         result = CliRunner().invoke(main, ["install", "claude-skill"])  # no input: no question
         assert result.exit_code == 0, result.output
-        assert f"Updated the skill in {target} from ChartBook 0.1.1 to {__version__}" in result.output
+        assert f"Updated the skill in {claude_skill.shown(target)} from ChartBook 0.1.1 to {__version__}" in result.output
         assert not (target / claude_skill.OLD_STAMP).exists()
         assert claude_skill.version_of(target) == __version__
         assert {p.name for p in target.iterdir()} == EXPECTED_FILES
@@ -287,13 +287,13 @@ class TestFindingAStaleCopy:
     def test_what_the_notice_says(self, tmp_path, claude_config_dir):
         user = claude_skill.Copy("user", _skill_dir(claude_config_dir), "0.1.1")
         assert claude_skill.notice(user) == (
-            f"your Claude Code skill, {_skill_dir(claude_config_dir)}, is for ChartBook 0.1.1, and this is ChartBook "
+            f"your Claude Code skill, {claude_skill.shown(_skill_dir(claude_config_dir))}, is for ChartBook 0.1.1, and this is ChartBook "
             f"{__version__}: `chartbook install claude-skill` installs this version's."
         )
         project = claude_skill.Copy("project", tmp_path / "repo" / ".claude" / "skills" / "chartbook", None)
         said = claude_skill.notice(project)
         assert "names no ChartBook version (it is from before 0.2.0)" in said
-        assert f"`chartbook install claude-skill --project` in {tmp_path / 'repo'} installs this version's." in said
+        assert f"`chartbook install claude-skill --project` in {claude_skill.shown(tmp_path / 'repo')} installs this version's." in said
 
 
 class TestSayingIt:

@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 
 import polars as pl
+import os
+
 import pytest
 import tomli_w
 
@@ -53,7 +55,7 @@ class TestTheSetting:
         assert config.clone_url_for("acme/rates", "github.com") == "https://github.com/acme/rates"
         assert config.clone_url_for("acme/rates", "https://gitlab.example.org/group") == "https://gitlab.example.org/group/acme/rates"
         assert config.clone_url_for("acme/rates", "git@gitlab.example.org:") == "git@gitlab.example.org:acme/rates"
-        assert config.clone_url_for("acme/rates", "/srv/git") == "/srv/git/acme/rates"
+        assert config.clone_url_for("acme/rates", "/srv/git") == os.path.join("/srv/git", "acme", "rates")
         assert config.clone_url_for("acme/rates", "gitlab.example.org/group") == "https://gitlab.example.org/group/acme/rates"
         assert config.clone_url_for("acme/rates", "repos") == "https://repos/acme/rates"  # a host name, not a folder
         assert config.clone_url_for("rates", "github.com") is None  # no owner to find it under
@@ -409,6 +411,7 @@ class TestWhatTheSecondReviewFound:
         assert "depend on each other" not in str(raised.value)
         assert not (forecast / "chartbook.lock").exists()
 
+    @pytest.mark.skipif(os.name == "nt", reason="the root folder / is a POSIX one")
     def test_a_root_folder_host_keeps_its_separator(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
         (tmp_path / "user").mkdir()

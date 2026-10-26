@@ -20,7 +20,7 @@ def remove_tree(path) -> None:
     """
     from chartbook.store import _remove_tree
 
-    _remove_tree(Path(path))
+    _remove_tree(path)  # as given: a test that sets os.name to "nt" cannot make a Path on POSIX
 
 
 def create_sample_parquet(path: Path, columns: dict = None, rows: int = 10) -> Path:

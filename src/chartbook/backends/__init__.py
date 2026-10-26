@@ -468,10 +468,12 @@ class ParquetBackend:
         said = nothing_to_read(location)
         if said:
             raise ValueError(said)
-        text = str(location.path)
+        # With / on every system: DuckDB reads it so on Windows too, and SQL
+        # with a path in it reads the same wherever it is pasted
+        text = Path(location.path).as_posix()
         if location.files:
             # A directory pinned from another pipeline: the files its record lists
-            listed = ", ".join(quote_literal(str(file)) for file in location.files)
+            listed = ", ".join(quote_literal(Path(file).as_posix()) for file in location.files)
             return f"read_parquet([{listed}], hive_partitioning = true)"
         if is_glob_pattern(text):
             return f"read_parquet({quote_literal(text)}, hive_partitioning = true)"
