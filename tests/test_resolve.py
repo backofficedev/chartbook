@@ -317,7 +317,7 @@ class TestResolveLocal:
             resolve("dataframe_O", start_dirs=[project])
 
     def test_empty_manifest_declares_nothing(self, tmp_path):
-        (tmp_path / "chartbook.toml").write_text("", encoding="utf-8")
+        (tmp_path / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
         with pytest.raises(AssetNotDeclaredError, match=r"Declared assets: \(none\)"):
             resolve("anything", start_dirs=[tmp_path])
 
@@ -469,7 +469,7 @@ class TestAssetsPath:
         script = mine / "src" / "where.py"
         script.write_text(
             "from chartbook import assets\n"
-            "RESULT = assets.path('chart/chart_0_0')\n", encoding="utf-8"
+            "RESULT = assets.path('chart/chart_0_0')\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.chdir(other)
         result = runpy.run_path(str(script))["RESULT"]
@@ -519,7 +519,7 @@ class TestDataPath:
         other = create_pipeline_project(tmp_path / "other", pipeline_id="other").resolve()
         script = mine / "src" / "where.py"
         script.write_text(
-            "from chartbook import data\nRESULT = data.path('dataframe_0')\n", encoding="utf-8"
+            "from chartbook import data\nRESULT = data.path('dataframe_0')\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.chdir(other)
         result = runpy.run_path(str(script))["RESULT"]
@@ -725,7 +725,7 @@ class TestScratch:
         directory = data.scratch()
         assert directory == project / "_data" / "_scratch"
         assert directory.is_dir()
-        (directory / "intermediate.parquet").write_text("throwaway", encoding="utf-8")
+        (directory / "intermediate.parquet").write_text("throwaway", encoding="utf-8", newline="\n")
 
     def test_ignores_itself_in_git(self, project):
         directory = data.scratch(project_dir=project)
@@ -733,8 +733,8 @@ class TestScratch:
 
     def test_calling_again_changes_nothing(self, project):
         first = data.scratch(project_dir=project)
-        (first / "kept.txt").write_text("still here", encoding="utf-8")
-        (first / ".gitignore").write_text("*\n!kept.txt\n", encoding="utf-8")
+        (first / "kept.txt").write_text("still here", encoding="utf-8", newline="\n")
+        (first / ".gitignore").write_text("*\n!kept.txt\n", encoding="utf-8", newline="\n")
         second = data.scratch(project_dir=project)
         assert second == first
         assert (second / "kept.txt").read_text(encoding="utf-8") == "still here"
@@ -744,7 +744,7 @@ class TestScratch:
         mine = create_pipeline_project(tmp_path / "mine", pipeline_id="mine").resolve()
         other = create_pipeline_project(tmp_path / "other", pipeline_id="other").resolve()
         script = mine / "src" / "where.py"
-        script.write_text("from chartbook import data\nRESULT = data.scratch()\n", encoding="utf-8")
+        script.write_text("from chartbook import data\nRESULT = data.scratch()\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(other)
         assert runpy.run_path(str(script))["RESULT"] == mine / "_data" / "_scratch"
 
@@ -759,7 +759,7 @@ class TestScratch:
 
         manifest = load_manifest(project)
         before = pipeline_fingerprint(manifest["project"]["id"], manifest)
-        (data.scratch(project_dir=project) / "intermediate.parquet").write_text("x", encoding="utf-8")
+        (data.scratch(project_dir=project) / "intermediate.parquet").write_text("x", encoding="utf-8", newline="\n")
 
         with pytest.raises(AssetNotDeclaredError):
             data.path("intermediate", project_dir=project)
@@ -782,7 +782,7 @@ class TestAHeldObjectIsReadInsideItself:
         folder = tmp_path / "asset"
         for name, text in files.items():
             (folder / name).parent.mkdir(parents=True, exist_ok=True)
-            (folder / name).write_text(text, encoding="utf-8")
+            (folder / name).write_text(text, encoding="utf-8", newline="\n")
         store = FolderStore(tmp_path / "store")
         return store, store.put(folder)
 

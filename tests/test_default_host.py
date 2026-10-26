@@ -24,7 +24,7 @@ def host(tmp_path, monkeypatch):
     settings = config.get_global_settings_path()
     assert not settings.is_relative_to(Path.home() / ".chartbook")  # not the real one; a temporary folder may be under home (Windows)
     settings.parent.mkdir(parents=True)
-    settings.write_text(tomli_w.dumps({"resolve": {"default_host": str(work / "host")}}), encoding="utf-8")
+    settings.write_text(tomli_w.dumps({"resolve": {"default_host": str(work / "host")}}), encoding="utf-8", newline="\n")
     return work
 
 
@@ -35,11 +35,11 @@ def _upstream(work: Path, value: float, committed: bool = True, scripts=None) ->
     manifest = {"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}}
     if scripts:
         manifest["scripts"] = scripts
-    (repository / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (repository / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     if committed:
         pl.DataFrame({"d": ["2024-01-01"], "r": [value]}).write_parquet(repository / "_data" / "treasury.parquet")
     else:
-        (repository / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     return repository
@@ -64,19 +64,19 @@ class TestTheSetting:
     def test_a_folder_of_repositories_is_relative_to_its_settings_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
         (tmp_path / "user").mkdir()
-        config.get_global_settings_path().write_text('[resolve]\ndefault_host = "./repositories"\n', encoding="utf-8")
+        config.get_global_settings_path().write_text('[resolve]\ndefault_host = "./repositories"\n', encoding="utf-8", newline="\n")
         assert config.get_default_host() == str(tmp_path / "user" / "repositories")
 
     def test_an_empty_host_is_none(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
         (tmp_path / "user").mkdir()
-        config.get_global_settings_path().write_text('[resolve]\ndefault_host = ""\n', encoding="utf-8")
+        config.get_global_settings_path().write_text('[resolve]\ndefault_host = ""\n', encoding="utf-8", newline="\n")
         assert config.get_default_host() == ""
 
     def test_a_host_that_is_no_text_is_said(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
         (tmp_path / "user").mkdir()
-        config.get_global_settings_path().write_text("[resolve]\ndefault_host = 5\n", encoding="utf-8")
+        config.get_global_settings_path().write_text("[resolve]\ndefault_host = 5\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="default_host must be a git host"):
             config.get_default_host()
 
@@ -172,7 +172,7 @@ class TestNoSnapshotSoItsRepository:
 
 def _set_host(work: Path, value: str) -> None:
     settings = config.get_global_settings_path()
-    settings.write_text(tomli_w.dumps({"resolve": {"default_host": value}}), encoding="utf-8")
+    settings.write_text(tomli_w.dumps({"resolve": {"default_host": value}}), encoding="utf-8", newline="\n")
 
 
 class TestWhatTheReviewFound:
@@ -186,7 +186,7 @@ class TestWhatTheReviewFound:
                 "project": {"id": "acme/rates"},
                 "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
                 "scripts": {"build": f"{sys.executable} -c \"open(r'{marker}', 'w').close()\""},
-            }), encoding="utf-8"
+            }), encoding="utf-8", newline="\n"
         )
         _commit(host / "host" / "acme" / "rates", "A build")
         catalog = host / "catalog"
@@ -196,14 +196,14 @@ class TestWhatTheReviewFound:
             "project": {"id": "acme/rates"},
             "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
             "scripts": {"build": f"{sys.executable} -c \"import polars as pl; pl.DataFrame({{'d': ['2024-01-01'], 'r': [1.0]}}).write_parquet('_data/treasury.parquet')\""},
-        }), encoding="utf-8")
+        }), encoding="utf-8", newline="\n")
         _forecast(catalog / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
         (catalog / "chartbook.toml").write_text(tomli_w.dumps({
             "project": {"type": "catalog", "id": "cat"},
             "pipelines": {"acme/forecast": {"path": "./forecast"}, "acme/rates": {"path": "./rates"}},
-        }), encoding="utf-8")
+        }), encoding="utf-8", newline="\n")
         _git(catalog, "init", "--quiet", "-b", "main")
-        (catalog / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (catalog / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(catalog)
         report = run.run(catalog, snapshot=True, echo=lambda *a, **k: None)
         assert report.failed is None, report.reason
@@ -287,7 +287,7 @@ class TestWhatTheReviewFound:
     def test_a_repository_that_names_itself_otherwise_is_not_pinned(self, host):
         repository = _upstream(host, 4.0)
         (repository / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "evil/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "evil/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _commit(repository, "Another name")
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
@@ -373,10 +373,10 @@ class TestWhatTheSecondReviewFound:
         _upstream(host, 4.0)
         other = host / "host" / "acme" / "yields"
         (other / "_data").mkdir(parents=True)
-        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/yields"}, "dataframes": {"curve": {"path": "./_data/curve.parquet", "docs": "d"}}}), encoding="utf-8")
+        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/yields"}, "dataframes": {"curve": {"path": "./_data/curve.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n")
         pl.DataFrame({"d": ["2024-01-01"]}).write_parquet(other / "_data" / "curve.parquet")
         _git(other, "init", "--quiet", "-b", "main")
-        (other / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (other / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
         _commit(other)
         snapshot.make(other)
         forecast = _forecast(host / "forecast", {"acme/rates": {}, "acme/yields": {}})
@@ -394,7 +394,7 @@ class TestWhatTheSecondReviewFound:
             "project": {"id": "evil/other"},
             "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
             "scripts": {"build": f"{sys.executable} -c \"open(r'{marker}', 'w').close()\""},
-        }), encoding="utf-8")
+        }), encoding="utf-8", newline="\n")
         _commit(repository, "Another name")
         forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
         report = run.run(forecast, echo=lambda *a, **k: None)
@@ -415,7 +415,7 @@ class TestWhatTheSecondReviewFound:
     def test_a_root_folder_host_keeps_its_separator(self, tmp_path, monkeypatch):
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
         (tmp_path / "user").mkdir()
-        config.get_global_settings_path().write_text('[resolve]\ndefault_host = "/"\n', encoding="utf-8")
+        config.get_global_settings_path().write_text('[resolve]\ndefault_host = "/"\n', encoding="utf-8", newline="\n")
         assert config.get_default_host() == "/"
 
 
@@ -425,10 +425,10 @@ class TestWhatTheThirdReviewFound:
         lock.pin(forecast)  # the host has no acme/rates: the clone fails, nothing is pinned
         elsewhere = host / "elsewhere"
         (elsewhere / "_data").mkdir(parents=True)
-        (elsewhere / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8")
+        (elsewhere / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n")
         pl.DataFrame({"d": ["2024-01-01"], "r": [3.0]}).write_parquet(elsewhere / "_data" / "treasury.parquet")
         _git(elsewhere, "init", "--quiet", "-b", "main")
-        (elsewhere / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (elsewhere / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
         _commit(elsewhere)
         snapshot.make(elsewhere)
         report = lock.pin(forecast)
@@ -438,7 +438,7 @@ class TestWhatTheThirdReviewFound:
 
     def test_a_refused_clone_records_none_of_its_commit(self, host):
         repository = _upstream(host, 4.0)
-        (repository / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "evil/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8")
+        (repository / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "evil/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n")
         _commit(repository, "Another name")
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
@@ -475,7 +475,7 @@ class TestWhatTheThirdReviewFound:
         from chartbook import run
 
         repository = _upstream(host, 4.0)
-        (repository / "chartbook.toml").write_text('project = "not a table"\n', encoding="utf-8")
+        (repository / "chartbook.toml").write_text('project = "not a table"\n', encoding="utf-8", newline="\n")
         _commit(repository, "Broken")
         forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
         try:
@@ -503,7 +503,7 @@ class TestWhatTheFourthReviewFound:
 
     def test_a_clone_whose_id_is_no_name_is_refused(self, host):
         repository = _upstream(host, 4.0)
-        (repository / "chartbook.toml").write_text('[project]\nid = 5\n\n[dataframes.treasury]\npath = "./_data/treasury.parquet"\ndocs = "d"\n', encoding="utf-8")
+        (repository / "chartbook.toml").write_text('[project]\nid = 5\n\n[dataframes.treasury]\npath = "./_data/treasury.parquet"\ndocs = "d"\n', encoding="utf-8", newline="\n")
         _commit(repository, "A number")
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
         (event,) = [e for e in lock.pin(forecast).events if e.status == "unfetched"]
@@ -552,7 +552,7 @@ class TestWhatTheFifthReviewFound:
         document = json.loads(path.read_text(encoding="utf-8"))
         (pipeline,) = [r for r in document["records"] if r.get("kind") == "Pipeline"]
         del pipeline["dependencies"][0]["location"]["first_commit"]  # as an older pin has it
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         _mallory(host)
         lock.update(forecast)
         monkeypatch.chdir(forecast)
@@ -621,12 +621,12 @@ def _model_repository(path: Path, model_id: str, version: str, label: bool, remo
     """A pipeline with one model, in its own repository: built, labelled `champion` if asked, snapshotted if asked."""
     (path / "_output").mkdir(parents=True)
     manifest = {"project": {"id": model_id}, "models": {"m": {"path": "./_output/m.json"}}}
-    (path / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-    (path / "_output" / "m.json").write_text(version, encoding="utf-8")
+    (path / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+    (path / "_output" / "m.json").write_text(version, encoding="utf-8", newline="\n")
     _git(path, "init", "--quiet", "-b", "main")
     if remote:
         _git(path, "remote", "add", "origin", remote)
-    (path / ".gitignore").write_text("chartbook.lock\n", encoding="utf-8")
+    (path / ".gitignore").write_text("chartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(path, f"{model_id} {version}")
     if not snapshotted:
         return path
@@ -634,8 +634,8 @@ def _model_repository(path: Path, model_id: str, version: str, label: bool, remo
     if label:
         start = first.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
         manifest["models"]["m"]["aliases"] = {"champion": start}
-        (path / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-        (path / "_output" / "m.json").write_text(version + "-later", encoding="utf-8")
+        (path / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (path / "_output" / "m.json").write_text(version + "-later", encoding="utf-8", newline="\n")
         _commit(path, "Champion")
         snapshot.make(path)
     return path
@@ -646,7 +646,7 @@ class TestWhatTheSixthReviewFound:
         _upstream(host, 4.0)
         other = host / "host" / "acme" / "rates2"
         (other / "_data").mkdir(parents=True)
-        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates2"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8")
+        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates2"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n")
         pl.DataFrame({"d": ["2024-01-01"], "r": [2.0]}).write_parquet(other / "_data" / "treasury.parquet")
         _git(other, "init", "--quiet", "-b", "main")
         _commit(other)
@@ -782,7 +782,7 @@ class TestWhatTheEighthReviewFound:
                 }}],
             }],
         }
-        (forecast / lock.LOCK_FILE).write_text(json.dumps(document), encoding="utf-8")
+        (forecast / lock.LOCK_FILE).write_text(json.dumps(document), encoding="utf-8", newline="\n")
         lock.update(forecast)
         assert not marker.exists()
         assert not lock._has_commit(None, "x", "--upload-pack=touch /tmp/x;", fetch=True)

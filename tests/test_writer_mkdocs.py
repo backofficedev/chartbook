@@ -29,7 +29,7 @@ MYST = re.compile(r"^```\{[a-z-]+\}|\{(?:ref|doc|sub-ref)\}`|^:::+\{|\{toctree\}
 def _set_writer(project: Path, name: str) -> None:
     manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["project"]["writer"] = name
-    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
 
 
 def _built(project: Path, monkeypatch) -> dict:
@@ -160,7 +160,7 @@ class TestTheBuild:
         _set_writer(project, "mkdocs")
         manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["enable_data_download"] = True
-        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
@@ -206,9 +206,9 @@ class TestTheBuild:
         project = pipeline_project.resolve()
         site_dir = project / "docs_src" / "site"
         site_dir.mkdir(parents=True, exist_ok=True)
-        (site_dir / "guide.md").write_text("# A Guide\n\n```{toctree}\nmore\n```\n", encoding="utf-8")
-        (site_dir / "more.md").write_text("# More\n", encoding="utf-8")
-        (site_dir / "index_toc.md").write_text("```{toctree}\nmore\nguide\n```\n", encoding="utf-8")
+        (site_dir / "guide.md").write_text("# A Guide\n\n```{toctree}\nmore\n```\n", encoding="utf-8", newline="\n")
+        (site_dir / "more.md").write_text("# More\n", encoding="utf-8", newline="\n")
+        (site_dir / "index_toc.md").write_text("```{toctree}\nmore\nguide\n```\n", encoding="utf-8", newline="\n")
         _set_writer(project, "mkdocs")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])

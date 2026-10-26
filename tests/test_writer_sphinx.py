@@ -70,10 +70,10 @@ class TestTheBuildWritesTheSite:
         catalog = catalog_project.resolve()
         for pid in ("pipeline_a", "pipeline_b"):
             folder = catalog / "pipelines" / pid
-            (folder / "docs_src" / "overview.md").write_text(f"# {pid}\n", encoding="utf-8")
+            (folder / "docs_src" / "overview.md").write_text(f"# {pid}\n", encoding="utf-8", newline="\n")
             config = tomli.loads((folder / "chartbook.toml").read_text(encoding="utf-8"))
             config["notes"] = {"overview": {"path": "docs_src/overview.md"}}
-            (folder / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8")
+            (folder / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         index = _built(catalog, monkeypatch)
         assert sum(1 for r in index["records"] if r["kind"] == "Note") == 2
         assert not (catalog / "_docs" / "cb" / "overview.md").exists()
@@ -119,12 +119,12 @@ class TestTheCatalogsOwnPages:
         catalog = catalog_project.resolve()
         config = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))
         config["policy"] = {"mode": "warn", "required": {"charts": ["name", "units"], "models": ["name", "docs"]}}
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8")
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         add_models(catalog / "pipelines" / "pipeline_b")
         pipeline_a = tomli.loads((catalog / "pipelines" / "pipeline_a" / "chartbook.toml").read_text(encoding="utf-8"))
         pipeline_a["charts"]["chart_0_0"].pop("tags", None)
         pipeline_a["dataframes"]["dataframe_0"]["providers"] = []
-        (catalog / "pipelines" / "pipeline_a" / "chartbook.toml").write_text(tomli_w.dumps(pipeline_a), encoding="utf-8")
+        (catalog / "pipelines" / "pipeline_a" / "chartbook.toml").write_text(tomli_w.dumps(pipeline_a), encoding="utf-8", newline="\n")
         index = _built(catalog, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         _same_catalog_pages(writer, catalog / "_docs")
@@ -163,14 +163,14 @@ class TestTheCatalogsOwnPages:
                 "models": ["metrics_path", "trained_on", "docs"],
             }
         }
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8")
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         add_models(catalog / "pipelines" / "pipeline_b")
         b = catalog / "pipelines" / "pipeline_b"
         config_b = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
         config_b["models"]["encoder"]["docs"] = "   "  # blank: missing on both sides
         config_b["sources"] = {"local": {"backend": "duckdb", "url": "duckdb:///./_data/local.duckdb"}}
         config_b["dataframes"]["curve"] = {"source": "local", "table": "curve", "docs": "A table.", "series": {"y": {"name": "Y"}}}
-        (b / "chartbook.toml").write_text(tomli_w.dumps(config_b), encoding="utf-8")
+        (b / "chartbook.toml").write_text(tomli_w.dumps(config_b), encoding="utf-8", newline="\n")
         (b / "_data").mkdir(exist_ok=True)
         con = duckdb.connect(str(b / "_data" / "local.duckdb"))
         con.sql("create table curve as select * from (values (date '2024-01-01', 1.0)) t(d, y)")
@@ -221,7 +221,7 @@ class TestTheCatalogsOwnPages:
         project = pipeline_project.resolve()
         config = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["my df"] = {"path": "./_data/x.parquet", "docs": "x"}
-        (project / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8")
+        (project / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"'my df' is not a legal dataframe key"):
             load_manifest(base_dir=project)
 
@@ -270,13 +270,13 @@ class TestThePipelinePage:
         site = project / "docs_src" / "site"
         (site / "guide").mkdir(parents=True)
         (site / "dir.md").mkdir()
-        (site / "guide.md").write_text("# Guide\n", encoding="utf-8")
-        (site / "guide" / "intro.md").write_text("# Intro\n", encoding="utf-8")
-        (site / "a-x.md").write_text("# A-X\n", encoding="utf-8")
+        (site / "guide.md").write_text("# Guide\n", encoding="utf-8", newline="\n")
+        (site / "guide" / "intro.md").write_text("# Intro\n", encoding="utf-8", newline="\n")
+        (site / "a-x.md").write_text("# A-X\n", encoding="utf-8", newline="\n")
         (site / "a").mkdir()
-        (site / "a" / "b.md").write_text("# B\n", encoding="utf-8")
+        (site / "a" / "b.md").write_text("# B\n", encoding="utf-8", newline="\n")
         readme = project / "README.md"
-        readme.write_text("# Title \x0c subtitle\n\nBody with a form feed \x0c inside.\n", encoding="utf-8")
+        readme.write_text("# Title \x0c subtitle\n\nBody with a form feed \x0c inside.\n", encoding="utf-8", newline="\n")
         index = _built(project, monkeypatch)
         (pipeline,) = [r for r in index["records"] if r["kind"] == "Pipeline"]
         assert pipeline["site_pages"] == ["a-x.md", "a/b.md", "guide.md", "guide/intro.md"]
@@ -326,7 +326,7 @@ class TestThePipelinePage:
         root is searched first, so a DEPENDENCIES.md there (any case, on macOS and Windows)
         was rendered onto the front page in its place."""
         _, forecast = trained
-        (forecast / "dependencies.md").write_text("# Our own notes on dependencies\n", encoding="utf-8")
+        (forecast / "dependencies.md").write_text("# Our own notes on dependencies\n", encoding="utf-8", newline="\n")
         index = _built(forecast, monkeypatch)
         page = SphinxWriter(index, theme="pipeline", docs_src_dir=forecast / "_docs_src").pipeline_page("acme/forecast")
         assert "Our own notes on dependencies" not in page
@@ -340,7 +340,7 @@ class TestThePipelinePage:
         rates, forecast = trained
         work = forecast.parent
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
         )
         # Not pinned: its page in the catalog
         index = _built(work, monkeypatch)
@@ -413,7 +413,7 @@ class TestTheModelPage:
         work = forecast.parent
         _edit_toml(forecast, lambda c: c["models"]["m"].update(trained_on=["d", "rates:treasury", "rates:nope"]))
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
         )
         index = _built(work, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
@@ -464,7 +464,7 @@ class TestTheModelPage:
         rates, forecast = trained
         work = forecast.parent
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
         )
         index = _built(work, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
@@ -491,8 +491,8 @@ class TestTheChartPage:
         The generator used to show the pipeline folder's own time there."""
         directory = tmp_path.resolve() / "rates"
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# Rates\n", encoding="utf-8")
-        (directory / "_data" / "curve.html").write_text("<div id='curve'>chart</div>", encoding="utf-8")
+        (directory / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
+        (directory / "_data" / "curve.html").write_text("<div id='curve'>chart</div>", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
             tomli_w.dumps(
                 {
@@ -501,7 +501,7 @@ class TestTheChartPage:
                     "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "A table.", "date_col": "d"}},
                     "charts": {"curve": {"dataframe": "curve", "path": "./_data/curve.html", "docs": "Its chart: {{ not_a_template }}.", "tags": ["rates"], "series": ["y02", "y10"]}},
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         con = duckdb.connect(str(directory / "_data" / "local.duckdb"))
         con.sql("create table curve as select * from (values (date '2024-01-01', 1.0, 4.0), (date '2024-01-02', 1.1, 4.3)) t(d, y02, y10)")
@@ -562,8 +562,8 @@ def first_pipeline(tmp_path):
     directory = tmp_path.resolve() / "first_pipeline"
     (directory / "_data").mkdir(parents=True)
     (directory / "_output").mkdir()
-    (directory / "README.md").write_text("# First\n\nText.\n", encoding="utf-8")
-    (directory / "_output" / "rates_chart.html").write_text("<div id='rates'>chart</div>", encoding="utf-8")
+    (directory / "README.md").write_text("# First\n\nText.\n", encoding="utf-8", newline="\n")
+    (directory / "_output" / "rates_chart.html").write_text("<div id='rates'>chart</div>", encoding="utf-8", newline="\n")
     rows = {"date": [date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)], "rate": [3.5, 3.6, 3.8499999999999996]}
     pl.DataFrame(rows).write_parquet(directory / "_data" / "rates.parquet")
     (directory / "chartbook.toml").write_text(
@@ -573,7 +573,7 @@ def first_pipeline(tmp_path):
                 "dataframes": {"rates": {"name": "Rates", "path": "./_data/rates.parquet", "docs": "Rates.", "date_col": "date"}},
                 "charts": {"rates_chart": {"name": "Rates chart", "dataframe": "rates", "path": "./_output/rates_chart.html", "docs": "A chart."}},
             }
-        ), encoding="utf-8"
+        ), encoding="utf-8", newline="\n"
     )
     return directory
 
@@ -629,19 +629,19 @@ class TestWhatANewUserFound:
         from chartbook.writers.mkdocs import MkDocsWriter
         from chartbook.writers.sphinx import OVERRIDABLE_TEMPLATES
 
-        (first_pipeline / "charts.md").write_text("OUR OWN CHART NOTES\\n", encoding="utf-8")
+        (first_pipeline / "charts.md").write_text("OUR OWN CHART NOTES\\n", encoding="utf-8", newline="\n")
         index = _built(first_pipeline, monkeypatch)
         mkdocs = MkDocsWriter(index, theme="pipeline", docs_src_dir=first_pipeline / "no-overrides")
         assert "OUR OWN CHART NOTES" not in mkdocs.own_page("cb/charts.md")
         catalog = catalog_project.resolve()
         for name in ("models.md", "pipelines.md", "versions.md", "dataframes.md", "diagnostics.md"):
-            (catalog / name).write_text("OUR OWN CATALOG NOTES\\n", encoding="utf-8")
+            (catalog / name).write_text("OUR OWN CATALOG NOTES\\n", encoding="utf-8", newline="\n")
         index = _built(catalog, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         for page_path in ("cb/models.md", "cb/pipelines.md", "cb/versions.md", "cb/dataframes.md", "cb/diagnostics.md"):
             assert "OUR OWN CATALOG NOTES" not in writer.catalog_page(page_path), page_path
         # What may be overridden still is, and the build guide's table names each one
-        (catalog / "pipeline_manifest.md").write_text("OUR OWN PIPELINE TABLE\\n", encoding="utf-8")
+        (catalog / "pipeline_manifest.md").write_text("OUR OWN PIPELINE TABLE\\n", encoding="utf-8", newline="\n")
         assert "OUR OWN PIPELINE TABLE" in writer.catalog_page("cb/pipelines.md")
         guide = (P(__file__).parent.parent / "docs_src" / "guide" / "how-the-build-works.md").read_text(encoding="utf-8")
         assert all(f"`{name}`" in guide for name in OVERRIDABLE_TEMPLATES)
@@ -675,7 +675,7 @@ class TestWhatANewUserFound:
 
         manifest = tomli.loads((first_pipeline / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["enable_data_download"] = True
-        (first_pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (first_pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _built(first_pipeline, monkeypatch)
         page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text(encoding="utf-8")
         assert "`./_data/rates.parquet`                                                        |\n| Download Data as Parquet" in page
@@ -748,7 +748,7 @@ class TestWhatANewUserFound:
         pl.DataFrame({"x": [1.0, 2.0]}).write_parquet(folder / "a.parquet")
         pl.DataFrame({"x": [3.0]}).write_parquet(folder / "000000_0")  # Hive's name, parquet inside
         (folder / "_SUCCESS").write_bytes(b"")
-        (folder / "README.txt").write_text("not a table\n", encoding="utf-8")
+        (folder / "README.txt").write_text("not a table\n", encoding="utf-8", newline="\n")
         (folder / ".DS_Store").write_bytes(b"\0")
         assert [f.name for f in directory_tables(folder)] == ["000000_0", "a.parquet"]
         glimpse = get_dataframe_glimpse(folder)
@@ -863,7 +863,7 @@ class TestTheDataframePage:
     def test_a_table_and_a_query(self, tmp_path, monkeypatch):
         directory = tmp_path.resolve() / "rates"
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# Rates\n", encoding="utf-8")
+        (directory / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
             tomli_w.dumps(
                 {
@@ -875,7 +875,7 @@ class TestTheDataframePage:
                         "slopes": {"source": "local", "query": "select d, y10 - y02 as slope from curve order by d", "docs": "A query."},
                     },
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"d": ["2024-01-01", "2024-01-02"], "r": [4.1, 4.2]}).write_parquet(directory / "_data" / "rates.parquet")
         con = duckdb.connect(str(directory / "_data" / "local.duckdb"))
@@ -902,7 +902,7 @@ class TestTheDataframePage:
         (directory / "_data" / "parts").mkdir(parents=True)
         (directory / "_data" / "empty").mkdir()
         (directory / "_data" / "empty" / ".DS_Store").write_bytes(b"\0")
-        (directory / "README.md").write_text("# P\n", encoding="utf-8")
+        (directory / "README.md").write_text("# P\n", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
             tomli_w.dumps(
                 {
@@ -912,7 +912,7 @@ class TestTheDataframePage:
                         "empty": {"path": "./_data/empty", "docs": "Nothing yet."},
                     },
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"x": [1.0]}).write_parquet(directory / "_data" / "parts" / "a.parquet")
         old = time.time() - 5 * 86400
@@ -934,7 +934,7 @@ class TestTheDataframePage:
         directory = tmp_path.resolve() / "p"
         (directory / "_data" / "parts").mkdir(parents=True)
         (directory / "_data" / "empty").mkdir()
-        (directory / "README.md").write_text("# P\n", encoding="utf-8")
+        (directory / "README.md").write_text("# P\n", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
             tomli_w.dumps(
                 {
@@ -944,7 +944,7 @@ class TestTheDataframePage:
                         "empty": {"path": "./_data/empty", "docs": "Nothing yet."},
                     },
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"x": [1.0]}).write_parquet(directory / "_data" / "parts" / "a.parquet")
         pl.DataFrame({"x": [2.0]}).write_parquet(directory / "_data" / "parts" / "b.parquet")
@@ -985,7 +985,7 @@ class TestWhatTheReviewFound:
         config = tomli.loads((pipeline / "chartbook.toml").read_text(encoding="utf-8"))
         config["sources"] = {"local": {"backend": "duckdb", "url": "duckdb:///./_data/local.duckdb"}}
         config["dataframes"]["curve"] = {"source": "local", "table": "curve", "docs": "A table.", "date_col": "d"}
-        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         index = _built(catalog, monkeypatch)  # the build runs from the catalog's root
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         _same_pages(writer, index, catalog / "_docs")
@@ -999,9 +999,9 @@ class TestWhatTheReviewFound:
         """Decided with the slice: what the author wrote is what the page shows."""
         directory = tmp_path.resolve() / "p"
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# P\n", encoding="utf-8")
+        (directory / "README.md").write_text("# P\n", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "Name is {{ name }}; {% if true %}yes{% endif %}; a struct {{'a': 1}}."}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "Name is {{ name }}; {% if true %}yes{% endif %}; a struct {{'a': 1}}."}}}), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"x": [1.0]}).write_parquet(directory / "_data" / "d.parquet")
         index = _built(directory, monkeypatch)

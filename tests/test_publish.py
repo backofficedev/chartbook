@@ -19,13 +19,13 @@ def _project_with_notebooks(root: Path) -> Path:
     project = create_pipeline_project(root / "proj", pipeline_id="rates")
     (project / "notebooks").mkdir()
     for name in ("explore", "scratch"):
-        (project / "notebooks" / f"{name}.ipynb").write_text(NOTEBOOK, encoding="utf-8")
+        (project / "notebooks" / f"{name}.ipynb").write_text(NOTEBOOK, encoding="utf-8", newline="\n")
     manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["notebooks"] = {
         "explore": {"path": "notebooks/explore.ipynb", "docs": "Shown.", "publishable": True},
         "scratch": {"path": "notebooks/scratch.ipynb", "docs": "Kept back.", "publishable": False},
     }
-    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     return project
 
 

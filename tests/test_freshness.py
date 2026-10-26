@@ -136,7 +136,7 @@ class TestGeneratedPages:
         first, second = tmp_path / "first", tmp_path / "second"
         pipeline_id = _generate(pipeline_project, first)
         source_file = pipeline_project / "src" / "dummy.py"
-        source_file.write_text("# edited\n", encoding="utf-8")
+        source_file.write_text("# edited\n", encoding="utf-8", newline="\n")
         os.utime(source_file, (source_file.stat().st_atime, source_file.stat().st_mtime + 3600))
         _generate(pipeline_project, second)
         for relative in (

@@ -168,7 +168,7 @@ class TestLayout:
 
     def test_a_store_laid_out_differently_is_refused(self, store, rates):
         store.put(rates)
-        (store.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8")
+        (store.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8", newline="\n")
         newer = FolderStore(store.root)
         for operation in (
             lambda: newer.put(rates),
@@ -181,7 +181,7 @@ class TestLayout:
 
     def test_a_marker_that_cannot_be_read_is_refused(self, store, rates):
         store.put(rates)
-        (store.root / MARKER_FILE).write_text("not json", encoding="utf-8")
+        (store.root / MARKER_FILE).write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="Cannot read"):
             FolderStore(store.root).put(rates)
 
@@ -495,7 +495,7 @@ class TestGetHasDelete:
     def test_hashes_are_in_order_and_skip_what_is_not_an_object(self, store, rates, partitioned):
         first = store.put(rates).content_hash
         second = store.put(partitioned).content_hash
-        (store.root / "objects" / "sha256" / "README").write_text("not an object", encoding="utf-8")
+        (store.root / "objects" / "sha256" / "README").write_text("not an object", encoding="utf-8", newline="\n")
         (store.root / "objects" / "sha256" / "zz").mkdir()
         (store.root / "objects" / "sha256" / "zz" / "nope").mkdir()
         assert list(store.hashes()) == sorted([first, second])
@@ -595,6 +595,7 @@ class TestVerify:
         elif change == "add":
             (stored.path / "year=2024" / "part-2.parquet").write_bytes(b"extra")
         else:
+            os.chmod(target, 0o644)  # the store's files are read-only, which Windows will not remove
             target.unlink()
         (problem,) = store.verify()
         assert problem.content_hash == stored.content_hash
@@ -609,6 +610,7 @@ class TestVerify:
 
     def test_an_emptied_object(self, store, rates):
         stored = store.put(rates, links=("copy",))
+        os.chmod(stored.path / "rates.parquet", 0o644)  # read-only, which Windows will not remove
         (stored.path / "rates.parquet").unlink()
         (problem,) = store.verify()
         assert problem.message == "the object is empty"
@@ -679,13 +681,13 @@ class TestWhereTheStoreIs:
     def test_the_settings_file_can_move_it(self, fake_config_dir, work):
         fake_config_dir.mkdir()
         settings = {"catalog": {"path": "/c/chartbook.toml"}, "store": {"path": str(work / "big")}}
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps(settings), encoding="utf-8")
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps(settings), encoding="utf-8", newline="\n")
         assert config.get_store_path() == work / "big"
 
     def test_the_environment_wins(self, fake_config_dir, work, monkeypatch):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"store": {"path": str(work / "big")}}), encoding="utf-8"
+            tomli_w.dumps({"store": {"path": str(work / "big")}}), encoding="utf-8", newline="\n"
         )
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "shared"))
         assert config.get_store_path() == work / "shared"
@@ -704,7 +706,7 @@ class TestWhereTheStoreIs:
     @pytest.mark.parametrize("table", [{}, {"url": ""}, {"url": 3}, {"path": ""}, {"dir": "/x"}])
     def test_a_store_table_without_a_url_is_an_error(self, fake_config_dir, table):
         fake_config_dir.mkdir()
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"store": table}), encoding="utf-8")
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"store": table}), encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"\[store\] needs a 'url'"):
             config.get_store_path()
 
@@ -746,7 +748,7 @@ class TestVerifyCommand:
 
     def test_a_store_it_cannot_read_is_a_clean_error(self, here, rates):
         here.put(rates)
-        (here.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8")
+        (here.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8", newline="\n")
         result = self._verify()
         assert result.exit_code == 1
         assert result.output.startswith("Error: The store at")

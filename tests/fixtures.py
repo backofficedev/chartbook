@@ -139,7 +139,7 @@ def create_sample_html_chart(path: Path, chart_id: str = "chart") -> Path:
 </body>
 </html>
 """
-    path.write_text(html_content, encoding="utf-8")
+    path.write_text(html_content, encoding="utf-8", newline="\n")
     return path
 
 
@@ -203,14 +203,14 @@ def create_pipeline_project(
     charts_dir.mkdir(parents=True, exist_ok=True)
 
     # Create source file for modification tracking
-    (base_dir / "src" / "dummy.py").write_text("# Dummy source file\n", encoding="utf-8")
+    (base_dir / "src" / "dummy.py").write_text("# Dummy source file\n", encoding="utf-8", newline="\n")
 
     # Create docs_src file
-    (base_dir / "docs_src" / "index.md").write_text("# Documentation\n", encoding="utf-8")
+    (base_dir / "docs_src" / "index.md").write_text("# Documentation\n", encoding="utf-8", newline="\n")
 
     # Create README.md (required by build_markdown for pipeline theme)
     (base_dir / "README.md").write_text(
-        f"# {pipeline_name}\n\nThis is a test pipeline.\n", encoding="utf-8"
+        f"# {pipeline_name}\n\nThis is a test pipeline.\n", encoding="utf-8", newline="\n"
     )
 
     # Build chartbook.toml (format v2)
@@ -246,7 +246,7 @@ def create_pipeline_project(
 
             # Create the dataframe documentation file
             (base_dir / dataframe_docs_path).write_text(
-                f"# Dataframe {i}\n\nDocumentation for dataframe {i}.\n", encoding="utf-8"
+                f"# Dataframe {i}\n\nDocumentation for dataframe {i}.\n", encoding="utf-8", newline="\n"
             )
 
             df_config = {
@@ -281,7 +281,7 @@ def create_pipeline_project(
 
                     # Create the chart documentation file
                     (base_dir / chart_docs_path).write_text(
-                        f"# Chart {i}-{j}\n\nDocumentation for chart {i}-{j}.\n", encoding="utf-8"
+                        f"# Chart {i}-{j}\n\nDocumentation for chart {i}-{j}.\n", encoding="utf-8", newline="\n"
                     )
 
                     config["charts"][chart_id] = {
@@ -299,7 +299,7 @@ def create_pipeline_project(
     if include_notes:
         # Notes should be in docs_src directory
         notes_dir = base_dir / "docs_src"
-        (notes_dir / "note1.md").write_text("# Note 1\nSome content.\n", encoding="utf-8")
+        (notes_dir / "note1.md").write_text("# Note 1\nSome content.\n", encoding="utf-8", newline="\n")
 
         config["notes"] = {
             "note1": {
@@ -317,10 +317,10 @@ def create_pipeline_project(
 
         site_dir.mkdir(parents=True, exist_ok=True)
         (site_dir / "index_toc.md").write_text(
-            "```{toctree}\n:maxdepth: 2\n:caption: Site Pages\nsample_page.md\n```\n", encoding="utf-8"
+            "```{toctree}\n:maxdepth: 2\n:caption: Site Pages\nsample_page.md\n```\n", encoding="utf-8", newline="\n"
         )
         (site_dir / "sample_page.md").write_text(
-            "# Sample Page\n\nThis is a sample site page.\n", encoding="utf-8"
+            "# Sample Page\n\nThis is a sample site page.\n", encoding="utf-8", newline="\n"
         )
 
     # Write chartbook.toml
@@ -426,8 +426,8 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
     # Create minimal directory structure
     (base_dir / "src").mkdir(exist_ok=True)
     (base_dir / "docs_src").mkdir(exist_ok=True)
-    (base_dir / "src" / "dummy.py").write_text("# Dummy\n", encoding="utf-8")
-    (base_dir / "docs_src" / "index.md").write_text("# Docs\n", encoding="utf-8")
+    (base_dir / "src" / "dummy.py").write_text("# Dummy\n", encoding="utf-8", newline="\n")
+    (base_dir / "docs_src" / "index.md").write_text("# Docs\n", encoding="utf-8", newline="\n")
 
     if error_type == "missing_file":
         # Don't create chartbook.toml
@@ -466,7 +466,7 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
         }
     elif error_type == "invalid_toml_syntax":
         # Write invalid TOML directly
-        (base_dir / "chartbook.toml").write_text("this is not valid toml {{{\n", encoding="utf-8")
+        (base_dir / "chartbook.toml").write_text("this is not valid toml {{{\n", encoding="utf-8", newline="\n")
         return base_dir
     else:
         raise ValueError(f"Unknown error_type: {error_type}")
@@ -499,7 +499,7 @@ def commit_pipeline(folder: Path) -> None:
     """
     folder = Path(folder).resolve()
     if not (folder / ".git").exists():
-        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n", encoding="utf-8")
+        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n", encoding="utf-8", newline="\n")
         _git(folder, "init", "--quiet", "-b", "main")
     _git(folder, "add", "-A", "--", ".")
     if _git(folder, "status", "--porcelain", "--", "."):

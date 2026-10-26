@@ -54,7 +54,7 @@ def _git(project, *args, when=None):
 def _commit_all(project, when=COMMIT_TIME, message="Add pipeline"):
     if not (project / ".git").exists():
         _git(project, "init")
-        (project / ".gitignore").write_text("_data/\n_output/\ndocs/\n_docs*/\n", encoding="utf-8")
+        (project / ".gitignore").write_text("_data/\n_output/\ndocs/\n_docs*/\n", encoding="utf-8", newline="\n")
     _git(project, "add", "--all")
     _git(project, "commit", "-m", message, when=when)
 
@@ -172,7 +172,7 @@ class TestCodeChangeTime:
 
     def test_only_commits_touching_the_source_count(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
-        (pipeline_project / "LICENSE").write_text("MIT\n", encoding="utf-8")
+        (pipeline_project / "LICENSE").write_text("MIT\n", encoding="utf-8", newline="\n")
         _commit_all(pipeline_project, when=datetime(2026, 1, 1, 12, 0, 0), message="Add licence")
         assert find_latest_code_change(pipeline_project) == COMMIT_TIME
 
@@ -180,20 +180,20 @@ class TestCodeChangeTime:
         self, pipeline_project, git_env
     ):
         _commit_all(pipeline_project)
-        (pipeline_project / "src" / "dummy.py").write_text("# edited, not committed\n", encoding="utf-8")
+        (pipeline_project / "src" / "dummy.py").write_text("# edited, not committed\n", encoding="utf-8", newline="\n")
         changed = find_latest_code_change(pipeline_project)
         assert changed == find_latest_source_modification(pipeline_project)
         assert changed > COMMIT_TIME
 
     def test_new_untracked_source_file_counts_as_a_change(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
-        (pipeline_project / "src" / "new_step.py").write_text("print('new')\n", encoding="utf-8")
+        (pipeline_project / "src" / "new_step.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         assert find_latest_code_change(pipeline_project) > COMMIT_TIME
 
     def test_changes_outside_the_source_do_not_count(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
         (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").touch()
-        (pipeline_project / "notes.txt").write_text("scratch\n", encoding="utf-8")
+        (pipeline_project / "notes.txt").write_text("scratch\n", encoding="utf-8", newline="\n")
         assert find_latest_code_change(pipeline_project) == COMMIT_TIME
 
     def test_outside_a_repository_it_is_the_modification_time(self, pipeline_project, git_env):

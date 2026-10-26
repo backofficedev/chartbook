@@ -62,14 +62,14 @@ def drive(tmp_path, monkeypatch):
     rates = work / "a" / "rates"
     _rates(rates, 4.1)
     _git(rates, "init", "--quiet", "-b", "main")
-    (rates / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+    (rates / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(rates)
     return work, machine, rates
 
 
 def _snapshot_again(rates: Path, value: float, made_at=None) -> snapshot.Snapshot:
     _rates(rates, value)
-    (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8")
+    (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
     _commit(rates, f"At {value}")
     return snapshot.make(rates, made_at=made_at).snapshot
 
@@ -245,12 +245,12 @@ class TestTheSizesOfAnObject:
     def test_what_a_record_says_is_read(self, drive):
         work, machine, rates = drive
         (rates / "_data" / "parts").mkdir()
-        (rates / "_data" / "parts" / "a.csv").write_text("1\n", encoding="utf-8")
+        (rates / "_data" / "parts" / "a.csv").write_text("1\n", encoding="utf-8", newline="\n")
         (rates / "chartbook.toml").write_text(
             tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
                 "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
                 "parts": {"path": "./_data/parts", "docs": "Parts."},
-            }}), encoding="utf-8"
+            }}), encoding="utf-8", newline="\n"
         )
         _commit(rates, "Parts")
         taken = snapshot.make(rates).snapshot
@@ -324,7 +324,7 @@ class TestASyncServicesCopies:
         copy = note.with_name(f"{note.stem} (1).json")
         shutil.copy(note, copy)  # the service kept the other side as a copy
         stored = json.loads(note.read_text(encoding="utf-8"))
-        note.write_text(json.dumps({**stored, "hashes": sorted(new.asset_hashes())}), encoding="utf-8")
+        note.write_text(json.dumps({**stored, "hashes": sorted(new.asset_hashes())}), encoding="utf-8", newline="\n")
         remove_tree(project)  # on a drive that is not plugged in, say
         plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
@@ -343,7 +343,7 @@ class TestASyncServicesCopies:
         store = default_store()
         (note,) = (store.root / "roots").glob("*.json")
         copy = note.with_name(f"{note.stem} (1).json")
-        copy.write_text('{"lock', encoding="utf-8")  # half a copy
+        copy.write_text('{"lock', encoding="utf-8", newline="\n")  # half a copy
         with pytest.raises(StoreError, match=rf"remove roots/{re.escape(copy.name)} if it is a copy nobody needs"):
             lock.plan_gc(store)
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
@@ -437,7 +437,7 @@ class TestOnePersonsTwoMachines:
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()  # as an older ChartBook wrote it: named by the path alone
         (store.root / "roots" / root_name(forecast / lock.LOCK_FILE)).write_text(
-            json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8"
+            json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n"
         )
         _forecast(forecast, {"acme/rates": {"commit": old.commit[:7]}})  # git pull
         (forecast / lock.LOCK_FILE).write_bytes(pulled)
@@ -464,7 +464,7 @@ class TestOnePersonsTwoMachines:
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()  # B pinned with an older ChartBook
         older = store.root / "roots" / root_name(project / lock.LOCK_FILE)
-        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8")
+        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n")
         machine("a")
         (project / lock.LOCK_FILE).unlink()
         assert lock.pin(project).problems == []  # A pins the old one too
@@ -532,13 +532,13 @@ class TestStoreInfo:
         assert f"Store: {config.get_global_config_dir() / 'store'}" in result.output
         assert "the default" in result.output and "nothing is there yet" in result.output
         system = tmp_path / "system.toml"
-        system.write_text(tomli_w.dumps({"store": {"url": str(work / "org-store")}}), encoding="utf-8")
+        system.write_text(tomli_w.dumps({"store": {"url": str(work / "org-store")}}), encoding="utf-8", newline="\n")
         monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(system))
         result = CliRunner().invoke(main, ["store", "info"])
         assert f"Store: {work / 'org-store'}" in result.output and f"in {system}, the organization's" in result.output
         user = config.get_global_settings_path()
         user.parent.mkdir(parents=True, exist_ok=True)
-        user.write_text(tomli_w.dumps({"store": {"url": str(work / "my-store")}}), encoding="utf-8")
+        user.write_text(tomli_w.dumps({"store": {"url": str(work / "my-store")}}), encoding="utf-8", newline="\n")
         result = CliRunner().invoke(main, ["store", "info"])
         assert f"Store: {work / 'my-store'}" in result.output and f"in {user}, your settings" in result.output
 
@@ -670,7 +670,7 @@ class TestAPathDependencyOnAnotherMachine:
         from chartbook.check import check_dependencies
         from chartbook.manifest import load_manifest
 
-        (default_store().root / "store.json").write_text('{"sch', encoding="utf-8")  # half synced
+        (default_store().root / "store.json").write_text('{"sch', encoding="utf-8", newline="\n")  # half synced
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
         assert "the store cannot be read" in problem.message
 
@@ -678,7 +678,7 @@ class TestAPathDependencyOnAnotherMachine:
         from chartbook.check import check_dependencies
         from chartbook.manifest import load_manifest
 
-        (cloned.parent / "rates").write_text("not a folder", encoding="utf-8")
+        (cloned.parent / "rates").write_text("not a folder", encoding="utf-8", newline="\n")
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
         assert problem.message.startswith("directory not found") and "named by its ID" not in problem.message
 
@@ -746,7 +746,7 @@ class TestAFileADirectorysRecordDoesNotList:
         (rates / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
             "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
             "parts": {"path": "./_data/parts", "docs": "Parts."},
-        }}), encoding="utf-8")
+        }}), encoding="utf-8", newline="\n")
         _commit(rates, "Parts")
         taken = snapshot.make(rates).snapshot
         machine("b")
@@ -768,12 +768,13 @@ class TestAFilesOwnNameNotThereYet:
         from chartbook.resolve import _held
 
         store = FolderStore(tmp_path / "store")
-        (tmp_path / "a.csv").write_text("x,y\n1,2\n", encoding="utf-8")
-        (tmp_path / "b.csv").write_text("x,y\n1,2\n", encoding="utf-8")
+        (tmp_path / "a.csv").write_text("x,y\n1,2\n", encoding="utf-8", newline="\n")
+        (tmp_path / "b.csv").write_text("x,y\n1,2\n", encoding="utf-8", newline="\n")
         stored = store.put(tmp_path / "a.csv", links=("copy",))
         assert store.put(tmp_path / "b.csv", links=("copy",)).content_hash == stored.content_hash
         held = store.get(stored.content_hash)
         os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "b.csv", stat.S_IRWXU)  # read-only, which Windows will not remove
         (held / "b.csv").unlink()  # this name not synced yet
         record = {
             "id": "acme/x:b", "content_hash": stored.content_hash, "size_bytes": stored.size_bytes,
@@ -881,7 +882,7 @@ class TestACloneThatKeptItsIdentity:
         snapshot.make(rates)
         first = get_machine_id()
         machine_id = work / "home-a" / ".chartbook" / "machine-id"
-        machine_id.write_text(json.dumps({"machines": {"x": "f" * 32}}), encoding="utf-8")  # changed under a running process
+        machine_id.write_text(json.dumps({"machines": {"x": "f" * 32}}), encoding="utf-8", newline="\n")  # changed under a running process
         assert get_machine_id() == first
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
@@ -899,8 +900,8 @@ class TestTheStoreShrinks:
         (rates / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
             "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
             "codes": {"path": "./_data/codes.parquet", "docs": "Codes that never change."},
-        }}), encoding="utf-8")
-        (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8")
+        }}), encoding="utf-8", newline="\n")
+        (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
         _commit(rates, f"At {value}")
         return snapshot.make(rates, made_at=when).snapshot
 
@@ -931,7 +932,7 @@ class TestTheStoreShrinks:
         store = default_store()
         old_note = store.root / "roots" / root_name("/gone/chartbook.lock")
         old_note.parent.mkdir(parents=True, exist_ok=True)
-        old_note.write_text(json.dumps({"lockfile": "/gone/chartbook.lock", "hashes": sorted(s2.asset_hashes())}), encoding="utf-8")
+        old_note.write_text(json.dumps({"lockfile": "/gone/chartbook.lock", "hashes": sorted(s2.asset_hashes())}), encoding="utf-8", newline="\n")
         plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
         assert sorted(t.made_at for t, _ in plan.snapshots_delete) == [s1.made_at, s3.made_at]
 
@@ -939,7 +940,7 @@ class TestTheStoreShrinks:
         """Checked out at an older commit and not pinned since: the note keeps what the commit left pinned."""
         work, machine, rates = drive
         s1 = snapshot.make(rates, made_at=LONG_AGO).snapshot
-        (rates / "notes.txt").write_text("only the code changed\n", encoding="utf-8")
+        (rates / "notes.txt").write_text("only the code changed\n", encoding="utf-8", newline="\n")
         _commit(rates, "Code only")
         s2 = snapshot.make(rates, made_at="2020-02-01T00:00:00.000000Z").snapshot  # the same bytes as s1
         _snapshot_again(rates, 4.2)
@@ -972,7 +973,7 @@ class TestWhatADirectorysReaderReads:
         (rates / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
             "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
             "parts": {"path": "./_data/parts", "docs": "Parts."},
-        }}), encoding="utf-8")
+        }}), encoding="utf-8", newline="\n")
         _commit(rates, "Parts")
         taken = snapshot.make(rates).snapshot
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
@@ -1066,7 +1067,7 @@ class TestWhatGcReadsAndPrints:
         lock.pin(forecast)
         (note,) = (default_store().root / "roots").glob("*.json")
         stored = json.loads(note.read_text(encoding="utf-8"))
-        note.write_text(json.dumps({**stored, "host": "evil\x1b[2J\nhost", "lockfile": stored["lockfile"] + "\x07"}), encoding="utf-8")
+        note.write_text(json.dumps({**stored, "host": "evil\x1b[2J\nhost", "lockfile": stored["lockfile"] + "\x07"}), encoding="utf-8", newline="\n")
         machine("a")
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert "\x1b" not in result.output and "\x07" not in result.output and "evil?[2J?host" in result.output
@@ -1080,7 +1081,7 @@ def _parts(rates: Path, writer) -> Path:
     (rates / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
         "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
         "parts": {"path": "./_data/parts", "docs": "Parts."},
-    }}), encoding="utf-8")
+    }}), encoding="utf-8", newline="\n")
     _commit(rates, "Parts")
     return parts
 
@@ -1158,7 +1159,7 @@ class TestADirectorysListedFiles:
         for record in document["records"]:
             if (record.get("location") or {}).get("path", "").endswith("parts"):
                 del record["files"]  # as pinned before records listed a directory's files
-        lockfile.write_text(json.dumps(document, indent=1), encoding="utf-8")
+        lockfile.write_text(json.dumps(document, indent=1), encoding="utf-8", newline="\n")
         hashed = []
         real = hashing.hash_file
         monkeypatch.setattr(hashing, "hash_file", lambda *a, **k: (hashed.append(a[0]), real(*a, **k))[1])
@@ -1271,7 +1272,7 @@ class TestAReadersNote:
         machine("b")
         other = _forecast(work / "b" / "forecast", {"acme/rates": {}})
         commit = lock.read_lock(project).dependencies[0]["location"]["commit"]
-        (other / lock.LOCK_FILE).write_text((project / lock.LOCK_FILE).read_text(encoding="utf-8").replace(commit, commit[:12]), encoding="utf-8")
+        (other / lock.LOCK_FILE).write_text((project / lock.LOCK_FILE).read_text(encoding="utf-8").replace(commit, commit[:12]), encoding="utf-8", newline="\n")
         lock.verify(other, note=True)
         machine("a")
         lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)  # reads every note
@@ -1409,7 +1410,7 @@ class TestAnOldNoteInThisUsersOwnStore:
         stored = json.loads(note.read_text(encoding="utf-8"))
         note.unlink()
         older = store.root / "roots" / root_name(project / lock.LOCK_FILE)
-        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8")
+        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}), encoding="utf-8", newline="\n")
         return older
 
     def test_is_this_machines_and_forgotten_when_its_lockfile_is_gone(self, own):
@@ -1513,7 +1514,7 @@ class TestAnOldNoteGivesWay:
         from chartbook.store import root_name
 
         older = default_store().root / "roots" / root_name(lockfile)
-        older.write_text(json.dumps({"lockfile": str(lockfile), "hashes": sorted(hashes)}), encoding="utf-8")
+        older.write_text(json.dumps({"lockfile": str(lockfile), "hashes": sorted(hashes)}), encoding="utf-8", newline="\n")
         return older
 
     def test_a_pin_writes_this_machines_note_in_its_place(self, own):
@@ -1643,7 +1644,7 @@ class TestADirectoryWithFilesThatAreNotTables:
 
         def writer(parts):
             pl.DataFrame({"a": [1, 2]}).write_parquet(parts / "part-0.parquet")
-            (parts / side).write_text("About these parts.\n", encoding="utf-8")
+            (parts / side).write_text("About these parts.\n", encoding="utf-8", newline="\n")
 
         _parts(rates, writer)
         taken = snapshot.make(rates).snapshot
@@ -2057,7 +2058,7 @@ class TestANoteOrARecordHalfSynced:
         lock.pin(forecast)
         store = default_store()
         (note,) = (store.root / "roots").glob("*.json")
-        note.write_text('{"lockfile": "/x"}', encoding="utf-8")
+        note.write_text('{"lockfile": "/x"}', encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="not a note this version of ChartBook reads") as raised:
             lock.plan_gc(store)
         assert "sync that has not finished" not in str(raised.value)
@@ -2070,20 +2071,20 @@ class TestANoteOrARecordHalfSynced:
         lock.pin(forecast)
         store = default_store()
         (note,) = (store.root / "roots").glob("*.json")
-        note.write_text("", encoding="utf-8")
+        note.write_text("", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match=r"the file is empty\. A sync that has not finished is the likeliest cause") as raised:
             lock.plan_gc(store)
         assert f"remove roots/{note.name}" in str(raised.value) and "Nothing is removed from the store until it is read or gone" in str(raised.value)
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 1 and "run this again once it has finished" in result.output and "Nothing was removed." in result.output
-        note.write_text('{"lock', encoding="utf-8")  # half of it
+        note.write_text('{"lock', encoding="utf-8", newline="\n")  # half of it
         with pytest.raises(StoreError, match=r"Cannot read .*: Unterminated string.*\. A sync that has not finished is the likeliest cause"):
             lock.plan_gc(store)
 
     def test_an_empty_snapshot_record_too(self, drive):
         work, machine, rates = drive
         taken = snapshot.make(rates).snapshot
-        taken.path.write_text("", encoding="utf-8")
+        taken.path.write_text("", encoding="utf-8", newline="\n")
         with pytest.raises(lock.LockError, match=r"Cannot read the snapshot .*: the file is empty\. A sync that has not finished is the likeliest cause"):
             lock.plan_gc(default_store())
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])

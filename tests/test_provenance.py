@@ -174,7 +174,7 @@ class TestOnThePage:
 def _edit_toml(path: Path, edit) -> None:
     config = tomli.loads(path.read_text(encoding="utf-8"))
     edit(config)
-    path.write_text(tomli_w.dumps(config), encoding="utf-8")
+    path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
 
 
 class TestIncrementalBuildsKeepThePanelsCurrent:
@@ -192,7 +192,7 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         _edit_toml(catalog / "chartbook.toml", scope)
         a = catalog / "pipelines" / "pipeline_a"
         (a / "_models").mkdir(exist_ok=True)
-        (a / "_models" / "m.json").write_text("{}", encoding="utf-8")
+        (a / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
 
         def model(config):
             config["dependencies"] = {"acme/pipeline_b": {"path": "../pipeline_b"}}
@@ -244,7 +244,7 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
 
         # A second model in pipeline_a uses the upstream dataframe: the
         # upstream's page, whose own files did not change, lists it
-        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}", encoding="utf-8")
+        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}", encoding="utf-8", newline="\n")
         _edit_toml(
             catalog / "pipelines" / "pipeline_a" / "chartbook.toml",
             lambda c: c["models"].update({"m2": {"path": "./_models/m2.json", "trained_on": ["acme/pipeline_b:dataframe_0"], "docs": "d"}}),
@@ -259,7 +259,7 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         catalog = self._catalog(tmp_path)
         monkeypatch.chdir(catalog)
         (catalog / "_docs").mkdir()
-        (catalog / "_docs" / "unrelated.txt").write_text("mine", encoding="utf-8")
+        (catalog / "_docs" / "unrelated.txt").write_text("mine", encoding="utf-8", newline="\n")
         from chartbook import index as index_module
 
         monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (_ for _ in ()).throw(AssertionError("the index was built first")))

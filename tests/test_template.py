@@ -595,7 +595,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout for env creation, encoding="utf-8", errors="replace"
+            timeout=300,  # 5 minute timeout for env creation, encoding="utf-8", errors="replace", encoding="utf-8", errors="replace"
         )
         if create_result.returncode != 0:
             pytest.fail(f"Failed to create conda env: {create_result.stderr}")
@@ -606,7 +606,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=600,  # 10 minute timeout for pip install, encoding="utf-8", errors="replace"
+            timeout=600,  # 10 minute timeout for pip install, encoding="utf-8", errors="replace", encoding="utf-8", errors="replace"
         )
         if pip_result.returncode != 0:
             pytest.fail(f"Failed to pip install: {pip_result.stderr}")
@@ -617,7 +617,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout for doit, encoding="utf-8", errors="replace"
+            timeout=300,  # 5 minute timeout for doit, encoding="utf-8", errors="replace", encoding="utf-8", errors="replace"
         )
 
         assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
@@ -999,7 +999,7 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
     run: the block says so.
     """
     project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
-    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n', encoding="utf-8")
+    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n', encoding="utf-8", newline="\n")
     dodo = project / "dodo.py"
     text = dodo.read_text(encoding="utf-8")
     block = text.index("## `doit` on its own")
@@ -1022,7 +1022,7 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
         # The class has create_doit_tasks too, which doit would call unbound
         "del _Report\n\n\n"
     )
-    dodo.write_text(text[:block] + others + text[block:], encoding="utf-8")
+    dodo.write_text(text[:block] + others + text[block:], encoding="utf-8", newline="\n")
     listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert listed.returncode == 0, listed.stderr
     tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}

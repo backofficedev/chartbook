@@ -388,14 +388,14 @@ def pipelines(work):
     for directory in (rates, forecast):
         (directory / "_data").mkdir(parents=True)
     (rates / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "A file."}}}), encoding="utf-8"
+        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "A file."}}}), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(rates / "_data" / "treasury.parquet")
     (forecast / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8"
+        tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8", newline="\n"
     )
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     return rates, forecast
 
@@ -518,9 +518,9 @@ class TestWhatTheFourthReviewFound:
         # The note as anyone who can write to the store could write it
         target = str(work / named) if named == "notes.txt" else named
         if named == "notes.txt":
-            Path(target).write_text("not a lockfile", encoding="utf-8")
+            Path(target).write_text("not a lockfile", encoding="utf-8", newline="\n")
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": target, "hashes": [stored.content_hash]}), encoding="utf-8")
+        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": target, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         assert [str(root.lockfile) for root in store.roots()] == [str(Path(target))]
         read = []
         original = lock.read_lock
@@ -538,7 +538,7 @@ class TestWhatTheFourthReviewFound:
         stored = store.put(a_file)
         store.add_root(work / "chartbook.lock", [stored.content_hash])
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": named, "hashes": [stored.content_hash]}), encoding="utf-8")
+        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": named, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
         assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
         assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
@@ -600,18 +600,18 @@ class TestAnObjectHalfUploaded:
         parts.mkdir(parents=True)
         forecast.mkdir()
         (rates / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"parts": {"path": "./_data/parts", "docs": "Parts."}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"parts": {"path": "./_data/parts", "docs": "Parts."}}}), encoding="utf-8", newline="\n"
         )
         (forecast / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8", newline="\n"
         )
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
 
         def build(value: int):
             pl.DataFrame({"a": [1]}).write_parquet(parts / "part-0.parquet")
             pl.DataFrame({"a": [value]}).write_parquet(parts / "part-1.parquet")
-            (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8")
+            (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
             _commit(work)
             return snapshot.make(rates).snapshot
 

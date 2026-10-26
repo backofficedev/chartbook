@@ -242,7 +242,7 @@ class TestDerivedNameFromARelativePath:
         """Path('.') has no name of its own; the ID used to come out as 'pipeline'."""
         project_dir = tmp_path / "term_premium"
         project_dir.mkdir()
-        (project_dir / "chartbook.toml").write_text("", encoding="utf-8")
+        (project_dir / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
         monkeypatch.chdir(project_dir)
 
         from pathlib import Path
@@ -271,7 +271,7 @@ class TestADriveLetterIsNotAHost:
         monkeypatch.setattr(manifests, "get_git_remote_url", lambda base_dir: r"C:\Users\me\repo")
         project = tmp_path / "rates"
         project.mkdir()
-        (project / "chartbook.toml").write_text("", encoding="utf-8")
+        (project / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
         loaded = load_manifest(project)
         assert loaded["project"]["repo_url"] == ""
         assert loaded["project"]["id"] == "rates"

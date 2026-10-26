@@ -42,7 +42,7 @@ HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 
 def _write_manifest(directory: Path, table: dict) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
 
 
 def _rewrite(path: Path, content: bytes) -> None:
@@ -403,7 +403,7 @@ def with_data(work, store):
     """Two real pipelines: ``upstream`` has a parquet file, ``reader`` depends on it."""
     upstream = create_pipeline_project(work / "upstream", pipeline_id="upstream").resolve()
     reader = create_pipeline_project(work / "reader", pipeline_id="reader").resolve()
-    with open(reader / "chartbook.toml", "a", encoding="utf-8") as f:
+    with open(reader / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
         f.write('\n[dependencies]\nupstream = { path = "../upstream" }\n')
     pin_from_snapshots(reader, store)
     return reader, upstream
@@ -483,8 +483,8 @@ class TestLoad:
 class TestInTheIndex:
     def _add_model(self, directory: Path, trained_on: list) -> None:
         (directory / "_models").mkdir(exist_ok=True)
-        (directory / "_models" / "m.json").write_text("{}", encoding="utf-8")
-        with open(directory / "chartbook.toml", "a", encoding="utf-8") as f:
+        (directory / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
+        with open(directory / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write("\n" + tomli_w.dumps({"models": {"m": {"path": "./_models/m.json", "trained_on": trained_on}}}))
 
     def _record(self, built, kind, suffix=""):
@@ -545,10 +545,10 @@ class TestInTheIndex:
         manifest_path.write_text(
             manifest_path.read_text(encoding="utf-8")
             .replace("[pipelines.pipeline_a]", '[pipelines."acme/pipeline_a"]')
-            .replace("[pipelines.pipeline_b]", '[pipelines."acme/pipeline_b"]'), encoding="utf-8"
+            .replace("[pipelines.pipeline_b]", '[pipelines."acme/pipeline_b"]'), encoding="utf-8", newline="\n"
         )
         pipeline_a = catalog / "pipelines" / "pipeline_a"
-        with open(pipeline_a / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(pipeline_a / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dependencies]\nup = { path = "../pipeline_b" }\n')
         self._add_model(pipeline_a, ["up:dataframe_0"])
         pin_from_snapshots(pipeline_a, store)
@@ -573,7 +573,7 @@ class TestInTheIndex:
     def test_a_lockfile_that_cannot_be_read_does_not_stop_a_build(self, with_data):
         reader, _ = with_data
         self._add_model(reader, ["upstream:dataframe_0"])
-        (reader / lock.LOCK_FILE).write_text("not json", encoding="utf-8")
+        (reader / lock.LOCK_FILE).write_text("not json", encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning, match="What is pinned is left out of the index"):
             built = index.build_index(load_manifest(reader))
         assert "pinned_inputs" not in self._record(built, "Model")

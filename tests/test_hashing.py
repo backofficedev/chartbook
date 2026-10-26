@@ -364,13 +364,13 @@ class TestHashCache:
     )
     def test_unreadable_cache_is_ignored(self, tree, tmp_path, content):
         cache_file = tmp_path / "cache.json"
-        cache_file.write_text(content, encoding="utf-8")
+        cache_file.write_text(content, encoding="utf-8", newline="\n")
         result = hash_file(tree / "a.parquet", HashCache(cache_file))
         assert result.content_hash == f"sha256:{HELLO_SHA256}"
 
     def test_damaged_entry_is_ignored(self, tree, tmp_path):
         cache_file = tmp_path / "cache.json"
         key = os.path.abspath(tree / "a.parquet")
-        cache_file.write_text(json.dumps({"version": 1, "files": {key: "oops"}}), encoding="utf-8")
+        cache_file.write_text(json.dumps({"version": 1, "files": {key: "oops"}}), encoding="utf-8", newline="\n")
         result = hash_file(tree / "a.parquet", HashCache(cache_file))
         assert result.content_hash == f"sha256:{HELLO_SHA256}"

@@ -32,11 +32,11 @@ def catalog(tmp_path):
     `pipeline_a`. `pipeline_a` has two snapshots, and `pipeline_b` pins the first."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
     manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {"pipeline_a": {"path": "../pipeline_a"}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     first = snapshot.make(a).snapshot
@@ -143,7 +143,7 @@ class TestWithMkDocs:
         root, first, second = catalog
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
         page = (root / "docs" / "cb" / "versions.html").read_text(encoding="utf-8")
@@ -157,7 +157,7 @@ def _plant(store_root: Path, commit: str, document: dict) -> Path:
     folder = store_root / "snapshots" / commit / "_top"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "20260101T000000.000000Z.json"  # named as a record is, or it is passed over
-    path.write_text(json.dumps(document), encoding="utf-8")
+    path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
     return path
 
 
@@ -239,10 +239,10 @@ class TestWhoseFilesTheseAre:
         project = pipeline_project.resolve()
         site = project / "docs_src" / "site"
         site.mkdir(parents=True, exist_ok=True)
-        (site / "guide.md").write_text("# Guide\n", encoding="utf-8")
-        (site / "conf.py.j2").write_text("raise SystemExit('PWNED: the site page ran as conf.py')\n", encoding="utf-8")
+        (site / "guide.md").write_text("# Guide\n", encoding="utf-8", newline="\n")
+        (site / "conf.py.j2").write_text("raise SystemExit('PWNED: the site page ran as conf.py')\n", encoding="utf-8", newline="\n")
         (site / "_templates").mkdir()
-        (site / "_templates" / "layout.html").write_text("{{ PWNED }}", encoding="utf-8")
+        (site / "_templates" / "layout.html").write_text("{{ PWNED }}", encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
@@ -255,7 +255,7 @@ class TestWhoseFilesTheseAre:
 
         from chartbook.writers.sphinx import _sandboxed
 
-        (tmp_path / "t.md").write_text("{{ ''.__class__.__mro__[1].__subclasses__() }}", encoding="utf-8")
+        (tmp_path / "t.md").write_text("{{ ''.__class__.__mro__[1].__subclasses__() }}", encoding="utf-8", newline="\n")
         with pytest.raises(jinja2.exceptions.SecurityError):
             _sandboxed([tmp_path]).get_template("t.md").render()
 
@@ -263,14 +263,14 @@ class TestWhoseFilesTheseAre:
         """In the working version, a write-up may include a file; in a version from the store, it may not."""
         secret = tmp_path / "outside" / "secret.md"
         secret.parent.mkdir()
-        secret.write_text("OUTSIDE SECRET TEXT\n", encoding="utf-8")
+        secret.write_text("OUTSIDE SECRET TEXT\n", encoding="utf-8", newline="\n")
         repository = tmp_path.resolve() / "repo"
         root = create_catalog_project(repository / "cat", pipeline_ids=["pipeline_a"])
         a = root / "pipelines" / "pipeline_a"
         climb = "../" * 40 + str(secret.resolve()).lstrip("/")
         writeup = next(a.rglob("docs_src/dataframes/*.md"))
-        writeup.write_text(f"# Write-up\n\n```{{include}} {climb}\n```\n\n![a picture]({'../' * 40}{str(secret.resolve()).lstrip('/')})\n", encoding="utf-8")
-        (repository / ".gitignore").write_text("docs/\n_docs*/\n", encoding="utf-8")
+        writeup.write_text(f"# Write-up\n\n```{{include}} {climb}\n```\n\n![a picture]({'../' * 40}{str(secret.resolve()).lstrip('/')})\n", encoding="utf-8", newline="\n")
+        (repository / ".gitignore").write_text("docs/\n_docs*/\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _commit(repository)
         taken = snapshot.make(a).snapshot
@@ -292,7 +292,7 @@ def _forged_version(taken, store, manifest_text: str, tmp_path: Path):
             target = forged / file.relative_to(held)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(file.read_bytes())
-    (forged / "chartbook.toml").write_text(manifest_text, encoding="utf-8")
+    (forged / "chartbook.toml").write_text(manifest_text, encoding="utf-8", newline="\n")
     stored = store.put(forged)
     documents = {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
     version = dataclasses.replace(taken, documents=documents, made_at="2030-01-01T00:00:00.000001Z", path=None)
@@ -306,7 +306,7 @@ class TestAForgedManifest:
     def test_a_query_reads_no_file_of_this_machine(self, catalog, tmp_path):
         root, first, second = catalog
         secret = tmp_path / "secret.csv"
-        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n", encoding="utf-8")
+        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n", encoding="utf-8", newline="\n")
         store = default_store()
         manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["sources"] = {"mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}}
@@ -346,14 +346,14 @@ def trained(tmp_path):
     snapshot; `pipeline_a` then makes a second, with other data."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
     manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {"pipeline_a": {"path": "../pipeline_a"}}
     manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": ["pipeline_a:dataframe_0"], "docs": "A model."}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     (b / "_models").mkdir()
-    (b / "_models" / "m.json").write_text("{}", encoding="utf-8")
+    (b / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     first = snapshot.make(a).snapshot
@@ -393,7 +393,7 @@ class TestLinksFollowPins:
         root, first, second = trained
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
         pinned = f"versions/pipeline_a/{versions.version_name(first.commit, first.made_at)}/cb/dataframes/pipeline_a/dataframe_0.html"
@@ -458,11 +458,11 @@ class TestWhatTheLinksReviewFound:
         a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
         manifest = tomli.loads((a / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["extra"] = {"path": "./_data/extra.parquet", "docs": "Added later."}
-        (a / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (a / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         pl.DataFrame({"x": [1]}).write_parquet(a / "_data" / "extra.parquet")
         model = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
         model["models"]["m"]["trained_on"].append("pipeline_a:extra")
-        (b / "chartbook.toml").write_text(tomli_w.dumps(model), encoding="utf-8")
+        (b / "chartbook.toml").write_text(tomli_w.dumps(model), encoding="utf-8", newline="\n")
         _commit(root.parent, "An input that is not pinned")
         snapshot.make(a)
         lock.pin(b)  # keeps the first; `extra` is not in it
@@ -494,7 +494,7 @@ class TestWhatTheLinksReviewFound:
         root, first, second = trained
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         assert _links(page) and all(_resolves(page, h) for h in _links(page))
@@ -505,14 +505,14 @@ def _trained_catalog(tmp_path, key: str = "pipeline_a"):
     """A catalog where pipeline_b's model is trained on pipeline_a:dataframe_0, known by *key*; nothing snapshotted yet."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
     manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {key: {"path": "../pipeline_a"}}
     manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": [f"{key}:dataframe_0"], "docs": "A model."}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     (b / "_models").mkdir()
-    (b / "_models" / "m.json").write_text("{}", encoding="utf-8")
+    (b / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     return repository, root, a, b
@@ -547,7 +547,7 @@ class TestWhatTheSecondLinksReviewFound:
         first = snapshot.make(a).snapshot
         lock.pin(b)
         snapshot.make(b)  # trained on the first
-        (a / "README.md").write_text("# A\n\nA new README, the same data.\n", encoding="utf-8")
+        (a / "README.md").write_text("# A\n\nA new README, the same data.\n", encoding="utf-8", newline="\n")
         _commit(repository, "README only")
         same_bytes = snapshot.make(a).snapshot
         assert same_bytes.made_at > first.made_at
@@ -598,7 +598,7 @@ class TestAPipelineFromTheStoreAlone:
         project = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
         manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["description"] = "Made on another machine."
-        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _commit(repository)
         taken = snapshot.make(project).snapshot
@@ -610,7 +610,7 @@ class TestAPipelineFromTheStoreAlone:
         taken = self._elsewhere(tmp_path)
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["pipeline_c"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         site = root / "docs"
         index = json.loads((site / "index.json").read_text(encoding="utf-8"))
@@ -632,7 +632,7 @@ class TestAPipelineFromTheStoreAlone:
         root, first, second = catalog
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["acme/nowhere"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         text = (root / "docs" / "cb" / "pipelines" / "acme--nowhere_README.html").read_text(encoding="utf-8")
         assert "No snapshot of it is in the store yet." in text
@@ -643,7 +643,7 @@ class TestAPipelineFromTheStoreAlone:
         before = CliRunner().invoke(main, ["check", "--skip-outputs"])
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["acme/nowhere"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         from chartbook.manifest import get_pipeline_ids, load_manifest
 
         loaded = load_manifest(root)
@@ -661,7 +661,7 @@ class TestAPipelineFromTheStoreAlone:
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["pipeline_c"] = {}
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
         page = root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html"
@@ -754,7 +754,7 @@ def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snap
     manifest["project"].update(project)
     if asset_name:
         manifest["dataframes"]["dataframe_0"]["name"] = manifest["charts"]["chart_0_0"]["name"] = asset_name
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     taken = snapshot.make(folder).snapshot
@@ -791,7 +791,7 @@ def _show_from_the_store(root: Path, pipeline_id: str = "pipeline_c", **settings
     manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["pipelines"][pipeline_id] = {}
     manifest["project"].update(settings)
-    (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
 
 
 class _Markup:
@@ -838,7 +838,7 @@ class TestWhatTheStoreOnlyReviewFound:
 
     def _hostile(self, tmp_path) -> tuple[dict, Path]:
         secret = tmp_path / "secret.txt"
-        secret.write_text("TOP-SECRET-TEXT", encoding="utf-8")
+        secret.write_text("TOP-SECRET-TEXT", encoding="utf-8", newline="\n")
         fields = {k: v.replace("SECRET", str(secret)) for k, v in self.HOSTILE.items()}
         return fields, secret
 
@@ -939,7 +939,7 @@ class TestWhatTheStoreOnlyReviewFound:
         held = Path(default_store().get(taken.index["content_hash"]))
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
-        (held / "index.json").write_text(content, encoding="utf-8")
+        (held / "index.json").write_text(content, encoding="utf-8", newline="\n")
         _show_from_the_store(root)
         _build(root, monkeypatch)
         record = next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
@@ -964,7 +964,7 @@ class TestWhatTheStoreOnlyReviewFound:
         taken = _elsewhere_with(tmp_path)
         held = self._held(taken)
         outside = tmp_path / "outside.json"
-        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}), encoding="utf-8")
+        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}), encoding="utf-8", newline="\n")
         (held / "index.json").unlink()
         (held / "index.json").symlink_to(outside)
         assert "description" not in self._shown(root, monkeypatch)
@@ -1078,13 +1078,13 @@ class TestACatalogEntryWithNoPath:
         root = tmp_path / "cat"
         root.mkdir()
         (root / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog", "name": "C", "maintainer": "M"}, "pipelines": pipelines}), encoding="utf-8"
+            tomli_w.dumps({"project": {"type": "catalog", "name": "C", "maintainer": "M"}, "pipelines": pipelines}), encoding="utf-8", newline="\n"
         )
         return root
 
     def _pipeline(self, folder: Path) -> Path:
         folder.mkdir(parents=True)
-        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "P", "maintainer": "M"}}), encoding="utf-8")
+        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "P", "maintainer": "M"}}), encoding="utf-8", newline="\n")
         return folder
 
     @pytest.mark.parametrize(

@@ -1163,7 +1163,18 @@ class FolderStore(Store):
             with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump({"schema": SCHEMA}, f)
                 f.write("\n")
-            os.replace(temporary, marker)
+            try:
+                os.replace(temporary, marker)
+            except PermissionError:
+                # Windows does not replace a file that another thread or
+                # process has open: another made it first, and is reading it
+                try:
+                    os.remove(temporary)
+                except OSError:
+                    pass
+                if not marker.is_file():
+                    raise
+                return self._check_layout()
             self._layout_checked = True
             return
         except (OSError, ValueError, AttributeError) as error:

@@ -33,7 +33,7 @@ def two(tmp_path):
                     "later": {"path": "./_data/later.parquet", "docs": "Not built yet."},
                 },
             }
-        ), encoding="utf-8"
+        ), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(rates / "_data" / "treasury.parquet")
     pl.DataFrame({"d": ["2024-01-01"], "b": [3.9]}).write_parquet(rates / "_data" / "bills.parquet")
@@ -44,11 +44,11 @@ def two(tmp_path):
                 "dependencies": {"rates": {"path": "../rates"}},
                 "dataframes": {"outlook": {"path": "./_data/outlook.parquet", "docs": "Its output."}},
             }
-        ), encoding="utf-8"
+        ), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-02-01"], "f": [4.2]}).write_parquet(forecast / "_data" / "outlook.parquet")
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     snapshot.make(rates)
     return rates, forecast
@@ -67,7 +67,7 @@ class TestASnapshotCarriesItsLineage:
         other = forecast.parent / "other"
         shutil.copytree(rates, other)
         manifest = (forecast / "chartbook.toml").read_text(encoding="utf-8")
-        (forecast / "chartbook.toml").write_text(manifest.replace('[dependencies.rates]\npath = "../rates"', '[dependencies.rates]\npath = "../rates"\n\n[dependencies.other]\npath = "../other"'), encoding="utf-8")
+        (forecast / "chartbook.toml").write_text(manifest.replace('[dependencies.rates]\npath = "../rates"', '[dependencies.rates]\npath = "../rates"\n\n[dependencies.other]\npath = "../other"'), encoding="utf-8", newline="\n")
         _commit(forecast.parent)
         with pytest.raises(snapshot.SnapshotError, match="other: is in \\[dependencies\\] and not in the lockfile"):
             snapshot.make(forecast)
@@ -122,7 +122,7 @@ def _add_dependency(forecast: Path, key: str, folder: Path) -> None:
 
     manifest = tomli.loads((forecast / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"][key] = {"path": f"../{folder.name}"}
-    (forecast / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (forecast / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
 
 
 class TestWhatTheReviewFound:
@@ -137,7 +137,7 @@ class TestWhatTheReviewFound:
         manifest = tomli.loads((forecast / "chartbook.toml").read_text(encoding="utf-8"))
         marker = forecast / "_data" / "built"
         manifest["scripts"] = {"build": f"{sys.executable} -c \"open('_data/built', 'w').close()\""}
-        (forecast / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (forecast / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _commit(forecast.parent)
         lock.pin(forecast)
         name_no_snapshot(forecast, "rates")  # kept by the pin before the build
@@ -150,7 +150,7 @@ class TestWhatTheReviewFound:
         rates, forecast = two
         fresh = forecast.parent / "fresh"
         shutil.copytree(rates, fresh)
-        (fresh / "chartbook.toml").write_text((fresh / "chartbook.toml").read_text(encoding="utf-8").replace("acme/rates", "acme/fresh"), encoding="utf-8")
+        (fresh / "chartbook.toml").write_text((fresh / "chartbook.toml").read_text(encoding="utf-8").replace("acme/rates", "acme/fresh"), encoding="utf-8", newline="\n")
         _add_dependency(forecast, "fresh", fresh)
         _commit(forecast.parent)
         lock.pin(forecast)
@@ -161,7 +161,7 @@ class TestWhatTheReviewFound:
         rates, forecast = two
         empty = forecast.parent / "empty"
         empty.mkdir()
-        (empty / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/empty"}}), encoding="utf-8")
+        (empty / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/empty"}}), encoding="utf-8", newline="\n")
         _add_dependency(forecast, "empty", empty)
         _commit(forecast.parent)
         lock.pin(forecast)
@@ -178,7 +178,7 @@ class TestWhatTheReviewFound:
         for record in document["records"]:
             if record.get("content_hash") and record.get("id", "").endswith(":treasury"):
                 record["content_hash"] = other
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="which its snapshot at .* does not hold") as raised:
             snapshot.make(forecast)
         assert "commit chartbook.lock" in str(raised.value)
@@ -193,7 +193,7 @@ class TestWhatTheReviewFound:
         for record in document["records"]:
             for dependency in record.get("dependencies") or []:
                 dependency["snapshot"] = "2001-01-01T00:00:00Z"
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="has no such snapshot"):
             snapshot.make(forecast)
 
@@ -218,7 +218,7 @@ class TestWhatTheSecondReviewFound:
         path, document = _lockfile(forecast)
         treasury, bills = _record(document, ":treasury"), _record(document, ":bills")
         treasury["content_hash"], bills["content_hash"] = bills["content_hash"], treasury["content_hash"]
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="does not hold as treasury"):
             snapshot.make(forecast)
 
@@ -231,7 +231,7 @@ class TestWhatTheSecondReviewFound:
         record = _record(document, ":treasury")
         record["content_hash"] = default_store().put(forecast / "_data" / "outlook.parquet").content_hash
         record["ref"]["rev"] = "x"
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="a version of treasury that no snapshot of it in the store holds"):
             snapshot.make(forecast)
 
@@ -239,7 +239,7 @@ class TestWhatTheSecondReviewFound:
         rates, forecast = two
         twin = forecast.parent / "aaa_twin"
         shutil.copytree(rates, twin)
-        (twin / "chartbook.toml").write_text((twin / "chartbook.toml").read_text(encoding="utf-8").replace("acme/rates", "acme/twin"), encoding="utf-8")
+        (twin / "chartbook.toml").write_text((twin / "chartbook.toml").read_text(encoding="utf-8").replace("acme/rates", "acme/twin"), encoding="utf-8", newline="\n")
         (twin / "_data" / "treasury.parquet").write_bytes(b"other bytes")
         _commit(forecast.parent)
         moment = "2030-01-01T00:00:00.000000Z"
@@ -260,7 +260,7 @@ class TestWhatTheSecondReviewFound:
         os.chmod(held.path, stat.S_IRUSR | stat.S_IWUSR)
         document = json.loads(held.path.read_text(encoding="utf-8"))
         document["schema"] = "chartbook/snapshot/v99"
-        held.path.write_text(json.dumps(document), encoding="utf-8")
+        held.path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="cannot be read"):
             snapshot.make(forecast)
 

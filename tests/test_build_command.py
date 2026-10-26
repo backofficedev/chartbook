@@ -20,7 +20,7 @@ CHARTBOOK = Path(sys.executable).with_name("chartbook")
 
 def _add_script(project: Path, script: str) -> None:
     """Give a project a build script, in its chartbook.toml."""
-    with open(project / "chartbook.toml", "a", encoding="utf-8") as f:
+    with open(project / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
         f.write(f"\n[scripts]\nbuild = {script!r}\n")
 
 
@@ -375,7 +375,7 @@ class TestCalledFromItsOwnScript:
             folder = tmp_path / name
             folder.mkdir()
             (folder / "chartbook.toml").write_text(
-                f'[project]\nid = "{name}"\n[scripts]\nbuild = "echo ran >> ran.log && {CHARTBOOK} run --project-dir ../{other}"\n', encoding="utf-8"
+                f'[project]\nid = "{name}"\n[scripts]\nbuild = "echo ran >> ran.log && {CHARTBOOK} run --project-dir ../{other}"\n', encoding="utf-8", newline="\n"
             )
         monkeypatch.chdir(tmp_path / "r1")
         result = CliRunner().invoke(main, ["run"])
@@ -387,9 +387,9 @@ class TestCalledFromItsOwnScript:
         """A refused call must not write a lockfile first."""
         other = tmp_path / "other"
         other.mkdir()
-        (other / "chartbook.toml").write_text("[dataframes.x]\npath = './x.parquet'\ndocs = 'd'\n", encoding="utf-8")
+        (other / "chartbook.toml").write_text("[dataframes.x]\npath = './x.parquet'\ndocs = 'd'\n", encoding="utf-8", newline="\n")
         (other / "x.parquet").write_bytes(b"x")
-        with open(pipeline_project / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(pipeline_project / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write(f'\n[scripts]\nbuild = "{CHARTBOOK} run > nested.log 2>&1"\n[dependencies]\nother = {{ path = "{other}" }}\n')
         monkeypatch.chdir(pipeline_project)
         import json

@@ -43,7 +43,7 @@ def _git(directory: Path, *arguments: str) -> str:
 def _commit(repository: Path, message: str = "Work") -> str:
     """Commit everything in a repository, making it one first if need be."""
     if not (repository / ".git").exists():
-        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
     _git(repository, "add", "-A")
     _git(repository, "commit", "--quiet", "--allow-empty", "-m", message)
@@ -52,7 +52,7 @@ def _commit(repository: Path, message: str = "Work") -> str:
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
@@ -137,7 +137,7 @@ class TestMaking:
     def test_it_gives_up_nothing_but_the_pipelines_own_files(self, maker, work):
         """A declared path that reaches outside the folder is refused."""
         secret = work / "secret.txt"
-        secret.write_text("mine\n", encoding="utf-8")
+        secret.write_text("mine\n", encoding="utf-8", newline="\n")
         _manifest(
             maker,
             {
@@ -219,7 +219,7 @@ class TestEverythingMustBeCommitted:
     """The label says "this is what that commit built". It has to be true."""
 
     def test_a_changed_file(self, maker):
-        (maker / "chartbook.toml").write_text((maker / "chartbook.toml").read_text(encoding="utf-8") + "\n# x\n", encoding="utf-8")
+        (maker / "chartbook.toml").write_text((maker / "chartbook.toml").read_text(encoding="utf-8") + "\n# x\n", encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError) as e:
             snapshot.make(maker)
         said = str(e.value)
@@ -229,18 +229,18 @@ class TestEverythingMustBeCommitted:
         assert not (default_store().root / "snapshots").exists()
 
     def test_a_new_file_git_does_not_ignore(self, maker):
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError, match=r"\?\? maker/pull.py"):
             snapshot.make(maker)
 
     def test_a_staged_change(self, maker, work):
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         _git(work, "add", "-A")
         with pytest.raises(SnapshotError, match="A  maker/pull.py"):
             snapshot.make(maker)
 
     def test_a_deleted_file(self, maker, work):
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         _commit(work)
         (maker / "pull.py").unlink()
         with pytest.raises(SnapshotError, match=" D maker/pull.py"):
@@ -248,7 +248,7 @@ class TestEverythingMustBeCommitted:
 
     def test_many_are_cut_short(self, maker):
         for number in range(14):
-            (maker / f"new_{number:02}.py").write_text("", encoding="utf-8")
+            (maker / f"new_{number:02}.py").write_text("", encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError) as e:
             snapshot.make(maker)
         assert "?? maker/new_09.py" in str(e.value) and "new_10.py" not in str(e.value)
@@ -263,12 +263,12 @@ class TestEverythingMustBeCommitted:
     def test_other_work_in_the_same_repository_does_not_count(self, maker, work):
         """Somebody else is half-way through a change, in another pipeline."""
         _manifest(work / "other", {"project": {"id": "acme/other"}})
-        (work / "notes.txt").write_text("not committed", encoding="utf-8")
+        (work / "notes.txt").write_text("not committed", encoding="utf-8", newline="\n")
         assert snapshot.uncommitted(maker) == []
         assert snapshot.make(maker).made
 
     def test_committing_is_what_lets_it_through(self, maker, work):
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError):
             snapshot.make(maker)
         commit = _commit(work)
@@ -364,7 +364,7 @@ class TestSeveral:
 
     def test_a_record_that_cannot_be_read_is_an_error(self, maker):
         taken = snapshot.make(maker).snapshot
-        taken.path.write_text('{"schema": "chartbook/snapshot/v9"}', encoding="utf-8")
+        taken.path.write_text('{"schema": "chartbook/snapshot/v9"}', encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError, match="Cannot read the snapshot"):
             snapshot.find(default_store(), taken.commit, "maker")
 
@@ -391,7 +391,7 @@ class TestBuiltWith:
     def test_nothing_of_the_environment_is_in_it(self, maker, monkeypatch):
         """A pipeline's .env holds secrets, and a store is something to share."""
         monkeypatch.setenv("FRED_API_KEY", "s3cret-value")
-        (maker / "_data" / ".env").write_text("FRED_API_KEY=s3cret-value\n", encoding="utf-8")
+        (maker / "_data" / ".env").write_text("FRED_API_KEY=s3cret-value\n", encoding="utf-8", newline="\n")
         taken = snapshot.make(maker).snapshot
         assert "s3cret-value" not in taken.path.read_text(encoding="utf-8")
 
@@ -426,7 +426,7 @@ class TestBuiltWith:
         assert taken.inputs == [] and "inputs" not in json.loads(taken.path.read_text(encoding="utf-8"))
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, maker):
-        (maker / "chartbook.lock").write_text("not json", encoding="utf-8")
+        (maker / "chartbook.lock").write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(SnapshotError, match="Cannot read"):
             snapshot.make(maker)
 
@@ -457,25 +457,25 @@ class TestFinding:
         """Its owner is three commits past the last build they declared ready."""
         taken = snapshot.make(maker).snapshot
         for number in range(3):
-            (maker / "pull.py").write_text(f"print({number})\n", encoding="utf-8")
+            (maker / "pull.py").write_text(f"print({number})\n", encoding="utf-8", newline="\n")
             _commit(work)
         found, code = snapshot.newest_for(maker)
         assert found == taken and code.commit != taken.commit
 
     def test_the_newer_of_two_commits(self, maker, work):
         snapshot.make(maker)
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         second = snapshot.make(maker).snapshot
-        (maker / "pull.py").write_text("print('newer')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('newer')\n", encoding="utf-8", newline="\n")
         _commit(work)
         assert snapshot.newest_for(maker)[0] == second
 
     def test_one_made_on_another_branch_is_not_found(self, maker, work):
         first = snapshot.make(maker).snapshot
         _git(work, "checkout", "--quiet", "-b", "experiment")
-        (maker / "pull.py").write_text("print('experiment')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('experiment')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"experimental")
         on_branch = snapshot.make(maker).snapshot
@@ -609,7 +609,7 @@ class TestPinning:
     def test_update_moves_to_the_newest(self, user, maker, work):
         first = snapshot.make(maker).snapshot
         lock.pin(user)
-        (maker / "pull.py").write_text("print('new code')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new code')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         second = snapshot.make(maker).snapshot
@@ -782,12 +782,12 @@ class TestKeeping:
         """A space or an accent in a folder name; the lockfile still does not count."""
         directory = _manifest(work / "my données", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
         (directory / "x.parquet").write_bytes(b"x")
-        (work / ".gitignore").write_text("_data/\n_output/\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\n_output/\n", encoding="utf-8", newline="\n")
         _git(work, "init", "--quiet", "-b", "main")
         _git(work, "add", "-A")
         _git(work, "commit", "--quiet", "-m", "Work")
-        (directory / "chartbook.lock").write_text("{}", encoding="utf-8")
-        (directory / "new file.txt").write_text("new", encoding="utf-8")
+        (directory / "chartbook.lock").write_text("{}", encoding="utf-8", newline="\n")
+        (directory / "new file.txt").write_text("new", encoding="utf-8", newline="\n")
         assert snapshot.uncommitted(directory) == ["?? my données/chartbook.lock", "?? my données/new file.txt"]
         assert snapshot.uncommitted(directory, ignoring=("chartbook.lock",)) == ["?? my données/new file.txt"]
         # A rename shows both names
@@ -820,7 +820,7 @@ class TestClearingOldSnapshots:
         """Found by a reviewer: a first design kept every such snapshot, and a
         CI runner's checkout is gone the moment the job ends."""
         first, second, third = three
-        (third.path.parent / "origins").write_text(str(tmp_path / "ci-runner-checkout") + "\n", encoding="utf-8")
+        (third.path.parent / "origins").write_text(str(tmp_path / "ci-runner-checkout") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert [t for t, _ in plan.remove] == [first, second]
         assert [t for t, _ in plan.keep] == [third]
@@ -841,7 +841,7 @@ class TestClearingOldSnapshots:
         newest = snapshot.make(directory).snapshot
         snapshot._write(dataclasses.replace(newest, made_at="2099-01-01T00:00:00.000000Z", labels={}), default_store())
         for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
-            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8")
+            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         assert (first, "a label points at a version in it") in _plan(default_store(), keep_days=7).keep
 
     def test_a_clock_behind_does_not_remove_a_new_snapshot(self, maker, tmp_path):
@@ -849,7 +849,7 @@ class TestClearingOldSnapshots:
         from datetime import datetime, timedelta, timezone
 
         taken = snapshot.make(maker).snapshot
-        (taken.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8")
+        (taken.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         behind = datetime.now(timezone.utc) - timedelta(minutes=15)
         plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7, now=behind)
         assert plan.remove == [] and plan.keep == [(taken, "it is dated after now, by less than 7 days")]
@@ -881,7 +881,7 @@ class TestClearingOldSnapshots:
         assert snapshot.read(third.path).labels == {"model/m": {"champion": version}}
         # Another machine: the folder is not here. The label still keeps the first.
         for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
-            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8")
+            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert (first, "a label points at a version in it") in plan.keep
         assert [t.made_at for t, _ in plan.remove] == [OLD]
@@ -895,7 +895,7 @@ class TestClearingOldSnapshots:
         (directory / "_output" / "m.json").write_bytes(b"v4")
         fourth = snapshot.make(directory).snapshot
         assert fourth.labels == {}
-        (fourth.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8")
+        (fourth.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert {t.made_at for t, _ in plan.remove} == {OLDER, OLD}
 
@@ -1010,11 +1010,11 @@ class TestClearingOldSnapshots:
         at that commit), and the removal then took the pin's only bytes.
         """
         first = snapshot.make(maker, made_at=OLDER).snapshot
-        (maker / "pull.py").write_text("print(1)\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print(1)\n", encoding="utf-8", newline="\n")
         second_commit = _commit(work)
         _build(maker, rates=b"rates-2")
         second = snapshot.make(maker, made_at=OLD).snapshot
-        (maker / "pull.py").write_text("print(2)\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print(2)\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-3")
         snapshot.make(maker)
@@ -1036,7 +1036,7 @@ class TestClearingOldSnapshots:
         """A release branch's last snapshot is what its users pin; it stays."""
         release = snapshot.make(maker, made_at=OLDER).snapshot
         _git(work, "tag", "v1")
-        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         snapshot.make(maker)
@@ -1064,20 +1064,20 @@ class TestClearingOldSnapshots:
     def test_a_line_in_origins_that_is_not_a_folder_says_nothing(self, three):
         first, second, third = three
         note = third.path.parent / "origins"
-        note.write_text("relative/thing\n" + note.read_text(encoding="utf-8"), encoding="utf-8")
+        note.write_text("relative/thing\n" + note.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
         assert all(path.is_absolute() for path in snapshot.origins(default_store(), third))
         plan = _plan(default_store())  # no crash, and the same answer
         assert [t for t, _ in plan.remove] == [first, second]
 
     def test_removing_the_last_record_leaves_anothers_half_written_one_alone(self, maker, work):
         first = snapshot.make(maker, made_at=OLDER).snapshot
-        (maker / "pull.py").write_text("print(1)\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print(1)\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         snapshot.make(maker)
         folder = first.path.parent
         half = folder / "deadbeef.tmp"  # another process, writing a record here now
-        half.write_text("{", encoding="utf-8")
+        half.write_text("{", encoding="utf-8", newline="\n")
         store = default_store()
         lock.run_gc(lock.plan_gc(store, recent_seconds=0), store)
         assert not first.path.exists()
@@ -1144,7 +1144,7 @@ class TestClearingOldSnapshots:
 
     def test_a_record_that_cannot_be_read_stops_the_clearing(self, maker):
         taken = snapshot.make(maker).snapshot
-        taken.path.write_text("not json", encoding="utf-8")
+        taken.path.write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(lock.LockError, match="Cannot read the snapshot"):
             lock.plan_gc(default_store())
 
@@ -1182,7 +1182,7 @@ class TestCommands:
         assert said[1] == "  not built: acme/maker:chart/curve (./_output/curve.html)"
 
     def test_snapshot_with_uncommitted_changes_is_refused(self, maker, monkeypatch):
-        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(maker)
         result = self._run("snapshot")
         assert result.exit_code == 1
@@ -1277,13 +1277,13 @@ class TestNamesAndAggressiveGc:
         os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
         document = json.loads(taken.path.read_text(encoding="utf-8"))
         document["tags"] = ["ok-1", "<script>", "a b", "..", 5, "x" * 200]
-        taken.path.write_text(json.dumps(document), encoding="utf-8")
+        taken.path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         assert snapshot.read(taken.path).tags == ["ok-1"]
 
     def test_aggressive_lets_a_tag_keep_nothing(self, maker, work):
         release = snapshot.make(maker, made_at=OLDER).snapshot
         _git(work, "tag", "v1")
-        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         newest = snapshot.make(maker).snapshot
@@ -1318,7 +1318,7 @@ class TestNamesAndAggressiveGc:
 
         release = snapshot.make(maker, made_at=OLDER).snapshot
         _git(work, "tag", "v1")
-        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8")
+        (maker / "pull.py").write_text("print('main moves on')\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         snapshot.make(maker)
@@ -1359,7 +1359,7 @@ class TestARecordThatWouldReachOutsideItsObject:
 
     def _written(self, tmp_path, record):
         path = tmp_path / "20261018T100000.000000Z.json"
-        path.write_text(json.dumps(self._document(record)), encoding="utf-8")
+        path.write_text(json.dumps(self._document(record)), encoding="utf-8", newline="\n")
         return path
 
     def test_a_glob_that_climbs_after_its_wildcard_is_refused(self, tmp_path):

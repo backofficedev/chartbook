@@ -37,7 +37,7 @@ def _edit_toml(project_dir: Path, edit) -> None:
     toml_path = Path(project_dir) / "chartbook.toml"
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8")
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
 
 
 def add_models(project_dir: Path) -> Path:
@@ -49,14 +49,14 @@ def add_models(project_dir: Path) -> Path:
     """
     project_dir = Path(project_dir)
     (project_dir / "_models" / "encoder" / "weights").mkdir(parents=True)
-    (project_dir / "_models" / "encoder" / "config.json").write_text("{}", encoding="utf-8")
+    (project_dir / "_models" / "encoder" / "config.json").write_text("{}", encoding="utf-8", newline="\n")
     (project_dir / "_models" / "encoder" / "weights" / "best.pt").write_bytes(b"w" * 3000)
-    (project_dir / "_models" / "forecaster.json").write_text('{"slope": 0.99}', encoding="utf-8")
+    (project_dir / "_models" / "forecaster.json").write_text('{"slope": 0.99}', encoding="utf-8", newline="\n")
     (project_dir / "_output").mkdir(exist_ok=True)
-    (project_dir / "_output" / "forecaster_metrics.json").write_text(json.dumps(METRICS), encoding="utf-8")
+    (project_dir / "_output" / "forecaster_metrics.json").write_text(json.dumps(METRICS), encoding="utf-8", newline="\n")
     (project_dir / "docs_src" / "models").mkdir(parents=True, exist_ok=True)
     (project_dir / "docs_src" / "models" / "forecaster.md").write_text(
-        "Predicts the rate, **for testing**.\n", encoding="utf-8"
+        "Predicts the rate, **for testing**.\n", encoding="utf-8", newline="\n"
     )
 
     def edit(config):
@@ -226,7 +226,7 @@ class TestPath:
 
         script = project / "src" / "where.py"
         script.write_text(
-            "from chartbook import models\nRESULT = models.path('forecaster')\n", encoding="utf-8"
+            "from chartbook import models\nRESULT = models.path('forecaster')\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.chdir(tmp_path)
         assert runpy.run_path(str(script))["RESULT"] == (
@@ -283,7 +283,7 @@ class TestPath:
 class TestReadMetrics:
     def _write(self, tmp_path, content) -> Path:
         path = tmp_path / "metrics.json"
-        path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
+        path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8", newline="\n")
         return path
 
     def test_flat_object_of_scores(self, tmp_path):
@@ -393,7 +393,7 @@ class TestModelRecord:
         self._validate(record)
 
     def test_malformed_metrics_are_left_out_with_a_warning(self, project):
-        (project / "_output" / "forecaster_metrics.json").write_text('{"a": [1, 2]}', encoding="utf-8")
+        (project / "_output" / "forecaster_metrics.json").write_text('{"a": [1, 2]}', encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning, match=r"\[models.forecaster\]: its metrics"):
             built = index.build_index(load_manifest(project))
         assert "metrics" not in self._models(built)["forecaster"]
@@ -480,7 +480,7 @@ class TestModelPage:
         assert not (pipeline_project / "docs" / "cb" / "models").exists()
 
     def test_malformed_metrics_do_not_break_the_build(self, project, monkeypatch):
-        (project / "_output" / "forecaster_metrics.json").write_text("not json", encoding="utf-8")
+        (project / "_output" / "forecaster_metrics.json").write_text("not json", encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
@@ -559,7 +559,7 @@ class TestCheck:
         }
 
     def test_malformed_metrics_are_reported(self, project):
-        (project / "_output" / "forecaster_metrics.json").write_text('{"curve": [1, 2]}', encoding="utf-8")
+        (project / "_output" / "forecaster_metrics.json").write_text('{"curve": [1, 2]}', encoding="utf-8", newline="\n")
         (problem,) = [p for p in self._problems(project) if p[1] == "metrics_path"]
         assert "'curve' must be a number" in problem[2]
 
@@ -672,7 +672,7 @@ class TestIncremental:
         self._touch(project / "_models" / "encoder" / "weights" / "best.pt")
         changed = self._fingerprint(project)
         assert changed != before
-        (project / "_models" / "encoder" / "vocab.txt").write_text("a b c", encoding="utf-8")
+        (project / "_models" / "encoder" / "vocab.txt").write_text("a b c", encoding="utf-8", newline="\n")
         assert self._fingerprint(project) != changed
 
     def test_model_pages_belong_to_their_pipeline(self, project):
@@ -700,7 +700,7 @@ class TestIncremental:
         assert runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"]).exit_code == 0
 
         metrics_file = project / "_output" / "forecaster_metrics.json"
-        metrics_file.write_text(json.dumps({"rmse": 0.05}), encoding="utf-8")
+        metrics_file.write_text(json.dumps({"rmse": 0.05}), encoding="utf-8", newline="\n")
         self._touch(metrics_file)
         result = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
@@ -739,7 +739,7 @@ class TestTrainedOnAnotherPipeline:
 
     def _add_model(self, pipeline_dir, trained_on, **dependencies):
         (pipeline_dir / "_models").mkdir(exist_ok=True)
-        (pipeline_dir / "_models" / "m.json").write_text("{}", encoding="utf-8")
+        (pipeline_dir / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
 
         def edit(config):
             config["models"] = {"m": {"path": "./_models/m.json", "trained_on": trained_on}}

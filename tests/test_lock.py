@@ -44,7 +44,7 @@ HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 
 def _write_manifest(directory: Path, config_table: dict) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(config_table), encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(config_table), encoding="utf-8", newline="\n")
 
 
 def _replace(path: Path, content: bytes) -> None:
@@ -246,7 +246,7 @@ class TestFrozen:
         path = downstream / lock.LOCK_FILE
         document = json.loads(path.read_text(encoding="utf-8"))
         del document["records"][0]["dependencies"][0]["id"]
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         with pytest.raises(lock.LockError, match="without an id"):
             lock.verify(downstream, store)
 
@@ -609,7 +609,7 @@ class TestPin:
 
     def test_only_what_pinning_needs_is_read_from_the_manifest(self, downstream, rates, store):
         """A dataframe with no write-up does not load, and can still be pinned from."""
-        with open(downstream / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(downstream / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.broken]\npath = "./x.parquet"\n')
         assert pin_from_snapshots(downstream, store).problems == []
 
@@ -740,13 +740,13 @@ class TestReadingAndWriting:
          '{"schema": "chartbook/lock/v1"}'],
     )
     def test_a_file_that_is_not_a_lockfile(self, work, content):
-        (work / LOCK_FILE).write_text(content, encoding="utf-8")
+        (work / LOCK_FILE).write_text(content, encoding="utf-8", newline="\n")
         with pytest.raises(LockError, match="Cannot read"):
             lock.read_lock(work)
 
     def test_a_lockfile_from_a_later_version_says_so(self, work):
         (work / LOCK_FILE).write_text(
-            '{"schema": "chartbook/lock/v9", "root": "x", "records": []}', encoding="utf-8"
+            '{"schema": "chartbook/lock/v9", "root": "x", "records": []}', encoding="utf-8", newline="\n"
         )
         with pytest.raises(LockError, match="reads 'chartbook/lock/v1'"):
             lock.read_lock(work)
@@ -831,7 +831,7 @@ class TestStoreRoots:
     def test_a_note_that_cannot_be_read_stops_everything(self, store, work):
         store.add_root(work / LOCK_FILE, [HELLO])
         (note,) = (store.root / "roots").glob("*.json")
-        note.write_text("not json", encoding="utf-8")
+        note.write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="Cannot read"):
             store.roots()
 
@@ -958,7 +958,7 @@ class TestGc:
         assert by_year in {h for h, _ in lock.plan_gc(moved).delete}
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
-        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8")
+        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(LockError, match="Cannot read"):
             lock.plan_gc(moved)
         assert moved.has(HELLO)
@@ -1121,7 +1121,7 @@ class TestCommands:
         assert list(garbage.hashes()) == [] and garbage.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):
-        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8")
+        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8", newline="\n")
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 1
         assert result.output.startswith("Error: Cannot read")

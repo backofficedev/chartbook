@@ -29,8 +29,8 @@ from chartbook.resolve import QueryLocation, TableLocation, resolve
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
-    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
+    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8", newline="\n")
     return directory
 
 
@@ -150,7 +150,7 @@ class TestManifest:
                     "pipelines": {"p": {"path": "p"}},
                     "sources": {"local": {"backend": "duckdb", "url": "duckdb:///x"}},
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         with pytest.raises(ValueError, match=r"a catalog has no \[sources\]"):
             load_manifest(tmp_path)
@@ -457,7 +457,7 @@ class TestCredentials:
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path / "home")
         (tmp_path / "home").mkdir()
         from_file = self._other_file(tmp_path, "FROM-FILE")
-        (tmp_path / "home" / "sources.toml").write_text(f'[local]\nurl = "duckdb:///{from_file}"\n', encoding="utf-8")
+        (tmp_path / "home" / "sources.toml").write_text(f"[local]\nurl = 'duckdb:///{from_file}'\n", encoding="utf-8", newline="\n")  # '…': a Windows path's \\ are no escapes
         assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-FILE"]
         assert data.connect("local", project_dir=pipeline).sql("select d from curve").fetchone() == ("FROM-FILE",)
         from_env = self._other_file(tmp_path, "FROM-ENV")
@@ -484,7 +484,7 @@ class TestCredentials:
 
     def test_then_sources_toml(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path)
-        (tmp_path / "sources.toml").write_text('[local]\nurl = "duckdb:///from-file.db"\n', encoding="utf-8")
+        (tmp_path / "sources.toml").write_text('[local]\nurl = "duckdb:///from-file.db"\n', encoding="utf-8", newline="\n")
         assert backends.source_url("local", "duckdb:///manifest.db") == "duckdb:///from-file.db"
         assert backends.source_url("other", "duckdb:///manifest.db") == "duckdb:///manifest.db"
 
@@ -494,7 +494,7 @@ class TestCredentials:
 
     def test_a_sources_file_that_cannot_be_read(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path)
-        (tmp_path / "sources.toml").write_text("not = toml =", encoding="utf-8")
+        (tmp_path / "sources.toml").write_text("not = toml =", encoding="utf-8", newline="\n")
         with pytest.raises(BackendError, match="Cannot read"):
             backends.source_url("local", "duckdb:///manifest.db")
 
@@ -658,7 +658,7 @@ class TestNotPinnedAcrossPipelines:
     def test_a_catalog_reaches_a_table_of_a_pipeline_it_lists(self, pipeline, tmp_path):
         """Found by a reviewer: the catalog path blamed a missing `path`."""
         (tmp_path / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}}), encoding="utf-8", newline="\n"
         )
         location = resolve("curve", pipeline="acme/rates", catalog_path=tmp_path / "chartbook.toml")
         assert isinstance(location, TableLocation) and location.identifier == "curve"

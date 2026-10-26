@@ -50,7 +50,7 @@ def _edit_toml(project_dir: Path, edit) -> None:
     toml_path = Path(project_dir) / "chartbook.toml"
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8")
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
 
 
 def _depend(project_dir: Path, **dependencies) -> None:
@@ -62,7 +62,7 @@ def _depend(project_dir: Path, **dependencies) -> None:
 def _add_model(project_dir: Path, trained_on: list) -> None:
     """Give a pipeline one model, trained on the given references."""
     (project_dir / "_models").mkdir(exist_ok=True)
-    (project_dir / "_models" / "m.json").write_text("{}", encoding="utf-8")
+    (project_dir / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
     _edit_toml(
         project_dir,
         lambda config: config.update(
@@ -675,14 +675,14 @@ class TestCheck:
 
     def test_a_manifest_that_cannot_be_read(self, two_pipelines):
         downstream, rates = two_pipelines
-        (rates / "chartbook.toml").write_text("[project\n", encoding="utf-8")
+        (rates / "chartbook.toml").write_text("[project\n", encoding="utf-8", newline="\n")
         _depend(downstream, rates={"path": "../rates"})
         (problem,) = self._problems(downstream)
         assert problem.message.startswith(f"{rates / 'chartbook.toml'} is not valid TOML: ")
 
     def test_an_old_format_manifest_says_so_once(self, two_pipelines):
         downstream, rates = two_pipelines
-        (rates / "chartbook.toml").write_text('[config]\ntype = "pipeline"\n', encoding="utf-8")
+        (rates / "chartbook.toml").write_text('[config]\ntype = "pipeline"\n', encoding="utf-8", newline="\n")
         _depend(downstream, rates={"path": "../rates"})
         (problem,) = self._problems(downstream)
         assert "old v1 format" in problem.message
@@ -734,7 +734,7 @@ class TestCheck:
 
         downstream, rates = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
-        (downstream / lock.LOCK_FILE).write_text('schema = "chartbook/lock/v9"\n', encoding="utf-8")
+        (downstream / lock.LOCK_FILE).write_text('schema = "chartbook/lock/v9"\n', encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning) as caught:
             assert check_dependencies(load_manifest(downstream), downstream) == []
         (warning,) = caught  # the lockfile, and no dependency blamed for it
@@ -825,7 +825,7 @@ class TestCheckCommand:
         """Run ``chartbook check`` in a project, against a policy that asks for nothing."""
         policy = project.parent / "policy.toml"
         required = {"required": {table: [] for table in DEFAULT_REQUIRED_FIELDS}}
-        policy.write_text(tomli_w.dumps({"policy": required}), encoding="utf-8")
+        policy.write_text(tomli_w.dumps({"policy": required}), encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
         return CliRunner().invoke(main, ["check", "--policy", str(policy)])
 

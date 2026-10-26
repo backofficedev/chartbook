@@ -208,7 +208,7 @@ class TestGenerateDocsEndToEnd:
         # Create existing output with marker file
         output_dir.mkdir()
         marker_file = output_dir / "old_marker.txt"
-        marker_file.write_text("old content", encoding="utf-8")
+        marker_file.write_text("old content", encoding="utf-8", newline="\n")
 
         generate_docs(
             output_dir=output_dir,
@@ -472,7 +472,7 @@ class TestStripMathjax2FromNotebook:
         """Test that MathJax 2 scripts are removed from notebook outputs."""
         nb = _make_notebook([_make_plotly_cell()])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb), encoding="utf-8")
+        nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
@@ -487,7 +487,7 @@ class TestStripMathjax2FromNotebook:
         """Test that non-MathJax HTML content is preserved."""
         nb = _make_notebook([_make_plotly_cell()])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb), encoding="utf-8")
+        nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         strip_mathjax2_from_notebook(nb_path)
 
@@ -512,7 +512,7 @@ class TestStripMathjax2FromNotebook:
         }
         nb = _make_notebook([cell])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb), encoding="utf-8")
+        nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
@@ -522,7 +522,7 @@ class TestStripMathjax2FromNotebook:
         """Test that only the CDN script is stripped (without the config script)."""
         nb = _make_notebook([_make_plotly_cell(PLOTLY_MATHJAX2_SCRIPT)])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb), encoding="utf-8")
+        nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
@@ -550,7 +550,7 @@ class TestStripMathjax2FromNotebook:
         }
         nb = _make_notebook([cell])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb), encoding="utf-8")
+        nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
@@ -574,7 +574,7 @@ class TestStripMathjax2FromNotebooks:
 
         for subdir in ["pipeline_a", "pipeline_b"]:
             nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
-            nb_path.write_text(json.dumps(nb), encoding="utf-8")
+            nb_path.write_text(json.dumps(nb), encoding="utf-8", newline="\n")
 
         _strip_mathjax2_from_notebooks(tmp_path)
 
@@ -647,12 +647,12 @@ class TestSmallFixes:
 
         source = tmp_path / "source"
         (source / "nested").mkdir(parents=True)
-        (source / "a.txt").write_text("a", encoding="utf-8")
-        (source / "nested" / "b.txt").write_text("b", encoding="utf-8")
+        (source / "a.txt").write_text("a", encoding="utf-8", newline="\n")
+        (source / "nested" / "b.txt").write_text("b", encoding="utf-8", newline="\n")
         destination = tmp_path / "destination"
         destination.mkdir()
-        (destination / "kept.txt").write_text("kept", encoding="utf-8")
-        (destination / "a.txt").write_text("old", encoding="utf-8")
+        (destination / "kept.txt").write_text("kept", encoding="utf-8", newline="\n")
+        (destination / "a.txt").write_text("old", encoding="utf-8", newline="\n")
 
         copy_tree(source, destination)
         assert (destination / "a.txt").read_text(encoding="utf-8") == "a"
@@ -674,7 +674,7 @@ class TestSmallFixes:
         monkeypatch.chdir(pipeline_project)
         (pipeline_project / "README.md").rename(pipeline_project / "ABOUT.md")
         (pipeline_project / "ABOUT.md").write_text(
-            "# Test Pipeline\n\nText from the configured readme.\n", encoding="utf-8"
+            "# Test Pipeline\n\nText from the configured readme.\n", encoding="utf-8", newline="\n"
         )
         toml_path = pipeline_project / "chartbook.toml"
         config = tomli.loads(toml_path.read_text(encoding="utf-8"))
@@ -842,7 +842,7 @@ class TestNotBuiltYet:
     def test_built_in_part_is_still_an_error_and_the_hint_is_the_build(self, unbuilt, capsys):
         """One output there means it was built, so what is missing is a mistake."""
         (unbuilt / "_output" / "walkthrough.ipynb").write_text(
-            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4}), encoding="utf-8"
+            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4}), encoding="utf-8", newline="\n"
         )
         with pytest.raises(SystemExit) as excinfo:
             generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
@@ -1006,9 +1006,9 @@ class TestAWriteUpIsTextOnThePage:
 
         manifest = tomli.loads((pipeline_project / "chartbook.toml").read_text(encoding="utf-8"))
         docs_path = next(iter(manifest["dataframes"].values()))["docs_path"]
-        with open(pipeline_project / docs_path, "a", encoding="utf-8") as f:
+        with open(pipeline_project / docs_path, "a", encoding="utf-8", newline="\n") as f:
             f.write("\n\n" + self.MARKERS)
-        with open(pipeline_project / "README.md", "a", encoding="utf-8") as f:
+        with open(pipeline_project / "README.md", "a", encoding="utf-8", newline="\n") as f:
             f.write("\n\nREADME-TEST: {{ 6+7 }}\n")
 
     @staticmethod

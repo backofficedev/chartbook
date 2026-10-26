@@ -334,7 +334,7 @@ class TestLoadPolicy:
         catalog = tmp_path / "chartbook.toml"
         catalog.write_text(
             '[pipelines."acme/gone"]\npath = "../not-checked-out"\n\n'
-            '[policy.required]\nproject = ["maintainer"]\n', encoding="utf-8"
+            '[policy.required]\nproject = ["maintainer"]\n', encoding="utf-8", newline="\n"
         )
         assert load_policy(catalog)["required"]["project"] == ["maintainer"]
 
@@ -344,7 +344,7 @@ class TestLoadPolicy:
 
     def test_invalid_policy(self, tmp_path):
         bad = tmp_path / "chartbook.toml"
-        bad.write_text('[policy]\nmode = "loud"\n', encoding="utf-8")
+        bad.write_text('[policy]\nmode = "loud"\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="invalid policy.mode"):
             load_policy(bad)
 
@@ -492,7 +492,7 @@ class TestCheckCommand:
 
     def test_policy_option_overrides_and_is_named(self, pipeline_project, tmp_path):
         policy = tmp_path / "strict.toml"
-        policy.write_text('[policy.required]\nproject = ["site_dir"]\n', encoding="utf-8")
+        policy.write_text('[policy.required]\nproject = ["site_dir"]\n', encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", pipeline_project, "--policy", policy)
         assert result.exit_code == 1
         assert f"[project] site_dir: required by the policy in {policy}" in result.output
@@ -502,7 +502,7 @@ class TestCheckCommand:
         """Found by a reviewer: `policy = "strict"` gave an AttributeError traceback."""
         for text, said in (('policy = "strict"\n', "[policy] must be a table"), ('[policy]\nrequired = "x"\n', "policy.required must be a table")):
             policy = tmp_path / "odd.toml"
-            policy.write_text(text, encoding="utf-8")
+            policy.write_text(text, encoding="utf-8", newline="\n")
             result = _invoke("--project-dir", pipeline_project, "--policy", policy)
             assert result.exit_code == 1
             assert f"Error: {policy}: {said}" in result.output
@@ -622,7 +622,7 @@ class TestCheckCommand:
         expired = date.today() - timedelta(days=3)
         _set_license_expiration(pipeline_project, expired.isoformat())
         policy = pipeline_project.parent / "policy.toml"
-        policy.write_text('[policy.required]\nproject = ["repo_url"]\n', encoding="utf-8")
+        policy.write_text('[policy.required]\nproject = ["repo_url"]\n', encoding="utf-8", newline="\n")
         result = _invoke(
             "--project-dir", pipeline_project, "--policy", policy, "--skip-outputs"
         )
@@ -669,7 +669,7 @@ class TestCheckCommand:
 
     def test_a_policy_file_that_is_not_toml_is_named(self, pipeline_project, tmp_path):
         policy = tmp_path / "policy.toml"
-        policy.write_text("[policy\n", encoding="utf-8")
+        policy.write_text("[policy\n", encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", pipeline_project, "--policy", policy)
         assert result.exit_code == 1
         assert f"Error: {policy} is not valid TOML: " in result.output and "Traceback" not in result.output
@@ -677,7 +677,7 @@ class TestCheckCommand:
     def test_a_catalog_member_that_is_not_toml_is_named(self, catalog_project):
         """Found by a reviewer: the error was `Illegal character '\\n' (at line 2, column 15)` and no file."""
         member = catalog_project / "pipelines" / "pipeline_a" / "chartbook.toml"
-        member.write_text("[project]\nname = \"unterminated\n", encoding="utf-8")
+        member.write_text("[project]\nname = \"unterminated\n", encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
         assert f"Error: {member} is not valid TOML: " in result.output

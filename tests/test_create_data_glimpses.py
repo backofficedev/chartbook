@@ -119,7 +119,7 @@ class TestDatasetReport:
 
     def test_unreadable_file_reports_an_error(self, tmp_path):
         bad = tmp_path / "bad.parquet"
-        bad.write_text("not parquet", encoding="utf-8")
+        bad.write_text("not parquet", encoding="utf-8", newline="\n")
         assert get_dataset_report(bad)["error"].startswith("ERROR: Could not read file")
 
     def test_stats_can_be_skipped(self, tmp_path):
@@ -174,7 +174,7 @@ class TestReports:
 
     def test_unreadable_data_is_reported_in_place(self, pipeline_project):
         declared = find_declared_dataframes(load_manifest(pipeline_project))
-        declared[0].path.write_text("not parquet", encoding="utf-8")
+        declared[0].path.write_text("not parquet", encoding="utf-8", newline="\n")
         report = create_txt_report(declared)
         assert "**ERROR:** ERROR: Could not read file" in report
 
@@ -216,7 +216,7 @@ class TestCommand:
     def test_an_output_dir_that_is_a_file_is_said_plainly(self, pipeline_project, tmp_path):
         """Found by a reviewer: an existing file not ending in .md got a FileExistsError."""
         taken = tmp_path / "notes.txt"
-        taken.write_text("mine\n", encoding="utf-8")
+        taken.write_text("mine\n", encoding="utf-8", newline="\n")
         result = _run(pipeline_project, "-o", taken)
         assert result.exit_code == 1
         assert f"Error: {taken} is there and is not a directory. Give a directory to write data_glimpses.md in" in (
@@ -246,7 +246,7 @@ class TestCommand:
     def test_needs_no_dodo_py(self, pipeline_project, tmp_path):
         """A project built with Snakemake, Make or plain scripts has no dodo.py."""
         assert not (pipeline_project / "dodo.py").exists()
-        (pipeline_project / "Snakefile").write_text("rule all:\n    input: []\n", encoding="utf-8")
+        (pipeline_project / "Snakefile").write_text("rule all:\n    input: []\n", encoding="utf-8", newline="\n")
         result = _run(pipeline_project, "-o", tmp_path / "glimpses.md")
         assert result.exit_code == 0, result.output
         assert "## dataframe_0" in (tmp_path / "glimpses.md").read_text(encoding="utf-8")
@@ -257,7 +257,7 @@ class TestCommand:
         undeclared = create_sample_parquet(pipeline_project / "_data" / "undeclared.parquet")
         (pipeline_project / "dodo.py").write_text(
             "raise RuntimeError('dodo.py must not be imported')\n"
-            f"def task_x():\n    return {{'targets': [{str(undeclared)!r}]}}\n", encoding="utf-8"
+            f"def task_x():\n    return {{'targets': [{str(undeclared)!r}]}}\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(
@@ -274,7 +274,7 @@ class TestCommand:
         def report_for(name, with_dodo):
             project = create_pipeline_project(tmp_path / name, pipeline_id="same")
             if with_dodo:
-                (project / "dodo.py").write_text("def task_x():\n    return {}\n", encoding="utf-8")
+                (project / "dodo.py").write_text("def task_x():\n    return {}\n", encoding="utf-8", newline="\n")
             out = tmp_path / f"{name}.md"
             assert _run(project, "-o", out).exit_code == 0
             lines = out.read_text(encoding="utf-8").splitlines()

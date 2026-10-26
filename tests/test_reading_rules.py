@@ -23,7 +23,7 @@ def _no_other_warning():
     """The organization's settings file, named by the test setup, is there, so that a read's warnings are its own."""
     import os
 
-    Path(os.environ["CHARTBOOK_SYSTEM_SETTINGS"]).write_text("", encoding="utf-8")
+    Path(os.environ["CHARTBOOK_SYSTEM_SETTINGS"]).write_text("", encoding="utf-8", newline="\n")
 
 
 def _value(reference: str) -> list:
@@ -37,7 +37,7 @@ def together(tmp_path):
     _rates(work / "rates", 4.0)
     forecast = _forecast(work / "forecast", {"acme/rates": {"path": "../rates"}})
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     taken = snapshot.make(work / "rates").snapshot
     return work, forecast, taken
@@ -70,7 +70,7 @@ class TestADeclaredDependencyNotPinned:
     def test_only_what_is_read_is_pinned(self, together, monkeypatch):
         work, forecast, taken = together
         _rates(work / "other", 1.0)
-        (work / "other" / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8")
+        (work / "other" / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n")
         _forecast(forecast, {"acme/rates": {"path": "../rates"}, "acme/other": {"path": "../other"}})
         _commit(work, "Another")
         snapshot.make(work / "other")
@@ -176,7 +176,7 @@ class TestOutsideAnyPipeline:
         catalog = work / "catalog"
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog", "id": "cat"}, "pipelines": {"acme/rates": {"path": "../rates"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"type": "catalog", "id": "cat"}, "pipelines": {"acme/rates": {"path": "../rates"}}}), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"d": ["2024-01-01"], "r": [9.0]}).write_parquet(work / "rates" / "_data" / "treasury.parquet")
         (work / "scratch").mkdir()
@@ -206,16 +206,16 @@ def _model_pipeline(work: Path):
     folder = repository / "model"
     (folder / "_output").mkdir(parents=True)
     manifest = {"project": {"id": "acme/model"}, "models": {"m": {"path": "./_output/m.json"}}}
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-    (folder / "_output" / "m.json").write_text("v1", encoding="utf-8")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+    (folder / "_output" / "m.json").write_text("v1", encoding="utf-8", newline="\n")
     _git(repository, "init", "--quiet", "-b", "main")
-    (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8")
+    (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(repository)
     v1 = snapshot.make(folder, made_at="2026-01-01T00:00:00.000000Z").snapshot
     start = v1.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
     manifest["models"]["m"]["aliases"] = {"champion": start}
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-    (folder / "_output" / "m.json").write_text("v2", encoding="utf-8")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+    (folder / "_output" / "m.json").write_text("v2", encoding="utf-8", newline="\n")
     _commit(repository, "Champion")
     snapshot.make(folder)
     return folder, start
@@ -224,7 +224,7 @@ def _model_pipeline(work: Path):
 def _catalog(work: Path, pipelines: dict) -> Path:
     catalog = work / "catalog"
     catalog.mkdir(exist_ok=True)
-    (catalog / "chartbook.toml").write_text(tomli_w.dumps({"project": {"type": "catalog", "id": "cat"}, "pipelines": pipelines}), encoding="utf-8")
+    (catalog / "chartbook.toml").write_text(tomli_w.dumps({"project": {"type": "catalog", "id": "cat"}, "pipelines": pipelines}), encoding="utf-8", newline="\n")
     return catalog
 
 
@@ -264,7 +264,7 @@ class TestWhatTheReviewFound:
         _forecast(forecast, {"yc": {"path": "../rates"}})
         lock.pin(forecast)
         _rates(work / "rates", 5.0)
-        (work / "rates" / "more.txt").write_text("more\n", encoding="utf-8")
+        (work / "rates" / "more.txt").write_text("more\n", encoding="utf-8", newline="\n")
         _commit(work, "Newer")
         snapshot.make(work / "rates")
         catalog = _catalog(work, {"acme/rates": {"path": "../rates"}})
@@ -281,10 +281,10 @@ class TestWhatTheReviewFound:
         other = work / "other-repo"
         _rates(other / "rates", 8.0)
         (other / "rates" / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _git(other, "init", "--quiet", "-b", "main")
-        (other / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (other / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
         _commit(other)
         snapshot.make(other / "rates")
         catalog = _catalog(work, {"rates": {"path": "../rates"}})
@@ -311,10 +311,10 @@ class TestWhatTheReviewFound:
         other = work / "other-repo"
         _rates(other / "rates", 8.0)
         (other / "rates" / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _git(other, "init", "--quiet", "-b", "main")
-        (other / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (other / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
         _commit(other)
         snapshot.make(other / "rates")
         _rates(work / "rates", 6.0)
@@ -337,7 +337,7 @@ class TestWhatTheReviewFound:
         work, forecast, taken = together
         _rates(work / "other", 1.0)
         (work / "other" / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _forecast(forecast, {"acme/rates": {"path": "../rates"}, "acme/other": {"path": "../other"}})
         _commit(work, "Another")
@@ -531,7 +531,7 @@ class TestWhatTheSecondReviewFound:
         copy = work / "copy"
         _rates(copy, 9.0)  # acme/rates too
         manifest = (copy / "chartbook.toml").read_text(encoding="utf-8")
-        (copy / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = { path = "../rates" }\n', encoding="utf-8")
+        (copy / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = { path = "../rates" }\n', encoding="utf-8", newline="\n")
         refused = lock.pin(copy).refused
         assert f"acme/rates is met in {copy} and again in {work / 'rates'}" in refused
         assert "give one of them an ID of its own with `[project] id`" in refused
@@ -551,7 +551,7 @@ class TestWhatTheSecondReviewFound:
         _rates(work / "rates", 7.0)
         forecast = _forecast(work / "forecast", {"acme/rates": {"path": "../rates"}})
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(work)
         monkeypatch.chdir(forecast)
         with pytest.warns(WorkingVersionWarning):
@@ -572,7 +572,7 @@ class TestWhatTheSecondReviewFound:
         settings = config.get_global_settings_path()
         assert not settings.is_relative_to(Path.home() / ".chartbook")  # not the real one; a temporary folder may be under home (Windows)
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text("[cache]\npath = 5\n", encoding="utf-8")
+        settings.write_text("[cache]\npath = 5\n", encoding="utf-8", newline="\n")
         lock.pin(forecast)
         assert lock.read_lock(forecast / lock.LOCK_FILE).dependencies
 
@@ -599,7 +599,7 @@ class TestWhatTheThirdReviewFound:
                 "project": {"id": "me/rates"},
                 "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
                 "dependencies": {"up": {"id": "acme/rates"}},
-            }), encoding="utf-8"
+            }), encoding="utf-8", newline="\n"
         )
         lock.pin(me)
         monkeypatch.chdir(me)
@@ -610,7 +610,7 @@ class TestWhatTheThirdReviewFound:
         me = tmp_path.resolve() / "me"
         _rates(me, 99.0)
         manifest = (me / "chartbook.toml").read_text(encoding="utf-8")
-        (me / "chartbook.toml").write_text(manifest + '\n[dependencies]\nbad = { path = "../x", git = "https://example.invalid/x.git" }\n', encoding="utf-8")
+        (me / "chartbook.toml").write_text(manifest + '\n[dependencies]\nbad = { path = "../x", git = "https://example.invalid/x.git" }\n', encoding="utf-8", newline="\n")
         monkeypatch.chdir(me)
         with pytest.raises(ValueError, match="chartbook.toml: \\[dependencies\\]: 'bad' has both"):
             data.load("acme/rates:treasury")
@@ -656,11 +656,11 @@ class TestWhatTheThirdReviewFound:
         _rates(work / "rates", 7.0)
         _rates(work / "other", 1.0)
         (work / "other" / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         forecast = _forecast(work / "forecast", {"acme/rates": {"path": "../rates"}})
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(work)
         other = snapshot.make(work / "other").snapshot
         monkeypatch.chdir(forecast)
@@ -698,7 +698,7 @@ class TestWhatTheThirdReviewFound:
     def test_a_snapshot_without_the_asset_is_an_error_everywhere(self, together, monkeypatch):
         work, forecast, taken = together
         manifest = (work / "rates" / "chartbook.toml").read_text(encoding="utf-8")
-        (work / "rates" / "chartbook.toml").write_text(manifest + '\n[dataframes.extra]\npath = "./_data/treasury.parquet"\ndocs = "d"\n', encoding="utf-8")
+        (work / "rates" / "chartbook.toml").write_text(manifest + '\n[dataframes.extra]\npath = "./_data/treasury.parquet"\ndocs = "d"\n', encoding="utf-8", newline="\n")
         (work / "scratch").mkdir()
         catalog = _catalog(work, {"acme/rates": {"path": "../rates"}})
         from chartbook import resolve as resolve_module
@@ -716,7 +716,7 @@ class TestWhatTheThirdReviewFound:
         me = work / "me"
         _rates(me, 5.0)
         manifest = (me / "chartbook.toml").read_text(encoding="utf-8")
-        (me / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = {}\n', encoding="utf-8")
+        (me / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = {}\n', encoding="utf-8", newline="\n")
         os.chmod(me, 0o555)
         monkeypatch.chdir(me)
         try:
@@ -735,7 +735,7 @@ class TestWhatTheFourthReviewFound:
                 "project": {"id": "me/rates"},
                 "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
                 "dependencies": dependencies,
-            }), encoding="utf-8"
+            }), encoding="utf-8", newline="\n"
         )
         return me
 
@@ -754,10 +754,10 @@ class TestWhatTheFourthReviewFound:
         other = work / "other-repo"
         _rates(other / "rates", 8.0)
         (other / "rates" / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "other/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _git(other, "init", "--quiet", "-b", "main")
-        (other / ".gitignore").write_text("_data/\n", encoding="utf-8")
+        (other / ".gitignore").write_text("_data/\n", encoding="utf-8", newline="\n")
         _commit(other)
         snapshot.make(other / "rates")
         me = self._me(work, {"up": {"id": "acme/rates"}, "down": {"id": "other/rates"}})
@@ -772,7 +772,7 @@ class TestWhatTheFourthReviewFound:
         fork = work / "fork"
         _rates(fork, 9.0)  # acme/rates too
         manifest = (fork / "chartbook.toml").read_text(encoding="utf-8")
-        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8")
+        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8", newline="\n")
         monkeypatch.chdir(fork)
         with pytest.raises(AssetNotPinnedError, match="acme/rates is met in") as raised:
             data.load("orig:treasury")
@@ -804,11 +804,11 @@ class TestWhatTheFifthReviewFound:
         work = tmp_path.resolve()
         _rates(work / "rates", 4.0)  # acme/rates
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         fork = work / "fork"
         _rates(fork, 9.0)  # acme/rates too
         manifest = (fork / "chartbook.toml").read_text(encoding="utf-8")
-        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8")
+        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8", newline="\n")
         _commit(work)
         snapshot.make(work / "rates")
         assert "acme/rates is met in" in lock.pin(fork).refused  # an ID names one pipeline
@@ -836,14 +836,14 @@ class TestWhatTheSixthReviewFound:
         upstream = work / "upstream"
         _rates(upstream, 4.0)
         (upstream / "chartbook.toml").write_text(
-            tomli_w.dumps({"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         _git(upstream, "init", "--quiet", "-b", "main")
         _commit(upstream)  # the parquet is committed: a git dependency has what its repository has
         fork = work / "fork"
         _rates(fork, 9.0)  # acme/rates
         manifest = (fork / "chartbook.toml").read_text(encoding="utf-8")
-        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "../upstream" }\n', encoding="utf-8")
+        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "../upstream" }\n', encoding="utf-8", newline="\n")
         lock.pin(fork)
         monkeypatch.chdir(fork)
         with pytest.raises(ValueError, match="names this pipeline"):
@@ -852,7 +852,7 @@ class TestWhatTheSixthReviewFound:
     def test_a_lockfile_that_cannot_be_read_does_not_stop_other_reads(self, elsewhere, monkeypatch):
         work, first, second = elsewhere
         forecast = _forecast(work / "forecast", {})
-        (forecast / "chartbook.lock").write_text("<<<<<<< ours\n{}\n=======\n{}\n>>>>>>> theirs\n", encoding="utf-8")
+        (forecast / "chartbook.lock").write_text("<<<<<<< ours\n{}\n=======\n{}\n>>>>>>> theirs\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(forecast)
         with pytest.warns(UnrecordedReadWarning):
             assert _value("acme/rates:treasury") == [4.2]
@@ -893,7 +893,7 @@ class TestWhatTheSeventhReviewFound:
         fork = work / "fork"
         _rates(fork, 9.0)  # acme/rates
         manifest = (fork / "chartbook.toml").read_text(encoding="utf-8")
-        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8")
+        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n', encoding="utf-8", newline="\n")
         os.chmod(fork, 0o555)
         monkeypatch.chdir(fork)
         try:
@@ -903,9 +903,9 @@ class TestWhatTheSeventhReviewFound:
             assert raised.value.reason == "cycle"
             # The original's folder takes another ID, and a snapshot of it
             rates = work / "rates" / "chartbook.toml"
-            rates.write_text(rates.read_text(encoding="utf-8").replace('id = "acme/rates"', 'id = "acme/other"'), encoding="utf-8")
+            rates.write_text(rates.read_text(encoding="utf-8").replace('id = "acme/rates"', 'id = "acme/other"'), encoding="utf-8", newline="\n")
             _rates(work / "rates", 7.0)
-            rates.write_text(rates.read_text(encoding="utf-8").replace('id = "acme/rates"', 'id = "acme/other"'), encoding="utf-8")
+            rates.write_text(rates.read_text(encoding="utf-8").replace('id = "acme/rates"', 'id = "acme/other"'), encoding="utf-8", newline="\n")
             _commit(work, "Another ID")
             snapshot.make(work / "rates")
             with pytest.raises(ValueError, match="names this pipeline"):
@@ -926,7 +926,7 @@ class TestWhatTheSeventhReviewFound:
     def test_a_pipeline_that_lists_its_own_folder_is_refused_by_pin_and_read(self, together, monkeypatch):
         work, forecast, taken = together
         rates = work / "rates" / "chartbook.toml"
-        rates.write_text(rates.read_text(encoding="utf-8") + '\n[dependencies]\n"acme/rates" = { path = "." }\n', encoding="utf-8")
+        rates.write_text(rates.read_text(encoding="utf-8") + '\n[dependencies]\n"acme/rates" = { path = "." }\n', encoding="utf-8", newline="\n")
         report = lock.pin(work / "rates")
         assert any("cannot depend on itself" in (e.detail or "") for e in report.events)
         monkeypatch.chdir(work / "rates")
@@ -943,7 +943,7 @@ class TestWhatTheSeventhReviewFound:
         document = json.loads(path.read_text(encoding="utf-8"))
         (pipeline,) = [r for r in document["records"] if r.get("kind") == "Pipeline"]
         pipeline["dependencies"].append({"id": ["not", "a", "name"], "location": {"kind": "path"}})
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         # acme/rates no longer declared; a folder not on this machine sends the read to the lockfile
         _forecast(forecast, {"gone": {"path": "../gone"}})
         monkeypatch.chdir(forecast)
@@ -962,7 +962,7 @@ class TestWhatTheSeventhReviewFound:
         with pytest.raises(ValueError, match="'model/m@champion'"):
             models.path("acme/model:m@champion")
         manifest = (folder / "chartbook.toml").read_text(encoding="utf-8")
-        (folder / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "https://example.invalid/acme/model.git" }\n', encoding="utf-8")
+        (folder / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "https://example.invalid/acme/model.git" }\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="If you mean orig in \\[dependencies\\]"):
             models.path("acme/model:m@champion")
 
@@ -980,7 +980,7 @@ class TestWhatTheEighthReviewFound:
         else:
             other = "../RATES"
         rates = work / "rates" / "chartbook.toml"
-        rates.write_text(rates.read_text(encoding="utf-8") + f'\n[dependencies]\norig = {{ path = "{other}" }}\n', encoding="utf-8")
+        rates.write_text(rates.read_text(encoding="utf-8") + f'\n[dependencies]\norig = {{ path = "{other}" }}\n', encoding="utf-8", newline="\n")
         report = lock.pin(work / "rates")
         (event,) = [e for e in report.events if e.dependency == "orig"]
         assert event.status == "no_snapshot" and "this pipeline's own folder" in event.detail
@@ -993,7 +993,7 @@ class TestWhatTheReleaseReviewFound:
     def _script(folder: Path, body: str) -> Path:
         (folder / "src").mkdir(exist_ok=True)
         script = folder / "src" / "pull.py"
-        script.write_text("from chartbook import data\n" + body, encoding="utf-8")
+        script.write_text("from chartbook import data\n" + body, encoding="utf-8", newline="\n")
         return script
 
     def test_a_script_in_a_pipeline_pins_by_either_form_wherever_it_is_run_from(self, together, monkeypatch, capsys):
@@ -1082,7 +1082,7 @@ class TestWhatTheReleaseReviewFound:
         monorepo = tmp_path.resolve() / "monorepo"
         (monorepo / ".venv" / "lib" / "chartbook").mkdir(parents=True)
         (monorepo / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/x.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/x.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         monkeypatch.setattr(cli_module, "__file__", str(monorepo / ".venv" / "lib" / "chartbook" / "cli.py"))
         monkeypatch.chdir(forecast)

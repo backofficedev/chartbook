@@ -38,7 +38,7 @@ def _pipeline(directory: Path, scripts=None, dependencies=None, **tables) -> Pat
     if dependencies is not None:
         table["dependencies"] = dependencies
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
@@ -69,7 +69,7 @@ def _commit(work: Path) -> None:
     Built data, lockfiles and logs are git-ignored, as in a real project.
     """
     if not (work / ".git").exists():
-        (work / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n*.log\n", encoding="utf-8")
+        (work / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n*.log\n", encoding="utf-8", newline="\n")
         _git(work, "init", "--quiet", "-b", "main")
     _git(work, "add", "-A")
     _git(work, "commit", "--quiet", "--allow-empty", "-m", "Work")
@@ -110,7 +110,7 @@ def _catalog(work: Path, *members: str) -> Path:
                 "project": {"type": "catalog"},
                 "pipelines": {name: {"path": name} for name in members},
             }
-        ), encoding="utf-8"
+        ), encoding="utf-8", newline="\n"
     )
     return work
 
@@ -163,7 +163,7 @@ class TestScripts:
         assert new_place["project"]["build"] == "doit"
 
         old_place = _pipeline(work / "b")
-        (old_place / "chartbook.toml").write_text('[project]\nid = "b"\nbuild = "make"\n', encoding="utf-8")
+        (old_place / "chartbook.toml").write_text('[project]\nid = "b"\nbuild = "make"\n', encoding="utf-8", newline="\n")
         loaded = load_manifest(old_place)
         assert loaded["scripts"] == {"build": "make"} and loaded["project"]["build"] == "make"
         assert "scripts" not in load_manifest(_pipeline(work / "c"))
@@ -183,7 +183,7 @@ class TestScripts:
                     "pipelines": {"p": {"path": "p"}},
                     "scripts": {"build": "doit"},
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         with pytest.raises(ValueError, match=r"a catalog has no \[scripts\]"):
             load_manifest(work)
@@ -246,7 +246,7 @@ class TestPlan:
     def test_a_manifest_that_cannot_be_read_names_the_file(self, work):
         """A catalog reads several in one run, so the error says which."""
         bad = _pipeline(work / "bad")
-        (bad / "chartbook.toml").write_text("this is not toml\n", encoding="utf-8")
+        (bad / "chartbook.toml").write_text("this is not toml\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError) as e:
             plan(bad)
         assert str(bad / "chartbook.toml") in str(e.value)
@@ -634,7 +634,7 @@ class TestRunThenSnapshot:
 
     def test_uncommitted_changes_stop_it_before_it_builds(self, reader, work):
         """Found out now, and not after an hour of building."""
-        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         with pytest.raises(RunError) as e:
             run.run(work / "upstream", echo=_quiet, snapshot=True)
         assert "upstream has changes that are not committed:" in str(e.value)
@@ -645,10 +645,10 @@ class TestRunThenSnapshot:
     def test_the_lockfile_it_writes_does_not_count_as_uncommitted(self, reader, work):
         """A real project commits chartbook.lock. The pin before the build
         changes it, and that is ChartBook's doing, not the build's."""
-        (work / ".gitignore").write_text("_data/\n_output/\n*.log\n", encoding="utf-8")  # the lockfile is tracked
+        (work / ".gitignore").write_text("_data/\n_output/\n*.log\n", encoding="utf-8", newline="\n")  # the lockfile is tracked
         _commit(work)
         _ready(work / "upstream")
-        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
         _commit(work)
         report = run.run(reader, echo=_quiet, snapshot=True)  # writes a new, untracked lockfile
@@ -665,9 +665,9 @@ class TestRunThenSnapshot:
 
     def test_a_path_that_reaches_out_is_refused_before_the_build(self, work):
         directory = _with_data(work / "upstream", {"build": "echo ran >> ../upstream_runs.log"})
-        with open(directory / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(directory / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.other]\npath = "../secret.txt"\ndocs = "d"\n')
-        (work / "secret.txt").write_text("mine\n", encoding="utf-8")
+        (work / "secret.txt").write_text("mine\n", encoding="utf-8", newline="\n")
         _commit(work)
         with pytest.raises(RunError, match="outside the pipeline's folder") as e:
             run.run(directory, echo=_quiet, snapshot=True)
@@ -677,7 +677,7 @@ class TestRunThenSnapshot:
     def test_a_build_that_commits_gets_no_snapshot(self, work):
         """The label would name a commit that did not run the build."""
         directory = _with_data(work / "upstream", {"build": "echo more >> notes.md && git add -A && git -c user.name=T -c user.email=t@e.org commit -q -m built"})
-        (directory / "notes.md").write_text("notes\n", encoding="utf-8")
+        (directory / "notes.md").write_text("notes\n", encoding="utf-8", newline="\n")
         _commit(work)
         before = _git(work, "rev-parse", "HEAD")
         report = run.run(directory, echo=_quiet, snapshot=True)
@@ -707,7 +707,7 @@ class TestRunThenSnapshot:
 
     def test_in_a_catalog_each_is_built_and_declared_ready_in_turn(self, reader, work):
         """So the second pins what the first has just declared ready."""
-        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8") as f:
+        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
         _commit(work)
         _catalog(work, "reader", "upstream")
@@ -746,7 +746,7 @@ class TestRunThenSnapshot:
         ]
 
     def test_the_command_refuses_before_building(self, reader, work, monkeypatch):
-        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8")
+        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(work / "upstream")
         result = CliRunner().invoke(main, ["run", "--snapshot"])
         assert result.exit_code == 1
@@ -774,7 +774,7 @@ class TestGitDependencies:
         )
         (directory / "data").mkdir()
         (directory / "data" / "committed.parquet").write_bytes(b"hello")
-        (directory / ".gitignore").write_text("/_data/\n/build.log\n", encoding="utf-8")
+        (directory / ".gitignore").write_text("/_data/\n/build.log\n", encoding="utf-8", newline="\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
@@ -813,7 +813,7 @@ class TestGitDependencies:
         the store and its hash into the committed lockfile.
         """
         secret = work / "secret.txt"
-        secret.write_text("the user's own file\n", encoding="utf-8")
+        secret.write_text("the user's own file\n", encoding="utf-8", newline="\n")
         repository = _pipeline(
             work / "sneaky",
             None,
@@ -846,7 +846,7 @@ class TestGitDependencies:
     def test_a_script_in_a_repository_can_be_run(self, work, cache):
         """A checkout is read-only, and a build script is still a program."""
         repository = _pipeline(work / "scripted", {"build": "./build.sh"})
-        (repository / "build.sh").write_text("#!/bin/sh\necho ran > built.txt\n", encoding="utf-8")
+        (repository / "build.sh").write_text("#!/bin/sh\necho ran > built.txt\n", encoding="utf-8", newline="\n")
         (repository / "build.sh").chmod(0o755)
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "add", "-A")
@@ -925,7 +925,7 @@ class TestGitDependencies:
         copy = self._copy(cache, repository)
         assert not is_built(copy)
 
-        (copy / "ready").write_text("", encoding="utf-8")  # whatever was wrong is put right
+        (copy / "ready").write_text("", encoding="utf-8", newline="\n")  # whatever was wrong is put right
         report = run.run(top, echo=_quiet)
         assert report.failed is None and [step.id for step in report.ran] == ["flaky", "top"]
         assert is_built(copy)
@@ -939,7 +939,7 @@ class TestGitDependencies:
         run.run(top, echo=_quiet)
         copy = self._copy(cache, repository)
         assert is_built(copy)
-        (copy / "broken").write_text("", encoding="utf-8")
+        (copy / "broken").write_text("", encoding="utf-8", newline="\n")
         assert run.run(top, echo=_quiet, force=True).failed.id == "flaky"
         assert not is_built(copy)
 
@@ -972,7 +972,7 @@ class TestGitDependencies:
         (repository / "chartbook.toml").write_text(
             (repository / "chartbook.toml").read_text(encoding="utf-8").replace(
                 "built-by-its-build", "built-by-a-later-commit"
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         _git(repository, "commit", "--quiet", "-am", "A new build")
         second = _git(repository, "rev-parse", "HEAD")
@@ -1027,7 +1027,7 @@ class TestGitDependencies:
         """Its working copy's directory is named after a commit, which says nothing."""
         directory = work / "ref_data"
         directory.mkdir()
-        (directory / "chartbook.toml").write_text('[scripts]\nbuild = "true"\n', encoding="utf-8")
+        (directory / "chartbook.toml").write_text('[scripts]\nbuild = "true"\n', encoding="utf-8", newline="\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
@@ -1044,7 +1044,7 @@ class TestGitDependencies:
         assert copy == cache.work_path(str(repository), checkout.commit)
         assert os.access(copy / "chartbook.toml", os.W_OK)
         assert not os.access(checkout.path / "chartbook.toml", os.W_OK)
-        (copy / "marker").write_text("kept", encoding="utf-8")
+        (copy / "marker").write_text("kept", encoding="utf-8", newline="\n")
         assert cache.work_copy(str(repository), checkout.commit) == copy
         assert (copy / "marker").read_text(encoding="utf-8") == "kept"
         assert cache.files(str(repository), checkout.commit) == copy
@@ -1163,7 +1163,7 @@ class TestCommand:
 
     def test_force_is_passed_on(self, work, monkeypatch):
         repository = _pipeline(work / "ref", {"build": "echo ran >> build.log"})
-        (repository / ".gitignore").write_text("/build.log\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("/build.log\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "add", "-A")
         _git(repository, "commit", "--quiet", "-m", "A pipeline")

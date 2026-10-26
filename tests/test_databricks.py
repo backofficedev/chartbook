@@ -72,9 +72,9 @@ def _pipeline(directory: Path, url: str = PUBLIC_URL) -> Path:
                     },
                 },
             }
-        ), encoding="utf-8"
+        ), encoding="utf-8", newline="\n"
     )
-    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8")
+    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8", newline="\n")
     (directory / "_data").mkdir(exist_ok=True)
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(directory / "_data" / "rates.parquet")
     return directory
@@ -199,7 +199,7 @@ class TestWhereTheTokenGoes:
         settings = backends.get_global_config_dir() / backends.SOURCES_FILE
         assert not settings.is_relative_to(Path.home() / ".chartbook")  # not the real one; a temporary folder may be under home (Windows)
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text(tomli_w.dumps({"warehouse": {"url": f"databricks://token:{TOKEN}@{HOST}"}}), encoding="utf-8")
+        settings.write_text(tomli_w.dumps({"warehouse": {"url": f"databricks://token:{TOKEN}@{HOST}"}}), encoding="utf-8", newline="\n")
         connection = connection_for("warehouse", PUBLIC_URL)
         assert (connection.host, connection.http_path, connection.token) == (HOST, HTTP_PATH, TOKEN)
 
@@ -380,7 +380,7 @@ class TestReading:
         assert isinstance(frame, pl.LazyFrame)
         assert frame.collect()["y10"].to_list() == [4.0, 4.3, 4.1]
         assert warehouse.queries[0] == "select * from (\nselect * from `workspace`.`rates`.`curve`\n) limit 0"
-        assert warehouse.open() == []
+        assert warehouse.open(encoding="utf-8") == []
 
     def test_nothing_is_read_until_it_is_collected(self, pipeline, signed_in, warehouse):
         frame = data.load("curve", project_dir=pipeline)
@@ -405,7 +405,7 @@ class TestReading:
         with pytest.raises((pl.exceptions.ComputeError, BackendError)) as error:
             frame.collect()
         assert "Catalog Error" in str(error.value) and "curve" in str(error.value)
-        assert warehouse.open() == []
+        assert warehouse.open(encoding="utf-8") == []
 
     def test_an_empty_result_without_its_schema_asks_for_a_row(self, pipeline, signed_in, warehouse):
         warehouse.empty_without_schema = True
@@ -440,7 +440,7 @@ class TestReading:
                         "b": {"source": "dev", "table": "workspace.rates.curve", "docs": "d"},
                     },
                 }
-            ), encoding="utf-8"
+            ), encoding="utf-8", newline="\n"
         )
         with pytest.raises(ValueError, match="names dataframes in 2 sources, dev, prod"):
             data.sql("select * from {a} cross join {b}", project_dir=directory)
@@ -458,10 +458,10 @@ class TestReading:
 
     def test_a_table_that_is_not_there_is_refused_when_loaded(self, pipeline, signed_in, warehouse):
         manifest = (pipeline / "chartbook.toml").read_text(encoding="utf-8").replace("workspace.rates.curve\"", "workspace.rates.nope\"", 1)
-        (pipeline / "chartbook.toml").write_text(manifest, encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(manifest, encoding="utf-8", newline="\n")
         with pytest.raises(BackendError, match="nope"):
             data.load("curve", project_dir=pipeline)
-        assert warehouse.open() == []
+        assert warehouse.open(encoding="utf-8") == []
 
     def test_sql_runs_in_the_warehouse(self, pipeline, signed_in, warehouse):
         frame = data.sql("select max(y10) as top from {curve}", project_dir=pipeline)
@@ -493,7 +493,7 @@ class TestDescribing:
         columns, rows = DatabricksBackend(PUBLIC_URL, "warehouse").describe(_table())
         assert columns == [{"name": "d", "dtype": "date"}, {"name": "y02", "dtype": "double"}, {"name": "y10", "dtype": "double"}]
         assert rows == 3
-        assert warehouse.open() == []
+        assert warehouse.open(encoding="utf-8") == []
 
     def test_span(self, signed_in, warehouse):
         first, last = DatabricksBackend(PUBLIC_URL, "warehouse").span(_table(), "d")

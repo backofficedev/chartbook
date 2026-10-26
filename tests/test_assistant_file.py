@@ -98,7 +98,7 @@ class TestACatalogsFile:
         root, first, second = catalog
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         site = root / "docs"
         text = (site / "llms.txt").read_text(encoding="utf-8")
@@ -115,7 +115,7 @@ class TestWhatTheReviewFound:
         _show_from_the_store(root)
         manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["description"] = description
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         site = root / "docs"
         files = [site / "llms.txt", *sorted((site / "versions").rglob("llms.txt"))]

@@ -182,8 +182,11 @@ def repository_slug(url: str) -> Path:
 
     The same repository reached two ways (``https://host/a/b.git``,
     ``git@host:a/b``) gets one path, and so one clone. A repository on this
-    disk goes under ``local/``. Nothing of a URL's user name or password is
-    in it, and no component can climb out of the cache. A port stays, as
+    disk goes under ``local/``, by its folder's name and a short hash of its
+    whole path: the path in full would make one in the cache longer than
+    the 260 characters Windows lets git work in. Nothing of a URL's user
+    name or password is in it, and no component can climb out of the
+    cache. A port stays, as
     ``host_8443``, and a component with a character that is not kept gets
     a short hash of itself, so that two different repositories never share
     a clone.
@@ -200,6 +203,13 @@ def repository_slug(url: str) -> Path:
     else:
         host, path = "local", re.sub(r"^file://", "", text)
     path = re.sub(r"\.git/?$", "", path.rstrip("/"))
+    if host == "local":
+        # One folder: its name, and a hash of the whole path, written with /
+        # so that C:\\repos\\x and C:/repos/x are one repository
+        whole = re.sub(r"[/\\]+", "/", path)
+        name = next((part for part in reversed(whole.split("/")) if part and set(part) != {"."}), "repository")
+        digest = hashlib.sha256(whole.encode("utf-8")).hexdigest()[:8]
+        return Path("local", re.sub(r"[^A-Za-z0-9._-]", "_", name) + "~" + digest)
     components = [host, *re.split(r"[/\\]+", path)]
     safe = []
     for part in components:

@@ -25,7 +25,7 @@ def files(tmp_path, monkeypatch):
 
 
 def _write(path: Path, settings: dict) -> None:
-    path.write_text(tomli_w.dumps(settings), encoding="utf-8")
+    path.write_text(tomli_w.dumps(settings), encoding="utf-8", newline="\n")
 
 
 class TestTheLayers:
@@ -107,12 +107,12 @@ class TestWhatTheReviewFound:
 
     def test_a_faulty_organization_file_is_a_warning_and_ignored(self, files, tmp_path):
         user, system = files
-        system.write_text("this = [not toml", encoding="utf-8")
+        system.write_text("this = [not toml", encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning, match="is not valid TOML.*It is ignored"):
             assert config.get_store_path() == (user.parent / "store").resolve()
         if os.name == "nt":
             return  # chmod does not make a file unreadable on Windows
-        system.write_text("", encoding="utf-8")
+        system.write_text("", encoding="utf-8", newline="\n")
         system.chmod(0o000)
         try:
             with pytest.warns(UserWarning, match="cannot be read.*It is ignored"):
@@ -127,10 +127,10 @@ class TestWhatTheReviewFound:
 
     def test_a_faulty_user_file_names_itself(self, files):
         user, _ = files
-        user.write_text("this = [not toml", encoding="utf-8")
+        user.write_text("this = [not toml", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"\.chartbook[/\\]settings\.toml, the user's settings, is not valid TOML"):
             config.get_store_path()
-        user.write_text("catalog = 5\n", encoding="utf-8")
+        user.write_text("catalog = 5\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"\[catalog\] must be a table"):
             config.get_default_catalog_path()
 
@@ -157,7 +157,7 @@ class TestWhatTheReviewFound:
         from chartbook.cli import main
 
         user, _ = files
-        user.write_text("x = [\n", encoding="utf-8")
+        user.write_text("x = [\n", encoding="utf-8", newline="\n")
         listed = CliRunner().invoke(main, ["ls"])
         assert listed.exit_code == 1
         assert "Error:" in listed.output and "is not valid TOML" in listed.output and "Traceback" not in listed.output

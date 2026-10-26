@@ -27,7 +27,7 @@ def _commit(repository: Path, message: str = "Work") -> None:
 def _rates(folder: Path, value: float) -> None:
     (folder / "_data").mkdir(parents=True, exist_ok=True)
     (folder / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}}), encoding="utf-8"
+        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}}), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-01-01"], "r": [value]}).write_parquet(folder / "_data" / "treasury.parquet")
 
@@ -41,7 +41,7 @@ def _forecast(folder: Path, dependencies: dict, scripts=None) -> Path:
     }
     if scripts:
         manifest["scripts"] = scripts
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     pl.DataFrame({"d": ["2024-02-01"], "f": [1.0]}).write_parquet(folder / "_data" / "outlook.parquet")
     return folder
 
@@ -54,11 +54,11 @@ def elsewhere(tmp_path):
     rates = machine_one / "rates"
     _rates(rates, 4.1)
     _git(machine_one, "init", "--quiet", "-b", "main")
-    (machine_one / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+    (machine_one / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(machine_one)
     first = snapshot.make(rates).snapshot
     _rates(rates, 4.2)
-    (rates / "notes.txt").write_text("a second commit\n", encoding="utf-8")
+    (rates / "notes.txt").write_text("a second commit\n", encoding="utf-8", newline="\n")
     _commit(machine_one, "Second")
     second = snapshot.make(rates).snapshot
     remove_tree(machine_one)
@@ -123,7 +123,7 @@ class TestTheRestOfChartBookKnowsIt:
         work, first, second = elsewhere
         forecast = _forecast(work / "forecast", {"acme/rates": {}})
         _git(forecast, "init", "--quiet", "-b", "main")
-        (forecast / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (forecast / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(forecast)
         with pytest.raises(snapshot.SnapshotError, match="its pins do not account"):
             snapshot.make(forecast)
@@ -196,7 +196,7 @@ class TestAdd:
 
         work, first, second = elsewhere
         forecast = _forecast(work / "forecast", {})
-        (forecast / "chartbook.toml").write_text("# my notes\n" + (forecast / "chartbook.toml").read_text(encoding="utf-8"), encoding="utf-8")
+        (forecast / "chartbook.toml").write_text("# my notes\n" + (forecast / "chartbook.toml").read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["add", "acme/rates", "--as", "rates"])
         assert result.exit_code == 0, result.output
@@ -257,8 +257,8 @@ def _another(work: Path, name: str, value: float, remote=None, made_at=None):
     _git(repository, "init", "--quiet", "-b", "main")
     if remote:
         _git(repository, "remote", "add", "origin", remote)
-    (repository / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
-    (repository / "README.md").write_text(f"{name}\n", encoding="utf-8")  # its own history, from its first commit
+    (repository / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
+    (repository / "README.md").write_text(f"{name}\n", encoding="utf-8", newline="\n")  # its own history, from its first commit
     _commit(repository)
     return snapshot.make(folder, made_at=made_at).snapshot
 
@@ -340,7 +340,7 @@ class TestWhatTheReviewFound:
         _rates(work / "rates", 4.0)
         forecast = _forecast(work / "forecast", {"acme/rates": {"path": "../rates"}})
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(work)
         snapshot.make(work / "rates")
         lock.pin(forecast)
@@ -394,7 +394,7 @@ class TestWhatTheSecondReviewFound:
         # The line is taken out again, and the owner makes a newer snapshot: update takes it
         _forecast(forecast, {"acme/rates": {}})
         _rates(work / "real" / "rates", 5.0)
-        (work / "real" / "rates" / "more.txt").write_text("more\n", encoding="utf-8")
+        (work / "real" / "rates" / "more.txt").write_text("more\n", encoding="utf-8", newline="\n")
         _commit(work / "real", "Newer")
         newer = snapshot.make(work / "real" / "rates").snapshot
         lock.update(forecast)
@@ -420,7 +420,7 @@ class TestWhatTheSecondReviewFound:
         from chartbook.identity import clear_git_remote_cache
 
         clear_git_remote_cache()
-        (work / "real" / "rates" / "more.txt").write_text("more\n", encoding="utf-8")
+        (work / "real" / "rates" / "more.txt").write_text("more\n", encoding="utf-8", newline="\n")
         _commit(work / "real", "Newer")
         newer = snapshot.make(work / "real" / "rates").snapshot
         assert newer.repository == "https://github.com/Acme/Rates"
@@ -463,7 +463,7 @@ class TestWhatTheSecondReviewFound:
 def _again(repository: Path, value: float, message: str, made_at=None):
     """Another commit of a repository `_another` made, snapshotted."""
     _rates(repository / "rates", value)
-    (repository / "rates" / "notes.txt").write_text(f"{message}\n", encoding="utf-8")
+    (repository / "rates" / "notes.txt").write_text(f"{message}\n", encoding="utf-8", newline="\n")
     _commit(repository, message)
     return snapshot.make(repository / "rates", made_at=made_at).snapshot
 
@@ -475,7 +475,7 @@ class TestWhatTheThirdReviewFound:
         work, first, second = elsewhere
         newer = default_store().root / "snapshots" / ("e" * 40) / "_root"
         newer.mkdir(parents=True)
-        (newer / "20260101T000000.000000Z.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}), encoding="utf-8")
+        (newer / "20260101T000000.000000Z.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}), encoding="utf-8", newline="\n")
         forecast = _forecast(work / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         assert _pinned(forecast)["location"]["commit"] == second.commit
@@ -518,19 +518,19 @@ class TestWhatTheThirdReviewFound:
         folder = repository / "model"
         (folder / "_output").mkdir(parents=True)
         manifest = {"project": {"id": "acme/model"}, "models": {"m": {"path": "./_output/m.json"}}}
-        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-        (folder / "_output" / "m.json").write_text("v1", encoding="utf-8")
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text("v1", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "remote", "add", "origin", "https://github.com/oldorg/model")
-        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(repository)
         v1 = snapshot.make(folder, made_at="2026-01-01T00:00:00.000000Z").snapshot
         start = v1.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
         _git(repository, "remote", "set-url", "origin", "https://github.com/neworg/model")
         clear_git_remote_cache()
         manifest["models"]["m"]["aliases"] = {"champion": start}
-        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-        (folder / "_output" / "m.json").write_text("v2", encoding="utf-8")
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text("v2", encoding="utf-8", newline="\n")
         _commit(repository, "Champion")
         snapshot.make(folder)
         forecast = _forecast(work / "forecast", {"acme/model": {}})
@@ -569,7 +569,7 @@ class TestWhatTheThirdReviewFound:
         newest = _again(work / "real", 4.5, "Second", made_at="2026-01-02T00:00:00.000000Z")
         copy = _another(work, "copy", 9.0)  # newer, another repository with the same ID
         for taken in (older, newest, copy):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7)
         kept = {t.commit for t, why in plan.keep if why == "it is the newest of its pipeline"}
         assert kept == {newest.commit, copy.commit}
@@ -586,7 +586,7 @@ class TestWhatTheThirdReviewFound:
         location = pipeline["dependencies"][0]["location"]
         location["repository"] = ""
         del location["first_commit"]
-        path.write_text(json.dumps(document), encoding="utf-8")
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         newer = _again(work / "real", 5.0, "Newer")
         lock.update(forecast)
         assert _pinned(forecast)["location"]["commit"] == newer.commit != real.commit
@@ -625,7 +625,7 @@ class TestWhatTheFourthReviewFound:
         _record(real, made_at="2026-10-15T00:00:00.000000Z", repository="")  # an agent's clone, a path remote
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         ci = (real.commit, "2026-10-01T00:00:00.000000Z")
         now = datetime(2026, 10, 16, tzinfo=timezone.utc)
         plan = snapshot.plan_removals(store, {ci}, set(), keep_days=7, now=now)
@@ -677,19 +677,19 @@ class TestWhatTheFourthReviewFound:
         folder = repository / "model"
         (folder / "_output").mkdir(parents=True)
         manifest = {"project": {"id": "acme/model"}, "models": {"m": {"path": "./_output/m.json"}}}
-        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-        (folder / "_output" / "m.json").write_text("v1", encoding="utf-8")
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text("v1", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "remote", "add", "origin", "https://github.com/acme/model")
-        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(repository)
         v1 = snapshot.make(folder, made_at="2026-01-01T00:00:00.000000Z").snapshot
         v1.path.unlink()
         _record(v1, repository="", first_commit="")  # as an older ChartBook wrote it
         start = v1.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
         manifest["models"]["m"]["aliases"] = {"champion": start}
-        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
-        (folder / "_output" / "m.json").write_text("v2", encoding="utf-8")
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (folder / "_output" / "m.json").write_text("v2", encoding="utf-8", newline="\n")
         _commit(repository, "Champion")
         v2 = snapshot.make(folder).snapshot
         # Another repository claims the ID
@@ -698,11 +698,11 @@ class TestWhatTheFourthReviewFound:
         report = lock.pin(forecast)
         assert [e.status for e in report.events if e.asset == "acme/model:model/m@champion"] == ["pinned"]
         # gc keeps it, with a newer snapshot that names no repository either
-        (folder / "_output" / "m.json").write_text("v1b", encoding="utf-8")
+        (folder / "_output" / "m.json").write_text("v1b", encoding="utf-8", newline="\n")
         _record(dataclasses_replace_assets(v1, "v1b"), repository="", first_commit="", made_at="2026-01-02T00:00:00.000000Z")
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         plan = snapshot.plan_removals(store, set(), set(), keep_days=7)
         assert ("2026-01-01T00:00:00.000000Z", "a label points at a version in it") in [(t.made_at, w) for t, w in plan.keep]
 
@@ -749,7 +749,7 @@ class TestWhatTheFifthReviewFound:
         _record(later, made_at="2026-10-10T00:00:00.000000Z", repository="", first_commit="")
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         plan = snapshot.plan_removals(store, set(), set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
         assert ("2026-09-01T00:00:00.000000Z", "it is the newest that names its repository") in [(t.made_at, w) for t, w in plan.keep]
         for taken, _ in plan.remove:
@@ -779,7 +779,7 @@ class TestWhatTheFifthReviewFound:
             _record(real, made_at=f"2026-09-0{day}T00:00:00.000000Z", repository=f"https://github.com/{address}")
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         plan = snapshot.plan_removals(store, set(), set(), keep_days=0, aggressive=True)
         assert [(t.made_at, w) for t, w in plan.keep] == [("2026-09-05T00:00:00.000000Z", "it is the newest of its pipeline")]
 
@@ -798,7 +798,7 @@ class TestWhatTheFifthReviewFound:
         _record(real, made_at="2026-10-15T00:00:00.000000Z", repository="")  # an agent's clone
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         plan = snapshot.plan_removals(
             store, {(real.commit, "2026-10-01T00:00:00.000000Z")}, set(), keep_days=0, aggressive=True, now=now
         )
@@ -811,7 +811,7 @@ class TestWhatTheSixthReviewFound:
 
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         return store
 
     def test_a_named_pin_on_a_clones_snapshot_keeps_what_names_its_address(self, tmp_path):
@@ -889,7 +889,7 @@ class TestWhatTheSeventhReviewFound:
 
         store = default_store()
         for taken in snapshot.all_snapshots(store):
-            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8")
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n", encoding="utf-8", newline="\n")
         return store
 
     def test_every_address_of_a_kept_clones_first_commit_stays(self, tmp_path):

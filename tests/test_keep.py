@@ -42,7 +42,7 @@ def _git(directory: Path, *arguments: str) -> str:
 
 def _commit(repository: Path, message: str = "Work") -> str:
     if not (repository / ".git").exists():
-        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_models/\n*.log\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_models/\n*.log\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
     _git(repository, "add", "-A")
     _git(repository, "commit", "--quiet", "--allow-empty", "-m", message)
@@ -51,7 +51,7 @@ def _commit(repository: Path, message: str = "Work") -> str:
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
@@ -81,7 +81,7 @@ def work(tmp_path):
 def costly(work):
     """A pipeline whose ``embeddings`` cost something to make, and is marked; built and committed."""
     directory = _manifest(work / "docs", COSTLY)
-    (directory / "README.md").write_text("# docs\n", encoding="utf-8")
+    (directory / "README.md").write_text("# docs\n", encoding="utf-8", newline="\n")
     _write(directory, "embeddings", b"emb-1")
     _write(directory, "summary", b"sum-1")
     _commit(work)
@@ -91,7 +91,7 @@ def costly(work):
 def _elsewhere(tmp_path: Path) -> None:
     """Make every snapshot's folder of origin one that is not on this machine."""
     for folder in {taken.path.parent for taken in snapshot.all_snapshots(default_store())}:
-        (folder / "origins").write_text(str(tmp_path / "another-machine") + "\n", encoding="utf-8")
+        (folder / "origins").write_text(str(tmp_path / "another-machine") + "\n", encoding="utf-8", newline="\n")
 
 
 def _plan(**kwargs):
@@ -342,7 +342,7 @@ class TestTheStopBeforeABuild:
         snapshot.make(costly)
         cheap = _manifest(work / "cheap", {"project": {"id": "acme/cheap"}, "scripts": {"build": "echo built >> build.log"}})
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"cheap": {"path": "cheap"}, "docs": {"path": "docs"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"cheap": {"path": "cheap"}, "docs": {"path": "docs"}}}), encoding="utf-8", newline="\n"
         )
         _commit(work)
         (costly / "_data" / "embeddings.parquet").unlink()
@@ -469,7 +469,7 @@ class TestAfterReview:
         for record in document["records"]:
             if record["id"] == "acme/docs:embeddings":
                 record["content_hash"] = "../../../etc/passwd"
-        taken.path.write_text(json.dumps(document), encoding="utf-8")
+        taken.path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         (costly / "_data" / "embeddings.parquet").unlink()
         ((name, why),) = snapshot.restore(costly).left
         assert name == "embeddings" and why.startswith(f"the newest snapshot holding it, at {taken.commit[:7]}, names an object that is not one")

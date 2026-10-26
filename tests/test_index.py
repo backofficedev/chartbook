@@ -30,7 +30,7 @@ def _edit_toml(project_dir: Path, edit) -> None:
     toml_path = Path(project_dir) / "chartbook.toml"
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8")
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
 
 
 def _add_notebook(project_dir: Path, name: str = "analysis") -> None:
@@ -43,7 +43,7 @@ def _add_notebook(project_dir: Path, name: str = "analysis") -> None:
     }
     path = Path(project_dir) / "_output" / f"{name}.ipynb"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(notebook), encoding="utf-8")
+    path.write_text(json.dumps(notebook), encoding="utf-8", newline="\n")
     _edit_toml(
         project_dir,
         lambda c: c["notebooks"].update({name: {"path": f"_output/{name}.ipynb"}}),
@@ -295,7 +295,7 @@ class TestFilesNotBuiltYet:
 
     def test_a_file_that_is_not_parquet_still_has_a_hash(self, project):
         parquet = project / "_data" / "notes_pipeline" / "dataframe_0.parquet"
-        parquet.write_text("not a parquet file", encoding="utf-8")
+        parquet.write_text("not a parquet file", encoding="utf-8", newline="\n")
         record = _by_id(_build(project), "notes_pipeline:dataframe_0")
         assert record["content_hash"].startswith("sha256:")
         assert "columns" not in record
@@ -710,7 +710,7 @@ class TestWriteIndex:
     @pytest.mark.parametrize("content", ["", "not json", "[]"])
     def test_an_unreadable_file_is_replaced(self, project, tmp_path, content):
         path = tmp_path / "index.json"
-        path.write_text(content, encoding="utf-8")
+        path.write_text(content, encoding="utf-8", newline="\n")
         built = _build(project)
         index.write_index(built, path, only_if_changed=True)
         assert json.loads(path.read_text(encoding="utf-8")) == built
@@ -810,9 +810,9 @@ class TestWhatTheWriterNeeds:
 
         directory = tmp_path.resolve() / "p"
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# P\n", encoding="utf-8")
+        (directory / "README.md").write_text("# P\n", encoding="utf-8", newline="\n")
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d", "date_col": "Date"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d", "date_col": "Date"}}}), encoding="utf-8", newline="\n"
         )
         pl.DataFrame({"Date": [datetime.date(2024, 1, 3), datetime.date(2024, 1, 1), datetime.date(2024, 1, 2)], "x": [1.0, 2.0, 3.0]}).write_parquet(
             directory / "_data" / "d.parquet"
@@ -831,7 +831,7 @@ class TestWhatTheWriterNeeds:
         assert _by_id(index.build_index(load_manifest(directory)), "acme/p:d")["date_range"] == {"first": "2024-01-01T00:00:00", "last": "2024-01-03T09:30:00"}
         # No date_col, no range
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}}), encoding="utf-8"
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
         )
         assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
 
@@ -871,7 +871,7 @@ class TestWhatTheWriterNeeds:
         config = catalog / "chartbook.toml"
         text = config.read_text(encoding="utf-8")
         if "[policy" not in text:
-            config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n", encoding="utf-8")
+            config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n", encoding="utf-8", newline="\n")
         built = index.build_index(load_manifest(catalog))
         (record,) = _of_kind(built, "Catalog")
         assert record["policy"]["required"]["dataframes"] == ["name"]

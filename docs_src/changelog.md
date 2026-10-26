@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — ChartBook on Windows
+
+The tests now run on Windows too, on the oldest and newest Python ChartBook supports, and what they found there is fixed:
+
+- **Text is UTF-8, written with `\n` line endings, on every system.** On Windows, ChartBook read and wrote text in the system's code page, and wrote `\r\n`: a snapshot's index came out bigger there than on a Mac, so a store that both share would have held two copies of the same thing. A file ChartBook writes is now the same bytes wherever it is written, and git's output is read as UTF-8.
+- **A `git` dependency on a folder on this machine is fetched.** The git cache keeps such a clone under a folder named after the repository's path, which passed the 260 characters Windows allows a path; git now runs with long paths there.
+- **`chartbook catalog add` writes a member's path with `/`**, as catalog discovery does, so a catalog file reads the same on every system.
+- **A `file://` store URL that names a host is refused on Windows too.** There, `file://user:password@host/…` was read as drive `U:`, and printed with its password.
+- **SQL names a parquet file with `/`**: `data.ref` and `data.sql` give the same text everywhere, and DuckDB reads it on Windows.
+- **A symlink's target is said as it is written**, without the `\\?\` Windows may add.
+- **A new project runs there.** The template's `dodo.py` no longer reads `USER`, which Windows does not set, and `chartbook init` from a ChartBook installed read-only no longer stops at removing a read-only file. The examples make their folders in Python, not with `mkdir -p`.
+- **A wheel built on Windows** names its template files with `/`.
+
 ### Added — `chartbook run --upstream` builds and snapshots an upstream that has no snapshot
 
 A pipeline that depends on another by `path` pins that pipeline's snapshot, which its owner makes with `chartbook snapshot`; with none, `chartbook run` stops and says so. With `--upstream` (on `chartbook run` and `chartbook build`), a `path` dependency on this machine that has no snapshot to pin, and is not pinned yet, is built first and snapshotted once its build succeeds, and each of its own the same way, as far up as they go, each before what depends on it; the run lists them before anything runs. Each must be trusted to run (asked at a terminal; elsewhere an untrusted one stops the run), have a `build` script, and have everything committed, and its build must leave its committed files as they were; the dependencies must form no cycle. The first that fails stops the run, and nothing that depends on it is built. An upstream that has a snapshot, or is pinned already, is not built again. Asked for by the maintainer on 2026-10-26.

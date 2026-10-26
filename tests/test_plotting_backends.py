@@ -44,13 +44,13 @@ def installed_example(tmp_path, monkeypatch, fresh_registry):
     site = tmp_path / "site-packages"
     dist_info = site / "chartbook_vegalite-0.1.dist-info"
     dist_info.mkdir(parents=True)
-    (site / "chartbook_vegalite.py").write_text(EXAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    (site / "chartbook_vegalite.py").write_text(EXAMPLE.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
     (dist_info / "METADATA").write_text(
-        "Metadata-Version: 2.1\nName: chartbook-vegalite\nVersion: 0.1\n", encoding="utf-8"
+        "Metadata-Version: 2.1\nName: chartbook-vegalite\nVersion: 0.1\n", encoding="utf-8", newline="\n"
     )
     # Exactly the registration the guide tells an author to write
     (dist_info / "entry_points.txt").write_text(
-        f"[{ENTRY_POINT_GROUP}]\nvegalite = chartbook_vegalite:backend\n", encoding="utf-8"
+        f"[{ENTRY_POINT_GROUP}]\nvegalite = chartbook_vegalite:backend\n", encoding="utf-8", newline="\n"
     )
     monkeypatch.syspath_prepend(str(site))
     yield
@@ -145,12 +145,12 @@ class TestClassesAndBrokenPlugins:
         site = tmp_path / "site-packages"
         dist_info = site / "chartbook_other-0.1.dist-info"
         dist_info.mkdir(parents=True)
-        (site / "chartbook_other.py").write_text(module_source, encoding="utf-8")
+        (site / "chartbook_other.py").write_text(module_source, encoding="utf-8", newline="\n")
         (dist_info / "METADATA").write_text(
-            "Metadata-Version: 2.1\nName: chartbook-other\nVersion: 0.1\n", encoding="utf-8"
+            "Metadata-Version: 2.1\nName: chartbook-other\nVersion: 0.1\n", encoding="utf-8", newline="\n"
         )
         (dist_info / "entry_points.txt").write_text(
-            f"[{ENTRY_POINT_GROUP}]\nother = chartbook_other:{target}\n", encoding="utf-8"
+            f"[{ENTRY_POINT_GROUP}]\nother = chartbook_other:{target}\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.syspath_prepend(str(site))
 

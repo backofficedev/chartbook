@@ -7,6 +7,8 @@ from pathlib import Path
 
 import jsonschema
 import polars as pl
+import os
+
 import pytest
 import tomli_w
 from click.testing import CliRunner
@@ -38,22 +40,22 @@ def pipeline(tmp_path):
     """
     work = tmp_path.resolve() / "rates"
     (work / "docs_src" / "site").mkdir(parents=True)
-    (work / "chartbook.toml").write_text(tomli_w.dumps(MANIFEST), encoding="utf-8")
-    (work / "README.md").write_text("# Rates\n\nThe README of the rates pipeline.\n", encoding="utf-8")
-    (work / "docs_src" / "treasury.md").write_text("The treasury write-up, as it stood at this commit.\n", encoding="utf-8")
-    (work / "docs_src" / "method.md").write_text("# Method\n\nHow the rates are made.\n", encoding="utf-8")
-    (work / "docs_src" / "site" / "guide.md").write_text("# A Guide\n\nRead this first.\n", encoding="utf-8")
+    (work / "chartbook.toml").write_text(tomli_w.dumps(MANIFEST), encoding="utf-8", newline="\n")
+    (work / "README.md").write_text("# Rates\n\nThe README of the rates pipeline.\n", encoding="utf-8", newline="\n")
+    (work / "docs_src" / "treasury.md").write_text("The treasury write-up, as it stood at this commit.\n", encoding="utf-8", newline="\n")
+    (work / "docs_src" / "method.md").write_text("# Method\n\nHow the rates are made.\n", encoding="utf-8", newline="\n")
+    (work / "docs_src" / "site" / "guide.md").write_text("# A Guide\n\nRead this first.\n", encoding="utf-8", newline="\n")
     (work / "docs_src" / "site" / "logo-small.png").write_bytes(b"\x89PNG\r\n\x1a\nnot really")
-    (work / "docs_src" / "site" / "draft.md").write_text("# Draft\n\nNot for anyone yet.\n", encoding="utf-8")
-    (work / ".env").write_text("FAKE_SECRET=do-not-store-me\n", encoding="utf-8")
-    (work / ".gitignore").write_text(".env\ndocs_src/site/draft.md\n_data/\n_output/\n_models/\n_docs*/\ndocs/\nchartbook.lock\n", encoding="utf-8")
+    (work / "docs_src" / "site" / "draft.md").write_text("# Draft\n\nNot for anyone yet.\n", encoding="utf-8", newline="\n")
+    (work / ".env").write_text("FAKE_SECRET=do-not-store-me\n", encoding="utf-8", newline="\n")
+    (work / ".gitignore").write_text(".env\ndocs_src/site/draft.md\n_data/\n_output/\n_models/\n_docs*/\ndocs/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     (work / "_data" / "by_year" / "year=2024").mkdir(parents=True)
     pl.DataFrame({"date": ["2024-01-02", "2024-01-03"], "rate": [4.1, 4.2]}).write_parquet(work / "_data" / "treasury.parquet")
     pl.DataFrame({"rate": [4.1]}).write_parquet(work / "_data" / "by_year" / "year=2024" / "part-0.parquet")
     (work / "_output").mkdir()
-    (work / "_output" / "curve.html").write_text("<html><body>curve</body></html>", encoding="utf-8")
+    (work / "_output" / "curve.html").write_text("<html><body>curve</body></html>", encoding="utf-8", newline="\n")
     (work / "_models" / "ar1" / "weights").mkdir(parents=True)
-    (work / "_models" / "ar1" / "config.json").write_text("{}", encoding="utf-8")
+    (work / "_models" / "ar1" / "config.json").write_text("{}", encoding="utf-8", newline="\n")
     (work / "_models" / "ar1" / "weights" / "best.pt").write_bytes(b"w" * 10)
     _git(work, "init", "--quiet", "-b", "main")
     _git(work, "add", "-A")
@@ -85,7 +87,7 @@ class TestTheIndexOfTheVersion:
 
     def test_a_manifest_a_docs_build_refuses_still_snapshots(self, pipeline):
         broken = dict(MANIFEST, charts={"curve": {"path": "./_output/curve.html", "docs": "No dataframe."}})
-        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(broken), encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(broken), encoding="utf-8", newline="\n")
         _git(pipeline, "commit", "--quiet", "-am", "A chart with no dataframe")
         report = snapshot.make(pipeline)
         assert report.made and report.snapshot.index is None
@@ -95,7 +97,7 @@ class TestTheIndexOfTheVersion:
 
     def test_the_command_says_when_the_index_is_not_recorded(self, pipeline, monkeypatch):
         broken = dict(MANIFEST, charts={"curve": {"path": "./_output/curve.html", "docs": "No dataframe."}})
-        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(broken), encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(broken), encoding="utf-8", newline="\n")
         _git(pipeline, "commit", "--quiet", "-am", "A chart with no dataframe")
         monkeypatch.chdir(pipeline)
         result = CliRunner().invoke(main, ["snapshot"])
@@ -138,19 +140,19 @@ class TestTheDocuments:
 
     def test_a_path_outside_the_folder_is_not_taken(self, pipeline):
         outside = pipeline.parent / "elsewhere.md"
-        outside.write_text("outside\n", encoding="utf-8")
+        outside.write_text("outside\n", encoding="utf-8", newline="\n")
         manifest = dict(MANIFEST)
         manifest["dataframes"] = dict(MANIFEST["dataframes"])
         manifest["dataframes"]["treasury"] = dict(MANIFEST["dataframes"]["treasury"], docs_path="../elsewhere.md")
-        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _git(pipeline, "commit", "--quiet", "-am", "A write-up outside")
         paths, skipped = snapshot.document_paths(pipeline)
         assert "../elsewhere.md" not in paths and all(not p.startswith("..") for p in paths)
         assert ("../elsewhere.md", snapshot.NOT_A_PLAIN_PATH) in skipped
 
     def test_the_lockfile_is_taken_when_git_tracks_it(self, pipeline):
-        (pipeline / ".gitignore").write_text(".env\ndocs_src/site/draft.md\n_data/\n_output/\n_models/\n_docs*/\ndocs/\n", encoding="utf-8")
-        (pipeline / "chartbook.lock").write_text('schema = "chartbook/lock/v1"\n', encoding="utf-8")
+        (pipeline / ".gitignore").write_text(".env\ndocs_src/site/draft.md\n_data/\n_output/\n_models/\n_docs*/\ndocs/\n", encoding="utf-8", newline="\n")
+        (pipeline / "chartbook.lock").write_text('schema = "chartbook/lock/v1"\n', encoding="utf-8", newline="\n")
         _git(pipeline, "add", "-A")
         _git(pipeline, "commit", "--quiet", "-m", "Commit the lockfile")
         assert "chartbook.lock" in snapshot.document_paths(pipeline)[0]
@@ -192,7 +194,7 @@ class TestLayingAVersionOut:
         with pytest.raises(snapshot.SnapshotError, match="carries no documents: it was made before snapshots did"):
             snapshot.materialize(dataclasses.replace(taken, documents=None), tmp_path / "old")
         (tmp_path / "busy").mkdir()
-        (tmp_path / "busy" / "x").write_text("x", encoding="utf-8")
+        (tmp_path / "busy" / "x").write_text("x", encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="has something in it"):
             snapshot.materialize(taken, tmp_path / "busy")
         assets = dict(taken.assets)
@@ -206,7 +208,7 @@ class TestLayingAVersionOut:
 def _set(pipeline: Path, **changes) -> None:
     """Rewrite the manifest with changes to whole tables, commit."""
     manifest = {**MANIFEST, **changes}
-    (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+    (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     _git(pipeline, "add", "-A")
     _git(pipeline, "commit", "--quiet", "-m", "Change")
 
@@ -233,7 +235,7 @@ class TestWhatTheReviewFound:
 
     def test_pathspec_magic_reaches_nothing_outside(self, pipeline, tmp_path):
         (pipeline.parent / "victim").mkdir()
-        (pipeline.parent / "victim" / "target.txt").write_text("ORIGINAL", encoding="utf-8")
+        (pipeline.parent / "victim" / "target.txt").write_text("ORIGINAL", encoding="utf-8", newline="\n")
         _set(pipeline, project={**MANIFEST["project"], "readme": ":(top)README.md", "logo": ":/"})
         paths, skipped = snapshot.document_paths(pipeline)
         assert all(snapshot.safe_relative(p) == p for p in paths)
@@ -243,7 +245,7 @@ class TestWhatTheReviewFound:
 
     def test_a_tracked_link_is_never_followed(self, pipeline, tmp_path):
         outside = tmp_path / "outside-secret.md"
-        outside.write_text("OUTSIDE BYTES\n", encoding="utf-8")
+        outside.write_text("OUTSIDE BYTES\n", encoding="utf-8", newline="\n")
         (pipeline / "docs_src" / "report[2024].md").symlink_to(outside)
         (pipeline / "docs_src" / "site" / "linked.md").symlink_to(outside)
         (pipeline / "docs_src" / "sub").mkdir()
@@ -275,9 +277,9 @@ class TestWhatTheReviewFound:
         store = default_store()
         forged = tmp_path / "forged"
         (forged / ".git").mkdir(parents=True)
-        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n", encoding="utf-8")
-        (forged / "README.md").write_text("# forged\n", encoding="utf-8")
-        (forged / ".chartbook-version.json").write_text('{"pipeline": "evil/other"}', encoding="utf-8")
+        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n", encoding="utf-8", newline="\n")
+        (forged / "README.md").write_text("# forged\n", encoding="utf-8", newline="\n")
+        (forged / ".chartbook-version.json").write_text('{"pipeline": "evil/other"}', encoding="utf-8", newline="\n")
         stored = store.put(forged)
         files = [".git/config", "README.md", "../escape.md", "C:evil.md", ".chartbook-version.json", ".g\u200cit/config"]
         bad = dataclasses.replace(taken, documents={"content_hash": stored.content_hash, "files": files})
@@ -295,7 +297,7 @@ class TestWhatTheReviewFound:
         store = default_store()
         forged = tmp_path / "forged"
         (forged / ".git").mkdir(parents=True)
-        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n", encoding="utf-8")
+        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n", encoding="utf-8", newline="\n")
         stored = store.put(forged)
         monkeypatch.setattr(snapshot, "_is_dot_git", lambda part: False)  # as if the rule missed this alias
         bad = dataclasses.replace(taken, documents={"content_hash": stored.content_hash, "files": [".git/config"]})
@@ -325,9 +327,9 @@ class TestWhatTheReviewFound:
         _git(laid.folder, "init", "--quiet", "-b", "main")
         assert read_version_file(laid.folder) == {}
         remove_tree(laid.folder / ".git")
-        (laid.folder / VERSION_FILE).write_text("[" * 200000, encoding="utf-8")
+        (laid.folder / VERSION_FILE).write_text("[" * 200000, encoding="utf-8", newline="\n")
         assert read_version_file(laid.folder) == {}
-        (laid.folder / VERSION_FILE).write_text(json.dumps({"pipeline": "x", "pad": "y" * 100000}), encoding="utf-8")
+        (laid.folder / VERSION_FILE).write_text(json.dumps({"pipeline": "x", "pad": "y" * 100000}), encoding="utf-8", newline="\n")
         assert read_version_file(laid.folder) == {}  # too large to be one
 
     def test_a_link_planted_in_an_object_is_not_followed(self, pipeline, tmp_path):
@@ -336,7 +338,7 @@ class TestWhatTheReviewFound:
         taken = snapshot.make(pipeline).snapshot
         store = default_store()
         secret = tmp_path / "secret.txt"
-        secret.write_text("LOCAL SECRET", encoding="utf-8")
+        secret.write_text("LOCAL SECRET", encoding="utf-8", newline="\n")
         model = Path(store.get(taken.assets["model/ar1"]["content_hash"]))
         (model / "weights" / "planted").symlink_to(secret)
         treasury = Path(store.get(taken.assets["treasury"]["content_hash"]))
@@ -360,7 +362,7 @@ class TestWhatTheReviewFound:
         store = default_store()
         mine = tmp_path / "mine"
         (mine / "docs_src" / "site").mkdir(parents=True)
-        (mine / "docs_src" / "site" / "private.md").write_text("MY PRIVATE NOTES", encoding="utf-8")
+        (mine / "docs_src" / "site" / "private.md").write_text("MY PRIVATE NOTES", encoding="utf-8", newline="\n")
         held = Path(store.get(taken.documents["content_hash"]))
         import shutil
 
@@ -374,16 +376,17 @@ class TestWhatTheReviewFound:
             snapshot.materialize(taken, tmp_path / "laid")
         assert not any("MY PRIVATE NOTES" in p.read_text(errors="replace", encoding="utf-8") for p in (tmp_path / "laid").rglob("*") if p.is_file())
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows allows no file name that ends in a space or holds a backslash")
     def test_a_tracked_name_that_differs_from_its_plain_form_is_not_taken(self, pipeline):
         """A tracked decoy, `secret.env ` with a trailing space or `private\\key.env`, put in
         order, names another file, an ignored one; git's names are taken exactly or not at all."""
         site = pipeline / "docs_src" / "site"
-        (site / "secret.env").write_text("IGNORED SECRET", encoding="utf-8")
-        (site / "secret.env ").write_text("decoy", encoding="utf-8")
+        (site / "secret.env").write_text("IGNORED SECRET", encoding="utf-8", newline="\n")
+        (site / "secret.env ").write_text("decoy", encoding="utf-8", newline="\n")
         (site / "private").mkdir()
-        (site / "private" / "key.env").write_text("IGNORED SECRET", encoding="utf-8")
-        (site / "private\\key.env").write_text("decoy", encoding="utf-8")
-        with open(pipeline / ".gitignore", "a", encoding="utf-8") as f:
+        (site / "private" / "key.env").write_text("IGNORED SECRET", encoding="utf-8", newline="\n")
+        (site / "private\\key.env").write_text("decoy", encoding="utf-8", newline="\n")
+        with open(pipeline / ".gitignore", "a", encoding="utf-8", newline="\n") as f:
             f.write("docs_src/site/secret.env\ndocs_src/site/private/\n")
         _git(pipeline, "add", "-A")
         _git(pipeline, "add", "-f", "docs_src/site/secret.env ", "docs_src/site/private\\key.env")
@@ -404,12 +407,12 @@ class TestWhatTheReviewFound:
 
     def test_a_copy_reads_the_file_it_looked_at(self, pipeline, tmp_path, monkeypatch):
         outside = tmp_path / "outside.md"
-        outside.write_text("OUTSIDE SECRET", encoding="utf-8")
+        outside.write_text("OUTSIDE SECRET", encoding="utf-8", newline="\n")
         real_open = snapshot.os.open
 
         def swap_then_open(path, flags, *args, **kwargs):
             # Between looking and opening, the file becomes a link to somewhere else
-            if str(path).endswith("docs_src/treasury.md") and not Path(path).is_symlink():
+            if Path(path).as_posix().endswith("docs_src/treasury.md") and not Path(path).is_symlink():
                 Path(path).unlink()
                 Path(path).symlink_to(outside)
             return real_open(path, flags, *args, **kwargs)
@@ -423,8 +426,8 @@ class TestWhatTheReviewFound:
                 assert b"OUTSIDE SECRET" not in file.read_bytes(), file
 
     def test_a_named_file_git_does_not_track_is_said(self, pipeline):
-        (pipeline / "docs_src" / "untracked.md").write_text("draft", encoding="utf-8")
-        with open(pipeline / ".gitignore", "a", encoding="utf-8") as f:
+        (pipeline / "docs_src" / "untracked.md").write_text("draft", encoding="utf-8", newline="\n")
+        with open(pipeline / ".gitignore", "a", encoding="utf-8", newline="\n") as f:
             f.write("docs_src/untracked.md\n")
         dataframes = {**MANIFEST["dataframes"], "treasury": {**MANIFEST["dataframes"]["treasury"], "docs_path": "./docs_src/untracked.md"}}
         _set(pipeline, dataframes=dataframes)
@@ -440,13 +443,13 @@ class TestWhatTheReviewFound:
 
     def test_a_file_is_not_a_folder(self, pipeline, tmp_path):
         taken = snapshot.make(pipeline).snapshot
-        (tmp_path / "afile").write_text("x", encoding="utf-8")
+        (tmp_path / "afile").write_text("x", encoding="utf-8", newline="\n")
         with pytest.raises(snapshot.SnapshotError, match="is a file"):
             snapshot.materialize(taken, tmp_path / "afile")
 
     def test_no_documents_does_not_make_a_snapshot_every_run(self, pipeline):
         _git(pipeline, "rm", "--quiet", "--cached", "-r", ".")
-        (pipeline / ".gitignore").write_text("*\n", encoding="utf-8")
+        (pipeline / ".gitignore").write_text("*\n", encoding="utf-8", newline="\n")
         _git(pipeline, "add", "-f", ".gitignore")
         _git(pipeline, "commit", "--quiet", "-m", "Nothing tracked but the ignore file")
         first = snapshot.make(pipeline)
@@ -474,7 +477,7 @@ class TestWhatTheReviewFound:
 class TestTheLaidOutVersion:
     def test_it_keeps_its_pipelines_id_whatever_the_folder_is_called(self, pipeline, tmp_path):
         manifest = dict(MANIFEST, project={"name": "Rates"})  # no id: it comes from the folder and git
-        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _git(pipeline, "commit", "--quiet", "-am", "No explicit id")
         taken = snapshot.make(pipeline).snapshot
         assert taken.pipeline == "rates"
@@ -485,7 +488,7 @@ class TestTheLaidOutVersion:
 
     def test_scores_are_written_back_and_the_code_time_is_the_versions(self, pipeline, tmp_path, monkeypatch):
         models = {"ar1": {**MANIFEST["models"]["ar1"], "metrics_path": "./_output/ar1_metrics.json"}}
-        (pipeline / "_output" / "ar1_metrics.json").write_text('{"rmse": 0.5}', encoding="utf-8")  # a build writes it; git ignores it
+        (pipeline / "_output" / "ar1_metrics.json").write_text('{"rmse": 0.5}', encoding="utf-8", newline="\n")  # a build writes it; git ignores it
         _set(pipeline, models=models)
         taken = snapshot.make(pipeline).snapshot
         assert taken.assets["model/ar1"]["metrics"] == {"rmse": 0.5}
