@@ -46,7 +46,10 @@ class TestALocalRepositorysClone:
         assert len({repository_slug(form) for form in forms}) == 1
 
     def test_on_windows_a_paths_case_is_no_other_folder(self, monkeypatch):
-        monkeypatch.setattr(os, "name", "nt")
+        from chartbook import gitcache
+
+        # Not os.name itself: a Path made while it says nt is a WindowsPath, which POSIX cannot make
+        monkeypatch.setattr(gitcache, "_paths_ignore_case", lambda: True)
         assert repository_slug("C:\\Repos\\X") == repository_slug("c:\\repos\\x")
 
     def test_its_path_is_short(self):

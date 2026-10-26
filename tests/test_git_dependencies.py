@@ -614,6 +614,7 @@ class TestPinning:
         assert _statuses(report)["twin"] == "restored" and report.problems == []
         assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_a_store_this_user_cannot_write_says_what_it_lacks(self, downstream, upstream, cache):
         held = self._twin_with_one_name(downstream, upstream, cache)
         root = Path(default_store().root)

@@ -343,6 +343,23 @@ def _link(source: str, destination: str, links: Iterable[str]) -> str:
     )
 
 
+def _read_marker(marker: Path):
+    """The layout a store's marker names.
+
+    On Windows a file another thread or process is replacing cannot be
+    opened for a moment (it is "delete pending"): it is tried again for a
+    second before that is said.
+    """
+    for attempt in range(20):
+        try:
+            with open(marker, encoding="utf-8") as f:
+                return json.load(f).get("schema")
+        except PermissionError:
+            if os.name != "nt" or attempt == 19:
+                raise
+            time.sleep(0.05)
+
+
 def link_target(path) -> str:
     """Where a symlink points, as a path is written: on Windows without the ``\\\\?\\`` that ``os.readlink`` may give."""
     target = os.readlink(path)
@@ -1154,8 +1171,7 @@ class FolderStore(Store):
             return
         marker = self.root / MARKER_FILE
         try:
-            with open(marker, encoding="utf-8") as f:
-                schema = json.load(f).get("schema")
+            schema = _read_marker(marker)
         except FileNotFoundError:
             if not create:
                 return  # nothing here yet; nothing to misread

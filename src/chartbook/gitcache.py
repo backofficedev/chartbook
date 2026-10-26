@@ -178,6 +178,11 @@ class Checkout:
     path: Path
 
 
+def _paths_ignore_case() -> bool:
+    """Whether one folder's path may be written in either case: on Windows."""
+    return os.name == "nt"
+
+
 def _remove_staging(folder: Path) -> None:
     """Remove a folder made on the way, its read-only files too, as far as it can be.
 
@@ -235,8 +240,8 @@ def repository_slug(url: str) -> Path:
         whole = re.sub(r"[/\\]+", "/", path)
         if re.match(r"^/[A-Za-z]:", whole):
             whole = whole[1:]
-        if os.name == "nt" or re.match(r"^[A-Za-z]:", whole):
-            whole = whole.lower() if os.name == "nt" else whole[0].lower() + whole[1:]
+        if _paths_ignore_case() or re.match(r"^[A-Za-z]:", whole):
+            whole = whole.lower() if _paths_ignore_case() else whole[0].lower() + whole[1:]
         name = next((part for part in reversed(whole.split("/")) if part and set(part) != {"."}), "repository")
         digest = hashlib.sha256(whole.encode("utf-8")).hexdigest()[:8]
         return Path("local", re.sub(r"[^A-Za-z0-9._-]", "_", name) + "~" + digest)
