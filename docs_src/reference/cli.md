@@ -643,7 +643,7 @@ Wrote chartbook.lock.
 | `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 
-A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
 
 ## chartbook pin
 
@@ -672,7 +672,7 @@ Wrote chartbook.lock.
 
 A commit alone would not be enough: the same code gives other data on another day. The hashes are what say which data.
 
-**The other pipeline's folder is not read.** `pin` takes the newest snapshot at the commit that folder is on or, if that commit has none, at the nearest commit before it that has one. So its owner can be several commits past the last build they declared ready, with the folder in any state, and you still get that build.
+**The other pipeline's data in its folder is not read.** `pin` takes the newest snapshot at the commit that folder is on or, if that commit has none, at the nearest commit before it that has one. So its owner can be several commits past the last build they declared ready, with the folder in any state, and you still get that build. Its `chartbook.toml` and `chartbook.lock` are read, to see that the pin makes no cycle (below).
 
 **A pipeline with no snapshot cannot be pinned**, and the command says what its owner has to do:
 
@@ -748,6 +748,8 @@ $ chartbook pin --frozen
 ```
 
 Where `pin` records an asset that was not built and goes on, `--frozen` counts it a problem: the build that follows may need it.
+
+Dependencies between pipelines must form a graph with no cycles. A pin whose new or moved entries would lead back to this pipeline, or into pipelines that depend on each other, is not written: `chartbook pin` says who depends on whom, and where each was read, and exits 1 with `chartbook.lock` and the store as they were. `chartbook update` and `chartbook add` do the same, and the first read of a dependency, which pins it, raises `AssetNotPinnedError` with reason `cycle`. A cycle reached only through pins made before is not the new pin's doing and does not stop it: `chartbook run` and `chartbook check` say it, and `chartbook pin --frozen` exits 1. A fork that reads its original under the same ID by `path` is two pipelines, not a cycle, and so is what reads such a fork; a fork is told apart by its folder and its repository's address, so two worktrees, or two clones at one address, are one pipeline, and a fork that reads its original by `git` is taken for a cycle.
 
 ## chartbook update
 

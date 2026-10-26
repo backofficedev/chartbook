@@ -638,7 +638,7 @@ def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> s
     for edge in [*loop.way_in, *loop.edges]:
         member = snapshotted.get(edge.dependency)
         declarer = snapshotted.get(edge.pipeline)
-        if member is None or declarer is None or "this run would pin its snapshot at" not in edge.where:
+        if member is None or declarer is None or "it would now be pinned to its snapshot at" not in edge.where:
             continue
         try:
             entry = (_read_manifest(declarer.directory).get("dependencies") or {}).get(edge.key)

@@ -2781,8 +2781,12 @@ def _short_hash(content_hash):
     return content_hash
 
 
-def _run_pin(project_dir, dependencies=None):
-    """Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""
+def _run_pin(project_dir, dependencies=None, on_refused=None):
+    """Run a pin, or an update when *dependencies* is given; exit 1 on a problem.
+
+    :param on_refused: Called before exiting when the lockfile was not
+        written because its new pins would close a cycle, or lead into one.
+    """
     from chartbook import lock
     from chartbook.store import StoreError
 
@@ -2794,6 +2798,12 @@ def _run_pin(project_dir, dependencies=None):
             report = lock.update(project_dir, dependencies)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        raise SystemExit(1)
+    if report.refused:
+        # Nothing was written, so what it would have pinned is not shown as pinned
+        click.echo(click.style("Error: ", fg="red", bold=True) + report.refused, err=True)
+        if on_refused is not None:
+            on_refused()
         raise SystemExit(1)
     _echo_pin_report(report)
     if report.unrooted:
@@ -2853,9 +2863,12 @@ def pin(project_dir, frozen):
     hash of each of its assets is written to chartbook.lock. Commit that
     file: a change to what the project depends on then shows in a diff.
 
-    Nothing in the other pipeline's folder is read. It can be half-way
-    through a change, and what you pin is still the build that was
-    declared ready.
+    None of the other pipeline's data in its folder is read. It can be
+    half-way through a change, and what you pin is still the build that
+    was declared ready. Its chartbook.toml and chartbook.lock are read, to
+    see that the pin makes no cycle: a pin whose new or moved entries would
+    lead back to this pipeline, or into pipelines that depend on each
+    other, is not written.
 
     A pin that already exists is never moved, whatever the other pipeline
     has done since; `chartbook update` moves pins. What `pin` does do again
@@ -2930,6 +2943,25 @@ def _run_frozen(project_dir):
         raise SystemExit(1)
     _echo_frozen_report(None, report)
     if report.problems:
+        raise SystemExit(1)
+    # Built from its lockfile alone, as `chartbook run --frozen` would: not in a cycle
+    from chartbook import lineage
+    from chartbook.snapshot import SnapshotError
+
+    from chartbook.snapshot import pipeline_in
+
+    try:
+        folder = resolve_project_dir(project_dir)
+        loop, pipeline_id = lineage.cycle(folder), pipeline_in(folder)
+    except (SnapshotError, ValueError, OSError):
+        loop = None
+    if loop is not None:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"{pipeline_id}: {lineage.cycle_lead(loop)}, so there is no order to build in.\n"
+            + lineage.explain_cycle(loop),
+            err=True,
+        )
         raise SystemExit(1)
 
 
@@ -3012,7 +3044,14 @@ def add_command(pipeline, key, commit, project_dir):
     with open(manifest_file, "w", encoding="utf-8", newline="") as f:
         f.write(changed)
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
-    _run_pin(project_dir)
+
+    def put_back():
+        # A dependency whose pin would close a cycle, or lead into one, is not added either
+        with open(manifest_file, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        click.echo(f"{pipeline} was not added: {manifest_file} is as it was.", err=True)
+
+    _run_pin(project_dir, on_refused=put_back)
 
 
 @main.command()
