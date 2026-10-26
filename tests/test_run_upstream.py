@@ -401,3 +401,120 @@ class TestWhatTheSecondReviewFound:
         assert "up: its snapshots cannot be read now; not built" in said
         assert "up" not in _order(work) and _snapshots_of("up") == []
         assert report.failed.id == "down" and report.reason == "what it depends on could not be pinned"
+
+
+def _child_env(work):
+    """A child process's own home: the test's ~/.chartbook is set in this process only."""
+    home = work / "home"
+    home.mkdir(exist_ok=True)
+    return {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+
+
+@posix
+class TestWhatTheThirdReviewFound:
+    def test_another_process_holding_the_turn_is_seen(self, work):
+        import subprocess
+        import sys
+
+        key = work / ".chartbook-snapshot-build"
+        holding = (
+            "import sys\n"
+            "from pathlib import Path\n"
+            "from chartbook import lock\n"
+            f"with lock._one_at_a_time(Path({str(key)!r})):\n"
+            "    print('held', flush=True)\n"
+            "    sys.stdin.readline()\n"
+        )
+        child = subprocess.Popen(
+            [sys.executable, "-c", holding], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+            env=_child_env(work),
+        )
+        try:
+            assert child.stdout.readline().strip() == "held"
+            assert lock.held_elsewhere(key) is True
+        finally:
+            child.communicate("done\n", timeout=30)
+        assert lock.held_elsewhere(key) is False
+
+    def test_where_files_cannot_be_locked_no_one_is_said_to_hold_it(self, work, monkeypatch):
+        import errno
+        import fcntl
+
+        key = work / ".chartbook-snapshot-build"
+        with lock._one_at_a_time(key):
+            pass  # its lock file is there now
+
+        def no_locks(descriptor, operation):
+            raise OSError(errno.ENOLCK, "No locks available")
+
+        monkeypatch.setattr(fcntl, "flock", no_locks)
+        assert lock.held_elsewhere(key) is False
+
+    def test_two_runs_build_one_upstream_once(self, work):
+        import subprocess
+        import sys
+
+        _with_data(work / "up", {"build": f"sleep 4 && {LOG}"})
+        first = _with_data(work / "first", {"build": LOG}, {"up": {"path": "../up"}})
+        second = _with_data(work / "second", {"build": LOG}, {"up": {"path": "../up"}})
+        _commit(work)
+        running = (
+            "from chartbook import run\n"
+            f"report = run.run({str(first)!r}, upstream=True, echo=lambda line: print(line, flush=True))\n"
+            "print('failed:', report.failed and report.failed.id, flush=True)\n"
+        )
+        child = subprocess.Popen(
+            [sys.executable, "-c", running], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            env=_child_env(work),
+        )
+        line = ""
+        while "up: build" not in line:
+            line = child.stdout.readline()
+            assert line, "the first run ended before building up"
+        said = []
+        report = run.run(second, upstream=True, echo=said.append)
+        rest = child.communicate(timeout=120)[0]
+        assert "failed: None" in rest
+        assert report.failed is None, report.reason
+        assert "up: another run is building it to make a snapshot; waiting for it" in said
+        assert any(line.startswith("up: has a snapshot now") for line in said)
+        assert len(_snapshots_of("up")) == 1 and _order(work).count("up") == 1
+
+    def test_a_member_with_no_build_is_not_said_to_be_snapshotted(self, work):
+        _with_data(work / "m", None)
+        _with_data(work / "p", {"build": LOG}, {"m": {"path": "../m"}})
+        _catalog(work, "p", "m")
+        _commit(work)
+        said = []
+        run.run(work, upstream=True, echo=said.append)
+        assert "Pipelines of this run that another pins by path, snapshotted after their build:" not in said
+
+    def test_a_repository_that_moved_is_said_to_have(self, work, tmp_path_factory):
+        """c, in a repository of its own, commits in b's repository as it builds: b's folder is as it was."""
+        other = tmp_path_factory.mktemp("other").resolve()
+        commits_elsewhere = f"git -C {work} -c user.name=T -c user.email=t@e.org commit --quiet --allow-empty -m elsewhere"
+        _with_data(other / "c", {"build": commits_elsewhere})
+        _commit(other)
+        _with_data(work / "b", {"build": LOG}, {"c": {"path": str(other / "c")}})
+        a = _with_data(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
+        _commit(work)
+        report = run.run(a, upstream=True, echo=lambda line: None)
+        assert report.failed.id == "b"
+        assert report.reason.startswith("its repository moved from ") and "it was checked at" in report.reason
+
+    def test_a_new_lockfile_is_said_where_git_hides_untracked_files(self, work, monkeypatch):
+        import subprocess
+
+        (work / ".gitignore").write_text("_data/\n*.log\n")  # lockfiles are committed here
+        subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=work, check=True)
+        w = _with_data(work / "w", {"build": LOG})
+        u = _with_data(work / "u", {"build": LOG}, {"w": {"path": "../w"}})
+        down = _with_data(work / "down", {"build": LOG}, {"u": {"path": "../u"}})
+        _commit(work)
+        snapshot.make(w)
+        monkeypatch.setenv("GIT_CONFIG_COUNT", "3")
+        monkeypatch.setenv("GIT_CONFIG_KEY_2", "status.showUntrackedFiles")
+        monkeypatch.setenv("GIT_CONFIG_VALUE_2", "no")
+        said = []
+        assert run.run(down, upstream=True, echo=said.append).failed is None
+        assert f"u: its chartbook.lock was written, and is not committed: commit it in {u}." in said

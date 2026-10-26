@@ -625,7 +625,9 @@ def plan(
 
     return [
         dataclasses.replace(
-            step, snapshot_first=step.source == "upstream" or (step.directory is not None and step.directory in snapshot_first)
+            step,
+            snapshot_first=step.source == "upstream"
+            or (step.directory is not None and step.directory in snapshot_first and BUILD_SCRIPT in step.scripts),
         )
         for step in order
     ]
@@ -1186,8 +1188,8 @@ def run(
                 if now != commits_before.get(step.directory, now):
                     report.failed, report.exit_code = step, 1
                     report.reason = (
-                        f"its folder moved from {commits_before[step.directory][:7]} to {now[:7]} before its turn "
-                        f"came, so it was not built: the snapshot would not say which code ran"
+                        f"its repository moved from {commits_before[step.directory][:7]} to {now[:7]} before its "
+                        f"turn came, so it was not built: it was checked at {commits_before[step.directory][:7]}"
                     )
                     break
 
@@ -1315,7 +1317,9 @@ def run(
                     on_snapshot(step, made)
                 if step.source == "upstream" and wrote_lockfile:
                     try:
-                        unrecorded = bool(snapshots._git(step.directory, "status", "--porcelain", "--", lock.LOCK_FILE).strip())
+                        unrecorded = bool(snapshots._git(
+                            step.directory, "status", "--porcelain", "--untracked-files=all", "--", lock.LOCK_FILE
+                        ).strip())
                     except snapshots.SnapshotError:
                         unrecorded = False
                     if unrecorded:
