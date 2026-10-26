@@ -710,11 +710,7 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
         field = "git" if "git" in entry else "path" if "path" in entry else "id"
         around = " -> ".join([edge.pipeline for edge in found.edges] + [found.edges[0].pipeline])
         if found.two_folders is not None:
-            pipeline, one, other = found.two_folders
-            remedy = (
-                f"Two pipelines call themselves {pipeline}, in {one} and in {other}, and an ID names one "
-                f"pipeline: give one of them an ID of its own (a git remote of its own, or [project] id)"
-            )
+            remedy = lineage.two_pipelines_said(*found.two_folders).rstrip(".")
         else:
             remedy = "Take one of these out of its [dependencies]"
         problems.append(

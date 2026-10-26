@@ -1464,9 +1464,11 @@ def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder
     no pipeline does. Through a catalog that lists the caller's own folder,
     the read is a local one. A name that is the caller's own ID, or the end
     of it, reads a dependency only where one is known to be that pipeline
-    (a copy may depend on its original under the original's ID); otherwise
-    it is refused, and its own assets are read by their own names. Nothing
-    is guessed: a dependency whose ID cannot be known here might be it.
+    under another key; otherwise it is refused, and its own assets are read
+    by their own names. Nothing is guessed: a dependency whose ID cannot be
+    known here might be it. An ID names one pipeline, so a dependency whose
+    folder calls itself this pipeline's ID is refused
+    (:func:`_refuse_a_copy_of_itself`).
     """
     from chartbook.manifest import resolve_project_type
 
@@ -1914,6 +1916,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     """
     import time
 
+    _refuse_a_copy_of_itself(asset, manifest_dir)
     try:
         return _resolve_pinned(asset, manifest_dir)
     except DependencyNotDeclaredError as error:
@@ -1976,8 +1979,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     if (dependency.kind == "store" and real_id == _own_id(manifest_dir)) or (
         dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir)
     ):
-        # As `chartbook pin` refuses a store one and `chartbook check` a folder one; a copy may
-        # depend on its original under the original's ID
+        # As `chartbook pin` refuses a store one and `chartbook check` a folder one
         raise AssetNotPinnedError(
             not_pinned.asset, "no_snapshot", f"{dependency.id!r} is this pipeline itself: a pipeline cannot depend on itself."
         )
@@ -2093,6 +2095,39 @@ def _cycle_signature(manifest_dir: Path, found: list) -> tuple:
             return None
 
     return (len(found), stamp(manifest_dir / MANIFEST_NAME), stamp(manifest_dir / "chartbook.lock"))
+
+
+def _refuse_a_copy_of_itself(asset: AssetRef, manifest_dir: Path) -> None:
+    """Refuse a read of a ``path`` dependency whose folder calls itself this pipeline's ID: an ID names one pipeline.
+
+    As the cycle check refuses its pin, whatever a lockfile from before
+    still pins of it. Two checkouts of one repository are one pipeline, and
+    a cycle between them is the cycle check's to say.
+
+    :raises AssetNotPinnedError: With reason ``"cycle"``, naming both folders.
+    """
+    from chartbook.manifest import validate_dependencies
+
+    try:
+        dependencies = validate_dependencies(_read_raw_manifest(manifest_dir / MANIFEST_NAME).get("dependencies") or {}, manifest_dir)
+        dependency = locate_pipeline(asset.pipeline_id, dependencies=dependencies)
+    except Exception:  # noqa: BLE001 - what the read itself says
+        return
+    if dependency.kind != "path" or dependency.path is None or _same_directory(dependency.path, manifest_dir):
+        return
+    own = _own_id(manifest_dir)
+    if not own or _own_id(Path(dependency.path)) != own:
+        return
+    from chartbook import lineage
+
+    folders = lineage._two_folders(own, Path(manifest_dir), Path(dependency.path))
+    if folders is None:
+        return  # another checkout of its repository: the cycle check says so
+    raise AssetNotPinnedError(
+        str(asset), "cycle",
+        f"{str(asset)!r} cannot be read: {dependency.id!r} is this pipeline itself under its ID. "
+        + lineage.two_pipelines_said(*folders),
+    )
 
 
 def _writable(folder: Path) -> bool:

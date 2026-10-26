@@ -531,8 +531,8 @@ class TestWhatTheSecondReviewFound:
         manifest = (copy / "chartbook.toml").read_text()
         (copy / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = { path = "../rates" }\n')
         refused = lock.pin(copy).refused
-        assert f"Two pipelines call themselves acme/rates, in {copy} and in {work / 'rates'}" in refused
-        assert "Give one of them an ID of its own" in refused
+        assert f"Two pipelines call themselves acme/rates: {copy} (from its [project] id) and {work / 'rates'}" in refused
+        assert "Give one of them an ID of its own with `[project] id`" in refused
         monkeypatch.chdir(copy)
         with pytest.raises(AssetNotPinnedError) as raised:
             data.load("acme/rates:treasury")
