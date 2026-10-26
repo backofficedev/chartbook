@@ -295,3 +295,38 @@ class TestASnapshotIsNotGivenBackWithOtherPins:
         made = snapshot.make(forecast).snapshot
         again = snapshot.make(forecast)
         assert not again.made and again.snapshot.path == made.path
+
+
+    def test_a_run_that_builds_with_the_moved_pins_says_so(self, two):
+        rates, forecast = two
+        self._moved(two)
+        assert snapshot.make(forecast, built_by_run=True).snapshot.built_by_run
+
+    def test_a_clone_with_other_pins_does_not_hide_this_checkouts_own(self, two, tmp_path):
+        """A clone shares the store and pins rates' newer snapshot; the main checkout, which pins the older one, makes its own again.
+
+        The clone's snapshot is the newest at the commit, and what a pin of the
+        main checkout's folder takes: given back the older one, the main
+        checkout would say nothing changed while a pin read the clone's pins.
+        """
+        import shutil
+
+        rates, forecast = two
+        work = rates.parent
+        _git(work, "remote", "add", "origin", "https://example.org/acme/work.git")
+        lock.pin(forecast)
+        mine = snapshot.make(forecast).snapshot
+        (was,) = mine.inputs
+        pl.DataFrame({"d": ["2024-01-01"], "r": [9.9]}).write_parquet(rates / "_data" / "treasury.parquet")
+        assert snapshot.make(rates).made  # rates' newer snapshot, at the same commit
+        clone = tmp_path / "clone"
+        _git(tmp_path, "clone", "--quiet", str(work), str(clone))
+        shutil.copytree(forecast / "_data", clone / "forecast" / "_data")
+        lock.pin(clone / "forecast")  # its own lockfile: the newer snapshot
+        theirs = snapshot.make(clone / "forecast")
+        assert theirs.made and theirs.snapshot.inputs[0]["snapshot"] != was["snapshot"]
+        again = snapshot.make(forecast)
+        assert again.made and again.snapshot.inputs == [was]
+        newest = snapshot.find(default_store(), again.snapshot.commit, again.snapshot.subdirectory)[0]
+        assert newest.path == again.snapshot.path
+        assert not snapshot.make(forecast).made  # and then it is stable

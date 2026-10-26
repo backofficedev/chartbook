@@ -13,7 +13,7 @@ A pipeline that depends, through what it depends on, on itself has no order to b
 
 ### Fixed — `chartbook snapshot` makes a new snapshot when what the pipeline is pinned to has moved
 
-`chartbook snapshot` gives back the newest snapshot at a commit when nothing has changed, so that running it twice makes one. It compared the pipeline's bytes only: after `chartbook update`, with nothing committed (the lockfile is often not), a pipeline whose own data came out the same was given back its old snapshot, which records the old pins, and a pipeline that pinned it read the old lineage. What a snapshot records it was pinned to now counts too, and a snapshot made again for moved pins does not say that a run built its bytes from them.
+`chartbook snapshot` gives back the newest snapshot at a commit when nothing has changed, so that running it twice makes one. It compared the pipeline's bytes only: after `chartbook update`, with nothing committed (the lockfile is often not), a pipeline whose own data came out the same was given back its old snapshot, which records the old pins, and a pipeline that pinned it read the old lineage. What a snapshot records it was pinned to now counts too, here and for a newer snapshot of the same bytes another checkout made with other pins (a clone sharing the store), and a snapshot made again for moved pins does not say that a run built its bytes from them, unless a run in the same command did.
 
 ## [0.2.0] - 2026-10-20
 
