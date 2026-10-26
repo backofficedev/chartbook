@@ -1834,7 +1834,7 @@ class TestNoPasswordOfAStoreAtAPath:
     def test_in_store_infos_cache_line(self, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_CACHE", "//alice:s3cr3tpw@fileserver/share/cache")
         result = CliRunner().invoke(main, ["store", "info"])
-        assert result.exit_code == 0 and "s3cr3tpw" not in result.output and "fileserver/share/cache" in result.output
+        assert result.exit_code == 0 and "s3cr3tpw" not in result.output and os.path.normpath("fileserver/share/cache") in result.output
 
     def test_in_what_windows_makes_of_the_path(self):
         assert "s3cr3tpw" not in config.shown_store_url("\\\\alice:s3cr3tpw@fileserver\\share\\store")

@@ -59,6 +59,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -175,6 +176,29 @@ class Checkout:
     rev: Optional[str]
     commit: str
     path: Path
+
+
+def _remove_staging(folder: Path) -> None:
+    """Remove a folder made on the way, its read-only files too, as far as it can be.
+
+    git's objects are read-only, and Windows does not remove a read-only
+    file: each is made writable and tried again. What still cannot be
+    removed is left; it is a temporary folder no one reads.
+    """
+
+    def writable_then_again(function, path, _error):
+        try:
+            os.chmod(os.path.dirname(path), stat.S_IRWXU)  # what holds it, on POSIX
+            if not os.path.islink(path):
+                os.chmod(path, stat.S_IRWXU if os.path.isdir(path) else stat.S_IWRITE | stat.S_IREAD)
+            function(path)
+        except OSError:
+            pass
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(folder, onexc=writable_then_again)
+    else:
+        shutil.rmtree(folder, onerror=writable_then_again)
 
 
 def repository_slug(url: str) -> Path:
@@ -312,7 +336,7 @@ class GitCache:
                     raise
         finally:
             if staging.exists():
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
         return final
 
     def _git(self, *arguments: str, url: Optional[str] = None, env=None) -> str:
@@ -365,7 +389,7 @@ class GitCache:
             try:
                 os.rename(staging, repo)
             except OSError:
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
                 if not (repo / "HEAD").is_file():
                     raise
         # The URL is given here and now, and is not kept in the clone
@@ -455,7 +479,7 @@ class GitCache:
             if index.exists():
                 index.unlink()
             if staging.exists():
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
         return final
 
     def get(self, url: str, rev: Optional[str] = None, fetch: bool = True) -> Checkout:

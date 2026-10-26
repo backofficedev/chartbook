@@ -602,6 +602,7 @@ class TestPinning:
         lock.pin(downstream, git_cache=cache)
         held = Path(default_store().get(HELLO))
         os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "twin.parquet", 0o644)  # read-only, which Windows will not remove
         (held / "twin.parquet").unlink()
         store_module._found_whole.clear()
         return held

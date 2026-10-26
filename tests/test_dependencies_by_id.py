@@ -26,9 +26,11 @@ def _commit(repository: Path, message: str = "Work") -> None:
 
 def _rates(folder: Path, value: float) -> None:
     (folder / "_data").mkdir(parents=True, exist_ok=True)
-    (folder / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}}), encoding="utf-8", newline="\n"
-    )
+    manifest = tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}})
+    if not (folder / "chartbook.toml").is_file() or (folder / "chartbook.toml").read_text(encoding="utf-8") != manifest:
+        # Not rewritten as it was: in a clone git checked out with \r\n
+        # (Windows' core.autocrlf), a rewrite with \n is a change to git
+        (folder / "chartbook.toml").write_text(manifest, encoding="utf-8", newline="\n")
     pl.DataFrame({"d": ["2024-01-01"], "r": [value]}).write_parquet(folder / "_data" / "treasury.parquet")
 
 

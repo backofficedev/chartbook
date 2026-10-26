@@ -445,7 +445,7 @@ class TestCheckCommand:
         assert result.exit_code == 1
         assert "required by the catalog policy" in result.output
         assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url" in result.output
-        assert "pipeline_b/chartbook.toml: [project] repo_url" in result.output
+        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url" in result.output
         assert "in 2 manifest(s)" in result.output
 
     def test_policy_of_a_catalog_that_sets_none_only_warns(self, pipeline_project, catalog_project):
@@ -468,7 +468,7 @@ class TestCheckCommand:
         assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url: recommended" in (
             result.stderr
         )
-        assert "pipeline_b/chartbook.toml: [project] repo_url: recommended" in (
+        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url: recommended" in (
             result.stderr
         )
 

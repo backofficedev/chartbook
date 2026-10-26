@@ -496,6 +496,7 @@ class TestWhatTheSecondReviewFound:
         finally:
             os.chmod(forecast, 0o755)
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_an_unwritable_pipeline_takes_the_commit_asked_for(self, elsewhere, monkeypatch):
         import os
 

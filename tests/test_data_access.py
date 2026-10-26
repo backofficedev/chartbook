@@ -275,7 +275,7 @@ class TestLoading:
 class TestRef:
     def test_a_file_a_table_and_a_query(self, pipeline):
         assert data.ref("rates", project_dir=pipeline) == (
-            f"read_parquet('{pipeline / '_data' / 'rates.parquet'}')"
+            f"read_parquet('{(pipeline / '_data' / 'rates.parquet').as_posix()}')"
         )
         assert data.ref("curve", project_dir=pipeline) == '"curve"'
         assert data.ref("slopes", project_dir=pipeline) == (

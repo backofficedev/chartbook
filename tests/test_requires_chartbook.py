@@ -118,7 +118,7 @@ class TestEveryCommandStops:
             load_manifest(catalog)
         assert "`chartbook catalog disable rates`" in str(error.value)
         members = _manifest(tmp_path / "by_members", {"pipelines": {"members": ["../rates"]}})
-        with pytest.raises(ValueError, match=r"catalog member .*rates/chartbook.toml requires ChartBook >=99.0") as error:
+        with pytest.raises(ValueError, match=r"catalog member .*rates[/\\]chartbook.toml requires ChartBook >=99.0") as error:
             load_manifest(members)
         assert "`chartbook catalog disable rates`" in str(error.value)
 
