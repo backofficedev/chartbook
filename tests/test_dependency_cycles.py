@@ -1412,3 +1412,59 @@ class TestWhatTheGuardsThirdReviewFound:
         _declare(fork, {"orig": {"git": str(original)}})
         _commit(fork)
         assert "it depends on itself" in lock.pin(fork).refused
+
+
+@posix
+class TestWhatTheGuardsFourthReviewFound:
+    def test_a_place_met_as_one_pipeline_is_walked_once(self, work, monkeypatch):
+        """A lattice two wide and ten deep: each folder is walked once, not once for every way to it."""
+        levels = 10
+        for i in range(levels, -1, -1):
+            for j in (0, 1):
+                below = {} if i == levels else {f"n{i + 1}_{k}": {"path": f"../n{i + 1}_{k}"} for k in (0, 1)}
+                _pipeline(work / f"n{i}_{j}", f"acme/n{i}-{j}", f"t{i}{j}", below or None)
+        r = _pipeline(work / "r", "acme/r", "rs", {f"n0_{k}": {"path": f"../n0_{k}"} for k in (0, 1)})
+        calls = []
+        original = lineage._Finder.children
+        monkeypatch.setattr(lineage._Finder, "children", lambda self, *a, **k: calls.append(1) or original(self, *a, **k))
+        assert lineage.cycle(r) is None
+        assert len(calls) <= 2 * (levels + 1) + 1
+
+    def test_git_is_not_asked_unless_two_folders_meet_under_one_id(self, chain, monkeypatch):
+        from chartbook import identity
+
+        fred, rates, forecast = chain
+        asked = []
+        original = identity.checkout_of
+        monkeypatch.setattr(identity, "checkout_of", lambda *a, **k: asked.append(1) or original(*a, **k))
+        assert lineage.cycle(forecast) is None
+        assert asked == []
+
+    def test_a_path_whose_repository_is_typed_in_another_case(self, tmp_path):
+        work = tmp_path.resolve()
+        repo = work / "repo"
+        a = _pipeline(repo / "a", "acme/a", "as", {"b": {"path": "../../REPO/b"}})
+        _pipeline(repo / "b", "acme/b", "bs", {"a": {"path": "../a"}})
+        _repository(repo)
+        if not (work / "REPO" / "b" / "chartbook.toml").is_file():
+            pytest.skip("a disk that tells case apart")
+        assert _around(lineage.cycle(a)) == [("acme/a", "acme/b"), ("acme/b", "acme/a")]
+
+    def test_two_worktrees_of_one_repository_hold_one_pipeline(self, tmp_path):
+        """In a second worktree, q reads x; the first worktree's x comes to read it. One pipeline x, in two worktrees."""
+        one = (tmp_path / "one").resolve()
+        x = _pipeline(one / "x", "acme/x", "xs")
+        _pipeline(one / "q", "acme/q", "qs")
+        _repository(one)
+        two = (tmp_path / "two").resolve()
+        _git(one, "worktree", "add", "--quiet", "-b", "other", str(two))
+        for name in ("x", "q"):
+            _pipeline(two / name, f"acme/{name}", f"{name}s")
+        snapshot.make(two / "x")
+        _declare(two / "q", {"x": {"path": "../x"}})
+        _commit(two)
+        assert lock.pin(two / "q").written
+        snapshot.make(two / "q")
+        _declare(x, {"q": {"path": "../../two/q"}})
+        _commit(one)
+        assert "these pipelines depend on each other" in lock.pin(x).refused

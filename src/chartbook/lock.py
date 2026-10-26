@@ -2698,7 +2698,8 @@ def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optio
     Dependencies between pipelines must form a directed acyclic graph
     (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
     pin``, ``update`` and ``add``, and the first read of a dependency. The
-    walk goes from the dependencies whose entry the pin makes or changes,
+    walk goes from the dependencies whose entry the pin makes, or whose
+    location or snapshot it changes (all the walk reads of an entry),
     with the lockfile as it would be written: one that leads back to this
     pipeline, or into pipelines that depend on each other, is refused. A
     cycle reached only through pins made before is not this pin's doing:
