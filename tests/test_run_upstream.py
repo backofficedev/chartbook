@@ -86,7 +86,7 @@ class TestUpstream:
 
     def test_an_upstream_with_changes_not_committed_stops_the_run_before_anything(self, pair, work):
         up, down = pair
-        (up / "notes.txt").write_text("half done")
+        (up / "notes.txt").write_text("half done", encoding="utf-8")
         with pytest.raises(RunError, match=r"(?s)^up has changes that are not committed:.*Nothing was built\.$") as raised:
             run.run(down, upstream=True, echo=lambda line: None)
         assert "notes.txt" in str(raised.value)
@@ -159,7 +159,7 @@ def _catalog(work, *members):
     import tomli_w
 
     (work / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in members}})
+        tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in members}}), encoding="utf-8"
     )
     return work
 
@@ -171,7 +171,7 @@ class TestWhatTheReviewFound:
         up, down = pair
         taken = snapshot.make(up).snapshot
         os.chmod(taken.path, 0o600)
-        taken.path.write_text("{ not json")
+        taken.path.write_text("{ not json", encoding="utf-8")
         report = run.run(down, upstream=True, echo=lambda line: None)
         assert report.failed is not None and _order(work) == []
 
@@ -277,7 +277,7 @@ class TestWhatTheReviewFound:
     def test_an_upstreams_new_lockfile_is_said_to_commit(self, work):
         import subprocess
 
-        (work / ".gitignore").write_text("_data/\n*.log\n")
+        (work / ".gitignore").write_text("_data/\n*.log\n", encoding="utf-8")
         subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=work, check=True)
         w = _with_data(work / "w", {"build": LOG})
         u = _with_data(work / "u", {"build": LOG}, {"w": {"path": "../w"}})
@@ -333,7 +333,7 @@ class TestWhatTheSecondReviewFound:
         finished = subprocess.run(
             [str(chartbook), "run", "--upstream", "--project-dir", str(down)],
             capture_output=True, text=True, timeout=120,
-            env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)},
+            env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)}, encoding="utf-8", errors="replace"
         )
         assert finished.returncode != 0
         assert "would then run itself without end" in finished.stdout + finished.stderr
@@ -427,7 +427,7 @@ class TestWhatTheThirdReviewFound:
         )
         child = subprocess.Popen(
             [sys.executable, "-c", holding], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
-            env=_child_env(work),
+            env=_child_env(work), encoding="utf-8", errors="replace"
         )
         try:
             assert child.stdout.readline().strip() == "held"
@@ -465,7 +465,7 @@ class TestWhatTheThirdReviewFound:
         )
         child = subprocess.Popen(
             [sys.executable, "-c", running], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            env=_child_env(work),
+            env=_child_env(work), encoding="utf-8", errors="replace"
         )
         line = ""
         while "up: build" not in line:
@@ -505,7 +505,7 @@ class TestWhatTheThirdReviewFound:
     def test_a_new_lockfile_is_said_where_git_hides_untracked_files(self, work, monkeypatch):
         import subprocess
 
-        (work / ".gitignore").write_text("_data/\n*.log\n")  # lockfiles are committed here
+        (work / ".gitignore").write_text("_data/\n*.log\n", encoding="utf-8")  # lockfiles are committed here
         subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=work, check=True)
         w = _with_data(work / "w", {"build": LOG})
         u = _with_data(work / "u", {"build": LOG}, {"w": {"path": "../w"}})

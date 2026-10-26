@@ -148,7 +148,7 @@ class TestOnThePage:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
-        built = json.loads((pipeline_project / "_docs" / "index.json").read_text())
+        built = json.loads((pipeline_project / "_docs" / "index.json").read_text(encoding="utf-8"))
         records = {r["id"]: r for r in built["records"]}
         pages = {
             "Dataframe": list((pipeline_project / "_docs" / "cb" / "dataframes").glob("*/*.md")),
@@ -157,24 +157,24 @@ class TestOnThePage:
         assert pages["Dataframe"] and pages["Chart"]
         for kind, files in pages.items():
             for page in files:
-                text = page.read_text()
+                text = page.read_text(encoding="utf-8")
                 assert "## Provenance" in text, page
                 assert "What this is, where it is, what made it and from what, as `index.json` records it." in text
         dataframe = [r for r in records.values() if r["kind"] == "Dataframe" and r.get("content_hash")][0]
         page = next(p for p in pages["Dataframe"] if p.stem == dataframe["id"].rsplit(":", 1)[1])
-        text = page.read_text()
+        text = page.read_text(encoding="utf-8")
         assert f"| What                           | Dataframe `{dataframe['id']}`" in text
         assert dataframe["content_hash"] in text and f"{dataframe['row_count']:,} rows" in text
         chart = [r for r in records.values() if r["kind"] == "Chart"][0]
         assert f"**Used by:** `{chart['id']}`" in text
-        chart_text = [p for p in pages["Chart"] if chart["id"].rsplit("/", 1)[1] in p.stem][0].read_text()
+        chart_text = [p for p in pages["Chart"] if chart["id"].rsplit("/", 1)[1] in p.stem][0].read_text(encoding="utf-8")
         assert f"- `{dataframe['id']}`: now at `{dataframe['content_hash'][:19]}…`" in chart_text
 
 
 def _edit_toml(path: Path, edit) -> None:
-    config = tomli.loads(path.read_text())
+    config = tomli.loads(path.read_text(encoding="utf-8"))
     edit(config)
-    path.write_text(tomli_w.dumps(config))
+    path.write_text(tomli_w.dumps(config), encoding="utf-8")
 
 
 class TestIncrementalBuildsKeepThePanelsCurrent:
@@ -192,7 +192,7 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         _edit_toml(catalog / "chartbook.toml", scope)
         a = catalog / "pipelines" / "pipeline_a"
         (a / "_models").mkdir(exist_ok=True)
-        (a / "_models" / "m.json").write_text("{}")
+        (a / "_models" / "m.json").write_text("{}", encoding="utf-8")
 
         def model(config):
             config["dependencies"] = {"acme/pipeline_b": {"path": "../pipeline_b"}}
@@ -218,12 +218,12 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         first = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         assert len(builds) == 1  # the index is built once per build, and handed to the pages
-        pipelines = {r["id"]: r for r in json.loads((catalog / "_docs" / "index.json").read_text())["records"] if r["kind"] == "Pipeline"}
+        pipelines = {r["id"]: r for r in json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["kind"] == "Pipeline"}
         assert all(p["code_changed_at"].endswith("Z") for p in pipelines.values())  # a docs build dates the code
-        index_1 = json.loads((catalog / "_docs" / "index.json").read_text())
+        index_1 = json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))
         hash_1 = next(r for r in index_1["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
         # The model page, built for real, carries the panel from the index, in the catalog theme
-        text = model_page.read_text()
+        text = model_page.read_text(encoding="utf-8")
         assert "## Provenance" in text and f"- `acme/pipeline_b:dataframe_0`: now at `{hash_1[:19]}…`" in text
         assert "| What                           | Model `acme/pipeline_a:model/m`" in text
 
@@ -236,15 +236,15 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         parquet.write_bytes(parquet.read_bytes() + b"\0")
         second = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert second.exit_code == 0, second.output
-        index_2 = json.loads((catalog / "_docs" / "index.json").read_text())
+        index_2 = json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))
         hash_2 = next(r for r in index_2["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
         assert hash_2 != hash_1
-        assert f"now at `{hash_2[:19]}…`" in model_page.read_text()
+        assert f"now at `{hash_2[:19]}…`" in model_page.read_text(encoding="utf-8")
         assert "regenerated 2 of 2" in second.output, second.output
 
         # A second model in pipeline_a uses the upstream dataframe: the
         # upstream's page, whose own files did not change, lists it
-        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}")
+        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}", encoding="utf-8")
         _edit_toml(
             catalog / "pipelines" / "pipeline_a" / "chartbook.toml",
             lambda c: c["models"].update({"m2": {"path": "./_models/m2.json", "trained_on": ["acme/pipeline_b:dataframe_0"], "docs": "d"}}),
@@ -252,14 +252,14 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         third = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert third.exit_code == 0, third.output
         assert "regenerated 2 of 2" in third.output, third.output  # pipeline_b on its panels alone
-        assert "`acme/pipeline_a:model/m2`" in upstream_page.read_text()
+        assert "`acme/pipeline_a:model/m2`" in upstream_page.read_text(encoding="utf-8")
         assert len(builds) == 4
 
     def test_a_directory_that_is_not_a_build_tree_is_refused_before_any_work(self, tmp_path, monkeypatch):
         catalog = self._catalog(tmp_path)
         monkeypatch.chdir(catalog)
         (catalog / "_docs").mkdir()
-        (catalog / "_docs" / "unrelated.txt").write_text("mine")
+        (catalog / "_docs" / "unrelated.txt").write_text("mine", encoding="utf-8")
         from chartbook import index as index_module
 
         monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (_ for _ in ()).throw(AssertionError("the index was built first")))

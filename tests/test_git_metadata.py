@@ -47,14 +47,14 @@ def _git(project, *args, when=None):
         stamp = when.astimezone().isoformat()
         env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = stamp
     return subprocess.run(
-        ["git", *args], cwd=project, env=env, capture_output=True, text=True, check=True
+        ["git", *args], cwd=project, env=env, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace"
     ).stdout
 
 
 def _commit_all(project, when=COMMIT_TIME, message="Add pipeline"):
     if not (project / ".git").exists():
         _git(project, "init")
-        (project / ".gitignore").write_text("_data/\n_output/\ndocs/\n_docs*/\n")
+        (project / ".gitignore").write_text("_data/\n_output/\ndocs/\n_docs*/\n", encoding="utf-8")
     _git(project, "add", "--all")
     _git(project, "commit", "-m", message, when=when)
 
@@ -135,7 +135,7 @@ class TestRepoUrlDefault:
         _commit_all(pipeline_project)
         _git(pipeline_project, "remote", "add", "origin", "git@github.com:octo/rates.git")
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["project"]["repo_url"] = "https://example.org/mirror/rates"
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         clear_git_remote_cache()
@@ -172,7 +172,7 @@ class TestCodeChangeTime:
 
     def test_only_commits_touching_the_source_count(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
-        (pipeline_project / "LICENSE").write_text("MIT\n")
+        (pipeline_project / "LICENSE").write_text("MIT\n", encoding="utf-8")
         _commit_all(pipeline_project, when=datetime(2026, 1, 1, 12, 0, 0), message="Add licence")
         assert find_latest_code_change(pipeline_project) == COMMIT_TIME
 
@@ -180,20 +180,20 @@ class TestCodeChangeTime:
         self, pipeline_project, git_env
     ):
         _commit_all(pipeline_project)
-        (pipeline_project / "src" / "dummy.py").write_text("# edited, not committed\n")
+        (pipeline_project / "src" / "dummy.py").write_text("# edited, not committed\n", encoding="utf-8")
         changed = find_latest_code_change(pipeline_project)
         assert changed == find_latest_source_modification(pipeline_project)
         assert changed > COMMIT_TIME
 
     def test_new_untracked_source_file_counts_as_a_change(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
-        (pipeline_project / "src" / "new_step.py").write_text("print('new')\n")
+        (pipeline_project / "src" / "new_step.py").write_text("print('new')\n", encoding="utf-8")
         assert find_latest_code_change(pipeline_project) > COMMIT_TIME
 
     def test_changes_outside_the_source_do_not_count(self, pipeline_project, git_env):
         _commit_all(pipeline_project)
         (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").touch()
-        (pipeline_project / "notes.txt").write_text("scratch\n")
+        (pipeline_project / "notes.txt").write_text("scratch\n", encoding="utf-8")
         assert find_latest_code_change(pipeline_project) == COMMIT_TIME
 
     def test_outside_a_repository_it_is_the_modification_time(self, pipeline_project, git_env):
@@ -223,7 +223,7 @@ class TestPagesUseTheCommitTime:
             project_dir=pipeline_project,
             keep_build_dirs=True,
         )
-        front_page = (pipeline_project / "_docs" / "index.md").read_text()
+        front_page = (pipeline_project / "_docs" / "index.md").read_text(encoding="utf-8")
         # Said in UTC, as every time on the site is
         in_utc = COMMIT_TIME.astimezone(timezone.utc)
         assert (
@@ -237,7 +237,7 @@ class TestPagesUseTheCommitTime:
         # Asset pages say nothing about the code, so a commit does not touch them
         page = (
             pipeline_project / "_docs" / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.md"
-        ).read_text()
+        ).read_text(encoding="utf-8")
         assert "2025-03-14" not in page
 
     def test_loading_a_manifest_does_not_ask_git_about_commits(

@@ -44,7 +44,7 @@ HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
 
 def _write_manifest(directory: Path, config_table: dict) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(config_table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(config_table), encoding="utf-8")
 
 
 def _replace(path: Path, content: bytes) -> None:
@@ -244,9 +244,9 @@ class TestFrozen:
         _train(rates)
         pin_from_snapshots(downstream, store)
         path = downstream / lock.LOCK_FILE
-        document = json.loads(path.read_text())
+        document = json.loads(path.read_text(encoding="utf-8"))
         del document["records"][0]["dependencies"][0]["id"]
-        path.write_text(json.dumps(document))
+        path.write_text(json.dumps(document), encoding="utf-8")
         with pytest.raises(lock.LockError, match="without an id"):
             lock.verify(downstream, store)
 
@@ -339,7 +339,7 @@ class TestPin:
         taken = made.snapshot
         listing = f"{HELLO.split(':')[1]}  acme/rates:treasury\n"
         overall = "sha256:" + hashlib.sha256(listing.encode()).hexdigest()
-        assert json.loads((downstream / LOCK_FILE).read_text()) == {
+        assert json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8")) == {
             "schema": "chartbook/lock/v1",
             "root": "downstream",
             "records": [
@@ -392,7 +392,7 @@ class TestPin:
         self, downstream, rates, store, work
     ):
         pin_from_snapshots(downstream, store)
-        text = (downstream / LOCK_FILE).read_text()
+        text = (downstream / LOCK_FILE).read_text(encoding="utf-8")
         assert str(work) not in text
         document = json.loads(text)
         assert set(document) == {"schema", "root", "records"}
@@ -609,7 +609,7 @@ class TestPin:
 
     def test_only_what_pinning_needs_is_read_from_the_manifest(self, downstream, rates, store):
         """A dataframe with no write-up does not load, and can still be pinned from."""
-        with open(downstream / "chartbook.toml", "a") as f:
+        with open(downstream / "chartbook.toml", "a", encoding="utf-8") as f:
             f.write('\n[dataframes.broken]\npath = "./x.parquet"\n')
         assert pin_from_snapshots(downstream, store).problems == []
 
@@ -726,7 +726,7 @@ class TestReadingAndWriting:
         locked = lock.read_lock(downstream / LOCK_FILE)
         assert isinstance(locked, Lock)
         assert lock.read_lock(downstream) == locked  # a directory will do
-        assert locked.to_document() == json.loads((downstream / LOCK_FILE).read_text())
+        assert locked.to_document() == json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8"))
         assert set(locked.assets_of("acme/rates")) == set(locked.assets)
         assert locked.assets_of("nope") == {}
 
@@ -740,13 +740,13 @@ class TestReadingAndWriting:
          '{"schema": "chartbook/lock/v1"}'],
     )
     def test_a_file_that_is_not_a_lockfile(self, work, content):
-        (work / LOCK_FILE).write_text(content)
+        (work / LOCK_FILE).write_text(content, encoding="utf-8")
         with pytest.raises(LockError, match="Cannot read"):
             lock.read_lock(work)
 
     def test_a_lockfile_from_a_later_version_says_so(self, work):
         (work / LOCK_FILE).write_text(
-            '{"schema": "chartbook/lock/v9", "root": "x", "records": []}'
+            '{"schema": "chartbook/lock/v9", "root": "x", "records": []}', encoding="utf-8"
         )
         with pytest.raises(LockError, match="reads 'chartbook/lock/v1'"):
             lock.read_lock(work)
@@ -755,7 +755,7 @@ class TestReadingAndWriting:
         locked = Lock(root="p")
         assert lock.write_lock(locked, work / LOCK_FILE) is True
         assert lock.write_lock(locked, work / LOCK_FILE) is False
-        assert json.loads((work / LOCK_FILE).read_text())["schema"] == SCHEMA
+        assert json.loads((work / LOCK_FILE).read_text(encoding="utf-8"))["schema"] == SCHEMA
         assert not (work / (LOCK_FILE + ".tmp")).exists()
 
 
@@ -764,18 +764,18 @@ class TestSchemas:
 
     def test_the_file_fits_its_schema(self, downstream, rates, store):
         pin_from_snapshots(downstream, store)
-        document = json.loads((downstream / LOCK_FILE).read_text())
-        jsonschema.validate(document, json.loads(lock.schema_path().read_text()))
+        document = json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8"))
+        jsonschema.validate(document, json.loads(lock.schema_path().read_text(encoding="utf-8")))
 
     def test_each_asset_record_fits_the_indexs_schema_for_its_kind(
         self, downstream, rates, store
     ):
         _train(rates)
         pin_from_snapshots(downstream, store)
-        records = json.loads((downstream / LOCK_FILE).read_text())["records"]
+        records = json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8"))["records"]
         kinds = set()
         for record in records[1:]:
-            schema = json.loads(index.schema_path(record["kind"]).read_text())
+            schema = json.loads(index.schema_path(record["kind"]).read_text(encoding="utf-8"))
             jsonschema.validate(record, schema)
             kinds.add(record["kind"])
         assert kinds == {"Dataframe", "Chart", "Model"}
@@ -787,14 +787,14 @@ class TestSchemas:
             crsp={"git": "https://example.org/acme/crsp.git"},
         )
         pin_from_snapshots(downstream, store)
-        pipeline = json.loads(index.schema_path("Pipeline").read_text())
+        pipeline = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         dependency = pipeline["properties"]["dependencies"]["items"]
         for entry in lock.read_lock(downstream).dependencies:
             jsonschema.validate(entry, dependency)
 
     def test_the_schema_is_shipped_beside_the_indexs(self):
         assert lock.schema_path().parent.parent == index.SCHEMAS_DIR
-        schema = json.loads(lock.schema_path().read_text())
+        schema = json.loads(lock.schema_path().read_text(encoding="utf-8"))
         assert schema["properties"]["schema"] == {"const": SCHEMA}
         jsonschema.Draft202012Validator.check_schema(schema)
 
@@ -831,7 +831,7 @@ class TestStoreRoots:
     def test_a_note_that_cannot_be_read_stops_everything(self, store, work):
         store.add_root(work / LOCK_FILE, [HELLO])
         (note,) = (store.root / "roots").glob("*.json")
-        note.write_text("not json")
+        note.write_text("not json", encoding="utf-8")
         with pytest.raises(StoreError, match="Cannot read"):
             store.roots()
 
@@ -958,7 +958,7 @@ class TestGc:
         assert by_year in {h for h, _ in lock.plan_gc(moved).delete}
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
-        (downstream / LOCK_FILE).write_text("not json")
+        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8")
         with pytest.raises(LockError, match="Cannot read"):
             lock.plan_gc(moved)
         assert moved.has(HELLO)
@@ -1027,7 +1027,7 @@ class TestCommands:
         assert now not in result.output and HELLO not in result.output
         assert "Wrote chartbook.lock." in result.output
         # The lockfile keeps the whole hash
-        assert now in (downstream / LOCK_FILE).read_text()
+        assert now in (downstream / LOCK_FILE).read_text(encoding="utf-8")
 
     def test_update_of_something_that_is_not_a_dependency(self, here):
         result = self._run("update", "nope")
@@ -1121,7 +1121,7 @@ class TestCommands:
         assert list(garbage.hashes()) == [] and garbage.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):
-        (downstream / LOCK_FILE).write_text("not json")
+        (downstream / LOCK_FILE).write_text("not json", encoding="utf-8")
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 1
         assert result.output.startswith("Error: Cannot read")

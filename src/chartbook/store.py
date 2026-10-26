@@ -946,7 +946,7 @@ class FolderStore(Store):
             final = folder / f"{stamp}-{count}.json"
         temporary = folder / f"{uuid.uuid4().hex}.tmp"
         try:
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(document, f, indent=2, ensure_ascii=False)
                 f.write("\n")
             os.replace(temporary, final)
@@ -996,7 +996,7 @@ class FolderStore(Store):
         except FileNotFoundError:
             known = []
         if top not in known:
-            with open(note, "a", encoding="utf-8") as f:
+            with open(note, "a", encoding="utf-8", newline="\n") as f:
                 f.write(top + "\n")
 
     def origins(self, commit: str, name: str) -> list[str]:
@@ -1152,7 +1152,7 @@ class FolderStore(Store):
             self.root.mkdir(parents=True, exist_ok=True)
             # Written whole or not at all, for another process reading it
             temporary = marker.with_name(f"{MARKER_FILE}.{uuid.uuid4().hex}.tmp")
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump({"schema": SCHEMA}, f)
                 f.write("\n")
             os.replace(temporary, marker)
@@ -1265,7 +1265,7 @@ class FolderStore(Store):
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(root_document(lockfile, hashes, snapshots, machine, labelled), f, indent=1)
                 f.write("\n")
             os.replace(temporary, note)

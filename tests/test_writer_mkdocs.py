@@ -27,9 +27,9 @@ MYST = re.compile(r"^```\{[a-z-]+\}|\{(?:ref|doc|sub-ref)\}`|^:::+\{|\{toctree\}
 
 
 def _set_writer(project: Path, name: str) -> None:
-    manifest = tomli.loads((project / "chartbook.toml").read_text())
+    manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["project"]["writer"] = name
-    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
 
 
 def _built(project: Path, monkeypatch) -> dict:
@@ -43,7 +43,7 @@ def _built(project: Path, monkeypatch) -> dict:
     monkeypatch.chdir(project)
     result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
     assert result.exit_code == 0, result.output
-    return json.loads((project / "_docs" / "index.json").read_text())
+    return json.loads((project / "_docs" / "index.json").read_text(encoding="utf-8"))
 
 
 def _pages(writer, index):
@@ -158,9 +158,9 @@ class TestTheBuild:
         pytest.importorskip("mkdocs_jupyter")
         project = pipeline_project_with_notes.resolve()
         _set_writer(project, "mkdocs")
-        manifest = tomli.loads((project / "chartbook.toml").read_text())
+        manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["enable_data_download"] = True
-        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
@@ -170,9 +170,9 @@ class TestTheBuild:
         assert (site / "search" / "search_index.json").is_file()  # MkDocs' search, not Sphinx's
         assert not (site / "_sources").exists() and not (project / "_docs" / "conf.py").exists()
         assert (project / "_docs" / "mkdocs.yml").is_file() and not (project / "_docs" / "pages" / "_templates").exists()
-        published = json.loads((site / "index.json").read_text())
+        published = json.loads((site / "index.json").read_text(encoding="utf-8"))
         assert published["records"] and "value" not in (published["records"][0].get("location") or {})
-        assert "cb-freshness" in (site / "index.html").read_text()
+        assert "cb-freshness" in (site / "index.html").read_text(encoding="utf-8")
         assert "contains a link" not in result.output, result.output  # every link on every page resolves, downloads included
         assert (site / "cb" / "download_dataframe").is_dir()
 
@@ -198,7 +198,7 @@ class TestTheBuild:
         for page in ("index.html", "cb/charts.html", "cb/dataframes.html", "cb/pipelines.html", "cb/diagnostics.html", "contributing.html", "cb/pipelines/pipeline_a_README.html"):
             assert (site / page).is_file(), page
         assert (site / "_static" / "diagnostics" / "chartbook_metadata_diagnostics.csv").is_file()
-        assert "Chart 0-0 (pipeline_a)" in (site / "index.html").read_text()
+        assert "Chart 0-0 (pipeline_a)" in (site / "index.html").read_text(encoding="utf-8")
         assert "contains a link" not in result.output, result.output
 
     def test_a_site_page_with_sphinx_syntax_is_said(self, pipeline_project, monkeypatch):
@@ -206,17 +206,17 @@ class TestTheBuild:
         project = pipeline_project.resolve()
         site_dir = project / "docs_src" / "site"
         site_dir.mkdir(parents=True, exist_ok=True)
-        (site_dir / "guide.md").write_text("# A Guide\n\n```{toctree}\nmore\n```\n")
-        (site_dir / "more.md").write_text("# More\n")
-        (site_dir / "index_toc.md").write_text("```{toctree}\nmore\nguide\n```\n")
+        (site_dir / "guide.md").write_text("# A Guide\n\n```{toctree}\nmore\n```\n", encoding="utf-8")
+        (site_dir / "more.md").write_text("# More\n", encoding="utf-8")
+        (site_dir / "index_toc.md").write_text("```{toctree}\nmore\nguide\n```\n", encoding="utf-8")
         _set_writer(project, "mkdocs")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         assert "warning: guide.md uses Sphinx syntax" in result.output
-        front = (project / "_docs" / "pages" / "index.md").read_text()
+        front = (project / "_docs" / "pages" / "index.md").read_text(encoding="utf-8")
         assert front.index("[More](more.md)") < front.index("[A Guide](guide.md)")  # index_toc.md's order, titles from the pages
-        nav = (project / "_docs" / "mkdocs.yml").read_text()
+        nav = (project / "_docs" / "mkdocs.yml").read_text(encoding="utf-8")
         assert "Site Pages" in nav and "guide.md" in nav
 
     def test_an_incremental_build_is_refused(self, pipeline_project, monkeypatch):

@@ -185,7 +185,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
                         capture_output=True,
                         text=True,
                         timeout=timeout,
-                        env={**_without_credentials(os.environ), UNTRUSTED_ENV_VAR: "1"},
+                        env={**_without_credentials(os.environ), UNTRUSTED_ENV_VAR: "1"}, encoding="utf-8", errors="replace"
                     )
                 except subprocess.TimeoutExpired:
                     why = f"its site took longer than {int(timeout)} seconds to build and was stopped"
@@ -197,7 +197,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             shutil.rmtree(staging / "site", ignore_errors=True)
             _placeholder(staging / "site", taken, why)
         if not again:
-            (staging / _DONE).write_text(why + "\n", encoding="utf-8")
+            (staging / _DONE).write_text(why + "\n", encoding="utf-8", newline="\n")
         if kept.is_dir() and not (kept / _DONE).is_file():
             # The placeholder of a build that is to be tried again, which this one replaces
             shutil.rmtree(kept, ignore_errors=True)
@@ -262,7 +262,7 @@ def _placeholder(folder: Path, taken, why: str) -> None:
         f"<h1>{html.escape(title)}</h1>"
         f"<p>The snapshot made {html.escape(taken.made_at[:16].replace('T', ' '))} UTC is in the store, "
         f"and its site could not be built: {html.escape(why)}.</p></body></html>\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n"
     )
 
 

@@ -68,6 +68,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
 from chartbook import hashing, snapshot
+from chartbook.gitcache import GIT as _GIT
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, get_git_remote_url, in_another_case, repository_key, strip_url_credentials
@@ -284,7 +285,7 @@ def write_lock(lock: Lock, path: Union[str, Path]) -> bool:
     # other's half-written file and then rename it away
     temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        temporary.write_text(text, encoding="utf-8")
+        temporary.write_text(text, encoding="utf-8", newline="\n")
         os.replace(temporary, path)
     finally:
         if temporary.exists():
@@ -572,8 +573,8 @@ def _history(git_cache: GitCache, url: str, commit: str, limit: int = 200000) ->
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", f"--max-count={limit}", commit],
-            capture_output=True, text=True, timeout=120, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+            [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "rev-list", f"--max-count={limit}", commit],
+            capture_output=True, text=True, timeout=120, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return []
@@ -696,8 +697,8 @@ def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False)
     def present() -> bool:
         try:
             result = subprocess.run(
-                ["git", f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
-                capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+                [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
+                capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
             )
         except (OSError, subprocess.SubprocessError, ValueError):
             return False
@@ -728,8 +729,8 @@ def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", "--max-parents=0", "--first-parent", commit],
-            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+            [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "rev-list", "--max-parents=0", "--first-parent", commit],
+            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return ""

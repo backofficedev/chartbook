@@ -153,23 +153,23 @@ def hook(monkeypatch):
 
 
 def _git(folder, *arguments):
-    return subprocess.run(["git", *arguments], cwd=folder, capture_output=True, text=True, check=True).stdout
+    return subprocess.run(["git", *arguments], cwd=folder, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace").stdout
 
 
 def _checkout(folder: Path) -> str:
     """A repository like this one: `src/chartbook/` and a `template/` with an ignored file; its HEAD."""
     (folder / "src" / "chartbook").mkdir(parents=True)
-    (folder / "src" / "chartbook" / "__init__.py").write_text("")
+    (folder / "src" / "chartbook" / "__init__.py").write_text("", encoding="utf-8")
     slug = folder / "template" / "{{cookiecutter.project_slug}}"
     slug.mkdir(parents=True)
-    (folder / "template" / "cookiecutter.json").write_text('{"project_slug": "x"}\n')
-    (slug / "README.md").write_text("# {{ cookiecutter.project_slug }}\n")
-    (slug / ".gitignore").write_text(".env\n")
+    (folder / "template" / "cookiecutter.json").write_text('{"project_slug": "x"}\n', encoding="utf-8")
+    (slug / "README.md").write_text("# {{ cookiecutter.project_slug }}\n", encoding="utf-8")
+    (slug / ".gitignore").write_text(".env\n", encoding="utf-8")
     _git(folder, "init", "--quiet")
     _git(folder, "add", "-A")
     _git(folder, "commit", "--quiet", "-m", "One")
     # Never tracked: the template author's own secrets
-    (slug / ".env").write_text("KEY=secret\n")
+    (slug / ".env").write_text("KEY=secret\n", encoding="utf-8")
     return _git(folder, "rev-parse", "HEAD").strip()
 
 
@@ -202,7 +202,7 @@ def _run(hook_module, root, target_name, version="standard"):
 def _recorded(build_data, target):
     """What the build puts in as built_from.txt at *target*, read from where the hook wrote it."""
     (source,) = [source for source, shipped in build_data["force_include"].items() if shipped == target]
-    return Path(source).read_text()
+    return Path(source).read_text(encoding="utf-8")
 
 
 @needs_git
@@ -247,7 +247,7 @@ def test_a_stray_copy_in_the_tree_is_overridden(hook, tmp_path):
     """The force-included file takes the path; one left in src/chartbook does not ship in its place."""
     root = tmp_path / "checkout"
     head = _checkout(root)
-    (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n")
+    (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n", encoding="utf-8")
     built, build_data = _run(hook, root, "wheel")
     assert _recorded(build_data, "chartbook/built_from.txt").strip() == head
     built.finalize("standard", build_data, "")
@@ -261,12 +261,12 @@ def test_a_wheel_built_from_the_sdist_ships_the_sdists_commit(hook, tmp_path):
     built, build_data = _run(hook, root, "sdist")
     unpacked = tmp_path / "chartbook-0.2.0"
     shutil.copytree(root / "src", unpacked / "src")
-    (unpacked / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\nVersion: 0.2.0\n")
+    (unpacked / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\nVersion: 0.2.0\n", encoding="utf-8")
     for source, shipped in build_data["force_include"].items():
         (unpacked / shipped).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, unpacked / shipped)
     built.finalize("standard", build_data, "")
-    assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text().strip() == head
+    assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text(encoding="utf-8").strip() == head
 
     built, build_data = _run(hook, unpacked, "wheel")
     # Its own file goes in with the package; the hook adds only the sdist's template
@@ -275,18 +275,18 @@ def test_a_wheel_built_from_the_sdist_ships_the_sdists_commit(hook, tmp_path):
         "chartbook/template/{{cookiecutter.project_slug}}/.gitignore",
         "chartbook/template/{{cookiecutter.project_slug}}/README.md",
     ]
-    assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text().strip() == head
+    assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text(encoding="utf-8").strip() == head
     built.finalize("standard", build_data, "")
 
 
 def _sdist(folder, commit):
     """An unpacked sdist: its PKG-INFO, its code with the commit it records (None: no file), its template."""
     (folder / "src" / "chartbook").mkdir(parents=True)
-    (folder / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\nVersion: 0.2.0\n")
+    (folder / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\nVersion: 0.2.0\n", encoding="utf-8")
     if commit is not None:
-        (folder / "src" / "chartbook" / "built_from.txt").write_text(commit + "\n")
+        (folder / "src" / "chartbook" / "built_from.txt").write_text(commit + "\n", encoding="utf-8")
     (folder / "template").mkdir()
-    (folder / "template" / "cookiecutter.json").write_text("{}\n")
+    (folder / "template" / "cookiecutter.json").write_text("{}\n", encoding="utf-8")
     return folder
 
 
@@ -332,11 +332,11 @@ def test_a_template_with_uncommitted_changes_stops_the_build(hook, tmp_path):
     """The commit must say what ships. An untracked file is never shipped, so it does not count."""
     root = tmp_path / "checkout"
     head = _checkout(root)
-    (root / "template" / "notes.txt").write_text("mine\n")
+    (root / "template" / "notes.txt").write_text("mine\n", encoding="utf-8")
     built, build_data = _run(hook, root, "wheel")
     assert _recorded(build_data, "chartbook/built_from.txt").strip() == head
     built.finalize("standard", build_data, "")
-    (root / "template" / "cookiecutter.json").write_text("{}\n")
+    (root / "template" / "cookiecutter.json").write_text("{}\n", encoding="utf-8")
     with pytest.raises(RuntimeError, match="changes git has not committed.*Commit them"):
         _run(hook, root, "wheel")
 
@@ -360,7 +360,7 @@ def test_a_git_folder_git_cannot_read_stops_the_build_and_says_the_ways_out(hook
     root = tmp_path / "checkout"
     (root / "src" / "chartbook").mkdir(parents=True)
     (root / "template").mkdir()
-    (root / "template" / "cookiecutter.json").write_text("{}\n")
+    (root / "template" / "cookiecutter.json").write_text("{}\n", encoding="utf-8")
     (root / ".git").mkdir()
     with pytest.raises(RuntimeError, match="has a .git, and git cannot read it") as raised:
         _run(hook, root, "wheel")
@@ -373,9 +373,9 @@ def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_stops_the_build(hook, tm
     built_from.txt in the tree never ships as if it were one."""
     root = tmp_path / "copy"
     (root / "src" / "chartbook").mkdir(parents=True)
-    (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n")
+    (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n", encoding="utf-8")
     (root / "template").mkdir()
-    (root / "template" / "cookiecutter.json").write_text("{}\n")
+    (root / "template" / "cookiecutter.json").write_text("{}\n", encoding="utf-8")
     with pytest.raises(RuntimeError, match="neither a git checkout nor an sdist.*clone of the repository.*PyPI"):
         _run(hook, root, "wheel")
 
@@ -505,14 +505,14 @@ def test_every_public_module_is_on_the_api_page():
     listed = set(
         re.findall(
             r"^\.\./apidocs/chartbook/([\w.]+)$",
-            (root / "docs_src" / "reference" / "api.md").read_text(),
+            (root / "docs_src" / "reference" / "api.md").read_text(encoding="utf-8"),
             re.M,
         )
     )
     left_out = set(
         re.findall(
             r'"apidocs/chartbook/([\w.]+)\.md"',
-            (root / "docs_src" / "conf.py").read_text(),
+            (root / "docs_src" / "conf.py").read_text(encoding="utf-8"),
         )
     )
     modules = []

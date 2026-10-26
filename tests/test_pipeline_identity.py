@@ -22,7 +22,7 @@ def _repository(folder: Path, remote: str = "") -> Path:
     """A git repository with one commit of an empty chartbook.toml, and an origin remote if given."""
     folder.mkdir(parents=True, exist_ok=True)
     if not (folder / "chartbook.toml").exists():
-        (folder / "chartbook.toml").write_text("")
+        (folder / "chartbook.toml").write_text("", encoding="utf-8")
     _git(folder, "init", "--quiet", "-b", "main")
     if remote:
         _git(folder, "remote", "add", "origin", remote)
@@ -46,7 +46,7 @@ class TestTheRule:
     def test_a_pipeline_in_a_subfolder_keeps_the_subfolders_name(self, tmp_path):
         top = tmp_path / "monorepo"
         (top / "yield-curve").mkdir(parents=True)
-        (top / "yield-curve" / "chartbook.toml").write_text("")
+        (top / "yield-curve" / "chartbook.toml").write_text("", encoding="utf-8")
         _repository(top, "https://github.com/acme/monorepo")
         assert derive_pipeline_id({}, top / "yield-curve") == "acme/yield_curve"
 
@@ -105,7 +105,7 @@ class TestTheRule:
         repository's top, and its pipeline named after the repository."""
         top = tmp_path / "monorepo"
         (top / "rates").mkdir(parents=True)
-        (top / "rates" / "chartbook.toml").write_text("")
+        (top / "rates" / "chartbook.toml").write_text("", encoding="utf-8")
         _repository(top, "https://github.com/acme/monorepo")
         monkeypatch.setenv("GIT_DIR", str(top / ".git"))
         assert derive_pipeline_id({}, top / "rates") == "acme/rates"
@@ -147,9 +147,9 @@ def _pipeline_with_data(folder: Path, value: float = 1.0) -> Path:
 
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "chartbook.toml").write_text(
-        '[dataframes.rates]\nname = "Rates"\npath = "_data/rates.parquet"\ndocs = "Rates."\n'
+        '[dataframes.rates]\nname = "Rates"\npath = "_data/rates.parquet"\ndocs = "Rates."\n', encoding="utf-8"
     )
-    (folder / ".gitignore").write_text("_data/\nchartbook.lock\n")
+    (folder / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
     (folder / "_data").mkdir(exist_ok=True)
     pl.DataFrame({"value": [value]}).write_parquet(folder / "_data" / "rates.parquet")
     if not (folder / ".git").exists():
@@ -161,7 +161,7 @@ def _pipeline_with_data(folder: Path, value: float = 1.0) -> Path:
 
 def _depending_on(folder: Path, key: str, entry: str = "{}") -> Path:
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "chartbook.toml").write_text(f'[dependencies]\n"{key}" = {entry}\n')
+    (folder / "chartbook.toml").write_text(f'[dependencies]\n"{key}" = {entry}\n', encoding="utf-8")
     return folder
 
 
@@ -243,8 +243,8 @@ class TestPinSaysTheIdChanged:
         for name in ("rates", "curve"):
             folder = top / name
             folder.mkdir(parents=True)
-            (folder / "chartbook.toml").write_text('[dataframes.x]\npath = "x.csv"\n')
-            (folder / "x.csv").write_text("a\n1\n")
+            (folder / "chartbook.toml").write_text('[dataframes.x]\npath = "x.csv"\n', encoding="utf-8")
+            (folder / "x.csv").write_text("a\n1\n", encoding="utf-8")
         _repository(top, "https://github.com/acme/monorepo")
         snapshot.make(top / "rates")
         second = _depending_on(tmp_path / "second", "acme/rates")
@@ -280,7 +280,7 @@ class TestCheckSaysTheIdChanged:
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text(
             '[project]\ntype = "catalog"\n\n[pipelines.first_pipeline]\npath = "../first_pipeline"\n\n'
-            '[pipelines.second]\npath = "../second"\n'
+            '[pipelines.second]\npath = "../second"\n', encoding="utf-8"
         )
         output = _check(catalog)
         assert '[pipelines.first_pipeline] the pipeline in' in output
@@ -293,7 +293,7 @@ class TestCheckSaysTheIdChanged:
 
 def _catalog(folder: Path, pipelines: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "chartbook.toml").write_text(f'[project]\ntype = "catalog"\n\n{pipelines}')
+    (folder / "chartbook.toml").write_text(f'[project]\ntype = "catalog"\n\n{pipelines}', encoding="utf-8")
     return folder
 
 
@@ -352,7 +352,7 @@ class TestTwoCheckoutsOfOneRepository:
         # One ID from two hosts: two repositories
         for name, host in (("a", "github.com"), ("b", "gitlab.com")):
             (tmp_path / "repos" / name).mkdir(parents=True)
-            (tmp_path / "repos" / name / "chartbook.toml").write_text(f"# {name}\n")
+            (tmp_path / "repos" / name / "chartbook.toml").write_text(f"# {name}\n", encoding="utf-8")
             _repository(tmp_path / "repos" / name, f"https://{host}/testorg/first_pipeline")
         catalog = _catalog(tmp_path / "catalog", '[pipelines]\nmembers = ["../repos/*"]\n')
         with pytest.raises(ValueError, match="two catalog members resolve to the same pipeline"):
@@ -372,7 +372,7 @@ class TestTwoCheckoutsOfOneRepository:
         assert "Already in catalog as 'testorg/first_pipeline' (another checkout of the same repository" in result.output
         import tomli
 
-        assert list(tomli.loads((catalog / "chartbook.toml").read_text())["pipelines"]) == ["testorg/first_pipeline"]
+        assert list(tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]) == ["testorg/first_pipeline"]
         # And once it is listed, adding the other checkout adds nothing
         again = CliRunner().invoke(cli, ["catalog", "add", str(feature), "--catalog", str(catalog)])
         assert "another checkout of the same repository" in again.output and "No new pipelines" in again.output
@@ -390,7 +390,7 @@ class TestTwoCheckoutsOfOneRepository:
         catalog = _catalog(root / "catalog", "[pipelines]\n")
         result = CliRunner().invoke(cli, ["catalog", "add", str(feature), str(main), "--catalog", str(catalog), "-y"])
         assert result.exit_code == 0, result.output
-        pipelines = tomli.loads((catalog / "chartbook.toml").read_text())["pipelines"]
+        pipelines = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]
         assert list(pipelines) == ["testorg/first_pipeline"]
         assert (catalog / pipelines["testorg/first_pipeline"]["path"]).resolve() == main.resolve()
         assert f"(another checkout of the same repository, {main.resolve()}): first-feature/" in result.output
@@ -502,7 +502,7 @@ class TestWhatCheckSaysOfIds:
 
     def test_a_folder_whose_project_is_not_a_table_gives_no_id(self, renamed):
         first, second, old, new = renamed
-        (first / "chartbook.toml").write_text('project = "x"\n')
+        (first / "chartbook.toml").write_text('project = "x"\n', encoding="utf-8")
         from chartbook import check
         from chartbook.manifest import load_manifest
 
@@ -513,14 +513,14 @@ class TestWhatCheckSaysOfIds:
         original's ID."""
         folder = tmp_path / "rates-copy"
         folder.mkdir()
-        (folder / "chartbook.toml").write_text('[project]\nrepo_url = "https://github.com/acme/rates"\n')
+        (folder / "chartbook.toml").write_text('[project]\nrepo_url = "https://github.com/acme/rates"\n', encoding="utf-8")
         _repository(folder, "https://github.com/me/rates-copy")
         output = _check(folder)
         assert "repo_url: https://github.com/acme/rates is not this folder's git remote" in output
         assert "the pipeline is named after repo_url's repository: acme/rates" in output
         assert "it is me/rates_copy" in output
         # Not when they agree
-        (folder / "chartbook.toml").write_text('[project]\nrepo_url = "https://github.com/Me/rates-copy.git"\n')
+        (folder / "chartbook.toml").write_text('[project]\nrepo_url = "https://github.com/Me/rates-copy.git"\n', encoding="utf-8")
         assert "repo_url:" not in _check(folder)
 
 
@@ -532,7 +532,7 @@ class TestWhatTheSecondReviewFound:
 
         alpha = tmp_path / "repos" / "alpha"
         (alpha / "pipeline").mkdir(parents=True)
-        (alpha / "pipeline" / "chartbook.toml").write_text("")
+        (alpha / "pipeline" / "chartbook.toml").write_text("", encoding="utf-8")
         _repository(alpha, "https://github.com/acme/alpha")
         run(tmp_path / "repos", "clone", "--quiet", str(alpha), str(tmp_path / "repos" / "beta"))
         run(tmp_path / "repos" / "beta", "remote", "set-url", "origin", "https://github.com/acme/beta")
@@ -579,8 +579,8 @@ class TestWhatTheSecondReviewFound:
 
         top = tmp_path / "monorepo"
         (top / "rates").mkdir(parents=True)
-        (top / "rates" / "chartbook.toml").write_text('[dataframes.x]\npath = "x.csv"\n')
-        (top / "rates" / "x.csv").write_text("a\n1\n")
+        (top / "rates" / "chartbook.toml").write_text('[dataframes.x]\npath = "x.csv"\n', encoding="utf-8")
+        (top / "rates" / "x.csv").write_text("a\n1\n", encoding="utf-8")
         _repository(top, "https://github.com/acme/monorepo")
         monkeypatch.setenv("GIT_DIR", str(top / ".git"))
         taken = snapshot.make(top / "rates").snapshot
@@ -597,7 +597,7 @@ class TestWhatTheSecondReviewFound:
         top = tmp_path / "monorepo"
         for part in ("a", "b"):
             (top / part / "rates").mkdir(parents=True)
-            (top / part / "rates" / "chartbook.toml").write_text("")
+            (top / part / "rates" / "chartbook.toml").write_text("", encoding="utf-8")
         _repository(top, "https://github.com/acme/monorepo")
         other_case = tmp_path / "MONOREPO" / "a" / "rates"
         if not other_case.exists():
@@ -664,7 +664,7 @@ class TestWhatTheSecondReviewFound:
         output = self._add(catalog, feature)
         assert "Already in catalog as 'testorg/first_pipeline' (found by pipelines.members pattern" in output
         assert "another checkout of the same repository" in output
-        assert "first-feature" not in (catalog / "chartbook.toml").read_text()
+        assert "first-feature" not in (catalog / "chartbook.toml").read_text(encoding="utf-8")
 
     def test_and_one_listed_under_another_key(self, two_checkouts):
         """A key written before the ID changed, `testorg/first_copy`, still names the pipeline."""
@@ -672,7 +672,7 @@ class TestWhatTheSecondReviewFound:
         catalog = _catalog(root / "catalog", '[pipelines."testorg/first_copy"]\npath = "../repos/first_pipeline"\n')
         output = self._add(catalog, feature)
         assert "Already in catalog as 'testorg/first_copy' (another checkout of the same repository" in output
-        assert "first-feature" not in (catalog / "chartbook.toml").read_text()
+        assert "first-feature" not in (catalog / "chartbook.toml").read_text(encoding="utf-8")
 
     def test_and_enables_a_disabled_one(self, two_checkouts):
         import tomli
@@ -683,5 +683,5 @@ class TestWhatTheSecondReviewFound:
         )
         output = self._add(catalog, feature)
         assert "Re-enabled 'testorg/first_pipeline' (another checkout of the same repository" in output
-        entry = tomli.loads((catalog / "chartbook.toml").read_text())["pipelines"]["testorg/first_pipeline"]
+        entry = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]["testorg/first_pipeline"]
         assert entry == {"path": "../repos/first_pipeline"}

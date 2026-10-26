@@ -40,7 +40,7 @@ def _pipeline(folder: Path, pipeline_id: str, name: str, dependencies=None, buil
         manifest["scripts"] = {"build": build}
     if dependencies:
         manifest["dependencies"] = dependencies
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     pl.DataFrame({"d": ["2024-01-01"], name: [1.0]}).write_parquet(folder / "_data" / f"{name}.parquet")
     return folder
 
@@ -58,21 +58,21 @@ def _pin_anyway(folder: Path, **keywords):
 
 def _declare(folder: Path, dependencies: dict) -> None:
     """Set a pipeline's ``[dependencies]``."""
-    manifest = tomli.loads((folder / "chartbook.toml").read_text())
+    manifest = tomli.loads((folder / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = dependencies
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
 
 
 def _repository(work: Path) -> None:
     """Make *work* a repository with everything committed; built data, lockfiles and logs ignored."""
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n*.log\n")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n*.log\n", encoding="utf-8")
     _commit(work)
 
 
 def _built(work: Path) -> list:
     log = work / "order.log"
-    return log.read_text().split() if log.exists() else []
+    return log.read_text(encoding="utf-8").split() if log.exists() else []
 
 
 def _snapshot_of(pipeline: str):
@@ -83,9 +83,9 @@ def _snapshot_of(pipeline: str):
 def _rewrite(taken, change) -> None:
     """Change a snapshot's record on disk, as anyone who can write to a store could."""
     os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
-    document = json.loads(taken.path.read_text())
+    document = json.loads(taken.path.read_text(encoding="utf-8"))
     change(document)
-    taken.path.write_text(json.dumps(document))
+    taken.path.write_text(json.dumps(document), encoding="utf-8")
 
 
 def _around(found) -> list:
@@ -283,7 +283,7 @@ class TestWhatCannotBeRead:
         fred, rates, forecast = chain
         broken = forecast.parent / "broken"
         broken.mkdir()
-        (broken / "chartbook.toml").write_text("not = [toml\n")
+        (broken / "chartbook.toml").write_text("not = [toml\n", encoding="utf-8")
         _declare(forecast, {"broken": {"path": "../broken"}, "rates": {"path": "../rates"}})
         _declare(fred, {"forecast": {"path": "../forecast"}})
         assert [edge.dependency for edge in lineage.cycle(forecast).edges] == ["acme/rates", "acme/fred", "acme/forecast"]
@@ -293,7 +293,7 @@ class TestWhatCannotBeRead:
         catalog = forecast.parent / "everything"
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"fred": {"path": "../fred"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"fred": {"path": "../fred"}}}), encoding="utf-8"
         )
         _declare(fred, {"all": {"path": "../everything"}})
         assert lineage.cycle(forecast) is None
@@ -322,7 +322,7 @@ def _git_repository(folder: Path, pipeline_id: str, name: str, dependencies=None
     _pipeline(folder, pipeline_id, name, dependencies, build=build)
     if dependencies:
         _pin_anyway(folder)
-    (folder / ".gitignore").write_text("")
+    (folder / ".gitignore").write_text("", encoding="utf-8")
     _git(folder, "init", "--quiet", "-b", "main")
     _commit(folder)
     return folder
@@ -423,7 +423,7 @@ class TestTheCommands:
             _pin_anyway(fred)  # past the guard, as a lockfile from before it, or edited by hand
         _pipeline(work / "apart", "acme/apart", "a", {"acme/rates": {}})
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}}), encoding="utf-8"
         )
         before = (_lockfile(work / "apart"), _lockfile(fred), _store_state())
         with pytest.raises(run.RunError, match=r"^acme/fred: these pipelines depend on each other"):
@@ -450,7 +450,7 @@ class TestTheCommands:
         _pin_anyway(b)
         _declare(a, {"acme/x": {}})
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}}), encoding="utf-8"
         )
         before = (_lockfile(a), _lockfile(b), _store_state())
         with pytest.raises(run.RunError) as raised:
@@ -471,7 +471,7 @@ class TestTheCommands:
         snapshot.make(x)
         g = _pipeline(elsewhere, "acme/g", "gold", {"acme/x": {}}, build=f"echo built >> {work / 'g.log'}")
         _pin_anyway(g)
-        (g / ".gitignore").write_text("_data/\n")
+        (g / ".gitignore").write_text("_data/\n", encoding="utf-8")
         _git(g, "init", "--quiet", "-b", "main")
         _commit(g)
         _declare(p, {"acme/g": {"git": str(g)}})
@@ -654,10 +654,10 @@ class TestWorkingOutAPin:
         """As `pin` takes the newest snapshot again for an entry that names a snapshot and holds no hash."""
         fred, rates, forecast = chain
         path = forecast / "chartbook.lock"
-        document = json.loads(path.read_text())
+        document = json.loads(path.read_text(encoding="utf-8"))
         for record in document["records"]:
             record.pop("content_hash", None)
-        path.write_text(json.dumps(document))
+        path.write_text(json.dumps(document), encoding="utf-8")
         assert [entry["id"] for entry in lock.would_pin(forecast).dependencies] == ["rates"]
 
 
@@ -669,7 +669,7 @@ class TestWhatTheSecondReviewFound:
         x = _pipeline(work / "x", "acme/x", "xs", {"acme/d": {}})
         m = _pipeline(work / "m", "acme/m", "ms")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"d": {"path": "d"}, "m": {"path": "m"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"d": {"path": "d"}, "m": {"path": "m"}}}), encoding="utf-8"
         )
         _repository(work)
         snapshot.make(d)
@@ -703,7 +703,7 @@ class TestWhatTheSecondReviewFound:
         fred, rates, forecast = would_be
         _pipeline(work / "apart", "acme/apart", "a", {"acme/rates": {}})
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"apart": {"path": "apart"}, "fred": {"path": "fred"}}}), encoding="utf-8"
         )
 
         def unreachable(folder, *arguments, **keywords):
@@ -731,7 +731,7 @@ class TestWhatTheSecondReviewFound:
         (work / "chartbook.toml").write_text(
             tomli_w.dumps(
                 {"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in ("apart", "b", "c")}}
-            )
+            ), encoding="utf-8"
         )
         with pytest.raises(run.RunError, match="these pipelines depend on each other"):
             run.run(work, echo=lambda line: None)
@@ -750,7 +750,7 @@ class TestWhatTheThirdReviewFound:
         b = _pipeline(work / "b", "acme/b", "bs")
         c = _pipeline(work / "c", "acme/c", "cs")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "a"}, "b": {"path": "b"}}}), encoding="utf-8"
         )
         _repository(work)
         snapshot.make(a)
@@ -782,7 +782,7 @@ class TestWhatTheThirdReviewFound:
 
         monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user" / ".chartbook")
         config.get_global_settings_path().parent.mkdir(parents=True)
-        config.get_global_settings_path().write_text(tomli_w.dumps({"resolve": {"default_host": str(tmp_path / "host")}}))
+        config.get_global_settings_path().write_text(tomli_w.dumps({"resolve": {"default_host": str(tmp_path / "host")}}), encoding="utf-8")
         fred = _pipeline(work / "fred", "acme/fred", "series")
         x = _pipeline(work / "x", "acme/x", "xs", {"acme/fred": {}})
         _repository(work)
@@ -800,7 +800,7 @@ class TestWhatTheThirdReviewFound:
             run.run(fred, echo=lambda line: None)
         # The pin stays where it was when the default host moves, or is unset: so does the walk
         for settings in ({"resolve": {"default_host": str(tmp_path / "elsewhere")}}, {}):
-            config.get_global_settings_path().write_text(tomli_w.dumps(settings))
+            config.get_global_settings_path().write_text(tomli_w.dumps(settings), encoding="utf-8")
             assert _around(lineage.cycle(fred)) == [("acme/fred", "acme/ref"), ("acme/ref", "acme/x"), ("acme/x", "acme/fred")]
             with pytest.raises(run.RunError, match="^acme/fred: these pipelines depend on each other"):
                 run.run(fred, echo=lambda line: None)
@@ -848,7 +848,7 @@ class TestWhatTheFourthReviewFound:
         q = _pipeline(work / "q", "acme/q", "qs")
         r = _pipeline(work / "r", "acme/r", "rs")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}}), encoding="utf-8"
         )
         _repository(work)
         snapshot.make(p)
@@ -886,7 +886,7 @@ class TestWhatTheFourthReviewFound:
     def test_the_store_is_read_once_for_every_walk_of_a_command(self, chain, work, monkeypatch):
         fred, rates, forecast = chain
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}}), encoding="utf-8"
         )
         reads = []
         original = lineage._Finder._read
@@ -931,7 +931,7 @@ class TestWhatTheFifthReviewFound:
         q = _pipeline(work / "q", "acme/q", "qs")
         r = _pipeline(work / "r", "acme/r", "rs")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pqr"}}), encoding="utf-8"
         )
         _repository(work)
         snapshot.make(p)
@@ -958,13 +958,13 @@ class TestWhatTheFifthReviewFound:
         p = _pipeline(work / "p", "acme/p", "ps")
         q = _pipeline(work / "q", "acme/q", "qs")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pq"}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in "pq"}}), encoding="utf-8"
         )
         _repository(work)
         snapshot.make(p)
         y = _pipeline(tmp_path / "y", "acme/y", "ys", {"acme/p": {}})
         _pin_anyway(y)
-        (y / ".gitignore").write_text("_data/\nchartbook.lock\n")
+        (y / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8")
         _git(y, "init", "--quiet", "-b", "main")
         _commit(y)
         snapshot.make(y)
@@ -987,13 +987,13 @@ class TestWhatTheFifthReviewFound:
     def test_a_pin_the_store_lacks_is_looked_for_once_per_command(self, chain, work, monkeypatch):
         fred, rates, forecast = chain
         path = forecast / "chartbook.lock"
-        document = json.loads(path.read_text())
+        document = json.loads(path.read_text(encoding="utf-8"))
         for record in document["records"]:
             for entry in record.get("dependencies") or []:
                 entry["snapshot"] = "2001-01-01T00:00:00.000000Z"  # gone from the store
-        path.write_text(json.dumps(document))
+        path.write_text(json.dumps(document), encoding="utf-8")
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {n: {"path": n} for n in ("fred", "rates", "forecast")}}), encoding="utf-8"
         )
         reads = []
         original = lineage._Finder._read
@@ -1134,9 +1134,9 @@ class TestWhatTheGuardsReviewFound:
         clear_git_remote_cache()
         mine = fork / "rates"
         (mine / "_data").mkdir(exist_ok=True)
-        manifest = tomli.loads((mine / "chartbook.toml").read_text())
+        manifest = tomli.loads((mine / "chartbook.toml").read_text(encoding="utf-8"))
         del manifest["project"]["id"]  # as a pipeline is written: its ID is its repository's
-        (mine / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (mine / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _declare(mine, {"orig": {"path": "../../original/rates"}})
         assert snapshot.pipeline_in(mine) == "someone/rates"
         assert lock.pin(mine).written
@@ -1444,10 +1444,10 @@ class TestWhatTheOneIdReviewFound:
         _pipeline(original, "acme/rates", "treasury")
         fork = (tmp_path / "fork").resolve()
         _pipeline(fork, "acme/rates", "treasury", {"orig": {"path": "../rates"}})
-        manifest = tomli.loads((fork / "chartbook.toml").read_text())
+        manifest = tomli.loads((fork / "chartbook.toml").read_text(encoding="utf-8"))
         del manifest["project"]["id"]
         manifest["project"]["repo_url"] = "https://github.com/acme/rates"
-        (fork / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (fork / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         for folder in (original, fork):
             _git(folder, "init", "--quiet", "-b", "main")
             _commit(folder)

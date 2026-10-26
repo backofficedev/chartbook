@@ -155,7 +155,7 @@ class HashCache:
             return  # nothing to add or drop; leave the file as it is
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.path.with_name(f"{self.path.name}.{uuid.uuid4().hex}.tmp")
-        with open(temporary, "w", encoding="utf-8") as f:
+        with open(temporary, "w", encoding="utf-8", newline="\n") as f:
             json.dump(
                 {"version": CACHE_VERSION, "files": self._used},
                 f,

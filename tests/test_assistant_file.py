@@ -59,7 +59,7 @@ class TestACatalogsFile:
         root, first, second = catalog
         _build(root, monkeypatch)
         site = root / "docs"
-        text = (site / "llms.txt").read_text()
+        text = (site / "llms.txt").read_text(encoding="utf-8")
         assert text.startswith("# ")
         assert "## Pipelines" in text and "## Dataframes" in text
         assert "[index.json](index.json)" in text
@@ -70,7 +70,7 @@ class TestACatalogsFile:
         versions = [link for line in block[1:] for link in _links(line) if link.startswith("versions/")]
         assert len(versions) == 2 and all(link.endswith("/llms.txt") for link in versions)
         assert second.commit[:7] in versions[0] and first.commit[:7] in versions[1]
-        own = (site / versions[0]).read_text()
+        own = (site / versions[0]).read_text(encoding="utf-8")
         assert f"This site is the snapshot of `pipeline_a` at commit `{second.commit[:7]}`" in own
         assert _all_resolve((site / versions[0]).parent, own) == []
         # Each dataframe by its ID
@@ -85,7 +85,7 @@ class TestACatalogsFile:
         _show_from_the_store(root)
         _build(root, monkeypatch)
         site = root / "docs"
-        text = (site / "llms.txt").read_text()
+        text = (site / "llms.txt").read_text(encoding="utf-8")
         line = _block(text, "pipeline_c")[0]
         assert "Not on this machine" in line and "Its newest snapshot says: “" in line
         # Only the links the writer made: the page and the version; all in the site
@@ -96,12 +96,12 @@ class TestACatalogsFile:
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = catalog
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _build(root, monkeypatch)
         site = root / "docs"
-        text = (site / "llms.txt").read_text()
+        text = (site / "llms.txt").read_text(encoding="utf-8")
         assert "`pipeline_a`" in text and _all_resolve(site, text) == []
 
 
@@ -113,16 +113,16 @@ class TestWhatTheReviewFound:
         root, first, second = catalog
         _elsewhere_with(tmp_path, description=description)
         _show_from_the_store(root)
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["description"] = description
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _build(root, monkeypatch)
         site = root / "docs"
         files = [site / "llms.txt", *sorted((site / "versions").rglob("llms.txt"))]
         # The store-only pipeline's own version site is among them, its summary the owner's words before
         assert list((site / "versions" / "pipeline_c").rglob("llms.txt")), "pipeline_c's version site was not built"
         for file in files:
-            text = file.read_text()
+            text = file.read_text(encoding="utf-8")
             headings, items = _structure(text)
             assert [tag for tag, _ in headings].count("h1") == 1, (file, headings)
             assert all(content in ("Pipelines", "Dataframes", "Charts", "Models") for tag, content in headings if tag == "h2")
@@ -139,7 +139,7 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(SphinxWriter, "ASSISTANT_VERSIONS", 1)
         _build(root, monkeypatch)
         site = root / "docs"
-        text = (site / "llms.txt").read_text()
+        text = (site / "llms.txt").read_text(encoding="utf-8")
         block = _block(text, "pipeline_a")
         assert len(block) == 3 and block[2] == "  - 1 older version: [the versions page](cb/versions.html)"
         assert _all_resolve(site, text) == []
@@ -155,7 +155,7 @@ class TestAPipelinesFile:
 
     def test_it_lists_the_pipelines_pages(self, tmp_path, monkeypatch):
         site = self._site(tmp_path, monkeypatch)
-        text = (site / "llms.txt").read_text()
+        text = (site / "llms.txt").read_text(encoding="utf-8")
         assert text.startswith("# Rates\n")
         assert "- [Rates](index.html): `rates`. “Description for Rates”\n" in text
         assert "\n> A ChartBook pipeline, `rates`.\n" in text

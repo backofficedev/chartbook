@@ -1212,7 +1212,7 @@ def write_index(
     if only_if_changed and _same_but_for_time(index, path):
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(index, f, indent=2, ensure_ascii=False, default=str)
         f.write("\n")
     return path

@@ -28,9 +28,9 @@ KINDS = ("Catalog", "Pipeline", "Dataframe", "Series", "Chart", "Notebook", "Not
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
     toml_path = Path(project_dir) / "chartbook.toml"
-    config = tomli.loads(toml_path.read_text())
+    config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config))
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8")
 
 
 def _add_notebook(project_dir: Path, name: str = "analysis") -> None:
@@ -43,7 +43,7 @@ def _add_notebook(project_dir: Path, name: str = "analysis") -> None:
     }
     path = Path(project_dir) / "_output" / f"{name}.ipynb"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(notebook))
+    path.write_text(json.dumps(notebook), encoding="utf-8")
     _edit_toml(
         project_dir,
         lambda c: c["notebooks"].update({name: {"path": f"_output/{name}.ipynb"}}),
@@ -65,10 +65,10 @@ def _by_id(built: dict, record_id: str) -> dict:
 
 def _validate(built: dict) -> None:
     """Validate an index, envelope and every record, against the published schemas."""
-    envelope = json.loads(index.schema_path("index").read_text())
+    envelope = json.loads(index.schema_path("index").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(envelope).validate(built)
     for record in built["records"]:
-        schema = json.loads(index.schema_path(record["kind"]).read_text())
+        schema = json.loads(index.schema_path(record["kind"]).read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(schema).validate(record)
 
 
@@ -295,7 +295,7 @@ class TestFilesNotBuiltYet:
 
     def test_a_file_that_is_not_parquet_still_has_a_hash(self, project):
         parquet = project / "_data" / "notes_pipeline" / "dataframe_0.parquet"
-        parquet.write_text("not a parquet file")
+        parquet.write_text("not a parquet file", encoding="utf-8")
         record = _by_id(_build(project), "notes_pipeline:dataframe_0")
         assert record["content_hash"].startswith("sha256:")
         assert "columns" not in record
@@ -616,7 +616,7 @@ class TestPublished:
 class TestSchemas:
     @pytest.mark.parametrize("name", ["index", *KINDS])
     def test_each_schema_is_a_valid_schema(self, name):
-        schema = json.loads(index.schema_path(name).read_text())
+        schema = json.loads(index.schema_path(name).read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator.check_schema(schema)
         assert schema["$id"].endswith(
             "index/v1.json" if name == "index" else f"v1/{name}.json"
@@ -680,8 +680,8 @@ class TestWriteIndex:
     def test_round_trip(self, project, tmp_path):
         built = _build(project)
         path = index.write_index(built, tmp_path / "out" / "index.json")
-        assert json.loads(path.read_text()) == built
-        assert path.read_text().endswith("}\n")
+        assert json.loads(path.read_text(encoding="utf-8")) == built
+        assert path.read_text(encoding="utf-8").endswith("}\n")
 
     def test_an_index_that_only_differs_in_time_is_left_alone(self, project, tmp_path):
         path = tmp_path / "index.json"
@@ -703,17 +703,17 @@ class TestWriteIndex:
         )
         changed = _build(project, generated_at=datetime.datetime(2026, 6, 1))
         index.write_index(changed, path, only_if_changed=True)
-        written = json.loads(path.read_text())
+        written = json.loads(path.read_text(encoding="utf-8"))
         assert written["generated_at"] == changed["generated_at"]
         assert _by_id(written, "notes_pipeline:dataframe_0")["name"] == "Renamed"
 
     @pytest.mark.parametrize("content", ["", "not json", "[]"])
     def test_an_unreadable_file_is_replaced(self, project, tmp_path, content):
         path = tmp_path / "index.json"
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")
         built = _build(project)
         index.write_index(built, path, only_if_changed=True)
-        assert json.loads(path.read_text()) == built
+        assert json.loads(path.read_text(encoding="utf-8")) == built
 
 
 class TestBuildWritesTheIndex:
@@ -724,7 +724,7 @@ class TestBuildWritesTheIndex:
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
-        built = json.loads((pipeline_project / "docs" / "index.json").read_text())
+        built = json.loads((pipeline_project / "docs" / "index.json").read_text(encoding="utf-8"))
         _validate(built)
         assert built["root"] == "test_pipeline"
         assert "test_pipeline:dataframe_0" in [r.get("id") for r in built["records"]]
@@ -741,11 +741,11 @@ class TestBuildWritesTheIndex:
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
 
-        full = json.loads((pipeline_project / "_docs" / "index.json").read_text())
+        full = json.loads((pipeline_project / "_docs" / "index.json").read_text(encoding="utf-8"))
         record = _by_id(full, "test_pipeline:dataframe_0")
         assert Path(record["location"]["resolved_path"]).is_file()
         assert (pipeline_project / "_docs" / hashing.CACHE_FILE).is_file()
-        public = json.loads((pipeline_project / "docs" / "index.json").read_text())
+        public = json.loads((pipeline_project / "docs" / "index.json").read_text(encoding="utf-8"))
         assert public == index.published(full)
 
     def test_incremental_builds_keep_it_current(self, pipeline_project, monkeypatch):
@@ -755,7 +755,7 @@ class TestBuildWritesTheIndex:
 
         first = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
-        before = json.loads(published.read_text())
+        before = json.loads(published.read_text(encoding="utf-8"))
 
         # Nothing changed: the same index, read from the hash cache
         reads = []
@@ -777,7 +777,7 @@ class TestBuildWritesTheIndex:
         )
         third = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert third.exit_code == 0, third.output
-        after = json.loads(published.read_text())
+        after = json.loads(published.read_text(encoding="utf-8"))
         assert [Path(p).name for p in reads] == ["dataframe_0.parquet"]
         changed = _by_id(after, "test_pipeline:dataframe_0")
         assert changed["content_hash"] != _by_id(before, "test_pipeline:dataframe_0")[
@@ -790,7 +790,7 @@ class TestBuildWritesTheIndex:
         monkeypatch.chdir(catalog_project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
-        built = json.loads((catalog_project / "docs" / "index.json").read_text())
+        built = json.loads((catalog_project / "docs" / "index.json").read_text(encoding="utf-8"))
         _validate(built)
         assert built["records"][0]["kind"] == "Catalog"
         assert [r["id"] for r in _of_kind(built, "Pipeline")] == [
@@ -810,9 +810,9 @@ class TestWhatTheWriterNeeds:
 
         directory = tmp_path.resolve() / "p"
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# P\n")
+        (directory / "README.md").write_text("# P\n", encoding="utf-8")
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d", "date_col": "Date"}}})
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d", "date_col": "Date"}}}), encoding="utf-8"
         )
         pl.DataFrame({"Date": [datetime.date(2024, 1, 3), datetime.date(2024, 1, 1), datetime.date(2024, 1, 2)], "x": [1.0, 2.0, 3.0]}).write_parquet(
             directory / "_data" / "d.parquet"
@@ -831,7 +831,7 @@ class TestWhatTheWriterNeeds:
         assert _by_id(index.build_index(load_manifest(directory)), "acme/p:d")["date_range"] == {"first": "2024-01-01T00:00:00", "last": "2024-01-03T09:30:00"}
         # No date_col, no range
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}})
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}}), encoding="utf-8"
         )
         assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
 
@@ -869,9 +869,9 @@ class TestWhatTheWriterNeeds:
 
         catalog = create_catalog_project(tmp_path / "cat")
         config = catalog / "chartbook.toml"
-        text = config.read_text()
+        text = config.read_text(encoding="utf-8")
         if "[policy" not in text:
-            config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n")
+            config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n", encoding="utf-8")
         built = index.build_index(load_manifest(catalog))
         (record,) = _of_kind(built, "Catalog")
         assert record["policy"]["required"]["dataframes"] == ["name"]

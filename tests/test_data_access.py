@@ -29,8 +29,8 @@ from chartbook.resolve import QueryLocation, TableLocation, resolve
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
-    (directory / "README.md").write_text("# A pipeline\n")
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
+    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8")
     return directory
 
 
@@ -150,7 +150,7 @@ class TestManifest:
                     "pipelines": {"p": {"path": "p"}},
                     "sources": {"local": {"backend": "duckdb", "url": "duckdb:///x"}},
                 }
-            )
+            ), encoding="utf-8"
         )
         with pytest.raises(ValueError, match=r"a catalog has no \[sources\]"):
             load_manifest(tmp_path)
@@ -457,7 +457,7 @@ class TestCredentials:
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path / "home")
         (tmp_path / "home").mkdir()
         from_file = self._other_file(tmp_path, "FROM-FILE")
-        (tmp_path / "home" / "sources.toml").write_text(f'[local]\nurl = "duckdb:///{from_file}"\n')
+        (tmp_path / "home" / "sources.toml").write_text(f'[local]\nurl = "duckdb:///{from_file}"\n', encoding="utf-8")
         assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-FILE"]
         assert data.connect("local", project_dir=pipeline).sql("select d from curve").fetchone() == ("FROM-FILE",)
         from_env = self._other_file(tmp_path, "FROM-ENV")
@@ -484,7 +484,7 @@ class TestCredentials:
 
     def test_then_sources_toml(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path)
-        (tmp_path / "sources.toml").write_text('[local]\nurl = "duckdb:///from-file.db"\n')
+        (tmp_path / "sources.toml").write_text('[local]\nurl = "duckdb:///from-file.db"\n', encoding="utf-8")
         assert backends.source_url("local", "duckdb:///manifest.db") == "duckdb:///from-file.db"
         assert backends.source_url("other", "duckdb:///manifest.db") == "duckdb:///manifest.db"
 
@@ -494,7 +494,7 @@ class TestCredentials:
 
     def test_a_sources_file_that_cannot_be_read(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path)
-        (tmp_path / "sources.toml").write_text("not = toml =")
+        (tmp_path / "sources.toml").write_text("not = toml =", encoding="utf-8")
         with pytest.raises(BackendError, match="Cannot read"):
             backends.source_url("local", "duckdb:///manifest.db")
 
@@ -517,7 +517,7 @@ class TestIndexAndSite:
         assert "source" not in query and "query" not in query  # in the location, not beside it
         file = records["acme/rates:rates"]
         assert file["location"]["kind"] == "file" and file["content_hash"].startswith("sha256:")
-        schema = json.loads(index.schema_path("Dataframe").read_text())
+        schema = json.loads(index.schema_path("Dataframe").read_text(encoding="utf-8"))
         for record in index.published(built)["records"]:
             if record["kind"] == "Dataframe":
                 jsonschema.validate(record, schema)
@@ -574,7 +574,7 @@ class TestIndexAndSite:
         monkeypatch.chdir(pipeline)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
-        page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text()
+        page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text(encoding="utf-8")
         assert "| Data available up to (min)     | 2024-01-01" in page
         assert "| Data available up to (max)     | 2024-01-02" in page
         assert "| Query                          | in source `local`; the SQL is below" in page
@@ -592,7 +592,7 @@ class TestIndexAndSite:
         monkeypatch.chdir(pipeline)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
-        page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text()
+        page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text(encoding="utf-8")
         assert "A query in source 'local' (duckdb): 2 rows, 2 columns." in page
         assert "slope: DECIMAL" in page
         assert "| Query " in page and "in source `local`" in page
@@ -658,7 +658,7 @@ class TestNotPinnedAcrossPipelines:
     def test_a_catalog_reaches_a_table_of_a_pipeline_it_lists(self, pipeline, tmp_path):
         """Found by a reviewer: the catalog path blamed a missing `path`."""
         (tmp_path / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}}), encoding="utf-8"
         )
         location = resolve("curve", pipeline="acme/rates", catalog_path=tmp_path / "chartbook.toml")
         assert isinstance(location, TableLocation) and location.identifier == "curve"

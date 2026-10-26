@@ -12,6 +12,17 @@ import polars as pl
 import tomli_w
 
 
+def remove_tree(path) -> None:
+    """Remove a folder and what is in it, read-only files included.
+
+    git's objects and the store's are read-only, and Windows does not remove
+    a read-only file: ``shutil.rmtree`` alone stops there.
+    """
+    from chartbook.store import _remove_tree
+
+    _remove_tree(Path(path))
+
+
 def create_sample_parquet(path: Path, columns: dict = None, rows: int = 10) -> Path:
     """Creates a real parquet file using polars.
 
@@ -128,7 +139,7 @@ def create_sample_html_chart(path: Path, chart_id: str = "chart") -> Path:
 </body>
 </html>
 """
-    path.write_text(html_content)
+    path.write_text(html_content, encoding="utf-8")
     return path
 
 
@@ -192,14 +203,14 @@ def create_pipeline_project(
     charts_dir.mkdir(parents=True, exist_ok=True)
 
     # Create source file for modification tracking
-    (base_dir / "src" / "dummy.py").write_text("# Dummy source file\n")
+    (base_dir / "src" / "dummy.py").write_text("# Dummy source file\n", encoding="utf-8")
 
     # Create docs_src file
-    (base_dir / "docs_src" / "index.md").write_text("# Documentation\n")
+    (base_dir / "docs_src" / "index.md").write_text("# Documentation\n", encoding="utf-8")
 
     # Create README.md (required by build_markdown for pipeline theme)
     (base_dir / "README.md").write_text(
-        f"# {pipeline_name}\n\nThis is a test pipeline.\n"
+        f"# {pipeline_name}\n\nThis is a test pipeline.\n", encoding="utf-8"
     )
 
     # Build chartbook.toml (format v2)
@@ -235,7 +246,7 @@ def create_pipeline_project(
 
             # Create the dataframe documentation file
             (base_dir / dataframe_docs_path).write_text(
-                f"# Dataframe {i}\n\nDocumentation for dataframe {i}.\n"
+                f"# Dataframe {i}\n\nDocumentation for dataframe {i}.\n", encoding="utf-8"
             )
 
             df_config = {
@@ -270,7 +281,7 @@ def create_pipeline_project(
 
                     # Create the chart documentation file
                     (base_dir / chart_docs_path).write_text(
-                        f"# Chart {i}-{j}\n\nDocumentation for chart {i}-{j}.\n"
+                        f"# Chart {i}-{j}\n\nDocumentation for chart {i}-{j}.\n", encoding="utf-8"
                     )
 
                     config["charts"][chart_id] = {
@@ -288,7 +299,7 @@ def create_pipeline_project(
     if include_notes:
         # Notes should be in docs_src directory
         notes_dir = base_dir / "docs_src"
-        (notes_dir / "note1.md").write_text("# Note 1\nSome content.\n")
+        (notes_dir / "note1.md").write_text("# Note 1\nSome content.\n", encoding="utf-8")
 
         config["notes"] = {
             "note1": {
@@ -306,10 +317,10 @@ def create_pipeline_project(
 
         site_dir.mkdir(parents=True, exist_ok=True)
         (site_dir / "index_toc.md").write_text(
-            "```{toctree}\n:maxdepth: 2\n:caption: Site Pages\nsample_page.md\n```\n"
+            "```{toctree}\n:maxdepth: 2\n:caption: Site Pages\nsample_page.md\n```\n", encoding="utf-8"
         )
         (site_dir / "sample_page.md").write_text(
-            "# Sample Page\n\nThis is a sample site page.\n"
+            "# Sample Page\n\nThis is a sample site page.\n", encoding="utf-8"
         )
 
     # Write chartbook.toml
@@ -415,8 +426,8 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
     # Create minimal directory structure
     (base_dir / "src").mkdir(exist_ok=True)
     (base_dir / "docs_src").mkdir(exist_ok=True)
-    (base_dir / "src" / "dummy.py").write_text("# Dummy\n")
-    (base_dir / "docs_src" / "index.md").write_text("# Docs\n")
+    (base_dir / "src" / "dummy.py").write_text("# Dummy\n", encoding="utf-8")
+    (base_dir / "docs_src" / "index.md").write_text("# Docs\n", encoding="utf-8")
 
     if error_type == "missing_file":
         # Don't create chartbook.toml
@@ -455,7 +466,7 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
         }
     elif error_type == "invalid_toml_syntax":
         # Write invalid TOML directly
-        (base_dir / "chartbook.toml").write_text("this is not valid toml {{{\n")
+        (base_dir / "chartbook.toml").write_text("this is not valid toml {{{\n", encoding="utf-8")
         return base_dir
     else:
         raise ValueError(f"Unknown error_type: {error_type}")
@@ -472,7 +483,7 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
@@ -488,7 +499,7 @@ def commit_pipeline(folder: Path) -> None:
     """
     folder = Path(folder).resolve()
     if not (folder / ".git").exists():
-        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n")
+        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n", encoding="utf-8")
         _git(folder, "init", "--quiet", "-b", "main")
     _git(folder, "add", "-A", "--", ".")
     if _git(folder, "status", "--porcelain", "--", "."):
@@ -515,7 +526,7 @@ def snapshot_dependencies(project_dir: Path, store=None, made_at: str = None) ->
     project_dir = Path(project_dir)
     if not (project_dir / "chartbook.toml").is_file():
         return []
-    raw = tomli.loads((project_dir / "chartbook.toml").read_text())
+    raw = tomli.loads((project_dir / "chartbook.toml").read_text(encoding="utf-8"))
     made = []
     for entry in (raw.get("dependencies") or {}).values():
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):

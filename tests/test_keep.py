@@ -20,6 +20,7 @@ from chartbook.cli import main
 from chartbook.manifest import load_manifest
 from chartbook.run import RunError
 from chartbook.store import default_store
+from tests.fixtures import remove_tree
 
 OLDEST = "2025-11-01T00:00:00.000000Z"
 OLDER = "2025-12-01T00:00:00.000000Z"
@@ -34,14 +35,14 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
 
 def _commit(repository: Path, message: str = "Work") -> str:
     if not (repository / ".git").exists():
-        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_models/\n*.log\n")
+        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_models/\n*.log\n", encoding="utf-8")
         _git(repository, "init", "--quiet", "-b", "main")
     _git(repository, "add", "-A")
     _git(repository, "commit", "--quiet", "--allow-empty", "-m", message)
@@ -50,7 +51,7 @@ def _commit(repository: Path, message: str = "Work") -> str:
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
     return directory
 
 
@@ -80,7 +81,7 @@ def work(tmp_path):
 def costly(work):
     """A pipeline whose ``embeddings`` cost something to make, and is marked; built and committed."""
     directory = _manifest(work / "docs", COSTLY)
-    (directory / "README.md").write_text("# docs\n")
+    (directory / "README.md").write_text("# docs\n", encoding="utf-8")
     _write(directory, "embeddings", b"emb-1")
     _write(directory, "summary", b"sum-1")
     _commit(work)
@@ -90,7 +91,7 @@ def costly(work):
 def _elsewhere(tmp_path: Path) -> None:
     """Make every snapshot's folder of origin one that is not on this machine."""
     for folder in {taken.path.parent for taken in snapshot.all_snapshots(default_store())}:
-        (folder / "origins").write_text(str(tmp_path / "another-machine") + "\n")
+        (folder / "origins").write_text(str(tmp_path / "another-machine") + "\n", encoding="utf-8")
 
 
 def _plan(**kwargs):
@@ -255,7 +256,7 @@ class TestRestore:
         taken = snapshot.make(costly).snapshot
         import shutil
 
-        shutil.rmtree(costly / "_models" / "m")
+        remove_tree(costly / "_models" / "m")
         report = snapshot.restore(costly)
         assert [(name, path, t) for name, path, t, _ in report.put_back] == [("model/m", "./_models/m", taken)]
         assert (costly / "_models" / "m" / "weights.bin").read_bytes() == b"w"
@@ -323,7 +324,7 @@ class TestTheStopBeforeABuild:
         snapshot.make(costly)
         (costly / "_data" / "embeddings.parquet").unlink()
         report = self._run(costly, remake=True)
-        assert report.failed is None and (costly / "build.log").read_text().split() == ["built"]
+        assert report.failed is None and (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]
 
     def test_a_first_build_is_not_stopped(self, costly):
         """No version in the store: there is nothing to put back, and the asset has to be made."""
@@ -341,7 +342,7 @@ class TestTheStopBeforeABuild:
         snapshot.make(costly)
         cheap = _manifest(work / "cheap", {"project": {"id": "acme/cheap"}, "scripts": {"build": "echo built >> build.log"}})
         (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"cheap": {"path": "cheap"}, "docs": {"path": "docs"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"cheap": {"path": "cheap"}, "docs": {"path": "docs"}}}), encoding="utf-8"
         )
         _commit(work)
         (costly / "_data" / "embeddings.parquet").unlink()
@@ -364,7 +365,7 @@ class TestTheStopBeforeABuild:
         assert not (costly / "site").exists()
         result = CliRunner().invoke(main, ["run", "--remake"])
         assert result.exit_code == 0, result.output
-        assert (costly / "build.log").read_text().split() == ["built"]
+        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]
 
     def test_kept_missing_alone(self, costly):
         assert run.kept_missing(costly) == []
@@ -443,7 +444,7 @@ class TestAfterReview:
         snapshot.make(costly)
         _manifest(costly, {**COSTLY, "models": {"m": {"path": "./_models/m.pt", "docs": "d", "keep": True}}})
         _commit(work)
-        shutil.rmtree(costly / "_models" / "m")
+        remove_tree(costly / "_models" / "m")
         report = snapshot.restore(costly)
         assert report.left == [(
             "model/m",
@@ -464,11 +465,11 @@ class TestAfterReview:
         import json
 
         taken = snapshot.make(costly).snapshot
-        document = json.loads(taken.path.read_text())
+        document = json.loads(taken.path.read_text(encoding="utf-8"))
         for record in document["records"]:
             if record["id"] == "acme/docs:embeddings":
                 record["content_hash"] = "../../../etc/passwd"
-        taken.path.write_text(json.dumps(document))
+        taken.path.write_text(json.dumps(document), encoding="utf-8")
         (costly / "_data" / "embeddings.parquet").unlink()
         ((name, why),) = snapshot.restore(costly).left
         assert name == "embeddings" and why.startswith(f"the newest snapshot holding it, at {taken.commit[:7]}, names an object that is not one")
@@ -498,7 +499,7 @@ class TestAfterReview:
         monkeypatch.chdir(costly)
         result = CliRunner().invoke(main, ["build", "./site", "-f", "--remake"])
         assert "is kept, and is not on disk" not in result.output
-        assert (costly / "build.log").read_text().split() == ["built"]  # the script ran; the render then finds the file still missing
+        assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran; the render then finds the file still missing
 
     def test_a_pin_keeps_the_newest_and_the_mark_keeps_the_older_version(self, costly, work):
         first = snapshot.make(costly, made_at=OLDER).snapshot

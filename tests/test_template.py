@@ -129,7 +129,7 @@ def test_minimal_project_generation(template_dir, temp_dir):
     assert not (project_dir / "src" / "example_plot.py").exists()
 
     # Only the R and Stata examples need directories defined in .env
-    assert "DATA_DIR" not in (project_dir / ".env.example").read_text()
+    assert "DATA_DIR" not in (project_dir / ".env.example").read_text(encoding="utf-8")
 
 
 def test_full_project_generation(template_dir, temp_dir):
@@ -249,7 +249,7 @@ def test_latex_reports_avoid_eps_graphics(template_dir, temp_dir):
     for tex_file in (project_dir / "reports").glob("*.tex"):
         graphics = re.findall(
             r"\\includegraphics(?:ifexists)?(?:\[[^\]]*\])?\{([^}]+)\}",
-            tex_file.read_text(),
+            tex_file.read_text(encoding="utf-8"),
         )
         eps_graphics = [g for g in graphics if g.lower().endswith(".eps")]
         assert not eps_graphics, f"{tex_file.name} includes EPS: {eps_graphics}"
@@ -271,7 +271,7 @@ def test_latex_reports_guard_generated_outputs(template_dir, temp_dir):
     project_dir = Path(project_path)
 
     for tex_file in (project_dir / "reports").glob("*.tex"):
-        text = tex_file.read_text()
+        text = tex_file.read_text(encoding="utf-8")
         checked = set(re.findall(r"\\IfFileExists\{([^}]+)\}", text))
         included = re.findall(
             r"\\(?:input|includegraphics(?:\[[^\]]*\])?)"
@@ -282,7 +282,7 @@ def test_latex_reports_guard_generated_outputs(template_dir, temp_dir):
         assert not unchecked, f"{tex_file.name} includes unchecked outputs: {unchecked}"
 
     # doit, unlike an editor, must still build the outputs before compiling
-    dodo = (project_dir / "dodo.py").read_text()
+    dodo = (project_dir / "dodo.py").read_text(encoding="utf-8")
     for output in ["example_plot.png", "example_table.tex", "pandas_to_latex_simple_table1.tex"]:
         assert f'OUTPUT_DIR / "{output}",' in dodo
 
@@ -308,7 +308,7 @@ def test_latex_reports_compile_before_outputs_exist(template_dir, temp_dir):
             ["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", f"{name}.tex"],
             cwd=reports_dir,
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace"
         )
         assert result.returncode == 0, f"{name} failed to compile:\n{result.stdout[-3000:]}"
         assert (reports_dir / f"{name}.pdf").exists()
@@ -330,9 +330,9 @@ def test_latex_without_fred_has_no_fred_dependency(template_dir, temp_dir):
 
     assert not (project_dir / "src" / "pull_fred.py").exists()
     for script in ["example_plot.py", "example_table.py"]:
-        assert "import pull_fred" not in (project_dir / "src" / script).read_text()
+        assert "import pull_fred" not in (project_dir / "src" / script).read_text(encoding="utf-8")
 
-    dodo = (project_dir / "dodo.py").read_text()
+    dodo = (project_dir / "dodo.py").read_text(encoding="utf-8")
     assert "def task_example_plot" in dodo
     assert "pull_fred" not in dodo
 
@@ -354,7 +354,7 @@ def test_latex_examples_run_without_fred(template_dir, temp_dir):
         ["doit", "config", "summary_stats", "example_plot"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
@@ -381,7 +381,7 @@ def test_r_only(template_dir, temp_dir):
     # Conda projects should have environment.yml
     assert (project_dir / "environment.yml").exists()
     # The R examples read these directories from .env
-    env_example = (project_dir / ".env.example").read_text()
+    env_example = (project_dir / ".env.example").read_text(encoding="utf-8")
     assert "DATA_DIR=_data" in env_example
     assert "OUTPUT_DIR=_output" in env_example
 
@@ -397,7 +397,7 @@ def test_stata_only(template_dir, temp_dir):
 
     assert (project_dir / "src" / "example_stata_plot.do").exists()
     # The Stata example reads these directories from .env
-    env_example = (project_dir / ".env.example").read_text()
+    env_example = (project_dir / ".env.example").read_text(encoding="utf-8")
     assert "DATA_DIR=_data" in env_example
     assert "OUTPUT_DIR=_output" in env_example
 
@@ -413,8 +413,8 @@ def test_r_without_fred_has_no_fred_dependency(template_dir, temp_dir):
     project_dir = Path(project_path)
 
     for script in ["example_r_plot.r", "04_example_regressions.Rmd"]:
-        assert "fred.parquet" not in (project_dir / "src" / script).read_text()
-    assert "pull_fred" not in (project_dir / "dodo.py").read_text()
+        assert "fred.parquet" not in (project_dir / "src" / script).read_text(encoding="utf-8")
+    assert "pull_fred" not in (project_dir / "dodo.py").read_text(encoding="utf-8")
 
 
 def test_stata_without_fred_has_no_fred_dependency(template_dir, temp_dir):
@@ -426,8 +426,8 @@ def test_stata_without_fred_has_no_fred_dependency(template_dir, temp_dir):
     project_path = generate_project(template_dir, temp_dir, context)
     project_dir = Path(project_path)
 
-    assert "fred.csv" not in (project_dir / "src" / "example_stata_plot.do").read_text()
-    assert "pull_fred" not in (project_dir / "dodo.py").read_text()
+    assert "fred.csv" not in (project_dir / "src" / "example_stata_plot.do").read_text(encoding="utf-8")
+    assert "pull_fred" not in (project_dir / "dodo.py").read_text(encoding="utf-8")
 
 
 def test_wrds_sources(template_dir, temp_dir):
@@ -444,7 +444,7 @@ def test_wrds_sources(template_dir, temp_dir):
     assert (project_dir / "src" / "pull_CRSP_Compustat.py").exists()
 
     # Check requirements.txt includes wrds
-    requirements = (project_dir / "requirements.txt").read_text()
+    requirements = (project_dir / "requirements.txt").read_text(encoding="utf-8")
     assert "wrds" in requirements
 
 
@@ -475,7 +475,7 @@ def test_dodo_src_references_match_filenames(template_dir, temp_dir):
     project_dir = Path(project_path)
 
     src_files = set(os.listdir(project_dir / "src"))
-    referenced = set(re.findall(r"\./src/([\w.]+)", (project_dir / "dodo.py").read_text()))
+    referenced = set(re.findall(r"\./src/([\w.]+)", (project_dir / "dodo.py").read_text(encoding="utf-8")))
 
     assert referenced, "expected dodo.py to reference files in ./src"
     assert referenced <= src_files, f"not found in src/: {sorted(referenced - src_files)}"
@@ -491,7 +491,7 @@ def test_doit_list_command(template_dir, temp_dir):
         ["doit", "list"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     # doit list should succeed (return code 0)
@@ -511,7 +511,7 @@ def test_doit_list_with_chartbook(template_dir, temp_dir):
         ["doit", "list"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit list failed: {result.stderr}"
@@ -530,7 +530,7 @@ def test_doit_list_with_fred(template_dir, temp_dir):
         ["doit", "list"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit list failed: {result.stderr}"
@@ -549,7 +549,7 @@ def test_doit_task_dependencies_resolve(template_dir, temp_dir):
         ["doit", "config"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit config failed: {result.stderr}"
@@ -564,7 +564,7 @@ def test_readme_contains_project_name(template_dir, temp_dir):
     project_path = generate_project(template_dir, temp_dir, context)
     project_dir = Path(project_path)
 
-    readme = (project_dir / "README.md").read_text()
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
     assert "My Awesome Project" in readme
 
 
@@ -595,7 +595,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout for env creation
+            timeout=300,  # 5 minute timeout for env creation, encoding="utf-8", errors="replace"
         )
         if create_result.returncode != 0:
             pytest.fail(f"Failed to create conda env: {create_result.stderr}")
@@ -606,7 +606,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=600,  # 10 minute timeout for pip install
+            timeout=600,  # 10 minute timeout for pip install, encoding="utf-8", errors="replace"
         )
         if pip_result.returncode != 0:
             pytest.fail(f"Failed to pip install: {pip_result.stderr}")
@@ -617,7 +617,7 @@ def test_doit_runs_with_fred(template_dir, temp_dir):
             cwd=project_dir,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout for doit
+            timeout=300,  # 5 minute timeout for doit, encoding="utf-8", errors="replace"
         )
 
         assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
@@ -650,7 +650,7 @@ def test_environment_manager_pip(template_dir, temp_dir):
     assert not (project_dir / "pixi.toml").exists()
 
     # Check README mentions pip
-    readme = (project_dir / "README.md").read_text()
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
     assert "python -m venv" in readme
     assert "pip install -r requirements.txt" in readme
 
@@ -671,13 +671,13 @@ def test_environment_manager_uv(template_dir, temp_dir):
     assert not (project_dir / "pixi.toml").exists()
 
     # Check pyproject.toml has correct structure
-    pyproject = (project_dir / "pyproject.toml").read_text()
+    pyproject = (project_dir / "pyproject.toml").read_text(encoding="utf-8")
     assert "[project]" in pyproject
     assert "dependencies" in pyproject
     assert "[tool.pytest.ini_options]" in pyproject
 
     # Check README mentions uv
-    readme = (project_dir / "README.md").read_text()
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
     assert "uv sync" in readme
 
 
@@ -697,7 +697,7 @@ def test_environment_manager_conda(template_dir, temp_dir):
     assert not (project_dir / "pixi.toml").exists()
 
     # Check README mentions conda
-    readme = (project_dir / "README.md").read_text()
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
     assert "conda env create" in readme
 
 
@@ -717,13 +717,13 @@ def test_environment_manager_pixi(template_dir, temp_dir):
     assert not (project_dir / "pyproject.toml").exists()
 
     # Check pixi.toml has correct structure
-    pixi_toml = (project_dir / "pixi.toml").read_text()
+    pixi_toml = (project_dir / "pixi.toml").read_text(encoding="utf-8")
     assert "[project]" in pixi_toml
     assert "[dependencies]" in pixi_toml
     assert "[tasks]" in pixi_toml
 
     # Check README mentions pixi
-    readme = (project_dir / "README.md").read_text()
+    readme = (project_dir / "README.md").read_text(encoding="utf-8")
     assert "pixi install" in readme
 
 
@@ -777,7 +777,7 @@ def test_r_with_pixi_works(template_dir, temp_dir):
     assert (project_dir / "src" / "example_r_plot.r").exists()
 
     # Check pixi.toml includes R dependencies
-    pixi_toml = (project_dir / "pixi.toml").read_text()
+    pixi_toml = (project_dir / "pixi.toml").read_text(encoding="utf-8")
     assert "r-base" in pixi_toml
 
 
@@ -794,7 +794,7 @@ def test_doit_list_with_uv(template_dir, temp_dir):
         ["doit", "list"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit list failed: {result.stderr}"
@@ -813,7 +813,7 @@ def test_doit_list_with_pixi(template_dir, temp_dir):
         ["doit", "list"],
         cwd=project_dir,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
 
     assert result.returncode == 0, f"doit list failed: {result.stderr}"
@@ -827,7 +827,7 @@ class TestOneSourceForTheSkill:
     def test_the_templates_copy_is_the_packages(self, name):
         package = Path(__file__).parent.parent / "src" / "chartbook" / "skills" / name
         copy = PROJECT_TEMPLATE / ".claude" / "skills" / "chartbook" / name
-        assert copy.read_text() == package.read_text(), (
+        assert copy.read_text(encoding="utf-8") == package.read_text(encoding="utf-8"), (
             f"template/.../.claude/skills/chartbook/{name} differs from "
             f"src/chartbook/skills/{name}. Edit the one in src/, then copy it here."
         )
@@ -837,7 +837,7 @@ class TestOneSourceForTheSkill:
         root = Path(__file__).parent.parent
         package = root / "src" / "chartbook" / "skills" / name
         copy = root / ".claude" / "skills" / "chartbook" / name
-        assert copy.read_text() == package.read_text(), (
+        assert copy.read_text(encoding="utf-8") == package.read_text(encoding="utf-8"), (
             f".claude/skills/chartbook/{name} differs from src/chartbook/skills/{name}. "
             f"Edit the one in src/, then copy it here."
         )
@@ -847,7 +847,7 @@ class TestOneSourceForTheSkill:
         project_dir = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
         package = Path(__file__).parent.parent / "src" / "chartbook" / "skills" / "SKILL.md"
         rendered = project_dir / ".claude" / "skills" / "chartbook" / "SKILL.md"
-        assert rendered.read_text() == package.read_text()
+        assert rendered.read_text(encoding="utf-8") == package.read_text(encoding="utf-8")
 
 
 # A project with a ChartBook site and one notebook, and nothing that needs a
@@ -877,7 +877,7 @@ def _chartbook(project, *args, path=None):
         capture_output=True,
         text=True,
         timeout=600,
-        env=_environment(path),
+        env=_environment(path), encoding="utf-8", errors="replace"
     )
 
 
@@ -898,7 +898,7 @@ class TestARenderedProjectBuilds:
         from chartbook.manifest import load_manifest
 
         assert load_manifest(project)["scripts"] == {"build": "doit"}
-        code = [line for line in (project / "dodo.py").read_text().splitlines() if not line.lstrip().startswith("#")]
+        code = [line for line in (project / "dodo.py").read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith("#")]
         # `chartbook build` renders the site after `doit`; doit rendering it
         # too was every build rendering it twice. And `chartbook build`
         # there would run this file again
@@ -913,7 +913,7 @@ class TestARenderedProjectBuilds:
         assert "`chartbook build` runs its build script" in result.stderr
         assert (project / "docs" / "index.html").is_file()
         page = project / "docs" / "cb" / "notebooks" / "scaffold_test" / f"{NOTEBOOK}.html"
-        assert "Not built yet" in page.read_text()
+        assert "Not built yet" in page.read_text(encoding="utf-8")
         assert not (project / "_output" / f"{NOTEBOOK}.ipynb").exists()
 
     def test_chartbook_build_builds_it(self, project):
@@ -932,7 +932,7 @@ class TestARenderedProjectBuilds:
         assert (project / "docs" / "index.json").is_file()
         assert (project / "_output" / f"{NOTEBOOK}.ipynb").is_file()
         page = project / "docs" / "cb" / "notebooks" / "scaffold_test" / f"{NOTEBOOK}.html"
-        assert "Not built yet" not in page.read_text()
+        assert "Not built yet" not in page.read_text(encoding="utf-8")
 
     def test_without_tex_the_latex_reports_are_skipped_and_the_rest_builds(self, template_dir, temp_dir):
         """With LaTeX chosen and no TeX installed, `doit` used to stop at `latexmk: command not found`."""
@@ -948,7 +948,7 @@ class TestARenderedProjectBuilds:
             capture_output=True,
             text=True,
             timeout=600,
-            env=_environment(no_tex),
+            env=_environment(no_tex), encoding="utf-8", errors="replace"
         )
         assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
         assert "latexmk was not found, so the reports in ./reports are not compiled" in result.stderr
@@ -974,7 +974,7 @@ class TestARenderedProjectBuilds:
 def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, context):
     """The tests are their own task, `doit run_pytest`; a build used to run them every time."""
     project = Path(generate_project(template_dir, temp_dir, context))
-    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
+    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert listed.returncode == 0, listed.stderr
     tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
     assert "run_pytest" in tasks
@@ -982,7 +982,7 @@ def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, contex
         [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
         cwd=project,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
     assert loaded.returncode == 0, loaded.stderr
     assert sorted(json.loads(loaded.stdout)) == sorted(tasks - {"run_pytest"})
@@ -999,9 +999,9 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
     run: the block says so.
     """
     project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
-    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n')
+    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n', encoding="utf-8")
     dodo = project / "dodo.py"
-    text = dodo.read_text()
+    text = dodo.read_text(encoding="utf-8")
     block = text.index("## `doit` on its own")
     assert "must stay the last thing in the file" in text[block:]
     others = (
@@ -1022,15 +1022,15 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
         # The class has create_doit_tasks too, which doit would call unbound
         "del _Report\n\n\n"
     )
-    dodo.write_text(text[:block] + others + text[block:])
-    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
+    dodo.write_text(text[:block] + others + text[block:], encoding="utf-8")
+    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True, encoding="utf-8", errors="replace")
     assert listed.returncode == 0, listed.stderr
     tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
     loaded = subprocess.run(
         [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
         cwd=project,
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
     assert loaded.returncode == 0, loaded.stderr
     defaults = set(json.loads(loaded.stdout))
@@ -1057,7 +1057,7 @@ class TestTheQuestions:
         assert (project / "docs" / "index.html").is_file()
 
     def test_every_question_says_what_it_asks(self, template_dir):
-        questions = json.loads((template_dir / "cookiecutter.json").read_text())
+        questions = json.loads((template_dir / "cookiecutter.json").read_text(encoding="utf-8"))
         prompts = questions["__prompts__"]
         asked = [name for name in questions if not name.startswith("_")]
         assert sorted(prompts) == sorted(asked)
@@ -1087,7 +1087,7 @@ class TestTheQuestions:
     def test_with_uv_the_readme_activates_the_environment_before_chartbook_build(self, template_dir, temp_dir):
         """After `uv sync` alone, a chartbook installed elsewhere ran a `doit` that is not on PATH."""
         project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": "uv"}))
-        readme = (project / "README.md").read_text()
+        readme = (project / "README.md").read_text(encoding="utf-8")
         quick_start = readme[readme.index("uv sync"):readme.index("And that's it!")]
         assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook build -f")
         assert "uv run chartbook build -f" in readme
@@ -1114,14 +1114,14 @@ class TestTheQuestions:
             "pixi": [("pixi.toml", 'chartbook = ">=9.8.7"')],
         }[manager]
         for name, floor in floors:
-            assert floor in (project / name).read_text(), name
+            assert floor in (project / name).read_text(encoding="utf-8"), name
 
     def test_the_template_is_of_the_version_of_the_chartbook_it_comes_with(self, template_dir):
         """So the floor is the rendering ChartBook's, and `cruft update` moves it to the template's: a
         release bumps both."""
         from chartbook.__about__ import __version__
 
-        questions = json.loads((template_dir / "cookiecutter.json").read_text())
+        questions = json.loads((template_dir / "cookiecutter.json").read_text(encoding="utf-8"))
         assert questions["_chartbook_version"] == __version__
 
     @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
@@ -1153,20 +1153,20 @@ class TestTheQuestions:
 
         for name in ("requirements.txt", "environment.yml"):
             if (project / name).exists():
-                for line in (project / name).read_text().splitlines():
+                for line in (project / name).read_text(encoding="utf-8").splitlines():
                     keep(name, line)
         if (project / "pyproject.toml").exists():
-            for line in tomli.loads((project / "pyproject.toml").read_text())["project"]["dependencies"]:
+            for line in tomli.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["project"]["dependencies"]:
                 keep("pyproject.toml", line)
         if (project / "pixi.toml").exists():
-            pixi = tomli.loads((project / "pixi.toml").read_text())
+            pixi = tomli.loads((project / "pixi.toml").read_text(encoding="utf-8"))
             found["pixi.toml"] = {
                 "chartbook": SpecifierSet(pixi["pypi-dependencies"]["chartbook"]),
                 "polars": SpecifierSet(pixi["dependencies"]["polars"]),
             }
         assert found
 
-        ours = tomli.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())["project"]
+        ours = tomli.loads((Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8"))["project"]
         polars_floor = next(
             Version(spec.version)
             for spec in next(Requirement(d) for d in ours["dependencies"] if d.startswith("polars")).specifier

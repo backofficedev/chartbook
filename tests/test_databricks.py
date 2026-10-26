@@ -72,9 +72,9 @@ def _pipeline(directory: Path, url: str = PUBLIC_URL) -> Path:
                     },
                 },
             }
-        )
+        ), encoding="utf-8"
     )
-    (directory / "README.md").write_text("# A pipeline\n")
+    (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8")
     (directory / "_data").mkdir(exist_ok=True)
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(directory / "_data" / "rates.parquet")
     return directory
@@ -197,9 +197,9 @@ class TestWhereTheTokenGoes:
 
     def test_the_machines_url_from_sources_toml(self, tmp_path):
         settings = backends.get_global_config_dir() / backends.SOURCES_FILE
-        assert Path.home() not in settings.parents
+        assert not settings.is_relative_to(Path.home() / ".chartbook")  # not the real one; a temporary folder may be under home (Windows)
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text(tomli_w.dumps({"warehouse": {"url": f"databricks://token:{TOKEN}@{HOST}"}}))
+        settings.write_text(tomli_w.dumps({"warehouse": {"url": f"databricks://token:{TOKEN}@{HOST}"}}), encoding="utf-8")
         connection = connection_for("warehouse", PUBLIC_URL)
         assert (connection.host, connection.http_path, connection.token) == (HOST, HTTP_PATH, TOKEN)
 
@@ -440,7 +440,7 @@ class TestReading:
                         "b": {"source": "dev", "table": "workspace.rates.curve", "docs": "d"},
                     },
                 }
-            )
+            ), encoding="utf-8"
         )
         with pytest.raises(ValueError, match="names dataframes in 2 sources, dev, prod"):
             data.sql("select * from {a} cross join {b}", project_dir=directory)
@@ -457,8 +457,8 @@ class TestReading:
         assert data.load("curve", project_dir=pipeline, format="pandas").shape == (3, 3)
 
     def test_a_table_that_is_not_there_is_refused_when_loaded(self, pipeline, signed_in, warehouse):
-        manifest = (pipeline / "chartbook.toml").read_text().replace("workspace.rates.curve\"", "workspace.rates.nope\"", 1)
-        (pipeline / "chartbook.toml").write_text(manifest)
+        manifest = (pipeline / "chartbook.toml").read_text(encoding="utf-8").replace("workspace.rates.curve\"", "workspace.rates.nope\"", 1)
+        (pipeline / "chartbook.toml").write_text(manifest, encoding="utf-8")
         with pytest.raises(BackendError, match="nope"):
             data.load("curve", project_dir=pipeline)
         assert warehouse.open() == []

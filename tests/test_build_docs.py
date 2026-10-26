@@ -194,7 +194,7 @@ class TestGenerateDocsEndToEnd:
         assert docs_src_dir.exists()
 
         # Verify conf.py updated with project title
-        conf_content = (docs_dir / "conf.py").read_text()
+        conf_content = (docs_dir / "conf.py").read_text(encoding="utf-8")
         assert 'project = "Test Pipeline"' in conf_content
         assert 'html_theme = "sphinx_book_theme"' in conf_content
 
@@ -208,7 +208,7 @@ class TestGenerateDocsEndToEnd:
         # Create existing output with marker file
         output_dir.mkdir()
         marker_file = output_dir / "old_marker.txt"
-        marker_file.write_text("old content")
+        marker_file.write_text("old content", encoding="utf-8")
 
         generate_docs(
             output_dir=output_dir,
@@ -251,7 +251,7 @@ class TestGenerateDocsEndToEnd:
         # Read the rendered dataframes.md from the build directory
         dataframes_md = docs_dir / "cb" / "dataframes.md"
         assert dataframes_md.exists(), "cb/dataframes.md not generated"
-        content = dataframes_md.read_text()
+        content = dataframes_md.read_text(encoding="utf-8")
 
         # Toctree entries should start with "dataframes/", not "cb/dataframes/"
         lines = content.strip().splitlines()
@@ -472,12 +472,12 @@ class TestStripMathjax2FromNotebook:
         """Test that MathJax 2 scripts are removed from notebook outputs."""
         nb = _make_notebook([_make_plotly_cell()])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb))
+        nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
         assert result is True
-        cleaned = json.loads(nb_path.read_text())
+        cleaned = json.loads(nb_path.read_text(encoding="utf-8"))
         html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
         for part in html_parts:
             assert "mathjax/2" not in part
@@ -487,11 +487,11 @@ class TestStripMathjax2FromNotebook:
         """Test that non-MathJax HTML content is preserved."""
         nb = _make_notebook([_make_plotly_cell()])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb))
+        nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         strip_mathjax2_from_notebook(nb_path)
 
-        cleaned = json.loads(nb_path.read_text())
+        cleaned = json.loads(nb_path.read_text(encoding="utf-8"))
         html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
         assert "<div>" in html_parts
         assert '<div id="plotly-graph"></div>' in html_parts
@@ -512,7 +512,7 @@ class TestStripMathjax2FromNotebook:
         }
         nb = _make_notebook([cell])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb))
+        nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
@@ -522,12 +522,12 @@ class TestStripMathjax2FromNotebook:
         """Test that only the CDN script is stripped (without the config script)."""
         nb = _make_notebook([_make_plotly_cell(PLOTLY_MATHJAX2_SCRIPT)])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb))
+        nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
         assert result is True
-        cleaned = json.loads(nb_path.read_text())
+        cleaned = json.loads(nb_path.read_text(encoding="utf-8"))
         html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
         for part in html_parts:
             assert "mathjax/2" not in part
@@ -550,12 +550,12 @@ class TestStripMathjax2FromNotebook:
         }
         nb = _make_notebook([cell])
         nb_path = tmp_path / "test.ipynb"
-        nb_path.write_text(json.dumps(nb))
+        nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         result = strip_mathjax2_from_notebook(nb_path)
 
         assert result is True
-        cleaned = json.loads(nb_path.read_text())
+        cleaned = json.loads(nb_path.read_text(encoding="utf-8"))
         html = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
         assert isinstance(html, str)
         assert "mathjax/2" not in html
@@ -574,13 +574,13 @@ class TestStripMathjax2FromNotebooks:
 
         for subdir in ["pipeline_a", "pipeline_b"]:
             nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
-            nb_path.write_text(json.dumps(nb))
+            nb_path.write_text(json.dumps(nb), encoding="utf-8")
 
         _strip_mathjax2_from_notebooks(tmp_path)
 
         for subdir in ["pipeline_a", "pipeline_b"]:
             nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
-            cleaned = json.loads(nb_path.read_text())
+            cleaned = json.loads(nb_path.read_text(encoding="utf-8"))
             html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
             for part in html_parts:
                 assert "mathjax/2" not in part
@@ -639,7 +639,7 @@ class TestSmallFixes:
             "assert before == (shutil.copy2, shutil.copystat, shutil.copymode)\n"
             "assert shutil.copy2 is not shutil.copy\n"
         )
-        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert result.returncode == 0, result.stderr
 
     def test_copy_tree_merges_and_copies_contents(self, tmp_path):
@@ -647,24 +647,24 @@ class TestSmallFixes:
 
         source = tmp_path / "source"
         (source / "nested").mkdir(parents=True)
-        (source / "a.txt").write_text("a")
-        (source / "nested" / "b.txt").write_text("b")
+        (source / "a.txt").write_text("a", encoding="utf-8")
+        (source / "nested" / "b.txt").write_text("b", encoding="utf-8")
         destination = tmp_path / "destination"
         destination.mkdir()
-        (destination / "kept.txt").write_text("kept")
-        (destination / "a.txt").write_text("old")
+        (destination / "kept.txt").write_text("kept", encoding="utf-8")
+        (destination / "a.txt").write_text("old", encoding="utf-8")
 
         copy_tree(source, destination)
-        assert (destination / "a.txt").read_text() == "a"
-        assert (destination / "nested" / "b.txt").read_text() == "b"
-        assert (destination / "kept.txt").read_text() == "kept"
+        assert (destination / "a.txt").read_text(encoding="utf-8") == "a"
+        assert (destination / "nested" / "b.txt").read_text(encoding="utf-8") == "b"
+        assert (destination / "kept.txt").read_text(encoding="utf-8") == "kept"
 
         copy_file(source / "a.txt", tmp_path / "copy.txt")
-        assert (tmp_path / "copy.txt").read_text() == "a"
+        assert (tmp_path / "copy.txt").read_text(encoding="utf-8") == "a"
 
         move_tree(destination, tmp_path / "moved")
         assert not destination.exists()
-        assert (tmp_path / "moved" / "nested" / "b.txt").read_text() == "b"
+        assert (tmp_path / "moved" / "nested" / "b.txt").read_text(encoding="utf-8") == "b"
 
     def test_readme_setting_is_honoured_by_the_build(self, pipeline_project, monkeypatch):
         """project.readme used to be read only by `publish`."""
@@ -674,16 +674,16 @@ class TestSmallFixes:
         monkeypatch.chdir(pipeline_project)
         (pipeline_project / "README.md").rename(pipeline_project / "ABOUT.md")
         (pipeline_project / "ABOUT.md").write_text(
-            "# Test Pipeline\n\nText from the configured readme.\n"
+            "# Test Pipeline\n\nText from the configured readme.\n", encoding="utf-8"
         )
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["project"]["readme"] = "./ABOUT.md"
         toml_path.write_bytes(tomli_w.dumps(config).encode())
 
         output_dir = pipeline_project / "docs"
         generate_docs(output_dir=output_dir, project_dir=pipeline_project)
-        assert "Text from the configured readme." in (output_dir / "index.html").read_text()
+        assert "Text from the configured readme." in (output_dir / "index.html").read_text(encoding="utf-8")
 
     def test_pipeline_site_builds_without_dangling_toctree_warnings(
         self, pipeline_project, monkeypatch
@@ -720,7 +720,7 @@ class TestNotBuiltYet:
         import tomli_w
 
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["notebooks"] = {"walkthrough": {"name": "Walkthrough", "path": "_output/walkthrough.ipynb"}}
         config["models"] = {"forecast": {"name": "Forecast", "path": "_models/forecast.json"}}
         config["scripts"] = {"build": "true"}
@@ -737,21 +737,21 @@ class TestNotBuiltYet:
         assert (output_dir / "index.html").is_file()
         # Where each one's page links, a page that says so
         notebook = output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html"
-        assert "Not built yet" in notebook.read_text()
-        assert "Not built yet" in (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        assert "Not built yet" in notebook.read_text(encoding="utf-8")
+        assert "Not built yet" in (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text(encoding="utf-8")
         # The glimpse is highlighted, a span a word
         dataframe = re.sub(
-            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text(encoding="utf-8")
         )
         assert "Not built yet" in dataframe
         assert "Error reading file" not in dataframe
         # No dates to give, rather than "None": the row is left out
         assert not re.search(r"Data available up to \((min|max)\)\s*None", dataframe)
         # A model says so in its provenance panel
-        model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text())
+        model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text(encoding="utf-8"))
         assert re.search(r"Content\s+not built", model)
         # The index has the records, without hashes
-        records = {r["id"]: r for r in json.loads((output_dir / "index.json").read_text())["records"]}
+        records = {r["id"]: r for r in json.loads((output_dir / "index.json").read_text(encoding="utf-8"))["records"]}
         for asset in (
             "test_pipeline:dataframe_0",
             "test_pipeline:chart/chart_0_0",
@@ -787,7 +787,7 @@ class TestNotBuiltYet:
         import tomli_w
 
         toml_path = unbuilt / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["project"]["enable_data_download"] = True
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         output_dir = unbuilt / "docs"
@@ -796,8 +796,8 @@ class TestNotBuiltYet:
             output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html",
             output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html",
         ):
-            assert "Download Data as Parquet" not in page.read_text(), page
-            assert "download_dataframe" not in page.read_text(), page
+            assert "Download Data as Parquet" not in page.read_text(encoding="utf-8"), page
+            assert "download_dataframe" not in page.read_text(encoding="utf-8"), page
 
     def test_in_a_version_from_the_store_it_gives_no_advice(self, unbuilt, monkeypatch):
         """A version's site is built from the store: it is as it was made, and `chartbook build` builds nothing of it."""
@@ -806,10 +806,10 @@ class TestNotBuiltYet:
         monkeypatch.setenv(UNTRUSTED_ENV_VAR, "1")
         output_dir = unbuilt / "docs"
         generate_docs(output_dir=output_dir, project_dir=unbuilt)
-        notebook = (output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html").read_text()
-        chart = (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        notebook = (output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html").read_text(encoding="utf-8")
+        chart = (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text(encoding="utf-8")
         dataframe = re.sub(
-            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text(encoding="utf-8")
         )
         for page in (notebook, chart, dataframe):
             assert "Not built in this version" in page
@@ -820,7 +820,7 @@ class TestNotBuiltYet:
         import tomli_w
 
         toml_path = unbuilt / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         del config["scripts"]
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
@@ -842,7 +842,7 @@ class TestNotBuiltYet:
     def test_built_in_part_is_still_an_error_and_the_hint_is_the_build(self, unbuilt, capsys):
         """One output there means it was built, so what is missing is a mistake."""
         (unbuilt / "_output" / "walkthrough.ipynb").write_text(
-            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4})
+            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4}), encoding="utf-8"
         )
         with pytest.raises(SystemExit) as excinfo:
             generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
@@ -888,28 +888,28 @@ class TestNotBuiltYet:
         parts.mkdir()
         (parts / "part-0.parquet").write_bytes(frame)
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["project"]["enable_data_download"] = True
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         monkeypatch.chdir(pipeline_project)
         output_dir = pipeline_project / "docs"
         generate_docs(output_dir=output_dir, project_dir=pipeline_project)
-        page = (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        page = (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text(encoding="utf-8")
         assert "Download Data as Parquet" not in page
-        assert "Download Data as Parquet" not in (output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html").read_text()
+        assert "Download Data as Parquet" not in (output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html").read_text(encoding="utf-8")
 
     def test_a_date_that_cannot_be_read_is_not_shown_as_none(self, pipeline_project, monkeypatch):
         import tomli
         import tomli_w
 
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["dataframes"]["dataframe_0"]["date_col"] = "no_such_column"
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         monkeypatch.chdir(pipeline_project)
         output_dir = pipeline_project / "docs"
         generate_docs(output_dir=output_dir, project_dir=pipeline_project)
-        page = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text())
+        page = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text(encoding="utf-8"))
         # The row is left out, rather than saying "None"
         assert not re.search(r"Data available up to \((min|max)\)\s*None", page)
 
@@ -920,7 +920,7 @@ class TestNotBuiltYet:
 
         (pipeline_project / "_data" / "test_pipeline" / "parts" / "a.parquet").mkdir(parents=True)
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["dataframes"]["dataframe_0"]["path"] = "_data/test_pipeline/parts/*.parquet"
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         monkeypatch.chdir(pipeline_project)
@@ -1004,7 +1004,7 @@ class TestAWriteUpIsTextOnThePage:
     def _add_markers(self, pipeline_project):
         import tomli
 
-        manifest = tomli.loads((pipeline_project / "chartbook.toml").read_text())
+        manifest = tomli.loads((pipeline_project / "chartbook.toml").read_text(encoding="utf-8"))
         docs_path = next(iter(manifest["dataframes"].values()))["docs_path"]
         with open(pipeline_project / docs_path, "a", encoding="utf-8") as f:
             f.write("\n\n" + self.MARKERS)

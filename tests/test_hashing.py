@@ -124,7 +124,7 @@ class TestHashFiles:
             "| LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256"
         )
         output = subprocess.run(
-            ["sh", "-c", script], cwd=tree, capture_output=True, text=True, check=True
+            ["sh", "-c", script], cwd=tree, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace"
         ).stdout
         assert hash_directory(tree).content_hash == "sha256:" + output.split()[0]
         assert [f.path for f in hash_directory(tree).files] == [
@@ -325,12 +325,12 @@ class TestHashCache:
         cache = HashCache(cache_file)
         hash_directory(tree, cache)
         cache.save()
-        assert len(json.loads(cache_file.read_text())["files"]) == 3
+        assert len(json.loads(cache_file.read_text(encoding="utf-8"))["files"]) == 3
 
         smaller = HashCache(cache_file)
         hash_file(tree / "a.parquet", smaller)
         smaller.save()
-        stored = json.loads(cache_file.read_text())
+        stored = json.loads(cache_file.read_text(encoding="utf-8"))
         assert list(stored["files"]) == [os.path.abspath(tree / "a.parquet")]
         assert stored["version"] == hashing.CACHE_VERSION
 
@@ -364,13 +364,13 @@ class TestHashCache:
     )
     def test_unreadable_cache_is_ignored(self, tree, tmp_path, content):
         cache_file = tmp_path / "cache.json"
-        cache_file.write_text(content)
+        cache_file.write_text(content, encoding="utf-8")
         result = hash_file(tree / "a.parquet", HashCache(cache_file))
         assert result.content_hash == f"sha256:{HELLO_SHA256}"
 
     def test_damaged_entry_is_ignored(self, tree, tmp_path):
         cache_file = tmp_path / "cache.json"
         key = os.path.abspath(tree / "a.parquet")
-        cache_file.write_text(json.dumps({"version": 1, "files": {key: "oops"}}))
+        cache_file.write_text(json.dumps({"version": 1, "files": {key: "oops"}}), encoding="utf-8")
         result = hash_file(tree / "a.parquet", HashCache(cache_file))
         assert result.content_hash == f"sha256:{HELLO_SHA256}"

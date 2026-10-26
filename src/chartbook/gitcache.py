@@ -89,6 +89,11 @@ DEFAULT_REF = "refs/chartbook/default"
 #: runs a command; a manifest must not be able to ask for it.
 ALLOWED_PROTOCOLS = "file:git:http:https:ssh"
 
+#: git as the cache runs it. A clone of a local repository is kept under a
+#: folder named after that repository's own path, so its files' paths can be
+#: longer than the 260 characters Windows otherwise allows a path.
+GIT = ("git", "-c", "core.longpaths=true") if os.name == "nt" else ("git",)
+
 _FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _HEX = re.compile(r"^[0-9a-f]{7,40}$")
 # What a revision may be: a branch, a tag or a commit. It is handed to git
@@ -312,7 +317,7 @@ class GitCache:
         environment.setdefault("GIT_SSH_COMMAND", "ssh -o BatchMode=yes")
         try:
             result = subprocess.run(
-                ["git", *arguments], capture_output=True, text=True, env=environment
+                [*GIT, *arguments], capture_output=True, text=True, env=environment, encoding="utf-8", errors="replace"
             )
         except FileNotFoundError:
             raise GitError(
@@ -481,7 +486,7 @@ def mark_built(work_copy: Union[str, Path]) -> None:
     been, so that the next run leaves it alone.
     """
     (Path(work_copy) / BUILT_MARKER).write_text(
-        "chartbook run finished this pipeline's build here.\n", encoding="utf-8"
+        "chartbook run finished this pipeline's build here.\n", encoding="utf-8", newline="\n"
     )
 
 

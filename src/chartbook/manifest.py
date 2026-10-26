@@ -2158,7 +2158,7 @@ def _git(base_dir: Path, *args: str) -> Union[str, None]:
             capture_output=True,
             text=True,
             timeout=15,
-            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None

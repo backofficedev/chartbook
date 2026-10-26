@@ -18,6 +18,7 @@ from chartbook.config import get_cache_path
 from chartbook.store import default_store
 from tests.fixtures import create_catalog_project
 from tests.test_model_versions import _git
+from tests.fixtures import remove_tree
 
 
 def _commit(repository: Path, message: str = "Work") -> None:
@@ -31,11 +32,11 @@ def catalog(tmp_path):
     `pipeline_a`. `pipeline_a` has two snapshots, and `pipeline_b` pins the first."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
-    manifest = tomli.loads((b / "chartbook.toml").read_text())
+    manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {"pipeline_a": {"path": "../pipeline_a"}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     first = snapshot.make(a).snapshot
@@ -58,7 +59,7 @@ class TestTheIndex:
     def test_a_pipeline_lists_its_snapshots_newest_first(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)
-        index = json.loads((root / "docs" / "index.json").read_text())
+        index = json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))
         records = {r["id"]: r for r in index["records"] if r["kind"] == "Pipeline"}
         listed = records["pipeline_a"]["snapshots"]
         assert [(s["commit"], s["made_at"]) for s in listed] == [(second.commit, second.made_at), (first.commit, first.made_at)]
@@ -73,14 +74,14 @@ class TestTheSite:
         site = root / "docs"
         for taken in (first, second):
             front = site / versions.site_path("pipeline_a", versions.version_name(taken.commit, taken.made_at)) / "index.html"
-            text = front.read_text()
+            text = front.read_text(encoding="utf-8")
             assert "A snapshot of this pipeline:" in text and taken.commit[:7] in text
-        page = (site / "cb" / "versions.html").read_text()
+        page = (site / "cb" / "versions.html").read_text(encoding="utf-8")
         assert page.count('href="../versions/pipeline_a/') == 2
         assert "pinned by <code>pipeline_b</code>" in page  # the first, as pipeline_b's lockfile says
         assert page.index(second.commit[:7]) < page.index(first.commit[:7])  # newest first
         assert "No snapshot of it is in the store." in page  # pipeline_b
-        assert "cb/versions.html" in (site / "index.html").read_text()
+        assert "cb/versions.html" in (site / "index.html").read_text(encoding="utf-8")
         # The catalog's search finds the working versions; each version's site is its own
         assert not (site / "versions" / "pipeline_a" / "searchindex.js").exists()
 
@@ -122,11 +123,11 @@ class TestTheSite:
         result = _build(root, monkeypatch)
         assert f"warning: pipeline_a at {first.commit[:7]}: it is not all in the store yet" in result.output
         name = versions.version_name(first.commit, first.made_at)
-        placeholder = (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").read_text()
+        placeholder = (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").read_text(encoding="utf-8")
         assert "not all in the store yet" in placeholder
         # The other version is unharmed
         other = versions.version_name(second.commit, second.made_at)
-        assert "A snapshot of this pipeline:" in (root / "docs" / versions.site_path("pipeline_a", other) / "index.html").read_text()
+        assert "A snapshot of this pipeline:" in (root / "docs" / versions.site_path("pipeline_a", other) / "index.html").read_text(encoding="utf-8")
 
     def test_a_pipeline_site_shows_no_versions_page(self, catalog, monkeypatch):
         root, first, second = catalog
@@ -140,12 +141,12 @@ class TestWithMkDocs:
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = catalog
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
-        page = (root / "docs" / "cb" / "versions.html").read_text()
+        page = (root / "docs" / "cb" / "versions.html").read_text(encoding="utf-8")
         assert page.count('href="../versions/pipeline_a/') == 2
         name = versions.version_name(second.commit, second.made_at)
         assert (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").is_file()
@@ -156,7 +157,7 @@ def _plant(store_root: Path, commit: str, document: dict) -> Path:
     folder = store_root / "snapshots" / commit / "_top"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / "20260101T000000.000000Z.json"  # named as a record is, or it is passed over
-    path.write_text(json.dumps(document))
+    path.write_text(json.dumps(document), encoding="utf-8")
     return path
 
 
@@ -196,7 +197,7 @@ class TestWhatTheReviewFound:
         root, first, second = catalog
         a = root / "pipelines" / "pipeline_a"
         _build(a, monkeypatch)
-        index = json.loads((a / "docs" / "index.json").read_text())
+        index = json.loads((a / "docs" / "index.json").read_text(encoding="utf-8"))
         assert all("snapshots" not in r for r in index["records"])
 
     def test_a_snapshot_gc_removed_leaves_the_site(self, catalog, monkeypatch):
@@ -221,7 +222,7 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(versions.subprocess, "run", hang)
         rendered = versions.render(second, timeout=1)
         assert not rendered.built and "took longer than 1 seconds to build and was stopped" in rendered.why
-        assert "took longer" in (rendered.folder / "index.html").read_text()
+        assert "took longer" in (rendered.folder / "index.html").read_text(encoding="utf-8")
 
     def test_a_change_to_chartbook_builds_a_version_again(self, catalog, monkeypatch):
         root, first, second = catalog
@@ -238,15 +239,15 @@ class TestWhoseFilesTheseAre:
         project = pipeline_project.resolve()
         site = project / "docs_src" / "site"
         site.mkdir(parents=True, exist_ok=True)
-        (site / "guide.md").write_text("# Guide\n")
-        (site / "conf.py.j2").write_text("raise SystemExit('PWNED: the site page ran as conf.py')\n")
+        (site / "guide.md").write_text("# Guide\n", encoding="utf-8")
+        (site / "conf.py.j2").write_text("raise SystemExit('PWNED: the site page ran as conf.py')\n", encoding="utf-8")
         (site / "_templates").mkdir()
-        (site / "_templates" / "layout.html").write_text("{{ PWNED }}")
+        (site / "_templates" / "layout.html").write_text("{{ PWNED }}", encoding="utf-8")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
-        assert "PWNED" not in (project / "_docs" / "conf.py").read_text()
-        assert not (project / "_docs" / "_templates" / "layout.html").exists() or "PWNED" not in (project / "_docs" / "_templates" / "layout.html").read_text()
+        assert "PWNED" not in (project / "_docs" / "conf.py").read_text(encoding="utf-8")
+        assert not (project / "_docs" / "_templates" / "layout.html").exists() or "PWNED" not in (project / "_docs" / "_templates" / "layout.html").read_text(encoding="utf-8")
         assert (project / "docs" / "guide.html").is_file()
 
     def test_templates_render_in_the_sandbox(self, tmp_path):
@@ -254,7 +255,7 @@ class TestWhoseFilesTheseAre:
 
         from chartbook.writers.sphinx import _sandboxed
 
-        (tmp_path / "t.md").write_text("{{ ''.__class__.__mro__[1].__subclasses__() }}")
+        (tmp_path / "t.md").write_text("{{ ''.__class__.__mro__[1].__subclasses__() }}", encoding="utf-8")
         with pytest.raises(jinja2.exceptions.SecurityError):
             _sandboxed([tmp_path]).get_template("t.md").render()
 
@@ -262,20 +263,20 @@ class TestWhoseFilesTheseAre:
         """In the working version, a write-up may include a file; in a version from the store, it may not."""
         secret = tmp_path / "outside" / "secret.md"
         secret.parent.mkdir()
-        secret.write_text("OUTSIDE SECRET TEXT\n")
+        secret.write_text("OUTSIDE SECRET TEXT\n", encoding="utf-8")
         repository = tmp_path.resolve() / "repo"
         root = create_catalog_project(repository / "cat", pipeline_ids=["pipeline_a"])
         a = root / "pipelines" / "pipeline_a"
         climb = "../" * 40 + str(secret.resolve()).lstrip("/")
         writeup = next(a.rglob("docs_src/dataframes/*.md"))
-        writeup.write_text(f"# Write-up\n\n```{{include}} {climb}\n```\n\n![a picture]({'../' * 40}{str(secret.resolve()).lstrip('/')})\n")
-        (repository / ".gitignore").write_text("docs/\n_docs*/\n")
+        writeup.write_text(f"# Write-up\n\n```{{include}} {climb}\n```\n\n![a picture]({'../' * 40}{str(secret.resolve()).lstrip('/')})\n", encoding="utf-8")
+        (repository / ".gitignore").write_text("docs/\n_docs*/\n", encoding="utf-8")
         _git(repository, "init", "--quiet", "-b", "main")
         _commit(repository)
         taken = snapshot.make(a).snapshot
         rendered = versions.render(taken)
         assert rendered.built, rendered.why
-        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        pages = "".join(p.read_text(errors="replace", encoding="utf-8") for p in rendered.folder.rglob("*") if p.is_file())
         assert "OUTSIDE SECRET TEXT" not in pages
         assert not any(p.name == "secret.md" for p in rendered.folder.rglob("*"))
 
@@ -291,7 +292,7 @@ def _forged_version(taken, store, manifest_text: str, tmp_path: Path):
             target = forged / file.relative_to(held)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(file.read_bytes())
-    (forged / "chartbook.toml").write_text(manifest_text)
+    (forged / "chartbook.toml").write_text(manifest_text, encoding="utf-8")
     stored = store.put(forged)
     documents = {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
     version = dataclasses.replace(taken, documents=documents, made_at="2030-01-01T00:00:00.000001Z", path=None)
@@ -305,15 +306,15 @@ class TestAForgedManifest:
     def test_a_query_reads_no_file_of_this_machine(self, catalog, tmp_path):
         root, first, second = catalog
         secret = tmp_path / "secret.csv"
-        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n")
+        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n", encoding="utf-8")
         store = default_store()
-        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["sources"] = {"mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}}
         manifest["dataframes"]["leak"] = {"source": "mem", "query": f"select * from read_csv_auto('{secret}')", "docs": "d"}
         version = _forged_version(second, store, tomli_w.dumps(manifest), tmp_path)
         rendered = versions.render(version, store)
         assert rendered.built, rendered.why
-        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        pages = "".join(p.read_text(errors="replace", encoding="utf-8") for p in rendered.folder.rglob("*") if p.is_file())
         assert "HUNTER2_LEAKED_SECRET" not in pages
         assert "not read in a build of files from a store" in pages
 
@@ -323,13 +324,13 @@ class TestAForgedManifest:
         private = tmp_path / "private.parquet"
         pl.DataFrame({"ssn": ["111-22-3333"]}).write_parquet(private)
         store = default_store()
-        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text(encoding="utf-8"))
         path = str(private) if where == "absolute" else "../" * 30 + str(private).lstrip("/")
         manifest["dataframes"]["leak"] = {"path": path, "docs": "d"}
         version = _forged_version(second, store, tomli_w.dumps(manifest), tmp_path)
         rendered = versions.render(version, store)
         assert not rendered.built and "is not a plain path inside the pipeline's folder" in rendered.why
-        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        pages = "".join(p.read_text(errors="replace", encoding="utf-8") for p in rendered.folder.rglob("*") if p.is_file())
         assert "111-22-3333" not in pages
 
     def test_the_working_version_still_reads_its_own_sources(self, catalog):
@@ -345,14 +346,14 @@ def trained(tmp_path):
     snapshot; `pipeline_a` then makes a second, with other data."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
-    manifest = tomli.loads((b / "chartbook.toml").read_text())
+    manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {"pipeline_a": {"path": "../pipeline_a"}}
     manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": ["pipeline_a:dataframe_0"], "docs": "A model."}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     (b / "_models").mkdir()
-    (b / "_models" / "m.json").write_text("{}")
+    (b / "_models" / "m.json").write_text("{}", encoding="utf-8")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     first = snapshot.make(a).snapshot
@@ -370,7 +371,7 @@ class TestLinksFollowPins:
         _build(root, monkeypatch)
         site = root / "docs"
         pinned = f"versions/pipeline_a/{versions.version_name(first.commit, first.made_at)}/cb/dataframes/pipeline_a/dataframe_0.html"
-        page = (site / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        page = (site / "cb" / "models" / "pipeline_b" / "m.html").read_text(encoding="utf-8")
         link = f'href="../../../{pinned}"'
         assert page.count(link) == 2, page  # under Trained On, and in the provenance panel
         assert (site / pinned).is_file()  # the link leads somewhere
@@ -382,7 +383,7 @@ class TestLinksFollowPins:
         root, first, second = trained
         snapshot.remove(default_store(), first)
         _build(root, monkeypatch)
-        page = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        page = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text(encoding="utf-8")
         assert "versions/pipeline_a" not in page
         assert "dataframes/pipeline_a/dataframe_0.html" in page
 
@@ -390,13 +391,13 @@ class TestLinksFollowPins:
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = trained
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
         pinned = f"versions/pipeline_a/{versions.version_name(first.commit, first.made_at)}/cb/dataframes/pipeline_a/dataframe_0.html"
-        assert f'href="../../../{pinned}"' in (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        assert f'href="../../../{pinned}"' in (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text(encoding="utf-8")
 
 
 class TestGcClearsTheKeptSites:
@@ -422,7 +423,7 @@ class TestGcClearsTheKeptSites:
 def _links(page: Path) -> list[str]:
     import re
 
-    return re.findall(r'href="([^"]*versions/[^"]*)"', page.read_text())
+    return re.findall(r'href="([^"]*versions/[^"]*)"', page.read_text(encoding="utf-8"))
 
 
 def _resolves(page: Path, href: str) -> bool:
@@ -438,7 +439,7 @@ class TestWhatTheLinksReviewFound:
         snapshot.remove(default_store(), first)
         _build(root, monkeypatch, "--incremental")
         assert all(_resolves(page, h) for h in _links(page)), _links(page)
-        assert versions.version_name(first.commit, first.made_at) not in page.read_text()
+        assert versions.version_name(first.commit, first.made_at) not in page.read_text(encoding="utf-8")
 
     def test_a_version_that_could_not_be_built_is_linked_to_the_page_that_says_why(self, trained, monkeypatch):
         root, first, second = trained
@@ -450,18 +451,18 @@ class TestWhatTheLinksReviewFound:
         name = versions.version_name(first.commit, first.made_at)
         links = [h for h in _links(page) if name in h]
         assert links and all(h.endswith(f"{name}/index.html") and _resolves(page, h) for h in links)
-        assert "could not be" in (page.parent / links[0]).resolve().read_text()
+        assert "could not be" in (page.parent / links[0]).resolve().read_text(encoding="utf-8")
 
     def test_an_input_the_lockfile_does_not_pin_is_not_linked_as_pinned(self, trained, monkeypatch):
         root, first, second = trained
         a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
-        manifest = tomli.loads((a / "chartbook.toml").read_text())
+        manifest = tomli.loads((a / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["extra"] = {"path": "./_data/extra.parquet", "docs": "Added later."}
-        (a / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (a / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         pl.DataFrame({"x": [1]}).write_parquet(a / "_data" / "extra.parquet")
-        model = tomli.loads((b / "chartbook.toml").read_text())
+        model = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
         model["models"]["m"]["trained_on"].append("pipeline_a:extra")
-        (b / "chartbook.toml").write_text(tomli_w.dumps(model))
+        (b / "chartbook.toml").write_text(tomli_w.dumps(model), encoding="utf-8")
         _commit(root.parent, "An input that is not pinned")
         snapshot.make(a)
         lock.pin(b)  # keeps the first; `extra` is not in it
@@ -476,12 +477,12 @@ class TestWhatTheLinksReviewFound:
         snapshot.make(b)  # trained on the first: that is what b pins
         lock.update(b)  # the pin moves to the second
         _build(root, monkeypatch)
-        index = json.loads((root / "docs" / "index.json").read_text())
+        index = json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))
         model = next(r for r in index["records"] if r["kind"] == "Model")
         assert model["stale_inputs"] == ["pipeline_a:dataframe_0"]
         assert model["trained_from"]["pipeline_a:dataframe_0"]["made_at"] == first.made_at
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
-        text = page.read_text()
+        text = page.read_text(encoding="utf-8")
         old, new = (versions.version_name(t.commit, t.made_at) for t in (first, second))
         assert f"as trained: the snapshot at {first.commit[:7]}" in text and f"the pin has since moved to {second.commit[:7]}" in text
         assert any(old in h for h in _links(page)) and any(new in h for h in _links(page))  # Trained On, and the panel's pin
@@ -491,9 +492,9 @@ class TestWhatTheLinksReviewFound:
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = trained
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         assert _links(page) and all(_resolves(page, h) for h in _links(page))
@@ -504,14 +505,14 @@ def _trained_catalog(tmp_path, key: str = "pipeline_a"):
     """A catalog where pipeline_b's model is trained on pipeline_a:dataframe_0, known by *key*; nothing snapshotted yet."""
     repository = tmp_path.resolve() / "repo"
     root = create_catalog_project(repository / "cat")
-    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n", encoding="utf-8")
     a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
-    manifest = tomli.loads((b / "chartbook.toml").read_text())
+    manifest = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dependencies"] = {key: {"path": "../pipeline_a"}}
     manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": [f"{key}:dataframe_0"], "docs": "A model."}}
-    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     (b / "_models").mkdir()
-    (b / "_models" / "m.json").write_text("{}")
+    (b / "_models" / "m.json").write_text("{}", encoding="utf-8")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     return repository, root, a, b
@@ -533,12 +534,12 @@ class TestWhatTheSecondLinksReviewFound:
         second = snapshot.make(a).snapshot
         lock.update(b)
         _build(root, monkeypatch)
-        index = json.loads((root / "docs" / "index.json").read_text())
+        index = json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))
         model = next(r for r in index["records"] if r["kind"] == "Model")
         assert model["trained_from"] == {"pipeline_a:dataframe_0": {"commit": first.commit, "made_at": first.made_at}}
         pipeline_b = next(r for r in index["records"] if r["id"] == "pipeline_b")
         assert pipeline_b["dependencies"][0]["key"] == "upstream"
-        text = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        text = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text(encoding="utf-8")
         assert f"as trained: the snapshot at {first.commit[:7]}" in text and f"moved to {second.commit[:7]}" in text
 
     def test_a_later_snapshot_of_the_same_bytes_is_not_what_it_was_trained_on(self, tmp_path, monkeypatch):
@@ -546,7 +547,7 @@ class TestWhatTheSecondLinksReviewFound:
         first = snapshot.make(a).snapshot
         lock.pin(b)
         snapshot.make(b)  # trained on the first
-        (a / "README.md").write_text("# A\n\nA new README, the same data.\n")
+        (a / "README.md").write_text("# A\n\nA new README, the same data.\n", encoding="utf-8")
         _commit(repository, "README only")
         same_bytes = snapshot.make(a).snapshot
         assert same_bytes.made_at > first.made_at
@@ -554,14 +555,14 @@ class TestWhatTheSecondLinksReviewFound:
         snapshot.make(a)
         lock.update(b)
         _build(root, monkeypatch)
-        index = json.loads((root / "docs" / "index.json").read_text())
+        index = json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))
         model = next(r for r in index["records"] if r["kind"] == "Model")
         assert model["trained_from"]["pipeline_a:dataframe_0"]["made_at"] == first.made_at
 
     def test_a_snapshot_that_leaves_the_store_mid_build_is_not_linked(self, trained, monkeypatch):
         root, first, second = trained
         _build(root, monkeypatch)
-        index = json.loads((root / "docs" / "index.json").read_text())
+        index = json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))
         snapshot.remove(default_store(), first)  # as a gc elsewhere might, after the index was made
         done = versions.render_listed(index)
         pipeline_a = next(r for r in index["records"] if r["id"] == "pipeline_a")
@@ -595,54 +596,54 @@ class TestAPipelineFromTheStoreAlone:
 
         repository = tmp_path.resolve() / "elsewhere"
         project = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
-        manifest = tomli.loads((project / "chartbook.toml").read_text())
+        manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["project"]["description"] = "Made on another machine."
-        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _git(repository, "init", "--quiet", "-b", "main")
         _commit(repository)
         taken = snapshot.make(project).snapshot
-        shutil.rmtree(repository)
+        remove_tree(repository)
         return taken
 
     def test_it_is_shown_from_its_snapshots(self, catalog, tmp_path, monkeypatch):
         root, first, second = catalog
         taken = self._elsewhere(tmp_path)
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["pipeline_c"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _build(root, monkeypatch)
         site = root / "docs"
-        index = json.loads((site / "index.json").read_text())
+        index = json.loads((site / "index.json").read_text(encoding="utf-8"))
         record = next(r for r in index["records"] if r["id"] == "pipeline_c")
         assert record["location"] == {"kind": "store"}
         assert record["name"] == "Pipeline C" and record["description"] == "Made on another machine."
         assert [s["commit"] for s in record["snapshots"]] == [taken.commit]
         page = site / "cb" / "pipelines" / "pipeline_c_README.html"
-        text = page.read_text()
+        text = page.read_text(encoding="utf-8")
         assert "Not on this machine" in text
         links = _links(page)
         assert links and all(_resolves(page, h) for h in links)
-        versions_page = (site / "cb" / "versions.html").read_text()
+        versions_page = (site / "cb" / "versions.html").read_text(encoding="utf-8")
         assert "not on this machine" in versions_page
-        assert "pipeline_c" in (site / "cb" / "pipelines.html").read_text()
-        assert "pipeline_c" not in (site / "cb" / "diagnostics.html").read_text()
+        assert "pipeline_c" in (site / "cb" / "pipelines.html").read_text(encoding="utf-8")
+        assert "pipeline_c" not in (site / "cb" / "diagnostics.html").read_text(encoding="utf-8")
 
     def test_one_with_no_snapshot_says_so(self, catalog, monkeypatch):
         root, first, second = catalog
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["acme/nowhere"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         _build(root, monkeypatch)
-        text = (root / "docs" / "cb" / "pipelines" / "acme--nowhere_README.html").read_text()
+        text = (root / "docs" / "cb" / "pipelines" / "acme--nowhere_README.html").read_text(encoding="utf-8")
         assert "No snapshot of it is in the store yet." in text
 
     def test_the_catalogs_other_commands_pass_it_by(self, catalog, monkeypatch):
         root, first, second = catalog
         monkeypatch.chdir(root)
         before = CliRunner().invoke(main, ["check", "--skip-outputs"])
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["acme/nowhere"] = {}
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         from chartbook.manifest import get_pipeline_ids, load_manifest
 
         loaded = load_manifest(root)
@@ -657,17 +658,17 @@ class TestAPipelineFromTheStoreAlone:
         pytest.importorskip("material")
         root, first, second = catalog
         self._elsewhere(tmp_path)
-        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["pipelines"]["pipeline_c"] = {}
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         result = _build(root, monkeypatch)
         assert "contains a link" not in result.output, result.output
         page = root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html"
         assert _links(page) and all(_resolves(page, h) for h in _links(page))
         # Its dataframes are listed beside the catalog's own, each linked to its page in the newest version
         listing = root / "docs" / "cb" / "dataframes.html"
-        assert "Dataframe 0" in listing.read_text()
+        assert "Dataframe 0" in listing.read_text(encoding="utf-8")
         assert any("pipeline_c/" in h and h.endswith("dataframe_0.html") and _resolves(listing, h) for h in _links(listing))
 
     def test_its_assets_are_listed_from_its_newest_snapshot(self, catalog, tmp_path, monkeypatch):
@@ -678,15 +679,15 @@ class TestAPipelineFromTheStoreAlone:
         _show_from_the_store(root)
         _build(root, monkeypatch)
         site = root / "docs"
-        record = next(r for r in json.loads((site / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        record = next(r for r in json.loads((site / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
         assert record["assets"] == ["pipeline_c:chart/chart_0_0", "pipeline_c:dataframe_0"]
         assert record["asset_names"] == {"pipeline_c:chart/chart_0_0": "Chart 0-0", "pipeline_c:dataframe_0": "Dataframe 0"}
         listing = site / "cb" / "dataframes.html"
-        assert "Dataframe 0" in listing.read_text() and "Not on this machine" in listing.read_text()
+        assert "Dataframe 0" in listing.read_text(encoding="utf-8") and "Not on this machine" in listing.read_text(encoding="utf-8")
         linked = [h for h in _links(listing) if h.endswith("/cb/dataframes/pipeline_c/dataframe_0.html")]
         assert linked and all(_resolves(listing, h) for h in linked)
         readme = site / "cb" / "pipelines" / "pipeline_c_README.html"
-        assert "Chart 0-0" in readme.read_text()
+        assert "Chart 0-0" in readme.read_text(encoding="utf-8")
         assert all(_resolves(readme, h) for h in _links(readme))
         # And `chartbook ls`, in the tree and the flat lists
         tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)])
@@ -712,15 +713,15 @@ class TestAPipelineFromTheStoreAlone:
         _git(repository, "init", "--quiet", "-b", "main")
         _commit(repository)
         snapshot.make(project)
-        shutil.rmtree(repository)
+        remove_tree(repository)
         _show_from_the_store(root)
         monkeypatch.setattr(snapshot, "STORED_ASSETS_SHOWN", 2)
         _build(root, monkeypatch)
         site = root / "docs" / "cb"
-        listing = (site / "dataframes.html").read_text()
+        listing = (site / "dataframes.html").read_text(encoding="utf-8")
         assert "and 1 more of" in listing and "Dataframe 2" not in listing
         readme = site / "pipelines" / "pipeline_c_README.html"
-        assert "and 4 more, in" in readme.read_text()
+        assert "and 4 more, in" in readme.read_text(encoding="utf-8")
         assert all(_resolves(readme, h) for h in _links(readme))
         tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
         assert "  ... and 4 more" in tree
@@ -749,15 +750,15 @@ def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snap
 
     repository = tmp_path.resolve() / "elsewhere"
     folder = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
-    manifest = tomli.loads((folder / "chartbook.toml").read_text())
+    manifest = tomli.loads((folder / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["project"].update(project)
     if asset_name:
         manifest["dataframes"]["dataframe_0"]["name"] = manifest["charts"]["chart_0_0"]["name"] = asset_name
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
     taken = snapshot.make(folder).snapshot
-    shutil.rmtree(repository)
+    remove_tree(repository)
     return taken
 
 
@@ -780,17 +781,17 @@ def test_a_version_that_did_not_build_an_asset_has_a_site_that_says_so(tmp_path)
     rendered = versions.render(taken)
     assert rendered.built, rendered.why
     chart = rendered.folder / "_static" / "pipeline_c" / "chart_0_0.html"
-    assert "Not built in this version" in chart.read_text()
-    pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*.html"))
+    assert "Not built in this version" in chart.read_text(encoding="utf-8")
+    pages = "".join(p.read_text(errors="replace", encoding="utf-8") for p in rendered.folder.rglob("*.html"))
     assert "chartbook build" not in pages
     assert "update the paths" not in pages
 
 
 def _show_from_the_store(root: Path, pipeline_id: str = "pipeline_c", **settings) -> None:
-    manifest = tomli.loads((root / "chartbook.toml").read_text())
+    manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["pipelines"][pipeline_id] = {}
     manifest["project"].update(settings)
-    (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
 
 
 class _Markup:
@@ -837,7 +838,7 @@ class TestWhatTheStoreOnlyReviewFound:
 
     def _hostile(self, tmp_path) -> tuple[dict, Path]:
         secret = tmp_path / "secret.txt"
-        secret.write_text("TOP-SECRET-TEXT")
+        secret.write_text("TOP-SECRET-TEXT", encoding="utf-8")
         fields = {k: v.replace("SECRET", str(secret)) for k, v in self.HOSTILE.items()}
         return fields, secret
 
@@ -868,7 +869,7 @@ class TestWhatTheStoreOnlyReviewFound:
         ]
         for page in own:
             self._no_markup_from_the_store(page)
-        readme = own[0].read_text()
+        readme = own[0].read_text(encoding="utf-8")
         # Shown as written, on one line, HTML's own characters by look-alikes
         assert "Hi ‹script›alert(1)‹/script›" in readme
         assert "‹b onmouseover=alert(4)›M‹/b›" in readme
@@ -876,7 +877,7 @@ class TestWhatTheStoreOnlyReviewFound:
         self._no_markup_from_the_store(site / "searchindex.js")
         # Not a web address: no link at all
         assert "Repository:" not in readme and "Web page:" not in readme
-        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
+        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore", encoding="utf-8") for page in site.rglob("*.html"))
 
     def test_and_with_mkdocs(self, catalog, tmp_path, monkeypatch):
         pytest.importorskip("mkdocs")
@@ -892,9 +893,9 @@ class TestWhatTheStoreOnlyReviewFound:
             if page.exists():
                 self._no_markup_from_the_store(page)
         # The page title, which the theme decodes and writes unescaped
-        title = (site / "cb" / "pipelines" / "pipeline_c_README.html").read_text().split("<title>", 1)[1].split("</title>", 1)[0]
+        title = (site / "cb" / "pipelines" / "pipeline_c_README.html").read_text(encoding="utf-8").split("<title>", 1)[1].split("</title>", 1)[0]
         assert "<" not in title and "‹" in title
-        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
+        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore", encoding="utf-8") for page in site.rglob("*.html"))
 
     @pytest.mark.parametrize("writer", ["sphinx", "mkdocs"])
     def test_an_assets_name_is_text_too(self, catalog, tmp_path, monkeypatch, writer):
@@ -909,8 +910,8 @@ class TestWhatTheStoreOnlyReviewFound:
         for page in (site / "cb" / "dataframes.html", site / "cb" / "pipelines" / "pipeline_c_README.html"):
             self._no_markup_from_the_store(page)
             # As a browser shows it: one writer leaves the character references in the page as written
-            assert "D ‹script›alert(8)‹/script›" in html.unescape(page.read_text()), page
-            assert "\x1b" not in page.read_text()
+            assert "D ‹script›alert(8)‹/script›" in html.unescape(page.read_text(), encoding="utf-8"), page
+            assert "\x1b" not in page.read_text(encoding="utf-8")
         listed = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
         assert "[dataframe] pipeline_c:dataframe_0: D <script>alert(8)</script>" in listed and "\x1b" not in listed
 
@@ -938,10 +939,10 @@ class TestWhatTheStoreOnlyReviewFound:
         held = Path(default_store().get(taken.index["content_hash"]))
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
-        (held / "index.json").write_text(content)
+        (held / "index.json").write_text(content, encoding="utf-8")
         _show_from_the_store(root)
         _build(root, monkeypatch)
-        record = next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        record = next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
         assert record["name"] == "pipeline_c" and "description" not in record
 
     def _held(self, taken) -> Path:
@@ -956,14 +957,14 @@ class TestWhatTheStoreOnlyReviewFound:
     def _shown(self, root: Path, monkeypatch) -> dict:
         _show_from_the_store(root)
         _build(root, monkeypatch)
-        return next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        return next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
 
     def test_a_stored_index_is_not_read_through_a_link(self, catalog, tmp_path, monkeypatch):
         root, first, second = catalog
         taken = _elsewhere_with(tmp_path)
         held = self._held(taken)
         outside = tmp_path / "outside.json"
-        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}))
+        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}), encoding="utf-8")
         (held / "index.json").unlink()
         (held / "index.json").symlink_to(outside)
         assert "description" not in self._shown(root, monkeypatch)
@@ -980,7 +981,7 @@ class TestWhatTheStoreOnlyReviewFound:
         _elsewhere_with(tmp_path, name=blank)
         record = self._shown(root, monkeypatch)
         assert record["name"] == "pipeline_c"
-        page = (root / "docs" / "cb" / "pipelines.html").read_text()
+        page = (root / "docs" / "cb" / "pipelines.html").read_text(encoding="utf-8")
         assert not re.search(r"<h2[^>]*>\s*(<a [^>]*>[^<]*</a>)?\s*</h2>", page)
 
     def test_the_description_is_the_linked_snapshots(self, catalog, tmp_path, monkeypatch):
@@ -993,7 +994,7 @@ class TestWhatTheStoreOnlyReviewFound:
         snapshot._write(later, default_store())
         _show_from_the_store(root)
         _build(root, monkeypatch)
-        record = next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        record = next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
         assert record["snapshots"][0]["made_at"] == "2099-01-01T00:00:00Z"
         assert "description" not in record
 
@@ -1077,13 +1078,13 @@ class TestACatalogEntryWithNoPath:
         root = tmp_path / "cat"
         root.mkdir()
         (root / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog", "name": "C", "maintainer": "M"}, "pipelines": pipelines})
+            tomli_w.dumps({"project": {"type": "catalog", "name": "C", "maintainer": "M"}, "pipelines": pipelines}), encoding="utf-8"
         )
         return root
 
     def _pipeline(self, folder: Path) -> Path:
         folder.mkdir(parents=True)
-        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "P", "maintainer": "M"}}))
+        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "P", "maintainer": "M"}}), encoding="utf-8")
         return folder
 
     @pytest.mark.parametrize(
@@ -1150,5 +1151,5 @@ class TestATagIsAVersionsName:
         tagged = snapshot.make(a).snapshot
         assert tagged.tags == ["release-9"]
         _build(root, monkeypatch)
-        page = (root / "docs" / "cb" / "versions.html").read_text()
+        page = (root / "docs" / "cb" / "versions.html").read_text(encoding="utf-8")
         assert "tagged" in page and "<code>release-9</code>" in page

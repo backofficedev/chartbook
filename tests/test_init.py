@@ -89,11 +89,11 @@ class FakeTools:
         if command[0] == "render":
             project = self.cwd / self.project_name
             project.mkdir()
-            (project / ".cruft.json").write_text("{}")
-            (project / ".gitignore").write_text(".env\n_data/\n")
-            (project / "README.md").write_text("# My Data Science Project\n")
+            (project / ".cruft.json").write_text("{}", encoding="utf-8")
+            (project / ".gitignore").write_text(".env\n_data/\n", encoding="utf-8")
+            (project / "README.md").write_text("# My Data Science Project\n", encoding="utf-8")
             (project / "chartbook.toml").write_text(
-                '[project]\nname = "My Data Science Project"\n'
+                '[project]\nname = "My Data Science Project"\n', encoding="utf-8"
             )
         if command[:3] == ["gh", "repo", "create"]:
             self.remote_url = f"https://github.com/octo/{command[3]}.git"
@@ -282,7 +282,7 @@ class TestGit:
         # A project rendered earlier must not be mistaken for the new one
         older = tools.cwd / "an_older_project"
         older.mkdir()
-        (older / ".cruft.json").write_text("{}")
+        (older / ".cruft.json").write_text("{}", encoding="utf-8")
         (tools.cwd / "unrelated_dir").mkdir()
 
         result = _init("--git")
@@ -452,7 +452,7 @@ def real_git(monkeypatch):
 
 def _git(project, *args):
     return subprocess.run(
-        ["git", *args], cwd=project, capture_output=True, text=True, check=True
+        ["git", *args], cwd=project, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace"
     ).stdout
 
 
@@ -460,11 +460,11 @@ def _git(project, *args):
 def test_real_git_init_and_commit(tmp_path, real_git):
     project = tmp_path / "my_pipeline"
     (project / "_data").mkdir(parents=True)
-    (project / "chartbook.toml").write_text('[project]\nname = "My Pipeline"\n')
-    (project / "README.md").write_text("# My Pipeline\n")
-    (project / ".gitignore").write_text(".env\n_data/\n")
-    (project / ".env").write_text("FRED_API_KEY=not-a-real-key\n")
-    (project / "_data" / "big.parquet").write_text("data")
+    (project / "chartbook.toml").write_text('[project]\nname = "My Pipeline"\n', encoding="utf-8")
+    (project / "README.md").write_text("# My Pipeline\n", encoding="utf-8")
+    (project / ".gitignore").write_text(".env\n_data/\n", encoding="utf-8")
+    (project / ".env").write_text("FRED_API_KEY=not-a-real-key\n", encoding="utf-8")
+    (project / "_data" / "big.parquet").write_text("data", encoding="utf-8")
 
     scaffold.preflight(tmp_path, use_github=False)
     assert scaffold.enclosing_repository(tmp_path) is None
@@ -489,7 +489,7 @@ def test_real_remote_gives_the_pipeline_its_scope(tmp_path, real_git):
     """What `gh repo create --remote origin` leaves behind scopes the ID."""
     project = tmp_path / "my_pipeline"
     project.mkdir()
-    (project / "chartbook.toml").write_text('[project]\nname = "My Pipeline"\n')
+    (project / "chartbook.toml").write_text('[project]\nname = "My Pipeline"\n', encoding="utf-8")
     scaffold.git_init_and_commit(project)
     assert load_manifest(project)["project"]["id"] == "my_pipeline"
 
@@ -536,7 +536,7 @@ class TestTheTemplateThatCameWithIt:
         _template_copy(package / "template")
         assert scaffold.find_template(package) == package / "template"
         assert scaffold.template_commit(package) is None
-        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n")
+        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n", encoding="utf-8")
         assert scaffold.template_commit(package) == COMMIT
 
     def test_a_source_checkout_has_it_beside_src(self, tmp_path):
@@ -560,8 +560,8 @@ class TestTheTemplateThatCameWithIt:
         package = root / "src" / "chartbook"
         package.mkdir(parents=True)
         _template_copy(root / "template")
-        (root / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\n")
-        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n")
+        (root / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\n", encoding="utf-8")
+        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n", encoding="utf-8")
         assert scaffold.template_commit(package) == COMMIT
         (package / scaffold.BUILT_FROM).unlink()
         source = scaffold.template_source(package)
@@ -603,7 +603,7 @@ class TestTheTemplateThatCameWithIt:
         package = outer / "unpacked" / "src" / "chartbook"
         package.mkdir(parents=True)
         _template_copy(outer / "unpacked" / "template")
-        (outer / "README.md").write_text("Someone else's repository\n")
+        (outer / "README.md").write_text("Someone else's repository\n", encoding="utf-8")
         _git(outer, "init", "--quiet")
         _git(outer, "add", "README.md")
         _git(outer, "commit", "--quiet", "-m", "Theirs")
@@ -629,7 +629,7 @@ class TestTheTemplateThatCameWithIt:
         assert result.exit_code == 0, result.output
         project = tmp_path / "my_data_science_project"
         assert (project / "chartbook.toml").is_file()
-        state = json.loads((project / ".cruft.json").read_text())
+        state = json.loads((project / ".cruft.json").read_text(encoding="utf-8"))
         assert state["template"] == "https://github.com/backofficedev/chartbook"
         assert state["directory"] == "template"
         assert state["commit"] == COMMIT
@@ -642,7 +642,7 @@ class TestTheTemplateThatCameWithIt:
         from chartbook import __version__
 
         assert answers["_chartbook_version"] == __version__
-        assert f"chartbook>={__version__}" in (project / "requirements.txt").read_text()
+        assert f"chartbook>={__version__}" in (project / "requirements.txt").read_text(encoding="utf-8")
 
     @needs_git
     def test_cruft_reads_the_file_it_writes(self, tmp_path, real_git, monkeypatch):
@@ -667,9 +667,9 @@ class TestTheTemplateThatCameWithIt:
         out.mkdir()
         project = scaffold.render(out, no_input=True).project_dir
         cruft_file = project / ".cruft.json"
-        state = json.loads(cruft_file.read_text())
+        state = json.loads(cruft_file.read_text(encoding="utf-8"))
         state["template"] = str(upstream)
-        cruft_file.write_text(json.dumps(state))
+        cruft_file.write_text(json.dumps(state), encoding="utf-8")
         assert cruft.check(project) is True
 
     def test_with_no_commit_known_there_is_no_cruft_file(self, tmp_path, monkeypatch):
@@ -719,7 +719,7 @@ class TestTheTemplateThatCameWithIt:
             "except FailedHookException:\n"
             "    print('refused')\n"
         )
-        result = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert "refused" in result.stdout, result.stderr
         assert "cannot be the project's folder name" in result.stdout
         assert "Traceback" not in result.stderr + result.stdout
@@ -729,18 +729,18 @@ class TestTheTemplateThatCameWithIt:
         """A wheel built from the checkout ships those files and no others, so a source install renders the same."""
         package = _committed_checkout(tmp_path)
         slug_folder = tmp_path / "checkout" / "template" / "{{cookiecutter.project_slug}}"
-        (slug_folder / ".env").write_text("FRED_API_KEY=a-real-key-of-the-template-author\n")
+        (slug_folder / ".env").write_text("FRED_API_KEY=a-real-key-of-the-template-author\n", encoding="utf-8")
         (slug_folder / ".ipynb_checkpoints").mkdir()
-        (slug_folder / ".ipynb_checkpoints" / "scratch.ipynb").write_text("{}")
+        (slug_folder / ".ipynb_checkpoints" / "scratch.ipynb").write_text("{}", encoding="utf-8")
         # A change to a tracked file is rendered, at its content on disk
         readme = slug_folder / "README.md"
-        readme.write_text(readme.read_text() + "\nAn uncommitted line.\n")
+        readme.write_text(readme.read_text(encoding="utf-8") + "\nAn uncommitted line.\n", encoding="utf-8")
         out = tmp_path / "projects"
         out.mkdir()
         rendered = scaffold.render(out, no_input=True, package_dir=package)
         assert not (rendered.project_dir / ".env").exists()
         assert not (rendered.project_dir / ".ipynb_checkpoints").exists()
-        assert "An uncommitted line." in (rendered.project_dir / "README.md").read_text()
+        assert "An uncommitted line." in (rendered.project_dir / "README.md").read_text(encoding="utf-8")
         # ...and then the template is at no commit
         assert rendered.commit is None and not (rendered.project_dir / ".cruft.json").exists()
 
@@ -750,9 +750,9 @@ class TestTheTemplateThatCameWithIt:
         head = scaffold.template_commit(package)
         assert head is not None
         # A file git does not track is never rendered, and does not count
-        (tmp_path / "checkout" / "template" / "notes.txt").write_text("mine\n")
+        (tmp_path / "checkout" / "template" / "notes.txt").write_text("mine\n", encoding="utf-8")
         assert scaffold.template_commit(package) == head
-        (tmp_path / "checkout" / "template" / "cookiecutter.json").write_text("{}\n")
+        (tmp_path / "checkout" / "template" / "cookiecutter.json").write_text("{}\n", encoding="utf-8")
         assert scaffold.template_commit(package) is None
         assert "changes git has not committed" in scaffold.template_source(package).why
 

@@ -54,7 +54,7 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
@@ -68,7 +68,7 @@ def _commit(repository: Path, message: str) -> str:
 
 def _write_manifest(directory: Path, table: dict) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8")
 
 
 def _statuses(report) -> dict:
@@ -106,7 +106,7 @@ def upstream(work):
     )
     (repository / "data").mkdir()
     (repository / "data" / "committed.parquet").write_bytes(b"hello")
-    (repository / ".gitignore").write_text("/_data/\n")
+    (repository / ".gitignore").write_text("/_data/\n", encoding="utf-8")
     # What a pipeline builds and does not commit: on this disk, not in git
     (repository / "_data").mkdir()
     (repository / "_data" / "ignored.parquet").write_bytes(b"built here, never committed")
@@ -243,7 +243,7 @@ class TestGitCache:
     def test_the_url_is_not_kept_in_the_clone(self, cache, upstream):
         """So a token in a URL is never written to disk by ChartBook."""
         repo = cache.fetch(str(upstream))
-        configuration = (repo / "config").read_text()
+        configuration = (repo / "config").read_text(encoding="utf-8")
         assert "url" not in configuration and "remote" not in configuration
 
     def test_a_revision_becomes_a_commit(self, cache, upstream):
@@ -375,21 +375,21 @@ class TestWhereTheCacheIs:
     def test_the_settings_file_can_move_it(self, fake_config_dir, work):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"git": {"path": str(work / "big")}})
+            tomli_w.dumps({"git": {"path": str(work / "big")}}), encoding="utf-8"
         )
         assert config.get_git_cache_path() == work / "big"
 
     def test_the_environment_wins(self, fake_config_dir, work, monkeypatch):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"git": {"path": str(work / "big")}})
+            tomli_w.dumps({"git": {"path": str(work / "big")}}), encoding="utf-8"
         )
         monkeypatch.setenv(config.GIT_CACHE_ENV_VAR, str(work / "shared"))
         assert config.get_git_cache_path() == work / "shared"
 
     def test_a_git_table_without_a_path_is_an_error(self, fake_config_dir):
         fake_config_dir.mkdir()
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"git": {"dir": "/x"}}))
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"git": {"dir": "/x"}}), encoding="utf-8")
         with pytest.raises(ValueError, match=r"\[git\] needs a 'path'"):
             config.get_git_cache_path()
 
@@ -436,7 +436,7 @@ class TestPinning:
 
     def test_the_lockfile_has_no_absolute_path_and_no_token(self, downstream, cache, work):
         lock.pin(downstream, git_cache=cache)
-        text = (downstream / LOCK_FILE).read_text()
+        text = (downstream / LOCK_FILE).read_text(encoding="utf-8")
         assert str(work) not in text
         assert json.loads(text)["records"][0]["dependencies"][0]["location"]["url"] == "../upstream"
 
@@ -531,7 +531,7 @@ class TestPinning:
         assert problem.status == "unfetched" and problem.dependency == "crsp"
         assert problem.detail.startswith("could not fetch https://localhost:1/acme/crsp.git: ")
         assert "s3cret" not in problem.detail
-        text = (downstream / LOCK_FILE).read_text()
+        text = (downstream / LOCK_FILE).read_text(encoding="utf-8")
         assert "s3cret" not in text
         assert lock.read_lock(downstream).dependencies == [
             {
@@ -571,9 +571,9 @@ class TestPinning:
 
     def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
         """The store lost one object that two assets share: put back for one, it lacked the other's name."""
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         (upstream / "data" / "twin.parquet").write_bytes(b"hello")  # the same bytes as committed.parquet
         _commit(upstream, "A twin")
         lock.pin(downstream, git_cache=cache)
@@ -589,9 +589,9 @@ class TestPinning:
 
     def _twin_with_one_name(self, downstream, upstream, cache) -> Path:
         """Both twins pinned, and their shared object holds one name only, as another pipeline's pin of the same bytes leaves it."""
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         (upstream / "data" / "twin.parquet").write_bytes(b"hello")
         _commit(upstream, "A twin")
         lock.pin(downstream, git_cache=cache)
@@ -627,9 +627,9 @@ class TestPinning:
 
     def test_a_directory_still_arriving_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
         """A put adds no file to a directory's object in a folder store, so nothing is put while one is short."""
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         (upstream / "data" / "parts").mkdir()
         (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
         (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
@@ -711,8 +711,8 @@ class TestPinning:
 class TestCheck:
     def _add_model(self, directory: Path, trained_on: list) -> None:
         (directory / "_models").mkdir(exist_ok=True)
-        (directory / "_models" / "m.json").write_text("{}")
-        with open(directory / "chartbook.toml", "a") as f:
+        (directory / "_models" / "m.json").write_text("{}", encoding="utf-8")
+        with open(directory / "chartbook.toml", "a", encoding="utf-8") as f:
             table = {"models": {"m": {"path": "./_models/m.json", "trained_on": trained_on}}}
             f.write("\n" + tomli_w.dumps(table))
 
@@ -777,11 +777,11 @@ class TestInTheIndex:
             "commit": commit,
         }
         assert dependency["via"] == "rev" and dependency["pinned_hash"].startswith("sha256:")
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         jsonschema.validate(built["records"][0], schema)
 
     def test_the_schema_wants_a_whole_commit(self):
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         record = {
             "kind": "Pipeline",
             "version": "chartbook/v1",
@@ -863,9 +863,9 @@ class TestCommands:
 
 def _twin(upstream: Path) -> None:
     """Give the upstream a second dataframe with the same bytes as `committed`."""
-    manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+    manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
-    (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     (upstream / "data" / "twin.parquet").write_bytes(b"hello")
     _commit(upstream, "A twin")
 
@@ -880,9 +880,9 @@ def _puts(monkeypatch) -> list:
 
 class TestWhatTheSecondReviewOfPuttingBackFound:
     def test_a_directory_of_one_file_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         (upstream / "data" / "parts").mkdir()
         (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
         _commit(upstream, "Parts")
@@ -897,19 +897,19 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         assert problem.status == "unsynced" and puts == []
 
     def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         (upstream / "data" / "parts").mkdir()
         (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
         (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
         _commit(upstream, "Parts")
         lock.pin(downstream, git_cache=cache)
-        document = json.loads((downstream / LOCK_FILE).read_text())
+        document = json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8"))
         for record in document["records"]:
             if str(record.get("id", "")).endswith(":parts"):
                 record.pop("files", None)
-        (downstream / LOCK_FILE).write_text(json.dumps(document, indent=2))
+        (downstream / LOCK_FILE).write_text(json.dumps(document, indent=2), encoding="utf-8")
         (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
         short = Path(default_store().get(record["content_hash"])) / "b.parquet"
         os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)

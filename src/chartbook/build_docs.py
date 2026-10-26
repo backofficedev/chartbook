@@ -125,7 +125,7 @@ def run_sphinx_build(_docs_dir: Path):
         str(_docs_dir / "_build"),
     ]
 
-    result = subprocess.run(build_cmd, capture_output=True, text=True, check=False)
+    result = subprocess.run(build_cmd, capture_output=True, text=True, check=False, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"Sphinx build failed:\n{result.stderr}")
     _echo_site_tool_warnings(result.stderr, "WARNING:")
@@ -234,8 +234,8 @@ def _write_sphinx_project(
     if untrusted_source():
         conf_content += _UNTRUSTED_CONF
         # No page takes in a file (include, literalinclude, csv-table)
-        (sources_dir / "docutils.conf").write_text("[general]\nfile_insertion_enabled: false\n", encoding="utf-8")
-    with open(conf_output_path, "w") as f:
+        (sources_dir / "docutils.conf").write_text("[general]\nfile_insertion_enabled: false\n", encoding="utf-8", newline="\n")
+    with open(conf_output_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(conf_content)
     (sources_dir / "conf.py.j2").unlink(missing_ok=True)
     return rendered
@@ -706,7 +706,7 @@ def _generate_docs_mkdocs(
             site_url=manifest["project"].get("site_url", ""),
             copyright=str(getattr(site_config, "copyright", "") or ""),
         )
-        (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8")
+        (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8", newline="\n")
         run_mkdocs_build(_docs_dir)
         _add_versions(manifest, built, _docs_dir / "_build" / "html", rendered)
 
@@ -749,7 +749,7 @@ def run_mkdocs_build(_docs_dir: Path) -> str:
     result = subprocess.run(
         [sys.executable, "-m", "mkdocs", "build", "-f", str(_docs_dir / "mkdocs.yml")],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="replace"
     )
     if result.returncode != 0:
         raise RuntimeError(f"mkdocs build failed:\n{result.stdout}\n{result.stderr}")
@@ -843,7 +843,7 @@ def _write_assistant_file(manifest: dict, built: dict, output_dir: Path) -> None
             return
     except OSError:
         pass
-    target.write_text(text, encoding="utf-8")
+    target.write_text(text, encoding="utf-8", newline="\n")
 
 
 @dataclass

@@ -201,7 +201,7 @@ def _ask_git(directory: str, *arguments: str) -> Optional[str]:
             capture_output=True,
             text=True,
             timeout=5,
-            env=_git_environment(),
+            env=_git_environment(), encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -576,7 +576,7 @@ def _tracked_by_git(base: Path, name: str) -> bool:
             capture_output=True,
             text=True,
             timeout=15,
-            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return False

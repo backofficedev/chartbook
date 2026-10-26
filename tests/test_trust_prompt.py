@@ -43,14 +43,14 @@ def _nothing_trusted_and_a_person_at_the_terminal(monkeypatch):
 
 def _recorded() -> list:
     path = config.get_trust_path()
-    return tomli.loads(path.read_text()).get("pipeline", []) if path.is_file() else []
+    return tomli.loads(path.read_text(encoding="utf-8")).get("pipeline", []) if path.is_file() else []
 
 
 def _scripted(folder: Path, build: str = "echo ran > ran.log") -> Path:
     """A pipeline whose build command leaves a mark."""
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "rates"}, "scripts": {"build": build}}))
-    (folder / "README.md").write_text("# rates\n")
+    (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "rates"}, "scripts": {"build": build}}), encoding="utf-8")
+    (folder / "README.md").write_text("# rates\n", encoding="utf-8")
     return folder
 
 
@@ -91,7 +91,7 @@ class TestBuilding:
 
     def test_build_r_renders_the_site_without_running_the_code(self, tmp_path, monkeypatch):
         project = create_pipeline_project(tmp_path)
-        with open(project / "chartbook.toml", "a") as f:
+        with open(project / "chartbook.toml", "a", encoding="utf-8") as f:
             f.write('\n[scripts]\nbuild = "echo ran > ran.log"\n')
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"], input="r\n")
@@ -155,7 +155,7 @@ class TestACatalog:
         catalog = tmp_path / "catalog"
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}}), encoding="utf-8"
         )
         return catalog
 
@@ -248,7 +248,7 @@ class TestWhatTheReviewFound:
         catalog = tmp_path / "catalog"
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}})
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}}), encoding="utf-8"
         )
         config.record_trust(catalog, "run")
         return catalog
@@ -261,7 +261,7 @@ class TestWhatTheReviewFound:
 
     def test_r_on_a_folder_trusted_to_render_renders_it_as_it_always_does(self, tmp_path, monkeypatch):
         project = create_pipeline_project(tmp_path)
-        with open(project / "chartbook.toml", "a") as f:
+        with open(project / "chartbook.toml", "a", encoding="utf-8") as f:
             f.write('\n[scripts]\nbuild = "echo ran > ran.log"\n')
         config.record_trust(project, "render")
         monkeypatch.chdir(project)
@@ -289,7 +289,7 @@ class TestWhatTheReviewFound:
 
     def test_rendering_says_what_a_yes_lets_a_build_run_later(self, tmp_path, monkeypatch):
         project = create_pipeline_project(tmp_path)
-        with open(project / "chartbook.toml", "a") as f:
+        with open(project / "chartbook.toml", "a", encoding="utf-8") as f:
             f.write('\n[scripts]\nbuild = "make everything"\n')
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"], input="n\n")
@@ -300,7 +300,7 @@ class TestWhatTheReviewFound:
         _scripted(tmp_path / "a")
         catalog = tmp_path / "catalog"
         catalog.mkdir()
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}}}))
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}}}), encoding="utf-8")
         monkeypatch.chdir(catalog)
         CliRunner().invoke(main, ["docs", "generate", "./site", "-f"], input="y\n")
         own = [e for e in _recorded() if Path(e["path"]).name == "catalog"]
@@ -329,9 +329,9 @@ class TestWhatTheReviewFound:
 
     def test_another_script_is_named_for_what_it_is(self, tmp_path, monkeypatch):
         folder = _scripted(tmp_path / "rates")
-        manifest = tomli.loads((folder / "chartbook.toml").read_text())
+        manifest = tomli.loads((folder / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["scripts"]["lint"] = "ruff check ."
-        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
         monkeypatch.chdir(folder)
         result = CliRunner().invoke(main, ["run", "lint"], input="n\n")
         assert "Its 'lint' script runs on this machine:\n    ruff check ." in result.output

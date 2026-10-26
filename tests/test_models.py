@@ -27,6 +27,7 @@ from chartbook.manifest import load_manifest, resolve_project_type
 from chartbook.refs import AssetRef, KindMismatchError
 from chartbook.resolve import UnsupportedReferenceError
 from tests.fixtures import create_catalog_project, create_pipeline_project
+from tests.fixtures import remove_tree
 
 METRICS = {"rmse": 0.2123456789, "mae": 0.17, "n_train": 5120, "converged": True}
 
@@ -34,9 +35,9 @@ METRICS = {"rmse": 0.2123456789, "mae": 0.17, "n_train": 5120, "converged": True
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
     toml_path = Path(project_dir) / "chartbook.toml"
-    config = tomli.loads(toml_path.read_text())
+    config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config))
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8")
 
 
 def add_models(project_dir: Path) -> Path:
@@ -48,14 +49,14 @@ def add_models(project_dir: Path) -> Path:
     """
     project_dir = Path(project_dir)
     (project_dir / "_models" / "encoder" / "weights").mkdir(parents=True)
-    (project_dir / "_models" / "encoder" / "config.json").write_text("{}")
+    (project_dir / "_models" / "encoder" / "config.json").write_text("{}", encoding="utf-8")
     (project_dir / "_models" / "encoder" / "weights" / "best.pt").write_bytes(b"w" * 3000)
-    (project_dir / "_models" / "forecaster.json").write_text('{"slope": 0.99}')
+    (project_dir / "_models" / "forecaster.json").write_text('{"slope": 0.99}', encoding="utf-8")
     (project_dir / "_output").mkdir(exist_ok=True)
-    (project_dir / "_output" / "forecaster_metrics.json").write_text(json.dumps(METRICS))
+    (project_dir / "_output" / "forecaster_metrics.json").write_text(json.dumps(METRICS), encoding="utf-8")
     (project_dir / "docs_src" / "models").mkdir(parents=True, exist_ok=True)
     (project_dir / "docs_src" / "models" / "forecaster.md").write_text(
-        "Predicts the rate, **for testing**.\n"
+        "Predicts the rate, **for testing**.\n", encoding="utf-8"
     )
 
     def edit(config):
@@ -84,7 +85,7 @@ def project(pipeline_project):
 
 def _page_text(html_file: Path) -> str:
     """The readable text of a built page's article."""
-    page = html_file.read_text()
+    page = html_file.read_text(encoding="utf-8")
     article = page[page.find("<article") : page.find("</article>")]
     article = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", article, flags=re.S)
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", article))
@@ -225,7 +226,7 @@ class TestPath:
 
         script = project / "src" / "where.py"
         script.write_text(
-            "from chartbook import models\nRESULT = models.path('forecaster')\n"
+            "from chartbook import models\nRESULT = models.path('forecaster')\n", encoding="utf-8"
         )
         monkeypatch.chdir(tmp_path)
         assert runpy.run_path(str(script))["RESULT"] == (
@@ -282,7 +283,7 @@ class TestPath:
 class TestReadMetrics:
     def _write(self, tmp_path, content) -> Path:
         path = tmp_path / "metrics.json"
-        path.write_text(content if isinstance(content, str) else json.dumps(content))
+        path.write_text(content if isinstance(content, str) else json.dumps(content), encoding="utf-8")
         return path
 
     def test_flat_object_of_scores(self, tmp_path):
@@ -313,7 +314,7 @@ class TestModelRecord:
         return {r["ref"]["name"]: r for r in built["records"] if r["kind"] == "Model"}
 
     def _validate(self, record) -> None:
-        schema = json.loads(index.schema_path("Model").read_text())
+        schema = json.loads(index.schema_path("Model").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(schema).validate(record)
 
     def test_a_file_model(self, project):
@@ -392,7 +393,7 @@ class TestModelRecord:
         self._validate(record)
 
     def test_malformed_metrics_are_left_out_with_a_warning(self, project):
-        (project / "_output" / "forecaster_metrics.json").write_text('{"a": [1, 2]}')
+        (project / "_output" / "forecaster_metrics.json").write_text('{"a": [1, 2]}', encoding="utf-8")
         with pytest.warns(UserWarning, match=r"\[models.forecaster\]: its metrics"):
             built = index.build_index(load_manifest(project))
         assert "metrics" not in self._models(built)["forecaster"]
@@ -447,7 +448,7 @@ class TestModelPage:
         assert "Files" not in text
 
     def test_it_links_to_the_dataframe_it_was_trained_on(self, site):
-        page = (site / "cb" / "models" / "test_pipeline" / "forecaster.html").read_text()
+        page = (site / "cb" / "models" / "test_pipeline" / "forecaster.html").read_text(encoding="utf-8")
         assert 'href="../../dataframes/test_pipeline/dataframe_0.html"' in page
         assert (site / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").is_file()
 
@@ -461,12 +462,12 @@ class TestModelPage:
         assert "Scores" not in text
 
     def test_the_page_shows_no_local_path(self, site, project):
-        page = (site / "cb" / "models" / "test_pipeline" / "forecaster.html").read_text()
+        page = (site / "cb" / "models" / "test_pipeline" / "forecaster.html").read_text(encoding="utf-8")
         article = page[page.find("<article") : page.find("</article>")]
         assert str(project / "_models") not in article
 
     def test_the_pipelines_front_page_lists_its_models(self, site):
-        front = (site / "index.html").read_text()
+        front = (site / "index.html").read_text(encoding="utf-8")
         assert "Pipeline Models" in front
         assert 'href="cb/models/test_pipeline/forecaster.html"' in front
         assert 'href="cb/models/test_pipeline/encoder.html"' in front
@@ -475,11 +476,11 @@ class TestModelPage:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
-        assert "Pipeline Models" not in (pipeline_project / "docs" / "index.html").read_text()
+        assert "Pipeline Models" not in (pipeline_project / "docs" / "index.html").read_text(encoding="utf-8")
         assert not (pipeline_project / "docs" / "cb" / "models").exists()
 
     def test_malformed_metrics_do_not_break_the_build(self, project, monkeypatch):
-        (project / "_output" / "forecaster_metrics.json").write_text("not json")
+        (project / "_output" / "forecaster_metrics.json").write_text("not json", encoding="utf-8")
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
@@ -501,13 +502,13 @@ class TestCatalogSite:
         add_models(catalog / "pipelines" / "pipeline_a")
         site = self._build(catalog, monkeypatch)
 
-        listing = (site / "cb" / "models.html").read_text()
+        listing = (site / "cb" / "models.html").read_text(encoding="utf-8")
         assert 'href="models/pipeline_a/forecaster.html"' in listing
         assert (site / "cb" / "models" / "pipeline_a" / "forecaster.html").is_file()
-        assert "Models" in (site / "index.html").read_text()
+        assert "Models" in (site / "index.html").read_text(encoding="utf-8")
         assert not (site / "cb" / "models" / "pipeline_b").exists()
 
-        built = json.loads((site / "index.json").read_text())
+        built = json.loads((site / "index.json").read_text(encoding="utf-8"))
         assert [r["id"] for r in built["records"] if r["kind"] == "Model"] == [
             "pipeline_a:model/encoder",
             "pipeline_a:model/forecaster",
@@ -516,7 +517,7 @@ class TestCatalogSite:
     def test_a_catalog_without_models_has_no_models_page(self, catalog_project, monkeypatch):
         site = self._build(catalog_project, monkeypatch)
         assert not (site / "cb" / "models.html").exists()
-        assert "cb/models" not in (site / "index.html").read_text()
+        assert "cb/models" not in (site / "index.html").read_text(encoding="utf-8")
 
 
 class TestCheck:
@@ -552,13 +553,13 @@ class TestCheck:
     def test_a_missing_directory_model(self, project):
         import shutil
 
-        shutil.rmtree(project / "_models" / "encoder")
+        remove_tree(project / "_models" / "encoder")
         assert ("models.encoder", "path") in {
             (table, field) for table, field, _ in self._problems(project)
         }
 
     def test_malformed_metrics_are_reported(self, project):
-        (project / "_output" / "forecaster_metrics.json").write_text('{"curve": [1, 2]}')
+        (project / "_output" / "forecaster_metrics.json").write_text('{"curve": [1, 2]}', encoding="utf-8")
         (problem,) = [p for p in self._problems(project) if p[1] == "metrics_path"]
         assert "'curve' must be a number" in problem[2]
 
@@ -671,7 +672,7 @@ class TestIncremental:
         self._touch(project / "_models" / "encoder" / "weights" / "best.pt")
         changed = self._fingerprint(project)
         assert changed != before
-        (project / "_models" / "encoder" / "vocab.txt").write_text("a b c")
+        (project / "_models" / "encoder" / "vocab.txt").write_text("a b c", encoding="utf-8")
         assert self._fingerprint(project) != changed
 
     def test_model_pages_belong_to_their_pipeline(self, project):
@@ -699,7 +700,7 @@ class TestIncremental:
         assert runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"]).exit_code == 0
 
         metrics_file = project / "_output" / "forecaster_metrics.json"
-        metrics_file.write_text(json.dumps({"rmse": 0.05}))
+        metrics_file.write_text(json.dumps({"rmse": 0.05}), encoding="utf-8")
         self._touch(metrics_file)
         result = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
@@ -709,7 +710,7 @@ class TestIncremental:
         )
         assert "rmse 0.05" in text
         assert "n_train" not in text
-        built = json.loads((project / "docs" / "index.json").read_text())
+        built = json.loads((project / "docs" / "index.json").read_text(encoding="utf-8"))
         (record,) = [r for r in built["records"] if r.get("id", "").endswith("forecaster")]
         assert record["metrics"] == {"rmse": 0.05}
 
@@ -738,7 +739,7 @@ class TestTrainedOnAnotherPipeline:
 
     def _add_model(self, pipeline_dir, trained_on, **dependencies):
         (pipeline_dir / "_models").mkdir(exist_ok=True)
-        (pipeline_dir / "_models" / "m.json").write_text("{}")
+        (pipeline_dir / "_models" / "m.json").write_text("{}", encoding="utf-8")
 
         def edit(config):
             config["models"] = {"m": {"path": "./_models/m.json", "trained_on": trained_on}}
@@ -798,7 +799,7 @@ class TestTrainedOnAnotherPipeline:
         assert result.exit_code == 0, result.output
 
         page_file = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
-        page = page_file.read_text()
+        page = page_file.read_text(encoding="utf-8")
         assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page
         assert (
             catalog / "docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.html"
@@ -814,7 +815,7 @@ class TestTrainedOnAnotherPipeline:
         assert result.exit_code == 0, result.output
         page_file = pipeline_project / "docs" / "cb" / "models" / "test_pipeline" / "m.html"
         assert "rates:treasury (in another pipeline" in _page_text(page_file)
-        assert "dataframes/rates" not in page_file.read_text()
+        assert "dataframes/rates" not in page_file.read_text(encoding="utf-8")
 
     def test_check_catches_a_dataframe_the_other_pipeline_does_not_have(self, tmp_path):
         catalog = _scoped_catalog(tmp_path)

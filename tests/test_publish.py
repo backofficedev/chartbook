@@ -19,20 +19,20 @@ def _project_with_notebooks(root: Path) -> Path:
     project = create_pipeline_project(root / "proj", pipeline_id="rates")
     (project / "notebooks").mkdir()
     for name in ("explore", "scratch"):
-        (project / "notebooks" / f"{name}.ipynb").write_text(NOTEBOOK)
-    manifest = tomli.loads((project / "chartbook.toml").read_text())
+        (project / "notebooks" / f"{name}.ipynb").write_text(NOTEBOOK, encoding="utf-8")
+    manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
     manifest["notebooks"] = {
         "explore": {"path": "notebooks/explore.ipynb", "docs": "Shown.", "publishable": True},
         "scratch": {"path": "notebooks/scratch.ipynb", "docs": "Kept back.", "publishable": False},
     }
-    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8")
     return project
 
 
 def _is_the_revised_manifest(published: Path, project: Path) -> None:
     """The published chartbook.toml is the manifest as revised for publishing, not the copy."""
     assert published.read_bytes() != (project / "chartbook.toml").read_bytes()
-    revised = tomli.loads(published.read_text())
+    revised = tomli.loads(published.read_text(encoding="utf-8"))
     assert revised["project"]["name"] == "Test Pipeline"
     assert list(revised["notebooks"]) == ["explore"]
     assert "base_dir" not in revised and "pipeline_base_dir" not in revised

@@ -119,7 +119,7 @@ class TestDatasetReport:
 
     def test_unreadable_file_reports_an_error(self, tmp_path):
         bad = tmp_path / "bad.parquet"
-        bad.write_text("not parquet")
+        bad.write_text("not parquet", encoding="utf-8")
         assert get_dataset_report(bad)["error"].startswith("ERROR: Could not read file")
 
     def test_stats_can_be_skipped(self, tmp_path):
@@ -174,7 +174,7 @@ class TestReports:
 
     def test_unreadable_data_is_reported_in_place(self, pipeline_project):
         declared = find_declared_dataframes(load_manifest(pipeline_project))
-        declared[0].path.write_text("not parquet")
+        declared[0].path.write_text("not parquet", encoding="utf-8")
         report = create_txt_report(declared)
         assert "**ERROR:** ERROR: Could not read file" in report
 
@@ -200,7 +200,7 @@ class TestCommand:
         out_dir.mkdir()
         result = _run(pipeline_project, "-o", out_dir)
         assert result.exit_code == 0, result.output
-        report = (out_dir / "data_glimpses.md").read_text()
+        report = (out_dir / "data_glimpses.md").read_text(encoding="utf-8")
         assert "## dataframe_0" in report
         assert "10 rows × 4 columns" in report
         assert "Found 1 declared dataframes, 1 with data on disk" in result.output
@@ -211,18 +211,18 @@ class TestCommand:
         result = _run(pipeline_project, "-o", out_dir)
         assert result.exit_code == 0, result.output
         assert out_dir.is_dir()
-        assert "## dataframe_0" in (out_dir / "data_glimpses.md").read_text()
+        assert "## dataframe_0" in (out_dir / "data_glimpses.md").read_text(encoding="utf-8")
 
     def test_an_output_dir_that_is_a_file_is_said_plainly(self, pipeline_project, tmp_path):
         """Found by a reviewer: an existing file not ending in .md got a FileExistsError."""
         taken = tmp_path / "notes.txt"
-        taken.write_text("mine\n")
+        taken.write_text("mine\n", encoding="utf-8")
         result = _run(pipeline_project, "-o", taken)
         assert result.exit_code == 1
         assert f"Error: {taken} is there and is not a directory. Give a directory to write data_glimpses.md in" in (
             " ".join(result.output.split())
         )
-        assert taken.read_text() == "mine\n"
+        assert taken.read_text(encoding="utf-8") == "mine\n"
 
     @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="a named pipe needs os.mkfifo")
     def test_an_output_dir_that_is_a_broken_link_or_a_pipe_is_said_plainly(self, pipeline_project, tmp_path):
@@ -246,10 +246,10 @@ class TestCommand:
     def test_needs_no_dodo_py(self, pipeline_project, tmp_path):
         """A project built with Snakemake, Make or plain scripts has no dodo.py."""
         assert not (pipeline_project / "dodo.py").exists()
-        (pipeline_project / "Snakefile").write_text("rule all:\n    input: []\n")
+        (pipeline_project / "Snakefile").write_text("rule all:\n    input: []\n", encoding="utf-8")
         result = _run(pipeline_project, "-o", tmp_path / "glimpses.md")
         assert result.exit_code == 0, result.output
-        assert "## dataframe_0" in (tmp_path / "glimpses.md").read_text()
+        assert "## dataframe_0" in (tmp_path / "glimpses.md").read_text(encoding="utf-8")
 
     def test_does_not_read_dodo_py(self, pipeline_project, tmp_path, monkeypatch):
         """A dodo.py is never imported: one that cannot be imported changes nothing,
@@ -257,14 +257,14 @@ class TestCommand:
         undeclared = create_sample_parquet(pipeline_project / "_data" / "undeclared.parquet")
         (pipeline_project / "dodo.py").write_text(
             "raise RuntimeError('dodo.py must not be imported')\n"
-            f"def task_x():\n    return {{'targets': [{str(undeclared)!r}]}}\n"
+            f"def task_x():\n    return {{'targets': [{str(undeclared)!r}]}}\n", encoding="utf-8"
         )
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(
             main, ["create-data-glimpses", "-o", str(tmp_path / "glimpses.md")]
         )
         assert result.exit_code == 0, result.output
-        report = (tmp_path / "glimpses.md").read_text()
+        report = (tmp_path / "glimpses.md").read_text(encoding="utf-8")
         assert "## dataframe_0" in report
         assert "undeclared" not in report
 
@@ -274,10 +274,10 @@ class TestCommand:
         def report_for(name, with_dodo):
             project = create_pipeline_project(tmp_path / name, pipeline_id="same")
             if with_dodo:
-                (project / "dodo.py").write_text("def task_x():\n    return {}\n")
+                (project / "dodo.py").write_text("def task_x():\n    return {}\n", encoding="utf-8")
             out = tmp_path / f"{name}.md"
             assert _run(project, "-o", out).exit_code == 0
-            lines = out.read_text().splitlines()
+            lines = out.read_text(encoding="utf-8").splitlines()
             return [
                 line.replace(str(project), "<project>")
                 for line in lines
@@ -296,7 +296,7 @@ class TestCommand:
         project = create_pipeline_project(tmp_path / "glob", use_glob_paths=True)
         result = _run(project, "-o", tmp_path / "glimpses.md")
         assert result.exit_code == 0, result.output
-        report = (tmp_path / "glimpses.md").read_text()
+        report = (tmp_path / "glimpses.md").read_text(encoding="utf-8")
         assert "## dataframe_0" in report
         assert "10 rows" in report
         assert "ERROR" not in report
@@ -308,14 +308,14 @@ class TestCommand:
         assert result.exit_code == 0, result.output
         assert "Found 2 declared dataframes, 1 with data on disk" in result.output
         assert "Skipping multi_df:dataframe_1" in result.output
-        report = (tmp_path / "glimpses.md").read_text()
+        report = (tmp_path / "glimpses.md").read_text(encoding="utf-8")
         assert "## dataframe_0" in report
         assert "dataframe_1" not in report
 
     def test_catalog(self, catalog_project, tmp_path):
         result = _run(catalog_project, "-o", tmp_path / "glimpses.md")
         assert result.exit_code == 0, result.output
-        report = (tmp_path / "glimpses.md").read_text()
+        report = (tmp_path / "glimpses.md").read_text(encoding="utf-8")
         assert "## pipeline_a:dataframe_0" in report
         assert "## pipeline_b:dataframe_0" in report
 
@@ -329,7 +329,7 @@ class TestCommand:
             pipeline_project, "-o", tmp_path / "g.md", "--no-samples", "--no-stats"
         )
         assert result.exit_code == 0, result.output
-        report = (tmp_path / "g.md").read_text()
+        report = (tmp_path / "g.md").read_text(encoding="utf-8")
         assert "### Sample Values" not in report
         assert "### Numeric Column Statistics" not in report
 

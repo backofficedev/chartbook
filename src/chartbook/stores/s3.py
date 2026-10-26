@@ -422,7 +422,7 @@ class S3Store(Store):
         note.parent.mkdir(parents=True, exist_ok=True)
         names = sorted(f.relative_to(local).as_posix() for f in hashing.directory_files(local))
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
-        temporary.write_text("\n".join(names) + "\n", encoding="utf-8")
+        temporary.write_text("\n".join(names) + "\n", encoding="utf-8", newline="\n")
         os.replace(temporary, note)
 
     def _forget_verified(self, content_hash: str) -> None:

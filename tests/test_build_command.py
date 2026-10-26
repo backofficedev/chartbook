@@ -20,7 +20,7 @@ CHARTBOOK = Path(sys.executable).with_name("chartbook")
 
 def _add_script(project: Path, script: str) -> None:
     """Give a project a build script, in its chartbook.toml."""
-    with open(project / "chartbook.toml", "a") as f:
+    with open(project / "chartbook.toml", "a", encoding="utf-8") as f:
         f.write(f"\n[scripts]\nbuild = {script!r}\n")
 
 
@@ -67,7 +67,7 @@ def test_docs_from_another_directory(pipeline_project, tmp_path, monkeypatch):
     )
 
     assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert "Pipeline Specs" in (output_dir / "index.html").read_text()
+    assert "Pipeline Specs" in (output_dir / "index.html").read_text(encoding="utf-8")
     # Nothing is left behind where the command was run. (Under `hatch test
     # --cover` the Sphinx subprocess writes its coverage data file there.)
     left_behind = [p.name for p in elsewhere.iterdir() if not p.name.startswith(".coverage")]
@@ -93,7 +93,7 @@ def test_docs_with_a_renamed_intermediate_directory(pipeline_project, monkeypatc
     )
 
     assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert "Pipeline Specs" in (pipeline_project / "docs" / "index.html").read_text()
+    assert "Pipeline Specs" in (pipeline_project / "docs" / "index.html").read_text(encoding="utf-8")
 
 
 @posix
@@ -154,7 +154,7 @@ class TestBuild:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
-        assert (pipeline_project / "ran.log").read_text().split() == ["ran"]
+        assert (pipeline_project / "ran.log").read_text(encoding="utf-8").split() == ["ran"]
         assert (pipeline_project / "docs" / "index.html").exists()
         said = result.output.splitlines()
         ran = said.index("Ran build in 1 pipeline(s).")
@@ -307,8 +307,8 @@ class TestCalledFromItsOwnScript:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
-        assert (pipeline_project / "ran.log").read_text().split() == ["ran"]  # once
-        nested = (pipeline_project / "nested.log").read_text()
+        assert (pipeline_project / "ran.log").read_text(encoding="utf-8").split() == ["ran"]  # once
+        nested = (pipeline_project / "nested.log").read_text(encoding="utf-8")
         assert "Warning: `chartbook build` was called from this pipeline's own build script." in nested
         assert "In a build script, say `chartbook docs generate`." in nested
         assert "Successfully generated documentation" in nested
@@ -318,8 +318,8 @@ class TestCalledFromItsOwnScript:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 1
-        assert (pipeline_project / "ran.log").read_text().split() == ["ran"]
-        nested = (pipeline_project / "nested.log").read_text()
+        assert (pipeline_project / "ran.log").read_text(encoding="utf-8").split() == ["ran"]
+        nested = (pipeline_project / "nested.log").read_text(encoding="utf-8")
         assert "was called from" in nested and "run itself without end" in nested
 
     def test_docs_inside_a_build_script_is_the_ordinary_thing(self, pipeline_project, monkeypatch):
@@ -327,7 +327,7 @@ class TestCalledFromItsOwnScript:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 0, result.output
-        assert "Warning" not in (pipeline_project / "nested.log").read_text()
+        assert "Warning" not in (pipeline_project / "nested.log").read_text(encoding="utf-8")
         assert (pipeline_project / "docs" / "index.html").exists()
 
     def test_a_script_is_told_which_pipeline_and_script_it_is(self, tmp_path):
@@ -335,7 +335,7 @@ class TestCalledFromItsOwnScript:
             'echo "$CHARTBOOK_RUN_SCRIPT in $CHARTBOOK_RUN_DIR" > told.txt', tmp_path, "build"
         )
         assert code == 0
-        assert (tmp_path / "told.txt").read_text().strip() == f"build in {tmp_path.resolve()}"
+        assert (tmp_path / "told.txt").read_text(encoding="utf-8").strip() == f"build in {tmp_path.resolve()}"
 
     def test_running(self, tmp_path, monkeypatch):
         assert not run.running(tmp_path, "build")
@@ -375,21 +375,21 @@ class TestCalledFromItsOwnScript:
             folder = tmp_path / name
             folder.mkdir()
             (folder / "chartbook.toml").write_text(
-                f'[project]\nid = "{name}"\n[scripts]\nbuild = "echo ran >> ran.log && {CHARTBOOK} run --project-dir ../{other}"\n'
+                f'[project]\nid = "{name}"\n[scripts]\nbuild = "echo ran >> ran.log && {CHARTBOOK} run --project-dir ../{other}"\n', encoding="utf-8"
             )
         monkeypatch.chdir(tmp_path / "r1")
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code != 0
-        assert (tmp_path / "r1" / "ran.log").read_text().split() == ["ran"]
-        assert (tmp_path / "r2" / "ran.log").read_text().split() == ["ran"]
+        assert (tmp_path / "r1" / "ran.log").read_text(encoding="utf-8").split() == ["ran"]
+        assert (tmp_path / "r2" / "ran.log").read_text(encoding="utf-8").split() == ["ran"]
 
     def test_the_recursion_guard_comes_before_the_pin(self, pipeline_project, tmp_path, monkeypatch):
         """A refused call must not write a lockfile first."""
         other = tmp_path / "other"
         other.mkdir()
-        (other / "chartbook.toml").write_text("[dataframes.x]\npath = './x.parquet'\ndocs = 'd'\n")
+        (other / "chartbook.toml").write_text("[dataframes.x]\npath = './x.parquet'\ndocs = 'd'\n", encoding="utf-8")
         (other / "x.parquet").write_bytes(b"x")
-        with open(pipeline_project / "chartbook.toml", "a") as f:
+        with open(pipeline_project / "chartbook.toml", "a", encoding="utf-8") as f:
             f.write(f'\n[scripts]\nbuild = "{CHARTBOOK} run > nested.log 2>&1"\n[dependencies]\nother = {{ path = "{other}" }}\n')
         monkeypatch.chdir(pipeline_project)
         import json

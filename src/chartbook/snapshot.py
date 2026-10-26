@@ -2689,7 +2689,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     code_changed_at = _code_changed_at(taken, store)
     if code_changed_at:
         marker["code_changed_at"] = code_changed_at
-    (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+    (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     held = Path(store.get(taken.documents["content_hash"]))
     for relative in taken.documents.get("files", []):
@@ -2919,7 +2919,7 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
         try:
             target = folder / plain
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8")
+            target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8", newline="\n")
         except OSError:
             report.left_out.append((f"model/{name}", f"its scores could not be written to {plain}"))
     site_dir = safe_relative((raw.get("project") or {}).get("site_dir"))

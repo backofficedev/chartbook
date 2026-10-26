@@ -99,7 +99,7 @@ class TestSnapshotRecords:
         assert store.snapshot_files(COMMIT, "_top") == []
         document = {"schema": "chartbook/snapshot/v1", "root": "acme/rates", "made_at": "2026-10-16T01:02:03Z", "records": []}
         written = store.write_snapshot(COMMIT, "_top", "20261016T010203Z", document)
-        assert json.loads(Path(written).read_text())["root"] == "acme/rates"
+        assert json.loads(Path(written).read_text(encoding="utf-8"))["root"] == "acme/rates"
         again = store.write_snapshot(COMMIT, "_top", "20261016T010203Z", document)
         assert again != written  # the same moment twice is two records
         assert store.snapshot_commits() == {COMMIT}
