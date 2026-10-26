@@ -2785,7 +2785,7 @@ def _run_pin(project_dir, dependencies=None, on_refused=None):
     """Run a pin, or an update when *dependencies* is given; exit 1 on a problem.
 
     :param on_refused: Called before exiting when the lockfile was not
-        written because it would leave the pipeline in a cycle.
+        written because its new pins would close a cycle, or lead into one.
     """
     from chartbook import lock
     from chartbook.store import StoreError
@@ -2866,8 +2866,9 @@ def pin(project_dir, frozen):
     None of the other pipeline's data in its folder is read. It can be
     half-way through a change, and what you pin is still the build that
     was declared ready. Its chartbook.toml and chartbook.lock are read, to
-    see that the pin makes no cycle: a pin that would make this pipeline
-    depend, through what it depends on, on itself is not written.
+    see that the pin makes no cycle: a pin whose new or moved entries would
+    lead back to this pipeline, or into pipelines that depend on each
+    other, is not written.
 
     A pin that already exists is never moved, whatever the other pipeline
     has done since; `chartbook update` moves pins. What `pin` does do again
@@ -3045,7 +3046,7 @@ def add_command(pipeline, key, commit, project_dir):
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
 
     def put_back():
-        # A dependency that would leave this pipeline in a cycle is not added either
+        # A dependency whose pin would close a cycle, or lead into one, is not added either
         with open(manifest_file, "w", encoding="utf-8", newline="") as f:
             f.write(text)
         click.echo(f"{pipeline} was not added: {manifest_file} is as it was.", err=True)

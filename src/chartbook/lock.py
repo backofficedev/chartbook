@@ -899,10 +899,10 @@ def _sync_now(
         anything, is why it is not to be written: then nothing is written,
         neither the lockfile, nor the store's note of it, nor any object
         (what the pin puts in the store is held until then), and the
-        report's ``refused`` says why. By default a lockfile that would
-        leave the pipeline in a cycle of dependencies is refused
-        (:func:`_refuse_a_cycle`); a caller that gives its own guard
-        decides instead.
+        report's ``refused`` says why. By default a lockfile whose new or
+        moved entries would close a cycle of dependencies, or lead into
+        one, is refused (:func:`_refuse_a_cycle`); a caller that gives its
+        own guard decides instead.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -2710,8 +2710,14 @@ def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optio
     def refuse(after: Lock) -> Optional[str]:
         from chartbook import lineage
 
+        # Where each is pinned from, which is all the walk reads: a hash a pin
+        # holds back until the lockfile is let through is no change
+        def pinned_from(entry: Optional[dict]) -> tuple:
+            entry = entry or {}
+            return json.dumps(entry.get("location"), sort_keys=True, default=str), entry.get("snapshot")
+
         filed = {entry.get("id"): entry for entry in before.dependencies}
-        new = {entry.get("id") for entry in after.dependencies if filed.get(entry.get("id")) != entry}
+        new = {entry.get("id") for entry in after.dependencies if pinned_from(filed.get(entry.get("id"))) != pinned_from(entry)}
         if not new:
             return None
         try:

@@ -65,7 +65,8 @@ it is about to make, so a refused run leaves your lockfile and the store as they
 pin would take changes while the run goes on, that pin is refused when its turn comes and is not
 written, though the pipelines before it in the run were pinned and built by then, and with
 `--snapshot` snapshotted. `chartbook pin`, `chartbook update`, `chartbook add` and the first read
-of a dependency refuse a pin that would make such a cycle too, and write nothing.
+of a dependency refuse a pin whose new entries would close a cycle, or lead into one, and write
+nothing.
 
 A cycle is found in the folders on your machine as soon as it is declared, and through the
 snapshot each pin names, since a pin does not move whatever the folder says now. A `git`

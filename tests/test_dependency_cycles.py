@@ -1114,12 +1114,17 @@ class TestWhatTheGuardsReviewFound:
 
     def test_a_fork_in_a_clone_of_its_original(self, tmp_path):
         """A fork as a host makes one: a clone of the original's repository, another remote, the same folder in it."""
+        from chartbook.identity import clear_git_remote_cache
+
         original, fork = (tmp_path / "original").resolve(), (tmp_path / "fork").resolve()
         rates = _pipeline(original / "rates", "acme/rates", "treasury")
         _repository(original)
+        _git(original, "remote", "add", "origin", "https://example.org/acme/rates.git")
+        clear_git_remote_cache()
         snapshot.make(rates)
         _git(tmp_path, "clone", "--quiet", str(original), str(fork))
-        _git(fork, "remote", "set-url", "origin", "https://example.org/someone/rates.git")
+        _git(fork, "remote", "set-url", "origin", "https://example.org/someone/rates.git")  # its own address: a fork
+        clear_git_remote_cache()
         mine = fork / "rates"
         (mine / "_data").mkdir(exist_ok=True)
         _declare(mine, {"orig": {"path": "../../original/rates"}})
@@ -1311,3 +1316,99 @@ class TestWhatTheGuardsSecondReviewFound:
         monkeypatch.setattr(lineage, "cycle", lambda *a, **k: walks.append(1) or original(*a, **k))
         lock.pin(forecast)
         assert walks == []
+
+
+@posix
+class TestWhatTheGuardsThirdReviewFound:
+    def _fork(self, work):
+        rates = _pipeline(work / "rates", "acme/rates", "treasury")
+        fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
+        _repository(work)
+        snapshot.make(rates)
+        assert lock.pin(fork).written
+        snapshot.make(fork)
+        return rates, fork
+
+    def test_what_reads_a_fork_whose_original_moved(self, work):
+        """The fork's snapshot recorded its original at ../rates, which has moved since: still another pipeline."""
+        rates, fork = self._fork(work)
+        _git(work, "mv", "rates", "rates2")
+        _declare(fork, {"orig": {"path": "../rates2"}})
+        _commit(work)
+        d = _pipeline(work / "d", "acme/d", "ds", {"f": {"path": "../fork"}})
+        _commit(work)
+        assert lock.pin(d).written and lineage.cycle(d) is None
+
+    @pytest.mark.parametrize("key", ["z", "0z"])
+    def test_the_verdict_does_not_turn_on_key_order(self, work, key):
+        rates, fork = self._fork(work)
+        c = _pipeline(work / "c", "acme/c", "cs", {"acme/rates": {}})
+        _commit(work)
+        assert lock.pin(c).written
+        snapshot.make(c)
+        _git(work, "mv", "rates", "rates2")
+        _declare(fork, {"orig": {"path": "../rates2"}})
+        _commit(work)
+        d = _pipeline(work / "d", "acme/d", "ds", {"acme/c": {}, key: {"path": "../fork"}})
+        _commit(work)
+        assert lineage.cycle(d) is None and lock.pin(d).written
+
+    def test_an_update_that_moves_nothing_is_not_refused(self, tmp_path, work):
+        """r's git dependency g is in a cycle with h, pinned before; an update with nothing to move changes no entry."""
+        g = _git_repository((tmp_path / "g").resolve(), "acme/g", "gs")
+        h = _git_repository((tmp_path / "h").resolve(), "acme/h", "hs", {"acme/g": {"git": str(g)}})
+        _declare(g, {"acme/h": {"git": str(h)}})
+        _pin_anyway(g)
+        _commit(g)
+        r = _pipeline(work / "r", "acme/r", "rs", {"acme/g": {"git": str(g)}})
+        _pin_anyway(r)
+        before = _lockfile(r)
+        assert lock.update(r).refused == "" and _lockfile(r) == before
+
+    def test_a_cycle_across_two_clones_of_one_repository(self, tmp_path):
+        """In clone two, q reads x; clone one's x comes to read clone two's q. One pipeline x, in two folders."""
+        one = (tmp_path / "one").resolve()
+        x = _pipeline(one / "x", "acme/x", "xs")
+        _pipeline(one / "q", "acme/q", "qs")
+        _repository(one)
+        two = (tmp_path / "two").resolve()
+        _git(tmp_path, "clone", "--quiet", str(one), str(two))
+        for name in ("x", "q"):
+            _pipeline(two / name, f"acme/{name}", f"{name}s")
+        snapshot.make(two / "x")
+        _declare(two / "q", {"x": {"path": "../x"}})
+        _commit(two)
+        assert lock.pin(two / "q").written
+        snapshot.make(two / "q")
+        _declare(x, {"q": {"path": "../../two/q"}})
+        _commit(one)
+        assert "these pipelines depend on each other" in lock.pin(x).refused
+
+    def test_a_read_is_tried_again_once_the_store_has_another_snapshot(self, work, monkeypatch):
+        """forecast's snapshot leads back to fred; forecast drops that, and makes a new one: fred's next read goes through."""
+        from chartbook import data
+        from chartbook.errors import AssetNotPinnedError
+
+        fred = _pipeline(work / "fred", "acme/fred", "series")
+        forecast = _pipeline(work / "forecast", "acme/forecast", "outlook", {"acme/fred": {}})
+        _repository(work)
+        snapshot.make(fred)
+        lock.pin(forecast)
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        monkeypatch.chdir(fred)
+        with pytest.raises(AssetNotPinnedError, match="cannot be pinned"):
+            data.load("acme/forecast:outlook")
+        _declare(forecast, {})
+        lock.pin(forecast)
+        _commit(work)
+        snapshot.make(forecast)
+        assert data.load("acme/forecast:outlook").collect().height == 1
+
+    def test_a_fork_that_reads_its_original_by_git_is_taken_for_one(self, tmp_path):
+        """A copy in the git cache stands for no folder: under one ID it is one pipeline, as the docs say."""
+        original = _git_repository((tmp_path / "original").resolve(), "acme/rates", "treasury")
+        fork = _git_repository((tmp_path / "fork").resolve(), "acme/rates", "treasury")
+        _declare(fork, {"orig": {"git": str(original)}})
+        _commit(fork)
+        assert "it depends on itself" in lock.pin(fork).refused

@@ -512,13 +512,15 @@ def cycle(
     snapshot is one node, and a cycle is a pipeline met again on the way up
     from itself. Two pipelines may share an ID, as a fork that reads its
     original by ``path`` does. They are told apart only by what the way to
-    each says (:meth:`_Finder.same`): a folder on this machine stands for
-    itself (a copy in the git cache does not); the snapshot a folder
-    dependency's pin names, of that folder's ID, stands for that folder;
-    and an input a snapshot recorded by ``path`` under its own pipeline's
-    ID is another pipeline than the one that recorded it. Anything else is
-    one under its ID, so that a cycle is never passed over for want of
-    knowing. A folder or a snapshot walked once is not walked again
+    each says (:meth:`_Finder.same`): a folder on this machine is its
+    folder in its repository, so two clones of one repository hold one
+    pipeline in the same folder of each and a fork at another address
+    another (a copy in the git cache stands for no folder); the snapshot a
+    folder dependency's pin names, of that folder's ID, stands for that
+    folder; an input a snapshot recorded by ``path`` is the folder beside
+    the recorder where that is known, else, under the recorder's own ID,
+    another pipeline than the recorder. Anything else is one under its ID,
+    so that a cycle is never passed over for want of knowing. A folder or a snapshot walked once is not walked again
     unless something above it is reachable from it, which is a cycle.
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
@@ -574,7 +576,7 @@ def cycle(
     #: names that place, once its walk is done
     reach: dict[str, set] = {}
 
-    def visit(source: object, place: str) -> tuple[Optional[Cycle], set]:
+    def visit(source: object, place: str, token: object) -> tuple[Optional[Cycle], set]:
         below: set = set()
         if len(chain) > DEEPEST:
             return None, below  # not recorded: a shorter way to it may still walk it
@@ -588,23 +590,41 @@ def cycle(
             if at is not None:
                 return Cycle(edges[at:] + [edge], edges[:at]), below
             below.add(edge.dependency)
-            known = reach.get(named)
+            # Which pipelines a place leads to turns on which pipeline it is met as
+            known = reach.get((named, token))
             if known is not None and not (known & {met for met, _ in chain}):
                 below |= known  # walked already, and nothing above here is reachable from it
                 continue
             chain.append((edge.dependency, token))
             edges.append(edge)
-            found, theirs = visit(child, named)
+            found, theirs = visit(child, named, token)
             chain.pop()
             edges.pop()
             if found is not None:
                 return found, below
             below |= theirs
-        reach[place] = below
+        reach[(place, token)] = below
         return None, below
 
-    found, _ = visit(directory, str(directory))
+    found, _ = visit(directory, str(directory), chain[0][1])
     return found
+
+
+def _same_place(one: tuple, other: tuple) -> bool:
+    """Whether two folders hold one pipeline: one folder, or the same folder of two clones or worktrees of one repository.
+
+    One repository by its address where both have one (a fork is at
+    another), else by its first commit where both have it.
+    """
+    if _same_folder(one[1], other[1]):
+        return True
+    if one[2] is None or other[2] is None or one[2] != other[2]:
+        return False  # a folder not in git, or another folder of its repository
+    if one[3] and other[3]:
+        return one[3] == other[3]
+    if one[4] and other[4]:
+        return one[4] == other[4]
+    return False
 
 
 def _same_folder(one: str, other: str) -> bool:
@@ -661,6 +681,8 @@ class _Finder:
         self.read_here = False
         #: The git cache's folder, once asked: a copy in it stands for no folder
         self._git_root: Optional[Path] = None
+        #: Each folder's place in its repository, worked out once a walk
+        self._folder_tokens: dict = {}
 
     def children(self, pipeline: str, source: object, token: object = None) -> list[tuple[Edge, object, str, object]]:
         """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place, which pipeline it is)``.
@@ -780,7 +802,13 @@ class _Finder:
         return children
 
     def folder_token(self, folder: Path) -> object:
-        """Which pipeline a folder is: itself, on this machine; nothing said for a copy in the git cache, which another clone may be."""
+        """Which pipeline a folder is: its folder in its repository; nothing said for a copy in the git cache, which another clone may be.
+
+        ``("folder", path, subdirectory, address, first commit)``: two clones
+        or worktrees of one repository hold one pipeline in the same
+        folder of each, and a fork, a repository at another address,
+        another (:func:`_same_place`). A folder not in git is its path.
+        """
         from chartbook.gitcache import default_git_cache
 
         place = Path(folder).resolve()
@@ -792,7 +820,18 @@ class _Finder:
                 self._git_root = Path("/nonexistent-git-cache")
         if place == self._git_root or self._git_root in place.parents:
             return None
-        return ("folder", str(place))
+        key = str(place)
+        if key not in self._folder_tokens:
+            from chartbook.identity import get_git_remote_url, remote_to_web_url, repository_key, web_link
+
+            try:
+                code = snapshot.code_of(place)
+            except snapshot.SnapshotError:
+                self._folder_tokens[key] = ("folder", key, None, "", "")
+            else:
+                address = repository_key(web_link(remote_to_web_url(get_git_remote_url(code.top))))
+                self._folder_tokens[key] = ("folder", key, code.subdirectory, address, snapshot._first_commit(code.top))
+        return self._folder_tokens[key]
 
     def same(self, one: object, other: object) -> bool:
         """Whether two pipelines met under one ID are one, by what the ways to them say.
@@ -815,7 +854,7 @@ class _Finder:
         if other[0] == "other":
             return not self._known_same(other[1], one)
         if one[0] == "folder" and other[0] == "folder":
-            return _same_folder(one[1], other[1])
+            return _same_place(one, other)
         return True
 
     def _recorded_token(self, pipeline: str, location: dict, below, token: object) -> object:
@@ -842,7 +881,9 @@ class _Finder:
                             return self.folder_token(there) or ("snapshot", str(below.path))
                 except Exception:  # noqa: BLE001 - a folder that cannot be read says nothing
                     pass
-            elif below.pipeline == pipeline:
+            if below.pipeline == pipeline:
+                # Not there now (moved, or not on this machine): still another folder than the
+                # recorder's, since a pin refuses a path to a pipeline's own folder
                 return ("other", token)
         return ("snapshot", str(below.path))
 
@@ -851,7 +892,7 @@ class _Finder:
         if one is None or other is None:
             return False
         if one[0] == "folder" and other[0] == "folder":
-            return _same_folder(one[1], other[1])
+            return _same_place(one, other)
         return one == other
 
     def _clone(self, url: str, commit: str) -> Optional[Path]:

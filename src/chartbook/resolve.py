@@ -1994,9 +1994,12 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     memo = (str(manifest_dir), dependency.id)
     tried = _tried.get(memo)
     retry_unwritable = tried is not None and tried[2] == "unwritable" and _writable(manifest_dir)
+    # A cycle may be gone once the store has another snapshot (its owner dropped the dependency)
+    retry_cycle = tried is not None and tried[2] == "cycle" and tried[4:5] != (len(found),)
     if (
         tried is not None
         and not retry_unwritable
+        and not retry_cycle
         and (not has_snapshots or tried[2] in ("unwritable", "cycle"))
         and time.monotonic() - tried[0] < _TRY_AGAIN_SECONDS
     ):
@@ -2010,7 +2013,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
             if report.refused:
                 # Pinning it would make a cycle: nothing was written, and nothing is read. Not
                 # tried again on every read of a loop, for a while
-                _tried[memo] = (time.monotonic(), 0, "cycle", report.refused)
+                _tried[memo] = (time.monotonic(), 0, "cycle", report.refused, len(found))
                 raise AssetNotPinnedError(
                     not_pinned.asset, "cycle", f"{not_pinned.asset!r} cannot be pinned: {report.refused}"
                 )
