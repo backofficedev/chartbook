@@ -869,7 +869,10 @@ check is that the lockfile is complete and that every pin can be had.
    first version of 4a did, as {doc}`asset-graph` describes: it ran `build` in every pipeline
    of the dependency graph, each in its own folder. That was taken out before it was merged.
    It was also pointless once pins did not move: the other pipeline was rebuilt, and this one
-   went on reading its pinned copy.
+   went on reading its pinned copy. *(2026-10-26: `chartbook run --upstream`, asked for by
+   the maintainer, builds and snapshots a `path` dependency that has no snapshot to pin,
+   when the folder is trusted and committed: only when asked, and only where there is
+   nothing to pin.)*
 4. **A build is refreshed on purpose.** A git dependency is built once for a commit, and
    `chartbook run --force` builds it again. A pipeline that pulls live data is not rebuilt
    because a day has passed.

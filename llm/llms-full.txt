@@ -101,7 +101,7 @@ chartbook docs generate --keep-build-dirs  # Debug mode
 ### chartbook build
 
 ```bash
-chartbook build [OPTIONS] [OUTPUT_DIR]
+chartbook build [OPTIONS] [OUTPUT_DIR]   # --upstream: build and snapshot each path upstream with no snapshot first
 ```
 
 Make everything current: run the project's `build` script (as `chartbook run` does: git dependencies built once, what has no pin pinned, then the script), and then render the site (as `chartbook docs generate` does, with the same arguments and options). If the script fails, the site is not rendered and the exit code is the script's. After the script has run, a declared file that is missing is an error even when none is there (no "not built yet"). With no `build` script in `[scripts]` it says so and only renders. In a catalog the script is run in each of the catalog's pipelines before the catalog's site is rendered. **Breaking:** `chartbook build` used to mean "render the site", which is now `chartbook docs generate`; a build script (a `dodo.py` task) that says `chartbook build -f` must say `chartbook docs generate -f`. Called from inside the build script it is itself running, `chartbook build` renders the site and prints a warning instead of running the script again. In a folder not trusted to run (`chartbook trust`), the script is not run and the command stops, naming the folder and the command that trusts it; with no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.

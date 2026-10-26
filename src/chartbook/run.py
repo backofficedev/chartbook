@@ -14,11 +14,13 @@ makes its assets current, and it is usually one word: ``doit``, ``make``,
 what the pipeline depends on can be read, and it does that without ever
 touching another pipeline's working directory:
 
-- **It never builds in a folder the pipeline depends on.** A ``path``
-  dependency is a directory somebody works in. They may be half-way
-  through a change. This pipeline reads what is pinned, not what is there,
-  so running that folder's build would disturb its owner and change
-  nothing this pipeline reads. It is its owner's to build.
+- **It never builds in a folder the pipeline depends on**, unless asked
+  to with ``--upstream``. A ``path`` dependency is a directory somebody
+  works in. They may be half-way through a change. This pipeline reads
+  what is pinned, not what is there, so running that folder's build would
+  disturb its owner and change nothing this pipeline reads. It is its
+  owner's to build; ``--upstream`` builds and snapshots one with no
+  snapshot to pin, for folders that are yours.
 - **A git dependency is built once, in a clean copy.** Nobody works in
   ChartBook's own copy of a commit, so there is nothing to disturb. The
   build runs in a writable copy of the checkout
@@ -42,6 +44,7 @@ is never built from the outside in.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -310,6 +313,9 @@ class Step:
         missing: Why it cannot be run, if it cannot: it could not be fetched.
         built: For a ``git`` dependency, whether its build has already
             finished in this working copy.
+        snapshot_first: With ``--upstream``, whether it is snapshotted once
+            built, before what pins it: an upstream, and a catalog member
+            another pipeline of the run pins by path that has no snapshot.
     """
 
     id: str
@@ -319,6 +325,7 @@ class Step:
     has_dependencies: bool = False
     missing: str = ""
     built: bool = False
+    snapshot_first: bool = False
 
 
 @dataclass
@@ -453,6 +460,8 @@ def plan(
     asked = set(roots)
 
     order: list[Step] = []
+    #: The run's own pipelines a pin of another of them needs snapshotted first (--upstream)
+    snapshot_first: set[Path] = set()
     done: set[Path] = set()
     visiting: list[Path] = []
     caches = [git_cache]  # made only if some pipeline has a git dependency
@@ -576,10 +585,14 @@ def plan(
                     # is in the order only if it was asked for itself, as
                     # another pipeline of the same catalog.
                     there = Path(entry["_resolved_path"]).resolve()
+                    # With --upstream, from what this run is about only (not a git
+                    # dependency's own manifest): built and snapshotted first
+                    wanted = upstream and source in ("asked", "upstream") and _nothing_to_pin(directory, key, entry, there, store)
                     if there in asked:
+                        if wanted:
+                            snapshot_first.add(there)
                         visit(there, "asked", key)
-                    elif upstream and _nothing_to_pin(directory, key, entry, there, store):
-                        # With --upstream: built and snapshotted here first, its own first
+                    elif wanted:
                         visit(there, "upstream", key)
             visiting.pop()
 
@@ -605,7 +618,14 @@ def plan(
 
     for root in roots:
         visit(root, "asked", str(root))
-    return order
+    import dataclasses
+
+    return [
+        dataclasses.replace(
+            step, snapshot_first=step.source == "upstream" or (step.directory is not None and step.directory in snapshot_first)
+        )
+        for step in order
+    ]
 
 
 def _cycle(step: Step, store: Optional[Store], git_cache: Optional[GitCache], lockfiles=None, shared=None, members=None):
@@ -676,6 +696,19 @@ def _cycle_said(loop) -> str:
     return f"{lineage.cycle_lead(loop)}, so there is no order to build in.\n{lineage.explain_cycle(loop)}"
 
 
+@contextlib.contextmanager
+def _alone_while_built(step: Step):
+    """For an upstream, one build and snapshot of it at a time, across processes: two runs that depend on it take turns.
+
+    The lock is a file under the cache, as a pin's is, keyed by the folder.
+    """
+    if step.source != "upstream" or step.directory is None:
+        yield
+        return
+    with lock._one_at_a_time(Path(step.directory) / ".chartbook-upstream-build"):
+        yield
+
+
 def _nothing_to_pin(directory: Path, key: str, entry: dict, there: Path, store: Optional[Store]) -> bool:
     """Whether a ``path`` dependency has no pin and no snapshot a pin would take: what ``--upstream`` builds and snapshots.
 
@@ -686,6 +719,11 @@ def _nothing_to_pin(directory: Path, key: str, entry: dict, there: Path, store: 
     if not (there / MANIFEST_NAME).is_file():
         return False
     try:
+        if resolve_project_type(_read_manifest(there), str(there / MANIFEST_NAME)) != "pipeline":
+            return False  # a catalog: the pin says so
+    except (OSError, ValueError):
+        return False  # a manifest that cannot be read: the pin says so
+    try:
         locked = lock.read_lock(directory)
     except lock.LockError:
         locked = None
@@ -693,9 +731,13 @@ def _nothing_to_pin(directory: Path, key: str, entry: dict, there: Path, store: 
     if locked is not None and lock._has_a_pin(listed, locked.assets_of(key), entry):
         return False
     try:
-        newest, _ = snapshots.newest_for(there, store if store is not None else default_store())
+        snapshots.code_of(there)
     except snapshots.SnapshotError:
-        return True
+        return True  # not in git: refused, saying so, before anything runs
+    try:
+        newest, _ = snapshots.newest_for(there, store if store is not None else default_store())
+    except (snapshots.SnapshotError, StoreError, OSError, ValueError):
+        return False  # a record that cannot be read now: the pin says so, and nothing is built for it
     return newest is None
 
 
@@ -986,13 +1028,13 @@ def run(
             f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
             f"{script} --snapshot` has nothing to take one of."
         )
-    if snapshot or upstreams:
+    if snapshot or any(step.snapshot_first for step in steps):
         # Found out now, and not after an hour of building. The lockfile
         # does not count: the pin before the build is about to write it,
         # and the snapshot records what it says in `inputs`. An upstream is
         # always snapshotted: that is what a pin of it takes
         for step in steps:
-            snapshotted = (snapshot and step.source == "asked") or step.source == "upstream"
+            snapshotted = (snapshot and step.source == "asked") or step.snapshot_first
             if snapshotted and step.directory and script in step.scripts:
                 try:
                     code = snapshots.require_committed(
@@ -1047,7 +1089,7 @@ def run(
     if building and not remake:
         # A costly output that is not on disk while the store has a version
         # of it: found out now, before any pipeline's build remakes it
-        said = []
+        said, own, upstream_folders = [], False, []
         for step in steps:
             if step.source not in ("asked", "upstream") or step.directory is None or script not in step.scripts:
                 continue
@@ -1056,12 +1098,25 @@ def run(
                     f"{step.id}: {name} is kept, and is not on disk ({declared}). The store has its version "
                     f"from {taken.commit[:7]}, made {taken.made_at[:10]} {taken.made_at[11:16]} UTC."
                 )
+                if step.source == "upstream":
+                    if step.directory not in upstream_folders:
+                        upstream_folders.append(step.directory)
+                else:
+                    own = True
         if said:
+            import shlex
+
             them = "them" if len(said) > 1 else "it"
+            # An upstream's own are put back from its own folder
+            restore = (["chartbook restore"] if own else []) + [
+                f"chartbook restore --project-dir {shlex.quote(str(folder))}" for folder in upstream_folders
+            ]
+            again = f"{remake_command} --upstream" if upstream else remake_command
+            lines = [f"\n  {command}{' ' * max(1, 28 - len(command))}puts {them} back" for command in restore]
             raise RunError(
                 "\n".join(said)
-                + f"\n  chartbook restore{' ' * max(1, 28 - len('chartbook restore'))}puts {them} back"
-                + f"\n  {remake_command}{' ' * max(1, 28 - len(remake_command))}runs the build without {them}, which makes {them} again"
+                + "".join(lines)
+                + f"\n  {again}{' ' * max(1, 28 - len(again))}runs the build without {them}, which makes {them} again"
                 + "\nNothing was built."
             )
 
@@ -1072,140 +1127,159 @@ def run(
         for step in upstreams:
             echo(f"  {step.id}    in {step.directory}")
     for step in steps:
-        if step.directory is None:
-            echo(f"{step.id}: not run. {step.missing}")
-            report.skipped.append((step, step.missing))
-            continue
-
-        command = step.scripts.get(script)
-        if command is None:
-            why = f"it has no script named {script!r}"
-            if step.source == "asked":
-                echo(f"{step.id}: not run. {why[0].upper()}{why[1:]}.")
-            # A git dependency with no build script is the ordinary case of
-            # a repository that commits its data. There is nothing to say.
-            report.skipped.append((step, why))
-            continue
-
-        if step.source == "git":
-            if step.built and not force:
-                echo(f"{step.id}: built already, at {step.directory.name[:7]}")
-                report.skipped.append((step, "it is built already"))
+        with _alone_while_built(step):
+            if step.directory is None:
+                echo(f"{step.id}: not run. {step.missing}")
+                report.skipped.append((step, step.missing))
                 continue
-            # Until this build finishes, the copy is not a built one
-            forget_built(step.directory)
 
-        if running(step.directory, script):
-            raise RunError(
-                f"`chartbook run {script}` was called from {step.id}'s own "
-                f"{script!r} script, which would then run itself without end. "
-                f"Take it out of the script."
-            )
+            command = step.scripts.get(script)
+            if command is None:
+                why = f"it has no script named {script!r}"
+                if step.source == "asked":
+                    echo(f"{step.id}: not run. {why[0].upper()}{why[1:]}.")
+                # A git dependency with no build script is the ordinary case of
+                # a repository that commits its data. There is nothing to say.
+                report.skipped.append((step, why))
+                continue
 
-        if building and frozen:
-            # Nothing is written but the store's note that this machine
-            # reads these pins, so that gc elsewhere keeps them. Either
-            # every pin can be had, or nothing runs. Checked whether or not
-            # the manifest has dependencies now: a lockfile may still list
-            # one it dropped.
-            checked = lock.verify(step.directory, store, note=True)
-            if on_verify is not None:
-                on_verify(step, checked)
-            if checked.problems:
-                report.failed, report.exit_code = step, 1
-                report.reason = (
-                    "its lockfile is not complete, or a pin is not in the store, "
-                    "and --frozen pins nothing"
-                )
-                break
-        elif building and step.has_dependencies:
-            # What its code reads from other pipelines has to be pinned
-            # before it runs. Nothing that is pinned is moved. A pin that
-            # would lead into a cycle is not written: walked with the
-            # lockfiles of the pipelines still to come as they were worked
-            # out above, since what was built since may have changed them
-            def refuse_a_cycle(after, step=step):
-                loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members)
-                if loop is None:
-                    return None
-                into = "lead into" if loop.way_in else "close"
-                return (
-                    f"pinning what it depends on would {into} a cycle: {_cycle_said(loop)}\n"
-                    f"Its lockfile was left as it was, and it was not built"
+            if step.source == "upstream":
+                # Another run may have made its snapshot while this one waited: then it is not built again
+                try:
+                    newest, _ = snapshots.newest_for(step.directory, store if store is not None else default_store())
+                except (snapshots.SnapshotError, StoreError, OSError, ValueError):
+                    newest = None
+                if newest is not None:
+                    echo(f"{step.id}: has a snapshot now, from {newest.commit[:7]}; not built again")
+                    report.skipped.append((step, "it has a snapshot now"))
+                    continue
+
+            if step.source == "git":
+                if step.built and not force:
+                    echo(f"{step.id}: built already, at {step.directory.name[:7]}")
+                    report.skipped.append((step, "it is built already"))
+                    continue
+                # Until this build finishes, the copy is not a built one
+                forget_built(step.directory)
+
+            if running(step.directory, script):
+                raise RunError(
+                    f"`chartbook run {script}` was called from {step.id}'s own "
+                    f"{script!r} script, which would then run itself without end. "
+                    f"Take it out of the script."
                 )
 
-            pins = lock.pin(
-                step.directory, store, git_cache,
-                built_here=set(members),
-                before_writing=refuse_a_cycle,
-            )
-            if pins.refused:
-                report.failed, report.exit_code = step, 1
-                report.reason = pins.refused
-                break
-            would_be.pop(step.directory, None)  # written now: its file is what holds
-            if on_pin is not None:
-                on_pin(step, pins)
-            if pins.problems:
-                report.failed, report.exit_code = step, 1
-                report.reason = "what it depends on could not be pinned"
-                break
-
-        if building and ((snapshot and step.source == "asked") or step.source == "upstream"):
-            # Its snapshot will carry its lineage: found out now, with what
-            # was just pinned, and not after the build
-            try:
-                gaps = snapshots.lineage_gaps(step.directory, store)
-            except (lock.LockError, ValueError) as error:
-                gaps = [str(error)]
-            if gaps:
-                report.failed, report.exit_code = step, 1
-                report.reason = (
-                    "its pins do not account for every dependency, so it could not have a snapshot, "
-                    "and it was not built:\n" + "\n".join(f"  {gap}" for gap in gaps)
-                ).rstrip(".")
-                break
-
-        where = "" if step.directory == here else f"    in {step.directory}"
-        echo(f"{step.id}: {script}{where}")
-        code = execute(command, step.directory, script, foreign=step.source == "git")
-        if code != 0:
-            report.failed, report.exit_code = step, code
-            report.reason = f"its {script!r} script exited with {code}"
-            break
-        if step.source == "git":
-            mark_built(step.directory)
-        report.ran.append(step)
-
-        if (snapshot and step.source == "asked") or step.source == "upstream":
-            # A build that changes a committed file, or that commits, leaves
-            # a folder the commit the build ran at does not describe, and
-            # the label would not be true
-            try:
-                changed = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
-                if changed:
-                    echo(f"{step.id}: its build changed files that are committed:")
-                    for line in changed[:10]:
-                        echo(f"  {line}")
-                    raise snapshots.SnapshotError(
-                        "its build left changes that are not committed, so no "
-                        "snapshot was made"
+            if building and frozen:
+                # Nothing is written but the store's note that this machine
+                # reads these pins, so that gc elsewhere keeps them. Either
+                # every pin can be had, or nothing runs. Checked whether or not
+                # the manifest has dependencies now: a lockfile may still list
+                # one it dropped.
+                checked = lock.verify(step.directory, store, note=True)
+                if on_verify is not None:
+                    on_verify(step, checked)
+                if checked.problems:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = (
+                        "its lockfile is not complete, or a pin is not in the store, "
+                        "and --frozen pins nothing"
                     )
-                now = snapshots.code_of(step.directory).commit
-                if now != commits_before.get(step.directory, now):
-                    raise snapshots.SnapshotError(
-                        f"its build moved the repository from "
-                        f"{commits_before[step.directory][:7]} to {now[:7]}, so no "
-                        f"snapshot was made: the label would not say which code ran"
+                    break
+            elif building and step.has_dependencies:
+                # What its code reads from other pipelines has to be pinned
+                # before it runs. Nothing that is pinned is moved. A pin that
+                # would lead into a cycle is not written: walked with the
+                # lockfiles of the pipelines still to come as they were worked
+                # out above, since what was built since may have changed them
+                def refuse_a_cycle(after, step=step):
+                    loop = _cycle(step, store, git_cache, {**would_be, step.directory: after}, shared, members)
+                    if loop is None:
+                        return None
+                    into = "lead into" if loop.way_in else "close"
+                    return (
+                        f"pinning what it depends on would {into} a cycle: {_cycle_said(loop)}\n"
+                        f"Its lockfile was left as it was, and it was not built"
                     )
-                made = snapshots.make(
-                    step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,)
+
+                pins = lock.pin(
+                    step.directory, store, git_cache,
+                    built_here=set(members),
+                    before_writing=refuse_a_cycle,
                 )
-            except snapshots.SnapshotError as error:
-                report.failed, report.exit_code = step, 1
-                report.reason = str(error).rstrip(".")
+                if pins.refused:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = pins.refused
+                    break
+                would_be.pop(step.directory, None)  # written now: its file is what holds
+                if on_pin is not None:
+                    on_pin(step, pins)
+                if pins.problems:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = "what it depends on could not be pinned"
+                    break
+
+            if building and ((snapshot and step.source == "asked") or step.snapshot_first):
+                # Its snapshot will carry its lineage: found out now, with what
+                # was just pinned, and not after the build
+                try:
+                    gaps = snapshots.lineage_gaps(step.directory, store)
+                except (lock.LockError, ValueError) as error:
+                    gaps = [str(error)]
+                if gaps:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = (
+                        "its pins do not account for every dependency, so it could not have a snapshot, "
+                        "and it was not built:\n" + "\n".join(f"  {gap}" for gap in gaps)
+                    ).rstrip(".")
+                    break
+
+            where = "" if step.directory == here else f"    in {step.directory}"
+            echo(f"{step.id}: {script}{where}")
+            code = execute(command, step.directory, script, foreign=step.source == "git")
+            if code != 0:
+                report.failed, report.exit_code = step, code
+                report.reason = f"its {script!r} script exited with {code}"
                 break
-            report.snapshots.append(made)
-            if on_snapshot is not None:
-                on_snapshot(step, made)
+            if step.source == "git":
+                mark_built(step.directory)
+            report.ran.append(step)
+
+            if (snapshot and step.source == "asked") or step.snapshot_first:
+                # A build that changes a committed file, or that commits, leaves
+                # a folder the commit the build ran at does not describe, and
+                # the label would not be true
+                try:
+                    changed = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
+                    if changed:
+                        echo(f"{step.id}: its build changed files that are committed:")
+                        for line in changed[:10]:
+                            echo(f"  {line}")
+                        raise snapshots.SnapshotError(
+                            "its build left changes that are not committed, so no "
+                            "snapshot was made"
+                        )
+                    now = snapshots.code_of(step.directory).commit
+                    if now != commits_before.get(step.directory, now):
+                        raise snapshots.SnapshotError(
+                            f"its build moved the repository from "
+                            f"{commits_before[step.directory][:7]} to {now[:7]}, so no "
+                            f"snapshot was made: the label would not say which code ran"
+                        )
+                    made = snapshots.make(
+                        step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,)
+                    )
+                except snapshots.SnapshotError as error:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = str(error).rstrip(".")
+                    break
+                report.snapshots.append(made)
+                if on_snapshot is not None:
+                    on_snapshot(step, made)
+                if step.source == "upstream" and (step.directory / lock.LOCK_FILE).is_file():
+                    try:
+                        unrecorded = any(lock.LOCK_FILE in line for line in snapshots.uncommitted(step.directory))
+                    except snapshots.SnapshotError:
+                        unrecorded = False
+                    if unrecorded:
+                        echo(f"{step.id}: its {lock.LOCK_FILE} was written, and is not committed: commit it in {step.directory}.")
     return report

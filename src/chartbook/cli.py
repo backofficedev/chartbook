@@ -372,7 +372,7 @@ def build(remake, upstream, **site):
             err=True,
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
-        _stop_where_a_build_tool_says_chartbook_build(project_dir)
+        _stop_where_a_build_tool_says_chartbook_build(project_dir, upstream=upstream)
         if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True, upstream=upstream) == "render":
             click.echo("The build command was not run; only the site is rendered.", err=True)
             _stop_on_a_cycle(project_dir)
@@ -425,7 +425,7 @@ def _stop_on_a_cycle(project_dir):
             raise SystemExit(1)
 
 
-def _stop_where_a_build_tool_says_chartbook_build(project_dir):
+def _stop_where_a_build_tool_says_chartbook_build(project_dir, upstream=False):
     """Stop before any build runs when a pipeline's build tool has a task that says `chartbook build`.
 
     Written when `chartbook build` rendered the site (before 0.2.0). Now it
@@ -438,13 +438,15 @@ def _stop_where_a_build_tool_says_chartbook_build(project_dir):
     from chartbook import run as runner
     from chartbook.manifest import BUILD_SCRIPT
 
+    from chartbook.store import StoreError
+
     try:
-        steps = runner.plan(project_dir, git=False)
-    except (runner.RunError, ValueError, OSError):
+        steps = runner.plan(project_dir, git=False, upstream=upstream)
+    except (runner.RunError, ValueError, OSError, StoreError):
         return  # the run says what is wrong
     found = []
     for step in steps:
-        command = step.scripts.get(BUILD_SCRIPT) if step.directory is not None and step.source == "asked" else None
+        command = step.scripts.get(BUILD_SCRIPT) if step.directory is not None and step.source in ("asked", "upstream") else None
         clash = runner.build_tool_runs_chartbook_build(step.directory, command) if command else None
         if clash is not None:
             name, number, line = clash
@@ -835,9 +837,11 @@ def _ask_before_running(project_dir, script, may_render, upstream=False) -> str:
 
     if not _can_ask():
         return "go"
+    from chartbook.store import StoreError
+
     try:
         steps = runner.plan(project_dir, git=False, upstream=upstream)
-    except (runner.RunError, ValueError, OSError):
+    except (runner.RunError, ValueError, OSError, StoreError):
         return "go"  # the run says what is wrong
     try:
         waiting = [
@@ -858,7 +862,10 @@ def _ask_before_running(project_dir, script, may_render, upstream=False) -> str:
             click.echo("Nothing was run.", err=True)
             raise SystemExit(1)
         return "go"
-    folders = [(step.directory, step.id, None) for step in waiting]
+    folders = [
+        (step.directory, step.id, "an upstream: built, then snapshotted" if step.source == "upstream" else None)
+        for step in waiting
+    ]
     if not _ask_to_trust_folders(folders, running=True, script=script):
         click.echo("Nothing was run.", err=True)
         raise SystemExit(1)
@@ -3244,9 +3251,9 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     pinned, so its code can read it. A pin that exists is never moved: you
     are told what has changed, and `chartbook update` moves pins.
 
-    It never builds in a folder this pipeline depends on. That folder is
-    somebody's work, and this pipeline reads what is pinned, not what is
-    there.
+    It never builds in a folder this pipeline depends on, unless you say
+    --upstream (below). That folder is somebody's work, and this pipeline
+    reads what is pinned, not what is there.
 
     A dependency that is a git repository is built once, in ChartBook's own
     clean copy of the commit, so that what it builds can be pinned. --force
@@ -3318,7 +3325,7 @@ def _has_script(project_dir, script):
     return any(script in step.scripts for step in steps if step.source == "asked")
 
 
-def _echo_snapshot(report):
+def _echo_snapshot(report, upstream=False):
     """Print what making a snapshot did."""
     taken = report.snapshot
     built = sum(1 for record in taken.assets.values() if record.get("content_hash"))
@@ -3344,7 +3351,9 @@ def _echo_snapshot(report):
             f"'_' and '-', does not read as a hash, and names a version by twelve or more "
             f"of its digits; `chartbook check` says the same."
         )
-    if report.made:
+    if report.made and upstream:
+        click.echo("Snapshot made, for what depends on it in this run to pin.")
+    elif report.made:
         click.echo(
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`."
@@ -3381,7 +3390,7 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: _echo_snapshot(made),
+            on_snapshot=lambda step, made: _echo_snapshot(made, upstream=step.source == "upstream"),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,

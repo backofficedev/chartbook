@@ -153,3 +153,163 @@ class TestUpstream:
         assert "Upstream with no snapshot to pin, built and snapshotted first:" in result.output
         assert result.output.splitlines()[-1] == "Ran build in 2 pipeline(s)."
         assert _order(work) == ["up", "down"]
+
+
+def _catalog(work, *members):
+    import tomli_w
+
+    (work / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in members}})
+    )
+    return work
+
+
+@posix
+class TestWhatTheReviewFound:
+    def test_a_record_that_cannot_be_read_is_not_taken_for_none(self, pair, work):
+        """up's snapshot record cannot be read: up is not built again, and the pin says what is wrong."""
+        up, down = pair
+        taken = snapshot.make(up).snapshot
+        os.chmod(taken.path, 0o600)
+        taken.path.write_text("{ not json")
+        report = run.run(down, upstream=True, echo=lambda line: None)
+        assert report.failed is not None and _order(work) == []
+
+    def test_a_store_that_cannot_be_read_at_a_terminal_is_a_clean_error(self, pair, monkeypatch):
+        from chartbook import cli
+        from chartbook.store import StoreError
+
+        up, down = pair
+
+        def unreadable(*arguments, **keywords):
+            raise StoreError("the store cannot be reached")
+
+        monkeypatch.setattr(cli, "_can_ask", lambda: True)
+        monkeypatch.setattr(snapshot, "newest_for", unreadable)
+        monkeypatch.chdir(down)
+        result = CliRunner().invoke(main, ["run", "--upstream"])
+        assert result.exit_code == 1 and isinstance(result.exception, SystemExit), result.output
+        assert result.output.startswith("Error: ") and "the store cannot be reached" in result.output
+
+    def test_a_catalog_member_another_pins_by_path_is_snapshotted_first(self, work):
+        u = _with_data(work / "u", {"build": LOG})
+        _with_data(work / "a", {"build": LOG}, {"u": {"path": "../u"}})
+        _catalog(work, "a", "u")
+        _commit(work)
+        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
+        assert _order(work) == ["u", "a"] and len(_snapshots_of("u")) == 1 and _snapshots_of("a") == []
+
+    def test_an_upstream_that_depends_on_a_catalog_member(self, work):
+        """d is in the catalog and reads u, which is not; u reads m, which is: m, then u, then d."""
+        _with_data(work / "m", {"build": LOG})
+        _with_data(work / "u", {"build": LOG}, {"m": {"path": "../m"}})
+        _with_data(work / "d", {"build": LOG}, {"u": {"path": "../u"}})
+        _catalog(work, "d", "m")
+        _commit(work)
+        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
+        assert _order(work) == ["m", "u", "d"] and len(_snapshots_of("m")) == 1 and len(_snapshots_of("u")) == 1
+
+    def test_two_pipelines_that_read_one_upstream_build_it_once(self, work):
+        _with_data(work / "u", {"build": LOG})
+        _with_data(work / "a", {"build": LOG}, {"u": {"path": "../u"}})
+        _with_data(work / "b", {"build": LOG}, {"u": {"path": "../u"}})
+        _catalog(work, "a", "b")
+        _commit(work)
+        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
+        assert _order(work) == ["u", "a", "b"] and len(_snapshots_of("u")) == 1
+
+    def test_a_git_dependencys_own_path_is_not_followed(self, work, tmp_path):
+        """A git dependency's manifest names a folder that happens to be here: --upstream does not build it."""
+        import subprocess
+
+        x = _with_data(work / "x", {"build": LOG})
+        repository = tmp_path / "g"
+        _pipeline(repository, None, {"x": {"path": str(x)}}, dataframes={"y": {"path": "./y.parquet", "docs": "d"}})
+        (repository / "y.parquet").write_bytes(b"y")
+        for command in (["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "g"]):
+            subprocess.run(["git", "-c", "user.name=T", "-c", "user.email=t@example.org", *command], cwd=repository, check=True)
+        down = _with_data(work / "down", {"build": LOG}, {"g": {"git": str(repository)}})
+        _commit(work)
+        run.run(down, upstream=True, echo=lambda line: None)
+        assert "x" not in _order(work) and _snapshots_of("x") == []
+
+    def test_one_made_while_waiting_is_not_built_again(self, pair, work, monkeypatch):
+        """Another run snapshots up between this run's plan and its turn to build it."""
+        up, down = pair
+        planned = run.plan
+
+        def plan_then_another_run(*arguments, **keywords):
+            steps = planned(*arguments, **keywords)
+            snapshot.make(up)
+            return steps
+
+        monkeypatch.setattr(run, "plan", plan_then_another_run)
+        said = []
+        assert run.run(down, upstream=True, echo=said.append).failed is None
+        assert any("up: has a snapshot now" in line for line in said)
+        assert _order(work) == ["down"] and len(_snapshots_of("up")) == 1
+
+    def test_an_upstreams_kept_output_names_commands_that_work(self, pair, monkeypatch):
+        from types import SimpleNamespace
+
+        up, down = pair
+        taken = SimpleNamespace(commit="a" * 40, made_at="2026-10-26T00:00:00.000000Z")
+        monkeypatch.setattr(run, "kept_missing", lambda folder, store=None: [("x", "./x.parquet", taken)] if folder == up else [])
+        with pytest.raises(RunError) as raised:
+            run.run(down, upstream=True, echo=lambda line: None)
+        assert f"chartbook restore --project-dir {up}" in str(raised.value)
+        assert "chartbook run --remake --upstream" in str(raised.value)
+
+    def test_a_build_that_moves_the_commit_is_not_snapshotted(self, work):
+        _with_data(work / "up", {"build": 'git -c user.name=T -c user.email=t@example.org commit --quiet --allow-empty -m moved'})
+        down = _with_data(work / "down", {"build": LOG}, {"up": {"path": "../up"}})
+        _commit(work)
+        report = run.run(down, upstream=True, echo=lambda line: None)
+        assert report.failed.id == "up" and "moved the repository" in report.reason and _snapshots_of("up") == []
+
+    def test_a_build_that_leaves_a_new_file_is_not_snapshotted(self, work):
+        _with_data(work / "up", {"build": "echo new > new.txt"})
+        down = _with_data(work / "down", {"build": LOG}, {"up": {"path": "../up"}})
+        _commit(work)
+        report = run.run(down, upstream=True, echo=lambda line: None)
+        assert report.failed.id == "up" and _snapshots_of("up") == []
+
+    def test_an_upstreams_new_lockfile_is_said_to_commit(self, work):
+        import subprocess
+
+        (work / ".gitignore").write_text("_data/\n*.log\n")
+        subprocess.run(["git", "init", "--quiet", "-b", "main"], cwd=work, check=True)
+        w = _with_data(work / "w", {"build": LOG})
+        u = _with_data(work / "u", {"build": LOG}, {"w": {"path": "../w"}})
+        down = _with_data(work / "down", {"build": LOG}, {"u": {"path": "../u"}})
+        _commit(work)
+        snapshot.make(w)
+        said = []
+        assert run.run(down, upstream=True, echo=said.append).failed is None
+        assert f"u: its chartbook.lock was written, and is not committed: commit it in {u}." in said
+
+    def test_at_a_terminal_an_upstream_is_asked_about_as_one(self, pair, work, monkeypatch):
+        from chartbook import cli
+
+        up, down = pair
+        monkeypatch.delenv("CHARTBOOK_TRUST", raising=False)
+        monkeypatch.delenv("CI", raising=False)
+        config.record_trust(down, "run")
+        monkeypatch.setattr(cli, "_can_ask", lambda: True)
+        monkeypatch.chdir(down)
+        result = CliRunner().invoke(main, ["run", "--upstream"], input="y\n")
+        assert result.exit_code == 0, result.output
+        assert "an upstream: built, then snapshotted" in result.output
+        assert config.trust_of(up) == "run" and _order(work) == ["up", "down"]
+
+    def test_build_takes_it(self, pair, monkeypatch):
+        from chartbook import cli
+
+        up, down = pair
+        seen = {}
+        monkeypatch.setattr(cli, "_run_script", lambda *a, **k: seen.update(k))
+        monkeypatch.setattr(cli, "_render_site", lambda **k: None)
+        monkeypatch.chdir(down)
+        result = CliRunner().invoke(main, ["build", "-f", "--upstream"])
+        assert result.exit_code == 0, result.output
+        assert seen.get("upstream") is True
