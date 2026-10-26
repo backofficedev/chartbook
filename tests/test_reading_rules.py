@@ -523,15 +523,20 @@ class TestWhatTheSecondReviewFound:
         finally:
             os.chmod(forecast, 0o755)
 
-    def test_a_copy_that_depends_on_its_original_by_the_same_id_reads_the_original(self, together, monkeypatch):
+    def test_a_copy_that_depends_on_its_original_by_the_same_id_is_refused(self, together, monkeypatch):
+        """An ID names one pipeline: a copy that kept its original's ID and reads the original depends on itself."""
         work, forecast, taken = together
         copy = work / "copy"
         _rates(copy, 9.0)  # acme/rates too
         manifest = (copy / "chartbook.toml").read_text()
         (copy / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = { path = "../rates" }\n')
-        lock.pin(copy)
+        refused = lock.pin(copy).refused
+        assert f"Two pipelines call themselves acme/rates, in {copy} and in {work / 'rates'}" in refused
+        assert "Give one of them an ID of its own" in refused
         monkeypatch.chdir(copy)
-        assert _value("acme/rates:treasury") == [4.0]
+        with pytest.raises(AssetNotPinnedError) as raised:
+            data.load("acme/rates:treasury")
+        assert raised.value.reason == "cycle"
 
     def test_a_bare_name_for_the_pipeline_itself_is_refused(self, together, monkeypatch):
         work, forecast, taken = together
@@ -758,14 +763,17 @@ class TestWhatTheFourthReviewFound:
         with pytest.raises(ValueError, match="more than one dependency's: down, up"):
             data.load("rates:treasury")
 
-    def test_a_fork_may_depend_on_its_original(self, together, monkeypatch):
+    def test_a_fork_under_its_originals_id_cannot_read_it(self, together, monkeypatch):
+        """Under any key: the fork is told to take an ID of its own."""
         work, forecast, taken = together
         fork = work / "fork"
         _rates(fork, 9.0)  # acme/rates too
         manifest = (fork / "chartbook.toml").read_text()
         (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n')
         monkeypatch.chdir(fork)
-        assert _value("orig:treasury") == [4.0]
+        with pytest.raises(AssetNotPinnedError, match="Two pipelines call themselves acme/rates") as raised:
+            data.load("orig:treasury")
+        assert raised.value.reason == "cycle"
 
     def test_a_read_only_pipeline_does_not_pin_on_every_read(self, together, monkeypatch):
         import os
@@ -800,12 +808,12 @@ class TestWhatTheFifthReviewFound:
         (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n')
         _commit(work)
         snapshot.make(work / "rates")
-        lock.pin(fork)
+        assert "Two pipelines call themselves acme/rates" in lock.pin(fork).refused  # an ID names one pipeline
         monkeypatch.chdir(fork)
-        assert _value("acme/rates:treasury") == [4.0]  # the original, known by its folder
+        with pytest.raises(AssetNotPinnedError) as raised:
+            data.load("acme/rates:treasury")  # the original, known by its folder: the fork itself, by its ID
+        assert raised.value.reason == "cycle"
         shutil.move(work / "rates", work / "elsewhere")
-        assert _value("acme/rates:treasury") == [4.0]  # known by the snapshot the lockfile names
-        (fork / "chartbook.lock").unlink()
         with pytest.raises(ValueError, match="names this pipeline"):
             data.load("acme/rates:treasury")  # orig might be it, and is not known to be
 
@@ -885,9 +893,10 @@ class TestWhatTheSeventhReviewFound:
         os.chmod(fork, 0o555)
         monkeypatch.chdir(fork)
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                assert _value("acme/rates:treasury") == [4.0]
+            # Under its original's ID, the fork cannot read it, folder written or not
+            with pytest.raises(AssetNotPinnedError) as raised:
+                data.load("acme/rates:treasury")
+            assert raised.value.reason == "cycle"
             # The original's folder takes another ID, and a snapshot of it
             rates = work / "rates" / "chartbook.toml"
             rates.write_text(rates.read_text().replace('id = "acme/rates"', 'id = "acme/other"'))

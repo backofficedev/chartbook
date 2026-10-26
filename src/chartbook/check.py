@@ -709,12 +709,20 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
             lead = "this pipeline depends on itself" if len(found.edges) == 1 else "these pipelines depend on each other"
         field = "git" if "git" in entry else "path" if "path" in entry else "id"
         around = " -> ".join([edge.pipeline for edge in found.edges] + [found.edges[0].pipeline])
+        if found.two_folders is not None:
+            pipeline, one, other = found.two_folders
+            remedy = (
+                f"Two pipelines call themselves {pipeline}, in {one} and in {other}, and an ID names one "
+                f"pipeline: give one of them an ID of its own (a git remote of its own, or [project] id)"
+            )
+        else:
+            remedy = "Take one of these out of its [dependencies]"
         problems.append(
             Problem(
                 pipeline_dir / "chartbook.toml",
                 _dependency_table(first.key),
                 field,
-                f"{around}: {lead}, so there is no order to build in. Take one of these out of its [dependencies]",
+                f"{around}: {lead}, so there is no order to build in. {remedy}",
             )
         )
     return problems

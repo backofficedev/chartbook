@@ -1076,17 +1076,24 @@ class TestEveryPinRefusesACycle:
 
 @posix
 class TestAForkOfTheSameId:
-    def test_a_fork_that_depends_on_its_original_is_no_cycle(self, work):
-        """fork and rates both call themselves acme/rates; fork reads its original by path. Two pipelines, one ID."""
+    def test_a_copy_under_its_originals_id_that_reads_it_is_told_to_take_its_own(self, work):
+        """fork and rates both call themselves acme/rates, and fork reads rates: an ID names one pipeline, so fork depends on itself."""
         rates = _pipeline(work / "rates", "acme/rates", "treasury")
         fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
         _repository(work)
         snapshot.make(rates)
-        assert lock.pin(fork).written  # the guard tells them apart
-        assert lineage.cycle(fork) is None
-        assert [p for p in run_checks(load_manifest(fork), fork) if "no order to build in" in p.message] == []
-        assert run.run(fork, echo=lambda line: None).failed is None
-        assert _built(work) == ["fork"]
+        said = f"Two pipelines call themselves acme/rates, in {fork} and in {rates}"
+        refused = lock.pin(fork).refused
+        assert refused.startswith("acme/rates: it depends on itself") and said in refused
+        assert "set `[project] id` in its chartbook.toml" in refused
+        (problem,) = [p for p in run_checks(load_manifest(fork), fork) if "no order to build in" in p.message]
+        assert said in problem.message and "give one of them an ID of its own" in problem.message
+        with pytest.raises(run.RunError, match="Two pipelines call themselves acme/rates"):
+            run.run(fork, echo=lambda line: None)
+        assert _built(work) == []
+        # Given an ID of its own, the copy reads its original
+        _pipeline(fork, "acme/rates_experiment", "treasury", {"orig": {"path": "../rates"}})
+        assert lock.pin(fork).written and lineage.cycle(fork) is None
 
     def test_a_pipeline_and_its_own_snapshot_are_one(self, chain):
         """The same pipeline met as its folder and as its snapshot is still one: fred's snapshot leads back to fred."""
@@ -1112,8 +1119,8 @@ class TestWhatTheGuardsReviewFound:
         assert "these pipelines depend on each other" in lock.pin(forecast).refused
         assert _lockfile(forecast) is None
 
-    def test_a_fork_in_a_clone_of_its_original(self, tmp_path):
-        """A fork as a host makes one: a clone of the original's repository, another remote, the same folder in it."""
+    def test_a_fork_with_a_remote_of_its_own_has_an_id_of_its_own(self, tmp_path):
+        """A fork as a host makes one: a clone of the original's repository, another remote. Its ID comes from that remote."""
         from chartbook.identity import clear_git_remote_cache
 
         original, fork = (tmp_path / "original").resolve(), (tmp_path / "fork").resolve()
@@ -1127,7 +1134,11 @@ class TestWhatTheGuardsReviewFound:
         clear_git_remote_cache()
         mine = fork / "rates"
         (mine / "_data").mkdir(exist_ok=True)
+        manifest = tomli.loads((mine / "chartbook.toml").read_text())
+        del manifest["project"]["id"]  # as a pipeline is written: its ID is its repository's
+        (mine / "chartbook.toml").write_text(tomli_w.dumps(manifest))
         _declare(mine, {"orig": {"path": "../../original/rates"}})
+        assert snapshot.pipeline_in(mine) == "someone/rates"
         assert lock.pin(mine).written
         assert lineage.cycle(mine) is None
 
@@ -1252,34 +1263,6 @@ class TestWhatTheGuardsSecondReviewFound:
             data.load("acme/d:ds")
         assert raised.value.reason == "cycle" and _lockfile(a) == before
 
-    def _fork(self, work):
-        rates = _pipeline(work / "rates", "acme/rates", "treasury")
-        fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
-        _repository(work)
-        snapshot.make(rates)
-        assert lock.pin(fork).written
-        snapshot.make(fork)
-        return rates, fork
-
-    @pytest.mark.parametrize("key", ["f", "zz"])
-    def test_what_reads_a_fork_by_path(self, work, key):
-        """The fork's snapshot records its original's, read by path beside it: another pipeline, whatever the key."""
-        rates, fork = self._fork(work)
-        (rates / "x.txt").write_text("x")
-        _commit(work)
-        snapshot.make(rates)
-        lock.update(fork)  # the fork's lockfile now pins the original's newer snapshot
-        d = _pipeline(work / "d", "acme/d", "ds", {key: {"path": "../fork"}, "a": {"path": "../rates"}})
-        _commit(work)
-        assert lock.pin(d).written and lineage.cycle(d) is None
-
-    def test_what_reads_a_fork_by_its_id(self, work):
-        """The newest snapshot of acme/rates is the fork's: it records its original's, read by path under the same ID."""
-        rates, fork = self._fork(work)
-        d = _pipeline(work / "d", "acme/d", "ds", {"acme/rates": {}})
-        _commit(work)
-        assert lock.pin(d).written and lineage.cycle(d) is None
-
     def test_a_folder_another_pipeline_now_holds(self, work):
         """q pinned x's snapshot from x2/; x moved to x/, acme/y took x2/, and x comes to depend on q."""
         x2 = _pipeline(work / "x2", "acme/x", "xs")
@@ -1320,39 +1303,6 @@ class TestWhatTheGuardsSecondReviewFound:
 
 @posix
 class TestWhatTheGuardsThirdReviewFound:
-    def _fork(self, work):
-        rates = _pipeline(work / "rates", "acme/rates", "treasury")
-        fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
-        _repository(work)
-        snapshot.make(rates)
-        assert lock.pin(fork).written
-        snapshot.make(fork)
-        return rates, fork
-
-    def test_what_reads_a_fork_whose_original_moved(self, work):
-        """The fork's snapshot recorded its original at ../rates, which has moved since: still another pipeline."""
-        rates, fork = self._fork(work)
-        _git(work, "mv", "rates", "rates2")
-        _declare(fork, {"orig": {"path": "../rates2"}})
-        _commit(work)
-        d = _pipeline(work / "d", "acme/d", "ds", {"f": {"path": "../fork"}})
-        _commit(work)
-        assert lock.pin(d).written and lineage.cycle(d) is None
-
-    @pytest.mark.parametrize("key", ["z", "0z"])
-    def test_the_verdict_does_not_turn_on_key_order(self, work, key):
-        rates, fork = self._fork(work)
-        c = _pipeline(work / "c", "acme/c", "cs", {"acme/rates": {}})
-        _commit(work)
-        assert lock.pin(c).written
-        snapshot.make(c)
-        _git(work, "mv", "rates", "rates2")
-        _declare(fork, {"orig": {"path": "../rates2"}})
-        _commit(work)
-        d = _pipeline(work / "d", "acme/d", "ds", {"acme/c": {}, key: {"path": "../fork"}})
-        _commit(work)
-        assert lineage.cycle(d) is None and lock.pin(d).written
-
     def test_an_update_that_moves_nothing_is_not_refused(self, tmp_path, work):
         """r's git dependency g is in a cycle with h, pinned before; an update with nothing to move changes no entry."""
         g = _git_repository((tmp_path / "g").resolve(), "acme/g", "gs")
