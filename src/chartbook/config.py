@@ -291,7 +291,7 @@ def _folder_text(url: str) -> str:
         text = text[1:]  # file:///C:/x names the drive, not a root folder
     # On Windows a drive may follow at once (file://C:/x). Anything else is
     # a host: user:password@host would otherwise be read as drive U:
-    on_a_drive = os.name == "nt" and re.match(r"^[A-Za-z]:[\\/]", text)
+    on_a_drive = os.name == "nt" and re.match(r"^[A-Za-z]:([\\/]|$)", text)
     if text and not text.startswith("/") and not on_a_drive:
         raise ValueError(
             f"The store {shown_store_url(url)!r} names a host; a file:// store is a folder on this machine, "

@@ -204,9 +204,15 @@ def repository_slug(url: str) -> Path:
         host, path = "local", re.sub(r"^file://", "", text)
     path = re.sub(r"\.git/?$", "", path.rstrip("/"))
     if host == "local":
-        # One folder: its name, and a hash of the whole path, written with /
-        # so that C:\\repos\\x and C:/repos/x are one repository
+        # One folder: its name, and a hash of the whole path written one
+        # way: with /, so that C:\\repos\\x, C:/repos/x and file:///C:/repos/x
+        # are one repository; on Windows, whose paths are one in any case,
+        # in lower case, as a terminal may give c:\\ where another gives C:\\
         whole = re.sub(r"[/\\]+", "/", path)
+        if re.match(r"^/[A-Za-z]:", whole):
+            whole = whole[1:]
+        if os.name == "nt" or re.match(r"^[A-Za-z]:", whole):
+            whole = whole.lower() if os.name == "nt" else whole[0].lower() + whole[1:]
         name = next((part for part in reversed(whole.split("/")) if part and set(part) != {"."}), "repository")
         digest = hashlib.sha256(whole.encode("utf-8")).hexdigest()[:8]
         return Path("local", re.sub(r"[^A-Za-z0-9._-]", "_", name) + "~" + digest)

@@ -16,6 +16,7 @@ import chartbook
 SOURCE = Path(chartbook.__file__).parent
 SUBPROCESS = {"run", "Popen", "check_output", "check_call", "call"}
 NOT_FILES = {"os", "webbrowser", "tarfile", "zipfile", "gzip", "io", "codecs", "Image"}
+TEMPORARY = {"NamedTemporaryFile", "TemporaryFile", "SpooledTemporaryFile"}
 
 
 def _mode(call: ast.Call, position: int):
@@ -41,8 +42,13 @@ def _lacking(call: ast.Call) -> list:
             lacking.append("encoding")
         if "newline" not in said and len(call.args) < 4:
             lacking.append("newline")
-    elif name == "open" and owner not in NOT_FILES:
-        position = 1 if isinstance(function, ast.Name) else 0
+    elif (name == "open" and owner not in NOT_FILES) or name == "fdopen" or name in TEMPORARY:
+        # open(path, mode) and os.fdopen(handle, mode); path.open(mode); a temporary file's mode=
+        position = 1 if isinstance(function, ast.Name) or name == "fdopen" else 0
+        if name in TEMPORARY:
+            position = 0
+            if _mode(call, position) is None:
+                return []  # w+b, binary, unless it says otherwise
         mode = _mode(call, position)
         if mode == "?" or (mode is not None and "b" in mode):
             return []
@@ -76,6 +82,10 @@ def test_the_check_finds_what_it_is_for():
         'open(p, "a", encoding="utf-8", newline="")': [],
         'subprocess.run(["git"], text=True)': ["encoding"],
         'os.open(p, 0)': [],
+        'os.fdopen(h, "w")': ["encoding", "newline"],
+        'os.fdopen(h, "rb")': [],
+        'tempfile.NamedTemporaryFile(mode="w")': ["encoding", "newline"],
+        'tempfile.NamedTemporaryFile()': [],
     }
     for text, lacking in calls.items():
         assert _lacking(ast.parse(text).body[0].value) == lacking, text

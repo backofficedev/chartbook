@@ -346,6 +346,8 @@ def _link(source: str, destination: str, links: Iterable[str]) -> str:
 def link_target(path) -> str:
     """Where a symlink points, as a path is written: on Windows without the ``\\\\?\\`` that ``os.readlink`` may give."""
     target = os.readlink(path)
+    if os.name == "nt" and target.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + target[8:]  # \\?\UNC\server\share is \\server\share
     if os.name == "nt" and target.startswith("\\\\?\\"):
         target = target[4:]
     return target

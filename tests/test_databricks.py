@@ -380,7 +380,7 @@ class TestReading:
         assert isinstance(frame, pl.LazyFrame)
         assert frame.collect()["y10"].to_list() == [4.0, 4.3, 4.1]
         assert warehouse.queries[0] == "select * from (\nselect * from `workspace`.`rates`.`curve`\n) limit 0"
-        assert warehouse.open(encoding="utf-8") == []
+        assert warehouse.open() == []
 
     def test_nothing_is_read_until_it_is_collected(self, pipeline, signed_in, warehouse):
         frame = data.load("curve", project_dir=pipeline)
@@ -405,7 +405,7 @@ class TestReading:
         with pytest.raises((pl.exceptions.ComputeError, BackendError)) as error:
             frame.collect()
         assert "Catalog Error" in str(error.value) and "curve" in str(error.value)
-        assert warehouse.open(encoding="utf-8") == []
+        assert warehouse.open() == []
 
     def test_an_empty_result_without_its_schema_asks_for_a_row(self, pipeline, signed_in, warehouse):
         warehouse.empty_without_schema = True
@@ -461,7 +461,7 @@ class TestReading:
         (pipeline / "chartbook.toml").write_text(manifest, encoding="utf-8", newline="\n")
         with pytest.raises(BackendError, match="nope"):
             data.load("curve", project_dir=pipeline)
-        assert warehouse.open(encoding="utf-8") == []
+        assert warehouse.open() == []
 
     def test_sql_runs_in_the_warehouse(self, pipeline, signed_in, warehouse):
         frame = data.sql("select max(y10) as top from {curve}", project_dir=pipeline)
@@ -493,7 +493,7 @@ class TestDescribing:
         columns, rows = DatabricksBackend(PUBLIC_URL, "warehouse").describe(_table())
         assert columns == [{"name": "d", "dtype": "date"}, {"name": "y02", "dtype": "double"}, {"name": "y10", "dtype": "double"}]
         assert rows == 3
-        assert warehouse.open(encoding="utf-8") == []
+        assert warehouse.open() == []
 
     def test_span(self, signed_in, warehouse):
         first, last = DatabricksBackend(PUBLIC_URL, "warehouse").span(_table(), "d")

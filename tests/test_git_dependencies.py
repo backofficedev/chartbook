@@ -156,8 +156,10 @@ class TestSlug:
             # short enough for Windows; one repository, however its path is written
             ("/srv/git/x.git", "local/x~5d13374a"),
             ("file:///srv/git/x.git", "local/x~5d13374a"),
-            ("C:/repos/x", "local/x~9b2b0308"),
-            ("C:\\repos\\x", "local/x~9b2b0308"),
+            ("C:/repos/x", "local/x~1012a9e9"),
+            ("C:\\repos\\x", "local/x~1012a9e9"),
+            ("c:\\repos\\x", "local/x~1012a9e9"),
+            ("file:///C:/repos/x", "local/x~1012a9e9"),
             # A component with a character that is not kept carries a hash
             # of itself, so that `a b` and `a_b` are two repositories
             ("https://host/a/../../etc/b", "host/a/etc/b"),
