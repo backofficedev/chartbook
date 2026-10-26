@@ -795,6 +795,48 @@ def _dependency_entry(key: str, entry: dict) -> dict:
 _in_process_locks: dict[str, "threading.Lock"] = {}
 
 
+def held_elsewhere(lock_path: Path) -> bool:
+    """Whether another thread or process holds :func:`_one_at_a_time`'s lock for this path now; False where that cannot be told.
+
+    Asked without waiting, so that a command can say it is about to wait.
+    """
+    from chartbook.config import get_cache_path
+
+    name = hashlib.sha256(str(Path(lock_path).resolve()).encode()).hexdigest()[:24]
+    guard = _in_process_locks.get(name)
+    if guard is not None and guard.locked():
+        return True
+    # Only "someone holds it" counts: a filesystem with no locks says
+    # something else, and there nothing waits
+    held = (errno.EWOULDBLOCK, errno.EAGAIN, errno.EACCES, errno.EDEADLK)
+    try:
+        path = get_cache_path() / "locks" / f"{name}.lock"
+        if not path.exists():
+            return False
+        with open(path, "a+b") as handle:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                except OSError as error:
+                    return error.errno in held
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+            import fcntl
+
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                return error.errno in held
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            return False
+    except (OSError, ValueError):
+        return False
+
+
 @contextlib.contextmanager
 def _one_at_a_time(lock_path: Path):
     """Hold a lockfile while it is read, worked out and written, across threads and processes.

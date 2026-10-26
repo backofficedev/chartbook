@@ -147,7 +147,7 @@ Open the rendered site, `OUTPUT_DIR/index.html` (default `./docs/index.html`), i
 chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
-Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs generate`, and it takes the arguments of {ref}`chartbook docs generate <chartbook-docs>`.
+Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs generate`, and it takes the arguments of {ref}`chartbook docs generate <chartbook-docs>`. `--upstream` first builds and snapshots each upstream with no snapshot to pin, as `chartbook run --upstream` does.
 
 ```console
 $ chartbook build -f
@@ -840,7 +840,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -871,7 +871,22 @@ In a fresh clone, `chartbook run` is the only command you need: there is no `cha
 
 **Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, you are asked first when you are at a terminal (`y` trusts it, Enter stops; {ref}`chartbook trust <chartbook-trust>`). Where no one is asked, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; in a catalog, it lists every member that is not trusted, and nothing runs (`chartbook trust --members`). A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
 
-**It never builds in a folder this pipeline depends on, and never reads one.** A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads the snapshot it pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build, and to declare ready with `chartbook snapshot`. If its owner has made no snapshot yet, `chartbook run` stops and says so.
+**It never builds in a folder this pipeline depends on, and never reads one**, unless you say `--upstream` (below). A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads the snapshot it pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build, and to declare ready with `chartbook snapshot`. If its owner has made no snapshot yet, `chartbook run` stops and says so.
+
+**Unless you say `--upstream`, for folders that are yours.** With `--upstream`, a `path` dependency on this machine that has no snapshot to pin, and is not pinned yet, is built first and snapshotted after its build succeeds, so that this pipeline can pin it; and so is each of its own, as far up as they go, each before what depends on it. The run says which first:
+
+```console
+$ chartbook run --upstream
+Upstream with no snapshot to pin, built and snapshotted first:
+  ftsfr/fed_yield_curve    in /work/fed_yield_curve
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made, for what depends on it in this run to pin.
+ftsfr/rate_forecast: pinning what it depends on
+...
+```
+
+Before anything runs, each upstream must be trusted to run, as this pipeline must (at a terminal you are asked, with each upstream marked as one; elsewhere an untrusted one stops the run), must have a `build` script, and must have everything committed, since a snapshot is labelled with its commit; and the dependencies, the upstreams' too, must form no cycle. Its build must leave its committed files as they were, and its commit where it was. A pipeline of the run itself, in a catalog, that another pins by path and that has no snapshot is snapshotted after its build the same way. Builds that end in a snapshot of one folder take turns, across runs (an upstream of two runs, a catalog member, the owner's own `chartbook run --snapshot`): a run that has to wait says so, an upstream that has a snapshot by its turn is not built again, and a folder that changed while it waited is not built. A lockfile its pin wrote in its folder is said, to commit there. The first that fails stops the run, and nothing that depends on it is built. An upstream that has a snapshot, or that this pipeline has pinned already, is not built again. `--upstream` is not taken with `--frozen`, and is for `build` only. A `git` dependency, and one named by its ID got from its repository, is built in ChartBook's own copy and pinned from it whether or not you say `--upstream`.
 
 **It never moves a pin.** If the other pipeline's owner has made a newer snapshot, this one is still built against the one it pinned, and you are told:
 
@@ -937,7 +952,7 @@ Error: acme/docs: embeddings is kept, and is not on disk (./_data/embeddings.par
 Nothing was built.
 ```
 
-{ref}`chartbook restore <chartbook-restore>` puts the bytes back, and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing: to remake one on purpose, delete the file, then `--remake`. The stop covers the pipelines the command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is not stopped. A version whose bytes are not in the store is nothing to put back, so it stops nothing either.
+{ref}`chartbook restore <chartbook-restore>` puts the bytes back (for an upstream of `--upstream`, `chartbook restore --project-dir` its folder), and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing: to remake one on purpose, delete the file, then `--remake`. The stop covers the pipelines the command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is not stopped. A version whose bytes are not in the store is nothing to put back, so it stops nothing either.
 
 ```console
 $ chartbook run --frozen
