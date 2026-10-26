@@ -313,3 +313,91 @@ class TestWhatTheReviewFound:
         result = CliRunner().invoke(main, ["build", "-f", "--upstream"])
         assert result.exit_code == 0, result.output
         assert seen.get("upstream") is True
+
+
+@posix
+class TestWhatTheSecondReviewFound:
+    def test_an_upstream_whose_build_runs_the_downstream_stops_and_does_not_hang(self, work):
+        """up's build runs `chartbook run --upstream` in down, which plans up again: the run refuses, as before the lock."""
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        chartbook = Path(sys.executable).parent / "chartbook"
+        down = work / "down"
+        _with_data(work / "up", {"build": f"{chartbook} run --upstream --project-dir {down}"})
+        _with_data(down, {"build": LOG}, {"up": {"path": "../up"}})
+        _commit(work)
+        home = work / "home"  # the test's own ~/.chartbook is set in this process only, so the child gets a home
+        home.mkdir()
+        finished = subprocess.run(
+            [str(chartbook), "run", "--upstream", "--project-dir", str(down)],
+            capture_output=True, text=True, timeout=120,
+            env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)},
+        )
+        assert finished.returncode != 0
+        assert "would then run itself without end" in finished.stdout + finished.stderr
+
+    def test_a_folder_that_changed_before_its_turn_is_not_built(self, work):
+        """c is built first and its build edits b: b, committed when the run began, is refused at its turn."""
+        _with_data(work / "c", {"build": f"{LOG} && echo half-done > ../b/notes.txt"})
+        _with_data(work / "b", {"build": LOG}, {"c": {"path": "../c"}})
+        a = _with_data(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
+        _commit(work)
+        report = run.run(a, upstream=True, echo=lambda line: None)
+        assert report.failed.id == "b"
+        assert "It changed before its turn came, and was not built" in report.reason
+        assert _order(work) == ["c"] and _snapshots_of("b") == []
+
+    def test_a_run_that_must_wait_says_so(self, pair, monkeypatch):
+        up, down = pair
+        monkeypatch.setattr(lock, "held_elsewhere", lambda path: True)
+        said = []
+        assert run.run(down, upstream=True, echo=said.append).failed is None
+        assert "up: another run is building it to make a snapshot; waiting for it" in said
+
+    def test_the_owners_own_snapshot_build_takes_the_same_turn(self, pair, monkeypatch):
+        up, down = pair
+        monkeypatch.setattr(lock, "held_elsewhere", lambda path: True)
+        said = []
+        assert run.run(up, snapshot=True, echo=said.append).failed is None
+        assert "up: another run is building it to make a snapshot; waiting for it" in said
+
+    def test_a_catalog_member_with_no_build_plans_no_upstream(self, work):
+        _with_data(work / "u", {"build": LOG})
+        _with_data(work / "p", None, {"u": {"path": "../u"}})
+        _with_data(work / "q", {"build": LOG})
+        _catalog(work, "p", "q")
+        _commit(work)
+        run.run(work, upstream=True, echo=lambda line: None)
+        assert "u" not in _order(work) and _snapshots_of("u") == []
+
+    def test_snapshots_that_cannot_be_read_at_its_turn_build_nothing(self, pair, work, monkeypatch):
+        import contextlib
+
+        from chartbook.store import StoreError
+
+        up, down = pair
+        turns = []
+        taking_a_turn = run._alone_while_built
+        original = snapshot.newest_for
+
+        @contextlib.contextmanager
+        def counted(*arguments, **keywords):
+            turns.append(1)
+            with taking_a_turn(*arguments, **keywords):
+                yield
+
+        def unreadable_at_its_turn(*arguments, **keywords):
+            if len(turns) == 1:  # up's second look, and only that
+                turns.append(1)
+                raise StoreError("the store cannot be reached")
+            return original(*arguments, **keywords)
+
+        monkeypatch.setattr(run, "_alone_while_built", counted)
+        monkeypatch.setattr(snapshot, "newest_for", unreadable_at_its_turn)
+        said = []
+        report = run.run(down, upstream=True, echo=said.append)
+        assert "up: its snapshots cannot be read now; not built" in said
+        assert "up" not in _order(work) and _snapshots_of("up") == []
+        assert report.failed.id == "down" and report.reason == "what it depends on could not be pinned"

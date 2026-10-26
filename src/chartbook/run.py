@@ -587,7 +587,10 @@ def plan(
                     there = Path(entry["_resolved_path"]).resolve()
                     # With --upstream, from what this run is about only (not a git
                     # dependency's own manifest): built and snapshotted first
-                    wanted = upstream and source in ("asked", "upstream") and _nothing_to_pin(directory, key, entry, there, store)
+                    wanted = (
+                        upstream and source in ("asked", "upstream") and BUILD_SCRIPT in scripts
+                        and _nothing_to_pin(directory, key, entry, there, store)
+                    )
                     if there in asked:
                         if wanted:
                             snapshot_first.add(there)
@@ -697,15 +700,22 @@ def _cycle_said(loop) -> str:
 
 
 @contextlib.contextmanager
-def _alone_while_built(step: Step):
-    """For an upstream, one build and snapshot of it at a time, across processes: two runs that depend on it take turns.
+def _alone_while_built(step: Step, echo: Callable[[str], None], snapshotted: bool):
+    """A build that ends in a snapshot, one at a time for its folder, across processes: runs that build it take turns.
 
-    The lock is a file under the cache, as a pin's is, keyed by the folder.
+    An upstream of two runs, a catalog member, or the owner's own ``chartbook
+    run --snapshot``. The lock is a file under the cache, as a pin's is,
+    keyed by the folder; a run that has to wait for it says so. Not where
+    this build is what runs the command (:func:`running`): the run refuses
+    that, and a lock would wait for itself.
     """
-    if step.source != "upstream" or step.directory is None:
+    if not snapshotted or step.directory is None or running(step.directory, BUILD_SCRIPT):
         yield
         return
-    with lock._one_at_a_time(Path(step.directory) / ".chartbook-upstream-build"):
+    key = Path(step.directory) / ".chartbook-snapshot-build"
+    if lock.held_elsewhere(key):
+        echo(f"{step.id}: another run is building it to make a snapshot; waiting for it")
+    with lock._one_at_a_time(key):
         yield
 
 
@@ -1042,7 +1052,11 @@ def run(
                     )
                     snapshots.check_within(step.directory, step.id)
                 except snapshots.SnapshotError as error:
-                    raise RunError(f"{error} Nothing was built.") from None
+                    why = (
+                        " With --upstream it is snapshotted after its build, since another pipeline of this run pins it by path."
+                        if step.snapshot_first and step.source == "asked" and not snapshot else ""
+                    )
+                    raise RunError(f"{error}{why} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
 
     # Dependencies between pipelines form a directed acyclic graph. Each
@@ -1126,8 +1140,14 @@ def run(
         echo("Upstream with no snapshot to pin, built and snapshotted first:")
         for step in upstreams:
             echo(f"  {step.id}    in {step.directory}")
+    members_first = [step for step in steps if step.snapshot_first and step.source == "asked" and not snapshot]
+    if members_first:
+        echo("Pipelines of this run that another pins by path, snapshotted after their build:")
+        for step in members_first:
+            echo(f"  {step.id}    in {step.directory}")
     for step in steps:
-        with _alone_while_built(step):
+        wrote_lockfile = False
+        with _alone_while_built(step, echo, (snapshot and step.source == "asked") or step.snapshot_first):
             if step.directory is None:
                 echo(f"{step.id}: not run. {step.missing}")
                 report.skipped.append((step, step.missing))
@@ -1148,11 +1168,28 @@ def run(
                 try:
                     newest, _ = snapshots.newest_for(step.directory, store if store is not None else default_store())
                 except (snapshots.SnapshotError, StoreError, OSError, ValueError):
-                    newest = None
+                    echo(f"{step.id}: its snapshots cannot be read now; not built")
+                    report.skipped.append((step, "its snapshots cannot be read now"))
+                    continue
                 if newest is not None:
                     echo(f"{step.id}: has a snapshot now, from {newest.commit[:7]}; not built again")
                     report.skipped.append((step, "it has a snapshot now"))
                     continue
+            if (snapshot and step.source == "asked") or step.snapshot_first:
+                # Found committed before the run, and maybe waited for since: still as it was
+                try:
+                    now = snapshots.require_committed(step.directory, step.id, ignoring=(lock.LOCK_FILE,)).commit
+                except snapshots.SnapshotError as error:
+                    report.failed, report.exit_code = step, 1
+                    report.reason = f"{str(error).rstrip('.')}. It changed before its turn came, and was not built"
+                    break
+                if now != commits_before.get(step.directory, now):
+                    report.failed, report.exit_code = step, 1
+                    report.reason = (
+                        f"its folder moved from {commits_before[step.directory][:7]} to {now[:7]} before its turn "
+                        f"came, so it was not built: the snapshot would not say which code ran"
+                    )
+                    break
 
             if step.source == "git":
                 if step.built and not force:
@@ -1211,6 +1248,7 @@ def run(
                     report.reason = pins.refused
                     break
                 would_be.pop(step.directory, None)  # written now: its file is what holds
+                wrote_lockfile = pins.written
                 if on_pin is not None:
                     on_pin(step, pins)
                 if pins.problems:
@@ -1275,9 +1313,9 @@ def run(
                 report.snapshots.append(made)
                 if on_snapshot is not None:
                     on_snapshot(step, made)
-                if step.source == "upstream" and (step.directory / lock.LOCK_FILE).is_file():
+                if step.source == "upstream" and wrote_lockfile:
                     try:
-                        unrecorded = any(lock.LOCK_FILE in line for line in snapshots.uncommitted(step.directory))
+                        unrecorded = bool(snapshots._git(step.directory, "status", "--porcelain", "--", lock.LOCK_FILE).strip())
                     except snapshots.SnapshotError:
                         unrecorded = False
                     if unrecorded:

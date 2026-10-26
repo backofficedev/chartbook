@@ -3390,7 +3390,7 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: _echo_snapshot(made, upstream=step.source == "upstream"),
+            on_snapshot=lambda step, made: _echo_snapshot(made, upstream=step.snapshot_first),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,
