@@ -859,3 +859,129 @@ class TestCommands:
         result = self._run("path", "upstream:committed")
         assert result.exit_code == 0, result.output
         assert result.stdout.strip() == str(default_store().get(HELLO) / "committed.parquet")
+
+
+def _twin(upstream: Path) -> None:
+    """Give the upstream a second dataframe with the same bytes as `committed`."""
+    manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+    manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+    (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (upstream / "data" / "twin.parquet").write_bytes(b"hello")
+    _commit(upstream, "A twin")
+
+
+def _puts(monkeypatch) -> list:
+    """Every FolderStore.put from now on."""
+    calls = []
+    original = store_module.FolderStore.put
+    monkeypatch.setattr(store_module.FolderStore, "put", lambda self, *a, **k: calls.append(a) or original(self, *a, **k))
+    return calls
+
+
+class TestWhatTheSecondReviewOfPuttingBackFound:
+    def test_a_directory_of_one_file_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        held = Path(default_store().get(record["content_hash"]))
+        os.chmod(held / "a.parquet", stat.S_IRUSR | stat.S_IWUSR)
+        (held / "a.parquet").unlink()
+        store_module._found_whole.clear()
+        puts = _puts(monkeypatch)
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and puts == []
+
+    def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        document = json.loads((downstream / LOCK_FILE).read_text())
+        for record in document["records"]:
+            if str(record.get("id", "")).endswith(":parts"):
+                record.pop("files", None)
+        (downstream / LOCK_FILE).write_text(json.dumps(document, indent=2))
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
+        short.write_bytes(b"pa")
+        store_module._found_whole.clear()
+        puts = _puts(monkeypatch)
+        lock.pin(downstream, git_cache=cache)
+        assert puts == [] and short.read_bytes() == b"pa"
+
+    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache):
+        """Another repository commits the same bytes; downstream pins both, and the store keeps one object for the two."""
+        other = work / "other"
+        _write_manifest(other, {"project": {"id": "other"}, "dataframes": {"same": {"path": "./data/same.parquet", "docs": "d"}}})
+        (other / "data").mkdir()
+        (other / "data" / "same.parquet").write_bytes(b"hello")
+        _git(other, "init", "--quiet", "-b", "main")
+        _commit(other, "The same bytes")
+        _write_manifest(
+            downstream,
+            {"project": {"id": "downstream"}, "dependencies": {"acme/upstream": {"git": "../upstream"}, "acme/other": {"git": "../other"}}},
+        )
+        lock.pin(downstream, git_cache=cache)
+        assert default_store().delete(HELLO)
+        for guard in (None, lambda would_be_written: None):
+            store_module._found_whole.clear()
+            report = lock.pin(downstream, git_cache=cache, before_writing=guard)
+            assert report.problems == [] and {"committed", "same"} <= set(_statuses(report))
+        held = Path(default_store().get(HELLO))
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "same.parquet"]
+
+
+class TestPuttingBackInAnS3Store:
+    @pytest.fixture
+    def client(self, monkeypatch):
+        pytest.importorskip("moto")
+        from tests.mocked_s3 import mocked_s3
+
+        with mocked_s3(monkeypatch) as client:
+            yield client
+
+    def _twin_key_gone(self, work, upstream, downstream, cache, client):
+        from tests.mocked_s3 import BUCKET, URL
+        from chartbook.stores.s3 import S3Store
+
+        _twin(upstream)
+        store = S3Store(URL, cache=work / "s3cache", client=client)
+        lock.pin(downstream, store=store, git_cache=cache)
+        digest = HELLO.split(":")[1]
+        prefix = f"stores/one/objects/sha256/{digest[:2]}/{digest[2:]}/"
+        client.delete_object(Bucket=BUCKET, Key=prefix + "twin.parquet")
+        store_module._found_whole.clear()
+        return prefix
+
+    @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
+    def test_a_key_the_object_lacks_is_uploaded(self, work, upstream, downstream, cache, client, guarded):
+        from tests.mocked_s3 import BUCKET, URL
+        from chartbook.stores.s3 import S3Store
+
+        prefix = self._twin_key_gone(work, upstream, downstream, cache, client)
+        store = S3Store(URL, cache=work / "s3cache", client=client)
+        report = lock.pin(downstream, store=store, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
+        assert report.problems == [] and _statuses(report)["twin"] == "restored"
+        keys = client.list_objects_v2(Bucket=BUCKET, Prefix=prefix).get("Contents", ())
+        assert sorted(entry["Key"][len(prefix):] for entry in keys) == ["committed.parquet", "twin.parquet"]
+
+    @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
+    def test_a_bucket_this_user_cannot_write_says_what_it_lacks(self, work, upstream, downstream, cache, client, guarded):
+        from tests.mocked_s3 import URL
+        from tests.test_store_s3 import _refusing
+        from chartbook.stores.s3 import S3Store
+
+        self._twin_key_gone(work, upstream, downstream, cache, client)
+        reader = S3Store(URL, cache=work / "s3cache", client=_refusing(client))
+        report = lock.pin(downstream, store=reader, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
+        assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]

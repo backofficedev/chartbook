@@ -808,13 +808,15 @@ class Store(abc.ABC):
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
         """Hash objects again, and report each that is not what its name says."""
 
-    def lacks(self, content_hash: str, names: Iterable[str]) -> bool:
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
         """Whether a put of the same bytes would add a file the store's object lacks under one of these names.
 
         Two assets with the same bytes share one object, under each one's
         name; put back one at a time, the object may hold one name and not
         the other. False when nothing would be added, or that cannot be
         told without reading. Reads nothing.
+
+        :param single: Whether the bytes are one file, not a directory.
         """
         return False
 
@@ -1359,16 +1361,18 @@ class FolderStore(Store):
         except ValueError:
             return str(path)
 
-    def lacks(self, content_hash: str, names: Iterable[str]) -> bool:
-        """Whether the object of one file lacks it under this name: a put of the same bytes adds a name to such an object only (:meth:`_move_into_place`)."""
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
+        """Whether the object of one file lacks it under this name: a put of the same bytes adds a name to such an object only, never a file to a directory's (:meth:`_move_into_place`)."""
         names = list(names)
-        if len(names) != 1:
+        if not single or len(names) != 1:
             return False
+        parts = plain_parts(names[0])
         path = self.object_path(content_hash)
-        if not path.is_dir() or path.is_symlink():
+        if parts is None or len(parts) != 1 or not path.is_dir() or path.is_symlink():
             return False
-        own = on_disk(path, list(PurePosixPath(names[0]).parts))
-        return not os.path.lexists(own)
+        if not os.access(path, os.W_OK):
+            return False  # a name it could not add: a store this user cannot write
+        return not os.path.lexists(on_disk(path, parts))
 
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False

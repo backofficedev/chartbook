@@ -439,7 +439,7 @@ class S3Store(Store):
         self._check_layout()
         return bool(self._object_files(content_hash))
 
-    def lacks(self, content_hash: str, names: Iterable[str]) -> bool:
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
         """Whether the bucket's object lacks a key under one of these names: a put uploads the keys an object lacks."""
         remote = self._object_files(content_hash)
         return bool(remote) and any(name not in remote for name in names)

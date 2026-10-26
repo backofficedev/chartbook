@@ -2459,7 +2459,13 @@ def _pin_asset(
     same = current is not None and current.content_hash == old
     unsynced = _incomplete(store, had) if store.has(old) else None
     names = snapshot.files_read(had) or {}
-    if unsynced and same and names and store.lacks(old, names):
+    # The bytes are one file, as its record and the checkout have them
+    single = not isinstance(had.get("files"), list) and os.path.isfile(absolute)
+    try:
+        lacking = bool(unsynced and same and names) and store.lacks(old, names, single=single)
+    except (OSError, StoreError):
+        lacking = False  # a store that cannot be asked now: said as before
+    if lacking:
         # The store has these bytes under another name only: two assets with
         # the same bytes, put back one at a time, or pinned by another
         # pipeline. The file here is what was pinned, so it is put in again,

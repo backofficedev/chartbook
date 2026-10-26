@@ -772,13 +772,13 @@ class TestAFrozenPutOverALinkedObject:
 
 
 
-
 def test_a_folder_store_says_what_an_object_of_one_file_lacks(tmp_path):
-    from chartbook.store import FolderStore
-
-    store = FolderStore(tmp_path / "store")
+    store = store_module.FolderStore(tmp_path / "store")
     (tmp_path / "rates.parquet").write_bytes(b"rates")
     stored = store.put(tmp_path / "rates.parquet")
     assert not store.lacks(stored.content_hash, ["rates.parquet"])
     assert store.lacks(stored.content_hash, ["twin.parquet"])
-    assert not store.lacks(stored.content_hash, ["a.parquet", "b.parquet"])  # a put adds no file to a directory's object
+    # A put adds a name to an object of one file only: not a file to a directory's
+    assert not store.lacks(stored.content_hash, ["twin.parquet"], single=False)
+    assert not store.lacks(stored.content_hash, ["a.parquet", "b.parquet"])
+    assert not store.lacks(stored.content_hash, ["../twin.parquet"])  # not a name in the object
