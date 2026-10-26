@@ -808,6 +808,16 @@ class Store(abc.ABC):
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
         """Hash objects again, and report each that is not what its name says."""
 
+    def lacks(self, content_hash: str, names: Iterable[str]) -> bool:
+        """Whether a put of the same bytes would add a file the store's object lacks under one of these names.
+
+        Two assets with the same bytes share one object, under each one's
+        name; put back one at a time, the object may hold one name and not
+        the other. False when nothing would be added, or that cannot be
+        told without reading. Reads nothing.
+        """
+        return False
+
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
     ) -> Optional[str]:
@@ -1348,6 +1358,17 @@ class FolderStore(Store):
             return f"{self}/{path.relative_to(self.root).as_posix()}"
         except ValueError:
             return str(path)
+
+    def lacks(self, content_hash: str, names: Iterable[str]) -> bool:
+        """Whether the object of one file lacks it under this name: a put of the same bytes adds a name to such an object only (:meth:`_move_into_place`)."""
+        names = list(names)
+        if len(names) != 1:
+            return False
+        path = self.object_path(content_hash)
+        if not path.is_dir() or path.is_symlink():
+            return False
+        own = on_disk(path, list(PurePosixPath(names[0]).parts))
+        return not os.path.lexists(own)
 
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False

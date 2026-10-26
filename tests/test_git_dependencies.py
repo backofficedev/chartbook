@@ -580,11 +580,71 @@ class TestPinning:
         before = (downstream / LOCK_FILE).read_bytes()
         assert default_store().delete(HELLO)
 
+        store_module._found_whole.clear()  # this process may have found it whole before
         report = lock.pin(downstream, git_cache=cache)
         assert _statuses(report) == {"committed": "restored", "ignored": "not_built", "twin": "restored"}
         assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
         held = Path(default_store().get(HELLO))
         assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
+
+    def _twin_with_one_name(self, downstream, upstream, cache) -> Path:
+        """Both twins pinned, and their shared object holds one name only, as another pipeline's pin of the same bytes leaves it."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "data" / "twin.parquet").write_bytes(b"hello")
+        _commit(upstream, "A twin")
+        lock.pin(downstream, git_cache=cache)
+        held = Path(default_store().get(HELLO))
+        os.chmod(held, stat.S_IRWXU)
+        (held / "twin.parquet").unlink()
+        store_module._found_whole.clear()
+        return held
+
+    def test_a_name_held_back_by_a_guarded_pin_is_said_restored_once_put(self, downstream, upstream, cache):
+        """`chartbook run` pins with a guard, which holds what it puts until the lockfile may be written."""
+        held = self._twin_with_one_name(downstream, upstream, cache)
+        report = lock.pin(downstream, git_cache=cache, before_writing=lambda would_be_written: None)
+        assert _statuses(report)["twin"] == "restored" and report.problems == []
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
+
+    def test_a_store_this_user_cannot_write_says_what_it_lacks(self, downstream, upstream, cache):
+        held = self._twin_with_one_name(downstream, upstream, cache)
+        root = Path(default_store().root)
+        everything = [root, *root.rglob("*")]
+        modes = {path: path.stat().st_mode for path in everything if not path.is_symlink()}
+        try:
+            for path in everything:
+                if path.is_dir() and not path.is_symlink():
+                    os.chmod(path, stat.S_IRUSR | stat.S_IXUSR)
+            for guard in (None, lambda would_be_written: None):
+                report = lock.pin(downstream, git_cache=cache, before_writing=guard)
+                assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]
+        finally:
+            for path, mode in modes.items():
+                os.chmod(path, mode)
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet"]
+
+    def test_a_directory_still_arriving_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        """A put adds no file to a directory's object in a folder store, so nothing is put while one is short."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text())
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
+        short.write_bytes(b"pa")
+        store_module._found_whole.clear()
+        puts = []
+        original = store_module.FolderStore.put
+        monkeypatch.setattr(store_module.FolderStore, "put", lambda self, *a, **k: puts.append(a) or original(self, *a, **k))
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and puts == [] and short.read_bytes() == b"pa"
 
     def test_a_file_still_arriving_is_still_said_to_be(self, downstream, cache):
         """Putting the bytes in again adds a missing name; it never changes a file the object has."""

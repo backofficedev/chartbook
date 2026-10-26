@@ -13,7 +13,7 @@ A pipeline that depends, through what it depends on, on itself has no order to b
 
 ### Fixed — a git dependency's assets with the same bytes are all put back in the store
 
-When the store had lost a `git` dependency's bytes (a fresh machine whose lockfile came with the clone), `chartbook pin` put them back from the checkout, one asset at a time. Two assets with the same bytes share one object, and the second found that object holding the first one's name only: it was reported as not fully synced, and the pin failed. Now, when a pinned file's object is not whole as its record has it and the file here still has the pinned bytes, they are put in again, which adds a name the object lacks and never changes a file it has, so a file a sync is still bringing is still said to be.
+When the store had lost a `git` dependency's bytes (a fresh machine whose lockfile came with the clone), `chartbook pin` put them back from the checkout, one asset at a time. Two assets with the same bytes share one object, and the second found that object holding the first one's name only: it was reported as not fully synced, and the pin failed. Now, when the store has a pinned file's bytes under another name only (so too when another pipeline pinned the same bytes) and the file here still has them, they are put in again, which adds the name; under `chartbook run`, whose pins hold what they put until the lockfile may be written, the asset is said `restored` once it is put. Nothing is put for a file that is there and still arriving, or a directory, which are still said to be not fully synced; nor where the store cannot be written, which is said as before. In an S3 store, a key an object lacks is uploaded from the checkout the same way.
 
 ## [0.2.0] - 2026-10-20
 
