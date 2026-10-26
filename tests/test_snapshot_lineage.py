@@ -313,9 +313,14 @@ class TestASnapshotIsNotGivenBackWithOtherPins:
 
         rates, forecast = two
         work = rates.parent
+        from chartbook.identity import clear_git_remote_cache
+
         _git(work, "remote", "add", "origin", "https://example.org/acme/work.git")
+        clear_git_remote_cache()
         lock.pin(forecast)
         mine = snapshot.make(forecast).snapshot
+        # Its address and its first commit: more of its repository than a clone with a path remote says
+        assert {kind for kind, _ in snapshot.identity_keys(mine)} == {"address", "first"}
         (was,) = mine.inputs
         pl.DataFrame({"d": ["2024-01-01"], "r": [9.9]}).write_parquet(rates / "_data" / "treasury.parquet")
         assert snapshot.make(rates).made  # rates' newer snapshot, at the same commit
