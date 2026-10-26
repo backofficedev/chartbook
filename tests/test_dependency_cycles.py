@@ -1088,3 +1088,105 @@ class TestAForkOfTheSameId:
         snapshot.make(forecast)
         _declare(fred, {"acme/forecast": {}})
         assert "these pipelines depend on each other" in lock.pin(fred).refused
+
+
+@posix
+class TestWhatTheGuardsReviewFound:
+    def test_a_snapshot_the_store_no_longer_has_still_names_its_pipeline(self, work):
+        """rates pinned forecast's snapshot, which `store gc` has let go since; forecast comes to name rates."""
+        forecast = _pipeline(work / "forecast", "acme/forecast", "outlook")
+        rates = _pipeline(work / "rates", "acme/rates", "treasury", {"acme/forecast": {}})
+        _repository(work)
+        gone = snapshot.make(forecast).snapshot
+        lock.pin(rates)
+        snapshot.make(rates)
+        os.chmod(gone.path, stat.S_IRUSR | stat.S_IWUSR)
+        gone.path.unlink()
+        _declare(forecast, {"acme/rates": {}})
+        assert "these pipelines depend on each other" in lock.pin(forecast).refused
+        assert _lockfile(forecast) is None
+
+    def test_a_fork_in_a_clone_of_its_original(self, tmp_path):
+        """A fork as a host makes one: a clone of the original's repository, another remote, the same folder in it."""
+        original, fork = (tmp_path / "original").resolve(), (tmp_path / "fork").resolve()
+        rates = _pipeline(original / "rates", "acme/rates", "treasury")
+        _repository(original)
+        snapshot.make(rates)
+        _git(tmp_path, "clone", "--quiet", str(original), str(fork))
+        _git(fork, "remote", "set-url", "origin", "https://example.org/someone/rates.git")
+        mine = fork / "rates"
+        (mine / "_data").mkdir(exist_ok=True)
+        _declare(mine, {"orig": {"path": "../../original/rates"}})
+        assert lock.pin(mine).written
+        assert lineage.cycle(mine) is None
+
+    def test_a_folder_renamed_since_its_snapshot_is_still_itself(self, work):
+        """a was snapshotted at a/, b pinned that snapshot; a moves to alpha/ and comes to name b."""
+        a = _pipeline(work / "a", "acme/a", "as")
+        b = _pipeline(work / "b", "acme/b", "bs", {"acme/a": {}})
+        _repository(work)
+        snapshot.make(a)
+        lock.pin(b)
+        snapshot.make(b)
+        _git(work, "mv", "a", "alpha")
+        _commit(work)
+        alpha = work / "alpha"
+        _declare(alpha, {"acme/b": {}})
+        assert "these pipelines depend on each other" in lock.pin(alpha).refused
+
+    def test_a_cycle_already_upstream_does_not_stop_another_pin(self, work, monkeypatch):
+        """b and c depend on each other; a depends on b, and comes to read d, which has nothing to do with them."""
+        from chartbook import data
+
+        a = _pipeline(work / "a", "acme/a", "as")
+        b = _pipeline(work / "b", "acme/b", "bs")
+        c = _pipeline(work / "c", "acme/c", "cs")
+        d = _pipeline(work / "d", "acme/d", "ds")
+        _repository(work)
+        for folder in (b, c, d):
+            snapshot.make(folder)
+        _declare(b, {"c": {"path": "../c"}})
+        _declare(c, {"b": {"path": "../b"}})
+        _declare(a, {"b": {"path": "../b"}})
+        assert lock.pin(a).written  # the cycle is b's and c's, there before this pin
+        _declare(a, {"b": {"path": "../b"}, "acme/d": {}})
+        monkeypatch.chdir(a)
+        assert data.load("acme/d:ds").collect().height == 1
+        with pytest.raises(run.RunError, match="pipelines it depends on depend on each other"):
+            run.run(a, echo=lambda line: None)  # and the run still says so
+
+    def test_update_of_one_named_dependency(self, work):
+        fred = _pipeline(work / "fred", "acme/fred", "series")
+        forecast = _pipeline(work / "forecast", "acme/forecast", "outlook")
+        rates = _pipeline(work / "rates", "acme/rates", "treasury", {"acme/fred": {}})
+        _repository(work)
+        snapshot.make(fred)
+        snapshot.make(forecast)
+        _declare(fred, {"acme/forecast": {}})
+        lock.pin(fred)
+        lock.pin(rates)
+        _commit(work)
+        snapshot.make(rates)
+        _declare(forecast, {"acme/rates": {}})
+        lock.pin(forecast)
+        _commit(work)
+        snapshot.make(forecast)
+        before = _lockfile(fred)
+        assert "these pipelines depend on each other" in lock.update(fred, ["acme/forecast"]).refused
+        assert _lockfile(fred) == before
+
+    def test_a_refused_pin_with_a_git_dependency_puts_no_object(self, would_be, tmp_path):
+        fred, rates, forecast = would_be
+        repository = _git_repository(tmp_path / "ref", "acme/ref", "table")
+        _declare(fred, {"acme/forecast": {}, "acme/ref": {"git": str(repository)}})
+        before = _store_state()
+        assert lock.pin(fred).refused
+        assert _lockfile(fred) is None and _store_state() == before
+
+    def test_pin_frozen_says_a_lockfile_in_a_cycle_cannot_be_built(self, would_be, monkeypatch):
+        fred, rates, forecast = would_be
+        _pin_anyway(fred)
+        monkeypatch.chdir(fred)
+        result = CliRunner().invoke(main, ["pin", "--frozen"])
+        assert result.exit_code == 1, result.output
+        assert "Error: acme/fred: these pipelines depend on each other, so there is no order to build in." in result.output

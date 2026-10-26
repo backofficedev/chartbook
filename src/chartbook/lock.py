@@ -400,9 +400,12 @@ class PinReport:
             for this user, as a store a team shares may be for everyone but
             its owner. The lockfile is written all the same; the store's
             ``gc`` goes by the note it has, if any.
-        refused: Why the lockfile was not written, when the caller's
-            ``before_writing`` refused it: neither the lockfile nor the
-            store's note of it was written. Empty otherwise.
+        refused: Why the lockfile was not written, when the pin's guard
+            refused it (the default one refuses a lockfile that would make
+            the pipeline's dependencies cyclic; a caller's
+            ``before_writing`` takes its place): neither the lockfile, nor
+            the store's note of it, nor any object was written. Empty
+            otherwise.
     """
 
     lockfile: Path
@@ -2502,9 +2505,10 @@ def pin(
     other pipeline has done since: :func:`update` is what moves one.
 
     A ``path`` dependency is pinned from its newest **snapshot**: what its
-    owner declared ready, at a commit (:mod:`chartbook.snapshot`). Nothing
-    in its folder is read. One that has no snapshot cannot be pinned, and
-    the report says what its owner has to do.
+    owner declared ready, at a commit (:mod:`chartbook.snapshot`). None of
+    its data in its folder is read: its manifest and lockfile are, to see
+    that the pin makes no cycle. One that has no snapshot cannot be pinned,
+    and the report says what its owner has to do.
 
     A ``git`` dependency is fetched into the git cache and pinned from the
     checkout, at the commit the lockfile names if it names one. It has only
@@ -2529,9 +2533,11 @@ def pin(
     :param built_here: The IDs of pipelines a run builds itself (a
         catalog's own), which are never cloned.
     :param before_writing: Called with the lockfile as it would be written;
-        what it returns, if anything, is why nothing is written
-        (``chartbook run`` refuses a pin that would make a cycle this way).
-        The report's ``refused`` says it.
+        what it returns, if anything, is why nothing is written. It takes
+        the place of the default guard, which refuses a lockfile that would
+        make the pipeline's dependencies cyclic (``chartbook run`` gives its
+        own, which walks the run's other pipelines too). The report's
+        ``refused`` says why.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -2639,23 +2645,27 @@ class _PutLater:
 
 
 def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list):
-    """The guard a pin has unless its caller gives one: a lockfile that would leave the pipeline in a cycle is not written.
+    """The guard a pin has unless its caller gives one: a lockfile that would make the pipeline's dependencies cyclic is not written.
 
     Dependencies between pipelines must form a directed acyclic graph
     (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
     pin``, ``update`` and ``add``, and the first read of a dependency. The
     walk takes the lockfile as it would be written, and the store's
-    snapshots as the pin read them.
+    snapshots as the pin read them. A cycle that is there with the
+    lockfile as it is, declared in folders or pinned before, is not this
+    pin's doing: it is left for ``chartbook run`` and ``chartbook check`` to
+    say, and the pin, a read of another dependency say, is not refused for
+    it.
     """
 
     def refuse(after: Lock) -> Optional[str]:
         from chartbook import lineage
 
+        shared = {"found": read[0]} if read else {}
         try:
-            found = lineage.cycle(
-                project_dir, store, git_cache=git_cache, lockfiles={project_dir: after},
-                shared={"found": read[0]} if read else None,
-            )
+            found = lineage.cycle(project_dir, store, git_cache=git_cache, lockfiles={project_dir: after}, shared=shared)
+            if found is not None and lineage.cycle(project_dir, store, git_cache=git_cache, shared=shared) is not None:
+                return None  # cyclic already, whatever this pin does
         except snapshot.SnapshotError:
             return None  # no pipeline here: the pin itself said so
         if found is None:

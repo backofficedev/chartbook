@@ -508,11 +508,11 @@ def cycle(
 
     A pipeline is known by its ID, so one met as a folder and again as a
     snapshot is one node, and a cycle is a pipeline met again on the way up
-    from itself. Two pipelines may share an ID, as a fork that depends on
-    its original does: they are told apart where that can be told, two
-    folders by their place on disk, and a folder and a snapshot, or two
-    snapshots, by their folder in their repository and the repository's
-    address or first commit (:meth:`_Finder.same`). A folder or a snapshot walked once is not walked again
+    from itself. Two pipelines may share an ID, as a fork that reads its
+    original by ``path`` does: a folder, and the snapshot a folder
+    dependency's pin names, stand for that folder, and two of them are one
+    pipeline only if they are one folder; anything known from the store
+    alone is one under its ID (:meth:`_Finder.same`). A folder or a snapshot walked once is not walked again
     unless something above it is reachable from it, which is a cycle.
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
@@ -636,8 +636,8 @@ class _Finder:
         self.members = {pipeline: Path(folder).resolve() for pipeline, folder in (members or {}).items()}
         #: Whether this walk read the store itself, rather than taking another walk's reading
         self.read_here = False
-        #: Each folder's place in its repository, worked out once
-        self._placed_folders: dict = {}
+        #: The folder here each snapshot a folder dependency's pin names stands for
+        self.folder_of: dict = {}
 
     def children(self, pipeline: str, source: object) -> list[tuple[Edge, object, str]]:
         """Each dependency of a pipeline as ``(edge, where to read its own from, what names that place)``.
@@ -743,6 +743,8 @@ class _Finder:
             children.append((Edge(pipeline, named, key, where), there, str(there)))
         # The snapshot its pin names, if the store has it
         taken = self._pinned(_text(location.get("commit")), _text(listed.get("snapshot")))
+        if taken is not None and children:
+            self.folder_of[str(taken.path)] = there  # the pin of a folder here: that folder's snapshot
         if taken is not None:
             at = _text(taken.commit)[:7]
             said = f"{where}; it would now be pinned to its snapshot at {at}" if new else f"{where}; pinned to its snapshot at {at}"
@@ -755,45 +757,27 @@ class _Finder:
         """Whether two places of the walk, met under one ID, are one pipeline.
 
         A place is a folder, a snapshot, or None for a pipeline known by its
-        ID alone. Two folders are one only if they are one folder. Otherwise
-        each is placed by its folder in its repository and the repository's
-        address or first commit, and they are one unless that tells them
-        apart: what cannot be told is taken to be one, so that a cycle is
-        never passed over for want of knowing.
+        ID alone. Two pipelines share an ID only where one is read from the
+        other's folder, as a fork reads its original by ``path`` (named by
+        its ID, a pipeline is this one itself, and refused as such). So a
+        folder stands for itself, and the snapshot a folder dependency's pin
+        names stands for that folder; two of these are one pipeline only if
+        they are one folder. Anything else, known from the store alone, is
+        taken to be one under its ID: a cycle is never passed over for want
+        of knowing.
         """
-        if isinstance(one, Path) and isinstance(other, Path):
-            return one.resolve() == other.resolve()
-        first, second = self._placed(one), self._placed(other)
-        if first is None or second is None:
-            return True
-        if first[0] != second[0]:
-            return False  # another folder of a repository
-        return not first[1] or not second[1] or bool(first[1] & second[1])
+        first, second = self._folder(one), self._folder(other)
+        if first is not None and second is not None:
+            return first == second
+        return True
 
-    def _placed(self, place: object) -> Optional[tuple[str, frozenset]]:
-        """A place's folder in its repository and the repository's names; None if they cannot be told."""
+    def _folder(self, place: object) -> Optional[Path]:
+        """The folder a place stands for: itself, or the folder whose pin names a snapshot; None if it is known from the store alone."""
+        if isinstance(place, Path):
+            return place.resolve()
         if isinstance(place, snapshot.Snapshot):
-            return _text(place.subdirectory), frozenset(snapshot.identity_keys(place))
-        if not isinstance(place, Path):
-            return None
-        key = str(place.resolve())
-        if key not in self._placed_folders:
-            from chartbook.identity import get_git_remote_url, remote_to_web_url, repository_key, web_link
-
-            try:
-                code = snapshot.code_of(place)
-            except snapshot.SnapshotError:
-                self._placed_folders[key] = None
-            else:
-                names = set()
-                address = repository_key(web_link(remote_to_web_url(get_git_remote_url(code.top))))
-                if address:
-                    names.add(("address", address))
-                first = snapshot._first_commit(code.top)
-                if first:
-                    names.add(("first", first))
-                self._placed_folders[key] = (code.subdirectory, frozenset(names))
-        return self._placed_folders[key]
+            return self.folder_of.get(str(place.path))
+        return None
 
     def _clone(self, url: str, commit: str) -> Optional[Path]:
         """A repository's copy at a commit, if it is fetched here: its working copy, else its checkout."""
@@ -918,8 +902,9 @@ class _Finder:
             for taken in self.shared["found"]:
                 if taken.same_moment(commit, made_at) and _text(taken.pipeline):
                     return taken
-            if self.read_here or not self.shared.get("may_be_old") or (commit, made_at) in self.shared["missing"]:
-                self.shared["missing"].add((commit, made_at))
+            missing = self.shared.setdefault("missing", set())
+            if self.read_here or not self.shared.get("may_be_old") or (commit, made_at) in missing:
+                missing.add((commit, made_at))
                 return None
             # Another walk's reading, made before snapshots this pin may name: read once more
             self._read()
