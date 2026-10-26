@@ -536,13 +536,15 @@ Error: ftsfr/fed_yield_curve has changes that are not committed:
 A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
-**New data, same code.** A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, nothing is made:
+**New data, same code.** A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, and `chartbook.lock` pins what it pinned, nothing is made:
 
 ```console
 $ chartbook snapshot
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was made.
 ```
+
+A snapshot records what the pipeline was pinned to, so after `chartbook update` it is made again with the same bytes: a pipeline that pins this one then reads where they came from. Two checkouts of one pipeline that share a store and pin differently (a lockfile git ignores) each make their own when they snapshot, and the newest is the one a pin takes.
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 

@@ -263,3 +263,75 @@ class TestWhatTheSecondReviewFound:
         held.path.write_text(json.dumps(document))
         with pytest.raises(snapshot.SnapshotError, match="cannot be read"):
             snapshot.make(forecast)
+
+
+class TestASnapshotIsNotGivenBackWithOtherPins:
+    """`chartbook snapshot` gives back the newest snapshot at a commit when nothing changed; what the pipeline is pinned to is part of that."""
+
+    def _moved(self, two):
+        """forecast's snapshot pins rates' first snapshot; rates makes another at the same commit, and forecast updates to it."""
+        rates, forecast = two
+        lock.pin(forecast)
+        first = snapshot.make(forecast, built_by_run=True).snapshot
+        pl.DataFrame({"d": ["2024-01-01"], "r": [9.9]}).write_parquet(rates / "_data" / "treasury.parquet")
+        assert snapshot.make(rates).made  # same commit, new bytes
+        assert {event.status for event in lock.update(forecast).events} >= {"moved"}
+        return first
+
+    def test_a_new_snapshot_records_the_new_pins(self, two):
+        rates, forecast = two
+        first = self._moved(two)
+        report = snapshot.make(forecast)
+        assert report.made and report.snapshot.commit == first.commit
+        assert report.snapshot.content() == first.content()  # forecast's own bytes are the same
+        (was,), (now,) = first.inputs, report.snapshot.inputs
+        assert was["snapshot"] != now["snapshot"] and now == lock.read_lock(forecast).dependencies[0]
+        # The bytes were built from the old pins: the new one does not say a run built them from these
+        assert not report.snapshot.built_by_run
+
+    def test_with_the_same_pins_it_is_given_back(self, two):
+        rates, forecast = two
+        self._moved(two)
+        made = snapshot.make(forecast).snapshot
+        again = snapshot.make(forecast)
+        assert not again.made and again.snapshot.path == made.path
+
+
+    def test_a_run_that_builds_with_the_moved_pins_says_so(self, two):
+        rates, forecast = two
+        self._moved(two)
+        assert snapshot.make(forecast, built_by_run=True).snapshot.built_by_run
+
+    def test_a_clone_with_other_pins_does_not_hide_this_checkouts_own(self, two, tmp_path):
+        """A clone shares the store and pins rates' newer snapshot; the main checkout, which pins the older one, makes its own again.
+
+        The clone's snapshot is the newest at the commit, and what a pin of the
+        main checkout's folder takes: given back the older one, the main
+        checkout would say nothing changed while a pin read the clone's pins.
+        """
+        import shutil
+
+        rates, forecast = two
+        work = rates.parent
+        from chartbook.identity import clear_git_remote_cache
+
+        _git(work, "remote", "add", "origin", "https://example.org/acme/work.git")
+        clear_git_remote_cache()
+        lock.pin(forecast)
+        mine = snapshot.make(forecast).snapshot
+        # Its address and its first commit: more of its repository than a clone with a path remote says
+        assert {kind for kind, _ in snapshot.identity_keys(mine)} == {"address", "first"}
+        (was,) = mine.inputs
+        pl.DataFrame({"d": ["2024-01-01"], "r": [9.9]}).write_parquet(rates / "_data" / "treasury.parquet")
+        assert snapshot.make(rates).made  # rates' newer snapshot, at the same commit
+        clone = tmp_path / "clone"
+        _git(tmp_path, "clone", "--quiet", str(work), str(clone))
+        shutil.copytree(forecast / "_data", clone / "forecast" / "_data")
+        lock.pin(clone / "forecast")  # its own lockfile: the newer snapshot
+        theirs = snapshot.make(clone / "forecast")
+        assert theirs.made and theirs.snapshot.inputs[0]["snapshot"] != was["snapshot"]
+        again = snapshot.make(forecast)
+        assert again.made and again.snapshot.inputs == [was]
+        newest = snapshot.find(default_store(), again.snapshot.commit, again.snapshot.subdirectory)[0]
+        assert newest.path == again.snapshot.path
+        assert not snapshot.make(forecast).made  # and then it is stable
