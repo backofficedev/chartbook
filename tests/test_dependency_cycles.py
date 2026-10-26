@@ -1082,17 +1082,13 @@ class TestAForkOfTheSameId:
         fork = _pipeline(work / "fork", "acme/rates", "treasury", {"orig": {"path": "../rates"}})
         _repository(work)
         snapshot.make(rates)
-        said = (
-            f"Two pipelines call themselves acme/rates: {fork} (from its [project] id) and {rates} (from its "
-            f"[project] id), and an ID names one pipeline. Give one of them an ID of its own with `[project] id` "
-            f"in its chartbook.toml."
-        )
+        said = f"acme/rates is met in {fork} and again in {rates}, and an ID names one pipeline."
         refused = lock.pin(fork).refused
         assert refused.startswith("acme/rates: it depends on itself") and said in refused
-        assert "Take one of these out" not in refused
+        assert "give one of them an ID of its own with `[project] id` in its chartbook.toml." in refused
         (problem,) = [p for p in run_checks(load_manifest(fork), fork) if "no order to build in" in p.message]
-        assert said.rstrip(".") in problem.message
-        with pytest.raises(run.RunError, match="Two pipelines call themselves acme/rates"):
+        assert said in problem.message
+        with pytest.raises(run.RunError, match="acme/rates is met in"):
             run.run(fork, echo=lambda line: None)
         assert _built(work) == []
         # Given an ID of its own, the copy reads its original
@@ -1338,8 +1334,8 @@ class TestWhatTheGuardsThirdReviewFound:
         _commit(one)
         refused = lock.pin(x).refused
         assert "these pipelines depend on each other" in refused
-        # One pipeline in two checkouts: a real cycle, and nothing to rename
-        assert "Two pipelines call themselves" not in refused and "Take one of these out" in refused
+        # One pipeline in two checkouts: both places are said, and taking a dependency out is the way for them
+        assert "acme/x is met in" in refused and "as two checkouts of one repository are, take one of these dependencies out" in refused
 
     def test_a_read_is_tried_again_once_the_store_has_another_snapshot(self, work, monkeypatch):
         """forecast's snapshot leads back to fred; forecast drops that, and makes a new one: fred's next read goes through."""
@@ -1369,7 +1365,8 @@ class TestWhatTheGuardsThirdReviewFound:
         _declare(fork, {"orig": {"git": str(original)}})
         _commit(fork)
         refused = lock.pin(fork).refused
-        assert "it depends on itself" in refused and "Two pipelines call themselves" not in refused
+        # Met here and again in the git cache's copy: both ways out are said
+        assert "it depends on itself" in refused and "acme/rates is met in" in refused
 
 
 @posix
@@ -1417,8 +1414,8 @@ class TestWhatTheGuardsFourthReviewFound:
         _commit(one)
         refused = lock.pin(x).refused
         assert "these pipelines depend on each other" in refused
-        # One pipeline in two checkouts: a real cycle, and nothing to rename
-        assert "Two pipelines call themselves" not in refused and "Take one of these out" in refused
+        # One pipeline in two checkouts: both places are said, and taking a dependency out is the way for them
+        assert "acme/x is met in" in refused and "as two checkouts of one repository are, take one of these dependencies out" in refused
 
 
 
@@ -1437,7 +1434,7 @@ class TestWhatTheOneIdReviewFound:
         _commit(work)
         (problem,) = [p for p in run_checks(load_manifest(r), r) if "no order to build in" in p.message]
         assert problem.message.startswith("acme/rates -> acme/rates: a pipeline this one depends on depends on itself")
-        assert f"Two pipelines call themselves acme/rates: {fork} (from its [project] id) and {rates}" in problem.message
+        assert f"acme/rates is met in {fork} and again in {rates}" in problem.message
 
     def test_a_fork_whose_id_comes_from_its_repo_url(self, tmp_path):
         """A fork whose manifest still names its upstream's repo_url keeps the upstream's ID, and is told where it comes from."""
@@ -1459,15 +1456,24 @@ class TestWhatTheOneIdReviewFound:
         snapshot.make(original)
         assert snapshot.pipeline_in(fork) == "acme/rates"
         refused = lock.pin(fork).refused
-        assert f"{fork} (from its repo_url) and {original} (from its [project] id)" in refused
+        assert f"acme/rates is met in {fork} and again in {original}" in refused and "`repo_url`" in refused
 
-    def test_a_read_through_a_pin_made_before_the_rule_is_refused(self, work, monkeypatch):
+    def test_a_read_through_a_pin_made_before_the_rule_reads_it_and_the_run_refuses(self, work, monkeypatch):
+        """As for any cycle pinned before: a read takes what is pinned, and what builds refuses."""
         from chartbook import data
-        from chartbook.errors import AssetNotPinnedError
 
         rates, fork = self._copy(work)
         _pin_anyway(fork)  # a lockfile from before an ID named one pipeline
         monkeypatch.chdir(fork)
-        with pytest.raises(AssetNotPinnedError, match="is this pipeline itself under its ID") as raised:
-            data.load("orig:treasury")
-        assert raised.value.reason == "cycle" and "Two pipelines call themselves acme/rates" in str(raised.value)
+        assert data.load("orig:treasury").collect().height == 1
+        with pytest.raises(run.RunError, match="acme/rates is met in"):
+            run.run(fork, echo=lambda line: None)
+
+    def test_an_ordinary_walk_asks_no_git(self, chain, monkeypatch):
+        from chartbook import identity
+
+        fred, rates, forecast = chain
+        asked = []
+        original = identity.checkout_of
+        monkeypatch.setattr(identity, "checkout_of", lambda *a, **k: asked.append(1) or original(*a, **k))
+        assert lineage.cycle(forecast) is None and asked == []

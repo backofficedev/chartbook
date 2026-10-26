@@ -471,15 +471,15 @@ class Cycle:
             that the walk met first, and ending with the edge back to it.
         way_in: The edges from the pipeline the walk started from down to
             that one; empty when the pipeline is in the cycle itself.
-        two_folders: ``(ID, folder, folder)`` when the cycle closes on a
-            folder that is another pipeline of the same ID than the one it
-            started from (not another checkout of its repository): a copy
-            that kept another's ID. None otherwise.
+        two_places: ``(ID, folder, folder)`` when the cycle closes on its
+            ID in another folder than the one it was met in: two checkouts
+            of one repository, or two pipelines that share the ID. None
+            otherwise.
     """
 
     edges: list[Edge]
     way_in: list[Edge] = field(default_factory=list)
-    two_folders: Optional[tuple] = None
+    two_places: Optional[tuple] = None
 
 
 def cycle(
@@ -518,9 +518,9 @@ def cycle(
     from itself. An ID names one pipeline: two folders, or two snapshots,
     under one ID are that pipeline (two clones or worktrees of one
     repository are). A copy that kept its original's ID and reads the
-    original depends on itself, and the cycle names both folders
-    (``two_folders``), unless they are two checkouts of one repository:
-    one of them is given an ID of its own. A folder or a snapshot walked once is not walked again
+    original depends on itself; where the cycle closes on its ID in
+    another folder (``two_places``), it names both, and says what to do
+    whether they are one pipeline or two. A folder or a snapshot walked once is not walked again
     unless something above it is reachable from it, which is a cycle.
     Nothing is said of what cannot be read here: a dependency with no pin
     and no folder, a ``git`` one not fetched, a folder whose manifest or
@@ -585,7 +585,7 @@ def cycle(
                 continue
             if edge.dependency in chain:
                 at = chain.index(edge.dependency)
-                return Cycle(edges[at:] + [edge], edges[:at], _two_folders(edge.dependency, places[at], child, finder.git_cache)), below
+                return Cycle(edges[at:] + [edge], edges[:at], _two_places(edge.dependency, places[at], child)), below
             below.add(edge.dependency)
             known = reach.get(named)
             if known is not None and not (known & set(chain)):
@@ -608,60 +608,23 @@ def cycle(
     return found
 
 
-def _two_folders(pipeline: str, one: object, other: object, git_cache=None) -> Optional[tuple]:
-    """The two folders that call themselves one ID, when a cycle closes on another pipeline than the one it started from; None otherwise.
-
-    Not two checkouts of one repository (two worktrees, or two clones at
-    one address), which are one pipeline, and a cycle between them a real
-    one; nor a copy in the git cache, which is a commit of a repository.
-    Asked of git only when a cycle is found.
-    """
+def _two_places(pipeline: str, one: object, other: object) -> Optional[tuple]:
+    """Where a cycle closes on its ID, when that is another folder than the one it was met in: ``(ID, folder, folder)``; None otherwise."""
     if not (isinstance(one, Path) and isinstance(other, Path)):
         return None
     one, other = Path(one).resolve(), Path(other).resolve()
     if _same_folder(str(one), str(other)):
         return None
-    try:
-        from chartbook.gitcache import default_git_cache
-        from chartbook.identity import checkout_of, same_pipeline_checked_out
-
-        root = Path((git_cache if git_cache is not None else default_git_cache()).root).resolve()
-        if any(folder == root or root in folder.parents for folder in (one, other)):
-            return None
-        if same_pipeline_checked_out(checkout_of(one), checkout_of(other)):
-            return None
-    except Exception:  # noqa: BLE001 - what cannot be told says nothing of two pipelines
-        return None
     return (pipeline, one, other)
 
 
-def where_the_id_comes_from(folder: Path) -> str:
-    """Where a folder's pipeline ID comes from, as :func:`chartbook.identity.derive_pipeline_id` takes it, in a few words."""
-    try:
-        project = snapshot._read_manifest_file(Path(folder)).get("project")
-    except Exception:  # noqa: BLE001 - a manifest that cannot be read says nothing
-        return "its folder"
-    project = project if isinstance(project, dict) else {}
-    if project.get("id"):
-        return "its [project] id"
-    if project.get("repo_url"):
-        return "its repo_url"
-    try:
-        from chartbook.identity import get_git_remote_url
-
-        if get_git_remote_url(Path(folder)):
-            return "its git remote"
-    except Exception:  # noqa: BLE001 - no remote to be read
-        pass
-    return "its folder's name"
-
-
-def two_pipelines_said(pipeline: str, one: Path, other: Path) -> str:
-    """What to say of two folders that call themselves one ID: which, why, and what to do."""
+def two_places_said(pipeline: str, one: Path, other: Path) -> str:
+    """What to say of an ID met in one folder and again in another: both, and what to do either way."""
     return (
-        f"Two pipelines call themselves {pipeline}: {one} (from {where_the_id_comes_from(one)}) and {other} "
-        f"(from {where_the_id_comes_from(other)}), and an ID names one pipeline. Give one of them an ID of "
-        f"its own with `[project] id` in its chartbook.toml."
+        f"{pipeline} is met in {one} and again in {other}, and an ID names one pipeline. If they are one "
+        f"pipeline, as two checkouts of one repository are, take one of these dependencies out. If they are "
+        f"two pipelines that share the ID (one kept another's `[project] id` or `repo_url`, say), give one of "
+        f"them an ID of its own with `[project] id` in its chartbook.toml."
     )
 
 
@@ -681,8 +644,8 @@ def explain_cycle(found: Cycle) -> str:
     for edge in [*found.way_in, *found.edges]:
         named = "" if edge.key == edge.dependency else f" (as {edge.key!r})"
         lines.append(f"  {edge.pipeline} depends on {edge.dependency}{named}: {edge.where}")
-    if found.two_folders is not None:
-        lines.append(two_pipelines_said(*found.two_folders))
+    if found.two_places is not None:
+        lines.append(two_places_said(*found.two_places))
         return "\n".join(lines)
     lines.append(
         "Dependencies between pipelines must form a graph with no cycles. Take one of these out of its "

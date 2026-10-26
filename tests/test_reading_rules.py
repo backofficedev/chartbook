@@ -531,8 +531,8 @@ class TestWhatTheSecondReviewFound:
         manifest = (copy / "chartbook.toml").read_text()
         (copy / "chartbook.toml").write_text(manifest + '\n[dependencies]\n"acme/rates" = { path = "../rates" }\n')
         refused = lock.pin(copy).refused
-        assert f"Two pipelines call themselves acme/rates: {copy} (from its [project] id) and {work / 'rates'}" in refused
-        assert "Give one of them an ID of its own with `[project] id`" in refused
+        assert f"acme/rates is met in {copy} and again in {work / 'rates'}" in refused
+        assert "give one of them an ID of its own with `[project] id`" in refused
         monkeypatch.chdir(copy)
         with pytest.raises(AssetNotPinnedError) as raised:
             data.load("acme/rates:treasury")
@@ -771,7 +771,7 @@ class TestWhatTheFourthReviewFound:
         manifest = (fork / "chartbook.toml").read_text()
         (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n')
         monkeypatch.chdir(fork)
-        with pytest.raises(AssetNotPinnedError, match="Two pipelines call themselves acme/rates") as raised:
+        with pytest.raises(AssetNotPinnedError, match="acme/rates is met in") as raised:
             data.load("orig:treasury")
         assert raised.value.reason == "cycle"
 
@@ -808,7 +808,7 @@ class TestWhatTheFifthReviewFound:
         (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n')
         _commit(work)
         snapshot.make(work / "rates")
-        assert "Two pipelines call themselves acme/rates" in lock.pin(fork).refused  # an ID names one pipeline
+        assert "acme/rates is met in" in lock.pin(fork).refused  # an ID names one pipeline
         monkeypatch.chdir(fork)
         with pytest.raises(AssetNotPinnedError) as raised:
             data.load("acme/rates:treasury")  # the original, known by its folder: the fork itself, by its ID

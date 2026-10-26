@@ -709,8 +709,8 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
             lead = "this pipeline depends on itself" if len(found.edges) == 1 else "these pipelines depend on each other"
         field = "git" if "git" in entry else "path" if "path" in entry else "id"
         around = " -> ".join([edge.pipeline for edge in found.edges] + [found.edges[0].pipeline])
-        if found.two_folders is not None:
-            remedy = lineage.two_pipelines_said(*found.two_folders).rstrip(".")
+        if found.two_places is not None:
+            remedy = lineage.two_places_said(*found.two_places).rstrip(".")
         else:
             remedy = "Take one of these out of its [dependencies]"
         problems.append(
