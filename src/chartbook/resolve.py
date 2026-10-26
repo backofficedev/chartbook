@@ -1464,9 +1464,9 @@ def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder
     no pipeline does. Through a catalog that lists the caller's own folder,
     the read is a local one. A name that is the caller's own ID, or the end
     of it, reads a dependency only where one is known to be that pipeline
-    (a copy may depend on its original under the original's ID); otherwise
-    it is refused, and its own assets are read by their own names. Nothing
-    is guessed: a dependency whose ID cannot be known here might be it.
+    under another key; otherwise it is refused, and its own assets are read
+    by their own names. Nothing is guessed: a dependency whose ID cannot be
+    known here might be it.
     """
     from chartbook.manifest import resolve_project_type
 
@@ -1976,8 +1976,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     if (dependency.kind == "store" and real_id == _own_id(manifest_dir)) or (
         dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir)
     ):
-        # As `chartbook pin` refuses a store one and `chartbook check` a folder one; a copy may
-        # depend on its original under the original's ID
+        # As `chartbook pin` refuses a store one and `chartbook check` a folder one
         raise AssetNotPinnedError(
             not_pinned.asset, "no_snapshot", f"{dependency.id!r} is this pipeline itself: a pipeline cannot depend on itself."
         )
