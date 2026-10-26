@@ -301,8 +301,10 @@ class Step:
         directory: Where it is, and where its script runs. For a ``git``
             dependency, its working copy. None if it could not be fetched.
         source: How it comes to be in the order: ``"asked"`` (the pipeline
-            ``run`` was given, or a member of the catalog it was given) or
-            ``"git"`` (a git dependency of one of those).
+            ``run`` was given, or a member of the catalog it was given),
+            ``"upstream"`` (with ``--upstream``, a ``path`` dependency on
+            this machine with no snapshot to pin, built and snapshotted
+            first) or ``"git"`` (a git dependency of one of those).
         scripts: Its named scripts.
         has_dependencies: Whether it declares any.
         missing: Why it cannot be run, if it cannot: it could not be fetched.
@@ -400,6 +402,7 @@ def plan(
     git: bool = True,
     force: bool = False,
     store: Optional[Store] = None,
+    upstream: bool = False,
 ) -> list[Step]:
     """Say which pipelines a run is about, in order.
 
@@ -409,8 +412,11 @@ def plan(
     git dependency is fetched if it has to be and given a working copy,
     which is the only thing here that changes anything.
 
-    A ``path`` dependency is never in the order. It is a folder somebody
-    works in, and it is theirs to build.
+    A ``path`` dependency is not in the order. It is a folder somebody
+    works in, and it is theirs to build. With *upstream*, one that has no
+    snapshot a pin would take, and is not pinned yet, is: built and
+    snapshotted before what depends on it (``"upstream"``), and so are its
+    own, as far up as they go.
 
     A git dependency that is built already is in the order, marked as
     built, and what *it* depends on is left out: that was needed to build
@@ -424,6 +430,8 @@ def plan(
     :param store: The store, which says which dependencies named by their
         ID have no snapshot and so are built from the default host; this
         user's by default.
+    :param upstream: Whether a ``path`` dependency with no snapshot to pin
+        is in the order, to be built and snapshotted first.
     :returns: The pipelines, each after what it depends on.
     :raises RunError: If *project_dir* holds no manifest, or two of a
         catalog's pipelines depend on each other.
@@ -570,6 +578,9 @@ def plan(
                     there = Path(entry["_resolved_path"]).resolve()
                     if there in asked:
                         visit(there, "asked", key)
+                    elif upstream and _nothing_to_pin(directory, key, entry, there, store):
+                        # With --upstream: built and snapshotted here first, its own first
+                        visit(there, "upstream", key)
             visiting.pop()
 
         done.add(directory)
@@ -633,7 +644,7 @@ def _snapshot_first(loop, steps: list, script: str, store: Optional[Store]) -> s
 
     snapshotted = {
         step.id: step for step in steps
-        if step.source == "asked" and step.directory is not None and script in step.scripts
+        if step.source in ("asked", "upstream") and step.directory is not None and script in step.scripts
     }
     for edge in [*loop.way_in, *loop.edges]:
         member = snapshotted.get(edge.dependency)
@@ -665,15 +676,39 @@ def _cycle_said(loop) -> str:
     return f"{lineage.cycle_lead(loop)}, so there is no order to build in.\n{lineage.explain_cycle(loop)}"
 
 
+def _nothing_to_pin(directory: Path, key: str, entry: dict, there: Path, store: Optional[Store]) -> bool:
+    """Whether a ``path`` dependency has no pin and no snapshot a pin would take: what ``--upstream`` builds and snapshots.
+
+    A folder that holds no pipeline is not, and the pin says so. One that
+    is not in git is, and is refused before anything runs, since it can
+    have no snapshot.
+    """
+    if not (there / MANIFEST_NAME).is_file():
+        return False
+    try:
+        locked = lock.read_lock(directory)
+    except lock.LockError:
+        locked = None
+    listed = next((e for e in (locked.dependencies if locked else []) if e.get("id") == key), None)
+    if locked is not None and lock._has_a_pin(listed, locked.assets_of(key), entry):
+        return False
+    try:
+        newest, _ = snapshots.newest_for(there, store if store is not None else default_store())
+    except snapshots.SnapshotError:
+        return True
+    return newest is None
+
+
 def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
     """Refuse unless every pipeline whose script would run is one the user trusts to run.
 
     A script is code, and a folder is trusted to run it only when the
     user has said so (``chartbook trust``; ``docs_src/design/trust.md``).
     That is the pipeline asked for, or each pipeline of the catalog asked
-    for that has the script. A ``git`` dependency is built in ChartBook's
-    own copy of its commit: naming it in ``[dependencies]`` is the trust
-    for that, and it is not asked about here.
+    for that has the script, and with ``--upstream`` each upstream folder
+    it builds. A ``git`` dependency is built in ChartBook's own copy of
+    its commit: naming it in ``[dependencies]`` is the trust for that, and
+    it is not asked about here.
 
     :raises RunError: Naming each folder that is not trusted to run, with
         its ID and the command that trusts it.
@@ -682,7 +717,7 @@ def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
 
     refused = []
     for step in steps:
-        if step.source != "asked" or step.directory is None or script not in step.scripts:
+        if step.source not in ("asked", "upstream") or step.directory is None or script not in step.scripts:
             continue
         level = trust_of(step.directory)
         if level != "run":
@@ -700,12 +735,20 @@ def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
             f"code, and it runs here once you say the pipeline is yours to run: `chartbook trust` in "
             f"{step.directory} trusts it."
         )
-    listed = "\n".join(f"  {step.id}: {step.directory} ({standing(level)})" for step, level in refused)
+    listed = "\n".join(
+        f"  {step.id}: {step.directory} ({standing(level)}{', an upstream --upstream would build' if step.source == 'upstream' else ''})"
+        for step, level in refused
+    )
+    if any(step.source == "upstream" for step, _ in refused):
+        remedy = "`chartbook trust` in a folder trusts that one, once you have read what its build runs."
+    else:
+        remedy = (
+            f"`chartbook trust --members` in {here} trusts the catalog's folder and each member folder "
+            f"on this machine; `chartbook trust` in one folder trusts that one."
+        )
     raise RunError(
         f"These pipelines are not trusted to run, so nothing was run:\n{listed}\n"
-        f"A build script is code, and it runs here once you say the pipeline is yours to run: "
-        f"`chartbook trust --members` in {here} trusts the catalog's folder and each member folder "
-        f"on this machine; `chartbook trust` in one folder trusts that one."
+        f"A build script is code, and it runs here once you say the pipeline is yours to run: {remedy}"
     )
 
 
@@ -832,6 +875,7 @@ def run(
     on_snapshot: Optional[Callable] = None,
     remake: bool = False,
     remake_command: str = "chartbook run --remake",
+    upstream: bool = False,
 ) -> RunReport:
     """Run a script in a pipeline, or in every pipeline of a catalog.
 
@@ -879,6 +923,12 @@ def run(
         (:func:`kept_missing`, ``docs_src/design/keep.md``).
     :param remake_command: The command line that says *remake*, for the
         message: ``chartbook build --remake`` from ``chartbook build``.
+    :param upstream: Before the pipelines asked for, build and snapshot each
+        ``path`` dependency on this machine that has no snapshot to pin and
+        is not pinned yet, its own first, so that it can be pinned
+        (``--upstream``). Each must be trusted to run and have everything
+        committed, as a snapshot needs, and its build must leave it so; the
+        first that fails stops the run, before anything that depends on it.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, the one
         asked for has no such script, a pipeline it builds depends, through
@@ -900,9 +950,23 @@ def run(
             f"--frozen is about what `{BUILD_SCRIPT}` pins before it runs, and "
             f"`chartbook run {script}` pins nothing, so `--frozen` has nothing to check."
         )
+    if upstream and frozen:
+        raise RunError("--frozen writes nothing, and --upstream builds and snapshots upstream pipelines. One or the other.")
+    if upstream and not building:
+        raise RunError(
+            f"--upstream builds what `{BUILD_SCRIPT}` pins, and `chartbook run {script}` pins nothing."
+        )
     # Under --frozen a git dependency is neither fetched nor built: what is
     # pinned of it has to be in the store already, and verify() checks that
-    steps = plan(here, git_cache, git=building and not frozen, force=force, store=store)
+    steps = plan(here, git_cache, git=building and not frozen, force=force, store=store, upstream=upstream)
+    upstreams = [step for step in steps if step.source == "upstream"]
+    for step in upstreams:
+        if script not in step.scripts:
+            raise RunError(
+                f"{step.id}, in {step.directory}, has no snapshot to pin and no `{BUILD_SCRIPT}` script, so "
+                f"--upstream cannot build it. Its owner makes a snapshot with `chartbook snapshot` there. "
+                f"Nothing was built."
+            )
     commits_before: dict[Path, str] = {}
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
@@ -917,17 +981,19 @@ def run(
     if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
     _require_trust_to_run(steps, script, here)
-    if snapshot:
-        if not building:
-            raise RunError(
-                f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
-                f"{script} --snapshot` has nothing to take one of."
-            )
+    if snapshot and not building:
+        raise RunError(
+            f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
+            f"{script} --snapshot` has nothing to take one of."
+        )
+    if snapshot or upstreams:
         # Found out now, and not after an hour of building. The lockfile
         # does not count: the pin before the build is about to write it,
-        # and the snapshot records what it says in `inputs`.
+        # and the snapshot records what it says in `inputs`. An upstream is
+        # always snapshotted: that is what a pin of it takes
         for step in steps:
-            if step.source == "asked" and step.directory and script in step.scripts:
+            snapshotted = (snapshot and step.source == "asked") or step.source == "upstream"
+            if snapshotted and step.directory and script in step.scripts:
                 try:
                     code = snapshots.require_committed(
                         step.directory, step.id, ignoring=(lock.LOCK_FILE,)
@@ -944,7 +1010,9 @@ def run(
     # too, and in a catalog no pipeline is built when one is in a cycle
     would_be: dict = {}
     # The pipelines of the run, by ID: one named by its ID is walked through its folder
-    members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
+    members = {
+        step.id: step.directory for step in steps if step.source in ("asked", "upstream") and step.directory is not None
+    }
     # The store's snapshots, read once for the walks below and the pins' own
     shared: dict = {}
     if building:
@@ -981,7 +1049,7 @@ def run(
         # of it: found out now, before any pipeline's build remakes it
         said = []
         for step in steps:
-            if step.source != "asked" or step.directory is None or script not in step.scripts:
+            if step.source not in ("asked", "upstream") or step.directory is None or script not in step.scripts:
                 continue
             for name, declared, taken in kept_missing(step.directory, store):
                 said.append(
@@ -998,6 +1066,11 @@ def run(
             )
 
     report = RunReport(script=script)
+    if upstreams:
+        # Said before anything runs: what --upstream builds, and snapshots, that is not this run's own
+        echo("Upstream with no snapshot to pin, built and snapshotted first:")
+        for step in upstreams:
+            echo(f"  {step.id}    in {step.directory}")
     for step in steps:
         if step.directory is None:
             echo(f"{step.id}: not run. {step.missing}")
@@ -1063,7 +1136,7 @@ def run(
 
             pins = lock.pin(
                 step.directory, store, git_cache,
-                built_here={other.id for other in steps if other.source == "asked"},
+                built_here=set(members),
                 before_writing=refuse_a_cycle,
             )
             if pins.refused:
@@ -1078,7 +1151,7 @@ def run(
                 report.reason = "what it depends on could not be pinned"
                 break
 
-        if building and snapshot and step.source == "asked":
+        if building and ((snapshot and step.source == "asked") or step.source == "upstream"):
             # Its snapshot will carry its lineage: found out now, with what
             # was just pinned, and not after the build
             try:
@@ -1104,7 +1177,7 @@ def run(
             mark_built(step.directory)
         report.ran.append(step)
 
-        if snapshot and step.source == "asked":
+        if (snapshot and step.source == "asked") or step.source == "upstream":
             # A build that changes a committed file, or that commits, leaves
             # a folder the commit the build ran at does not describe, and
             # the label would not be true

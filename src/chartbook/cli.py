@@ -319,7 +319,12 @@ def docs_open(output_dir, project_dir):
     is_flag=True,
     help="Build even though an asset marked keep = true is not on disk while the store has a version of it (see `chartbook run --remake`)",
 )
-def build(remake, **site):
+@click.option(
+    "--upstream",
+    is_flag=True,
+    help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin (see `chartbook run --upstream`)",
+)
+def build(remake, upstream, **site):
     """Make everything current: run the build script, then render the site.
 
     The same as `chartbook run` followed by `chartbook docs generate`, and
@@ -338,10 +343,15 @@ def build(remake, **site):
     `keep = true` is not on disk while the store has a version of it:
     `chartbook restore` puts it back, and --remake builds without it.
 
+    --upstream first builds and snapshots each pipeline this one depends
+    on by path that has no snapshot to pin, as `chartbook run --upstream`
+    does.
+
     \b
     Examples:
         chartbook build -f
         chartbook build -f --project-dir ../rate_forecast
+        chartbook build -f --upstream
     """
     from chartbook import run as runner
     from chartbook.manifest import BUILD_SCRIPT
@@ -363,11 +373,13 @@ def build(remake, **site):
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
         _stop_where_a_build_tool_says_chartbook_build(project_dir)
-        if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True) == "render":
+        if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True, upstream=upstream) == "render":
             click.echo("The build command was not run; only the site is rendered.", err=True)
             _stop_on_a_cycle(project_dir)
         else:
-            _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
+            _run_script(
+                project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake", upstream=upstream
+            )
             # So what the script did not make is an error, not "not built yet"
             after_build = True
     else:
@@ -810,7 +822,7 @@ def _ask_to_trust_folders(folders: list, running: bool, script: str = "build") -
     return True
 
 
-def _ask_before_running(project_dir, script, may_render) -> str:
+def _ask_before_running(project_dir, script, may_render, upstream=False) -> str:
     """At a terminal, ask about each folder whose script would run and is not trusted to run: ``"go"`` or ``"render"``.
 
     ``"render"``, for `chartbook build` alone, is the answer r: the site is
@@ -824,13 +836,13 @@ def _ask_before_running(project_dir, script, may_render) -> str:
     if not _can_ask():
         return "go"
     try:
-        steps = runner.plan(project_dir, git=False)
+        steps = runner.plan(project_dir, git=False, upstream=upstream)
     except (runner.RunError, ValueError, OSError):
         return "go"  # the run says what is wrong
     try:
         waiting = [
             step for step in steps
-            if step.source == "asked" and step.directory is not None and script in step.scripts
+            if step.source in ("asked", "upstream") and step.directory is not None and script in step.scripts
             and trust_of(step.directory) != "run"
         ]
     except ValueError:
@@ -3212,7 +3224,12 @@ def lineage_command(project_dir, check, rehash, as_json):
     is_flag=True,
     help="Build even though an asset marked keep = true is not on disk while the store has a version of it, so that the build makes it again (`chartbook restore` puts it back instead)",
 )
-def run_command(script, project_dir, force, make_snapshot, frozen, remake):
+@click.option(
+    "--upstream",
+    is_flag=True,
+    help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed",
+)
+def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -3249,6 +3266,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake):
         chartbook run --force
         chartbook run --snapshot
         chartbook run --frozen
+        chartbook run --upstream
 
     --frozen pins nothing and writes nothing before the build but, where
     the store can be written, its note that this machine reads these pins:
@@ -3261,13 +3279,22 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake):
     one is not on disk while the store has a version of it, `build` stops
     before anything runs and says so: `chartbook restore` puts it back,
     and --remake runs the build without it, which makes it again.
+
+    --upstream is for folders that are yours. A pipeline this one depends
+    on by path, on this machine, that has no snapshot to pin and is not
+    pinned yet is built first, and snapshotted once its build succeeds, so
+    that this one can pin it; its own the same way, each before what
+    depends on it. Each must be trusted to run, have a `build` script and
+    have everything committed, and its build must leave it so. The first
+    that fails stops the run.
     """
     project_dir = resolve_project_dir(project_dir)
     from chartbook.manifest import BUILD_SCRIPT
 
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
-    if not ((frozen and make_snapshot) or ((frozen or make_snapshot) and script != BUILD_SCRIPT)):
-        _ask_before_running(project_dir, script, may_render=False)
+    refused = (frozen and (make_snapshot or upstream)) or ((frozen or make_snapshot or upstream) and script != BUILD_SCRIPT)
+    if not refused:
+        _ask_before_running(project_dir, script, may_render=False, upstream=upstream)
     _run_script(
         project_dir,
         script,
@@ -3275,6 +3302,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake):
         snapshot=make_snapshot,
         frozen=frozen,
         remake=remake,
+        upstream=upstream,
     )
 
 
@@ -3329,7 +3357,8 @@ def _echo_snapshot(report):
 
 
 def _run_script(
-    project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake"
+    project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
+    upstream=False,
 ):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
@@ -3357,6 +3386,7 @@ def _run_script(
             on_verify=_echo_frozen_report,
             remake=remake,
             remake_command=remake_command,
+            upstream=upstream,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)

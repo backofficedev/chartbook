@@ -183,7 +183,9 @@ Ran build in 1 pipeline(s).
 
 `chartbook run` does not build `ftsfr/fed_yield_curve`, and does not read its folder. That folder
 is somebody's work, perhaps in the middle of a change. Whoever owns it builds it and makes the
-snapshot.
+snapshot. When the folder is yours, `chartbook run --upstream` does that for you: a `path`
+dependency with no snapshot to pin is built and snapshotted first, once you trust it and its
+changes are committed.
 
 It never moves a pin either. If the other pipeline has a newer snapshot, yours is still built
 against the one you pinned, and the command tells you so. `chartbook update` is what moves a pin.
