@@ -263,3 +263,35 @@ class TestWhatTheSecondReviewFound:
         held.path.write_text(json.dumps(document))
         with pytest.raises(snapshot.SnapshotError, match="cannot be read"):
             snapshot.make(forecast)
+
+
+class TestASnapshotIsNotGivenBackWithOtherPins:
+    """`chartbook snapshot` gives back the newest snapshot at a commit when nothing changed; what the pipeline is pinned to is part of that."""
+
+    def _moved(self, two):
+        """forecast's snapshot pins rates' first snapshot; rates makes another at the same commit, and forecast updates to it."""
+        rates, forecast = two
+        lock.pin(forecast)
+        first = snapshot.make(forecast, built_by_run=True).snapshot
+        pl.DataFrame({"d": ["2024-01-01"], "r": [9.9]}).write_parquet(rates / "_data" / "treasury.parquet")
+        assert snapshot.make(rates).made  # same commit, new bytes
+        assert {event.status for event in lock.update(forecast).events} >= {"moved"}
+        return first
+
+    def test_a_new_snapshot_records_the_new_pins(self, two):
+        rates, forecast = two
+        first = self._moved(two)
+        report = snapshot.make(forecast)
+        assert report.made and report.snapshot.commit == first.commit
+        assert report.snapshot.content() == first.content()  # forecast's own bytes are the same
+        (was,), (now,) = first.inputs, report.snapshot.inputs
+        assert was["snapshot"] != now["snapshot"] and now == lock.read_lock(forecast).dependencies[0]
+        # The bytes were built from the old pins: the new one does not say a run built them from these
+        assert not report.snapshot.built_by_run
+
+    def test_with_the_same_pins_it_is_given_back(self, two):
+        rates, forecast = two
+        self._moved(two)
+        made = snapshot.make(forecast).snapshot
+        again = snapshot.make(forecast)
+        assert not again.made and again.snapshot.path == made.path

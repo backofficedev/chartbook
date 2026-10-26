@@ -2083,6 +2083,12 @@ def _inputs(directory: Path) -> list:
     return []
 
 
+def _inputs_key(inputs: object) -> list:
+    """A snapshot's inputs in one order and form, to tell whether two say the same."""
+    listed = inputs if isinstance(inputs, list) else []
+    return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in listed)
+
+
 def _scores(directory: Path, entry) -> Optional[dict]:
     """A model's scores as its metrics file has them now, if it has a readable one."""
     from chartbook.models import read_metrics
@@ -2133,9 +2139,10 @@ def make(
     commit. An asset that is declared and not built is in the record
     without a hash, and in the report.
 
-    If nothing has changed since the newest snapshot at this commit, no
-    new one is made; unless that one took its owner's word and this one
-    follows a build, which is worth recording.
+    If nothing has changed since the newest snapshot at this commit (its
+    bytes, and what the pipeline is pinned to), no new one is made; unless
+    that one took its owner's word and this one follows a build, which is
+    worth recording.
 
     :param project_dir: The pipeline's folder.
     :param store: The store; this user's by default.
@@ -2266,11 +2273,16 @@ def make(
         # not the same object, and the new snapshot holds both
         says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags
         lost = [part["content_hash"] for part in (same.index, same.documents) if part and not store.has(part["content_hash"])]
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost:
+        # What it was pinned to is part of what a snapshot says: one whose
+        # pins have moved since (`chartbook update`, with nothing committed)
+        # is not given back, or a pipeline that pins it would read old lineage
+        same_inputs = _inputs_key(same.inputs) == _inputs_key(snapshot.inputs)
+        if says_as_much and same_inputs and (same.built_by_run or not built_by_run) and not lost:
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
-        if same.built_by_run:
-            # Made again for what the one before lacks: the bytes are still the ones a run built
+        if same.built_by_run and same_inputs:
+            # Made again for what the one before lacks: the bytes are still
+            # the ones a run built, from these same pins
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
