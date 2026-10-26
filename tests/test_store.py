@@ -32,6 +32,7 @@ from chartbook.store import (
     StoreError,
     StoreProblem,
     default_store,
+    link_target,
 )
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
@@ -149,6 +150,7 @@ class TestLayout:
         monkeypatch.chdir(work)
         assert FolderStore("relative/store").root == work / "relative" / "store"
         monkeypatch.setenv("HOME", str(work))
+        monkeypatch.setenv("USERPROFILE", str(work))  # Windows reads home from here
         assert FolderStore("~/store").root == work / "store"
 
     def test_looking_makes_nothing(self, store):
@@ -278,7 +280,7 @@ class TestPut:
         alias = work / "alias.parquet"
         alias.symlink_to(rates)
         stored = store.put(alias, links=("symlink",))
-        assert os.readlink(stored.path / "alias.parquet") == str(rates)
+        assert link_target(stored.path / "alias.parquet") == str(rates)
 
 
 class TestLinks:
@@ -327,7 +329,7 @@ class TestLinks:
         stored = store.put(rates, links=("symlink",))
         held = stored.path / "rates.parquet"
         assert stored.frozen is False
-        assert held.is_symlink() and os.readlink(held) == str(rates)
+        assert held.is_symlink() and link_target(held) == str(rates)
 
     def test_each_kind_is_tried_in_turn(self, store, rates, monkeypatch):
         def refuse(*args, **kwargs):
@@ -476,6 +478,7 @@ class TestGetHasDelete:
         store_module._make_removable(str(stored.path / "rates.parquet"))
         assert _mode(rates) == 0o444
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows keeps one read-only flag, not POSIX permission bits")
     def test_a_retried_removal_frees_the_stores_own_copy(self, store, rates):
         stored = store.put(rates, links=("copy",))
         held = stored.path / "rates.parquet"
@@ -694,6 +697,7 @@ class TestWhereTheStoreIs:
 
     def test_a_home_directory_is_expanded(self, fake_config_dir, work, monkeypatch):
         monkeypatch.setenv("HOME", str(work))
+        monkeypatch.setenv("USERPROFILE", str(work))  # Windows reads home from here
         monkeypatch.setenv(config.STORE_ENV_VAR, "~/elsewhere")
         assert config.get_store_path() == work / "elsewhere"
 

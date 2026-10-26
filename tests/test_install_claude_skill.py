@@ -55,6 +55,7 @@ class TestInstalling:
         """Without CLAUDE_CONFIG_DIR, the target is ~/.claude/skills/chartbook."""
         monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         result = CliRunner().invoke(main, ["install", "claude-skill"])
         assert result.exit_code == 0
         assert (_skill_dir(tmp_path / ".claude") / "SKILL.md").exists()
@@ -238,6 +239,7 @@ class TestFindingAStaleCopy:
         """A walk up from the home folder meets ~/.claude, which is the user's copy."""
         monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         _old_copy(tmp_path / ".claude" / "skills" / "chartbook")
         (tmp_path / "work").mkdir()
         assert claude_skill.project_dir(tmp_path / "work") is None
@@ -260,6 +262,7 @@ class TestFindingAStaleCopy:
         """Found by a reviewer: with CLAUDE_CONFIG_DIR elsewhere, ~/.claude was "this project's", with
         `--project` to be run in `~/.`."""
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "elsewhere"))
         _old_copy(tmp_path / ".claude" / "skills" / "chartbook")
         (tmp_path / "work" / "deep").mkdir(parents=True)

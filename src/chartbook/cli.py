@@ -2326,11 +2326,12 @@ def catalog_add(paths, catalog_path, yes):
     # Add each pipeline
     added = 0
     for d, name, key, fills in planned:
+        # With / on every system, so a catalog file is read the same on each
         try:
-            rel_path = os.path.relpath(d, catalog_dir)
+            rel_path = Path(os.path.relpath(d, catalog_dir)).as_posix()
         except ValueError:
             # Cross-drive on Windows
-            rel_path = str(d)
+            rel_path = Path(d).as_posix()
 
         # What is added is enabled, whatever the disabled list said of its ID
         listed = _off_the_disabled_list(raw_catalog, key)

@@ -343,6 +343,14 @@ def _link(source: str, destination: str, links: Iterable[str]) -> str:
     )
 
 
+def link_target(path) -> str:
+    """Where a symlink points, as a path is written: on Windows without the ``\\\\?\\`` that ``os.readlink`` may give."""
+    target = os.readlink(path)
+    if os.name == "nt" and target.startswith("\\\\?\\"):
+        target = target[4:]
+    return target
+
+
 def _make_removable(path: str) -> None:
     """Give back the permissions that removing *path* needs, to the store only.
 
@@ -1521,7 +1529,7 @@ def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
         if file.is_symlink() and not file.exists():
             return (
                 f"{file.relative_to(path).as_posix()} is a link to "
-                f"{os.readlink(file)}, which is no longer there"
+                f"{link_target(file)}, which is no longer there"
             )
 
     cache = hashing.HashCache()  # fresh, so every byte is read
@@ -1548,7 +1556,7 @@ def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
     if linked:
         name = linked[0].relative_to(path).as_posix()
         where = (
-            f"a link to {os.readlink(linked[0])}"
+            f"a link to {link_target(linked[0])}"
             if linked[0].is_symlink()
             else "a hard link to a file outside the store"
         )

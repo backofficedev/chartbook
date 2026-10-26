@@ -109,7 +109,7 @@ class TestHashFiles:
             hash_files([outside], tree)
 
     @pytest.mark.skipif(
-        shutil.which("shasum") is None, reason="needs the shasum command"
+        shutil.which("shasum") is None or os.name == "nt", reason="needs the shasum command, and a POSIX shell's find and sort"
     )
     def test_can_be_reproduced_by_hand(self, tree):
         """The listing is `sha256sum` output, so a shell gives the same answer."""

@@ -823,6 +823,7 @@ class TestAMachineThatOnlyReads:
         machine("b")
         assert lock.verify(clone).problems == []
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_frozen_says_when_the_note_cannot_be_written(self, reader):
         work, machine, rates, old, project, clone = reader
         roots = default_store().root / "roots"
@@ -1106,6 +1107,7 @@ class TestADirectorysListedFiles:
         assert len(data.load("acme/rates:parts", format="pandas")) == 2
         assert data.sql("select count(*) as n from {acme/rates:parts}").collect()["n"][0] == 2
 
+    @pytest.mark.skipif(os.name == "nt", reason="a file name cannot hold a colon on Windows")
     def test_a_name_with_a_colon_is_read(self, drive, monkeypatch):
         import polars as pl
 
@@ -1373,6 +1375,7 @@ class TestRunnersThatShareAName:
         assert len(notes) == 1 and notes[0].machine == "ci-runners"
         assert [made_at for _, made_at in notes[0].snapshots] == [taken.made_at]  # the last run's
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_a_note_not_written_is_said_for_what_it_is(self, drive):
         work, machine, rates = drive
         snapshot.make(rates)

@@ -412,6 +412,7 @@ class TestWhatTheReviewFound:
         assert "this is no pipeline" in result.output and "a batch run" in result.output
         assert "reads only what a lockfile pins" in result.output
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_a_folder_with_no_manifest_or_one_that_cannot_be_written(self, together, monkeypatch, tmp_path):
         import os
 
@@ -481,6 +482,7 @@ class TestWhatTheSecondReviewFound:
         with pytest.raises(AssetNotPinnedError):
             data.load("acme/rates:treasury")
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_an_unwritable_pipeline_reads_what_a_pin_would_take(self, together, monkeypatch):
         import os
 
@@ -614,6 +616,7 @@ class TestWhatTheThirdReviewFound:
             data.load("acme/rates:treasury")
         assert _value("treasury") == [99.0]  # its own names are its own
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_an_unwritable_pipeline_reads_a_version_and_says_why_it_cannot(self, tmp_path, monkeypatch):
         import os
 
@@ -867,6 +870,7 @@ class TestWhatTheSixthReviewFound:
         with pytest.raises(ValueError, match="names this pipeline"):
             data.load(pipeline="acme/rates", dataframe="treasury", catalog_path=tmp_path / "missing.toml")
 
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
     def test_a_folder_is_writable_when_a_file_can_be_made_in_it(self, tmp_path):
         import os
 

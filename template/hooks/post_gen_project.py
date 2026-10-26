@@ -3,16 +3,27 @@
 
 import os
 import shutil
+import stat
+import sys
 
 # Get the current working directory (the generated project)
 PROJECT_DIR = os.getcwd()
+
+
+def _writable_then_retry(function, path, error):
+    """Windows does not remove a read-only file, as a template installed read-only copies."""
+    os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+    function(path)
 
 
 def remove_file(filepath):
     """Remove a file if it exists."""
     full_path = os.path.join(PROJECT_DIR, filepath)
     if os.path.exists(full_path):
-        os.remove(full_path)
+        try:
+            os.remove(full_path)
+        except PermissionError:
+            _writable_then_retry(os.remove, full_path, None)
         # print(f"  Removed: {filepath}")
 
 
@@ -20,7 +31,10 @@ def remove_dir(dirpath):
     """Remove a directory and its contents if it exists."""
     full_path = os.path.join(PROJECT_DIR, dirpath)
     if os.path.isdir(full_path):
-        shutil.rmtree(full_path)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(full_path, onexc=_writable_then_retry)
+        else:
+            shutil.rmtree(full_path, onerror=_writable_then_retry)
         # print(f"  Removed: {dirpath}/")
 
 
