@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -517,6 +517,7 @@
 </ul>
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.DEFAULT_REF"><code class="docutils literal notranslate"><span class="pre">DEFAULT_REF</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GIT"><code class="docutils literal notranslate"><span class="pre">GIT</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GIT_LOCATION_VARIABLES"><code class="docutils literal notranslate"><span class="pre">GIT_LOCATION_VARIABLES</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GitCache"><code class="docutils literal notranslate"><span class="pre">GitCache</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GitCache.checkout"><code class="docutils literal notranslate"><span class="pre">GitCache.checkout()</span></code></a></li>
@@ -669,13 +670,16 @@ itself is never written to.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.gitcache.DEFAULT_REF" title="chartbook.gitcache.DEFAULT_REF"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_REF</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.gitcache.GIT_LOCATION_VARIABLES" title="chartbook.gitcache.GIT_LOCATION_VARIABLES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GIT_LOCATION_VARIABLES</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.gitcache.GIT" title="chartbook.gitcache.GIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GIT</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.gitcache.REPOS_DIR" title="chartbook.gitcache.REPOS_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">REPOS_DIR</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.gitcache.GIT_LOCATION_VARIABLES" title="chartbook.gitcache.GIT_LOCATION_VARIABLES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GIT_LOCATION_VARIABLES</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.gitcache.WORK_DIR" title="chartbook.gitcache.WORK_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WORK_DIR</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.gitcache.REPOS_DIR" title="chartbook.gitcache.REPOS_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">REPOS_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.gitcache.WORK_DIR" title="chartbook.gitcache.WORK_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WORK_DIR</span></code></a></p></td>
 <td></td>
 </tr>
 </tbody>
@@ -742,6 +746,12 @@ path: The directory the files are in.</p>
 <dt class="sig sig-object py" id="chartbook.gitcache.DEFAULT_REF">
 <span class="sig-prename descclassname"><span class="pre">chartbook.gitcache.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_REF</span></span><a class="headerlink" href="#chartbook.gitcache.DEFAULT_REF" title="Link to this definition">#</a></dt>
 <dd><p>‘refs/chartbook/default’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.gitcache.GIT">
+<span class="sig-prename descclassname"><span class="pre">chartbook.gitcache.</span></span><span class="sig-name descname"><span class="pre">GIT</span></span><a class="headerlink" href="#chartbook.gitcache.GIT" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
 </dd></dl>
 
 <dl class="py data">
@@ -998,8 +1008,11 @@ been, so that the next run leaves it alone.</p>
 <dd><p>A relative path for a repository, made from its URL: <code class="docutils literal notranslate"><span class="pre">host/owner/name</span></code>.</p>
 <p>The same repository reached two ways (<code class="docutils literal notranslate"><span class="pre">https://host/a/b.git</span></code>,
 <code class="docutils literal notranslate"><span class="pre">git&#64;host:a/b</span></code>) gets one path, and so one clone. A repository on this
-disk goes under <code class="docutils literal notranslate"><span class="pre">local/</span></code>. Nothing of a URL’s user name or password is
-in it, and no component can climb out of the cache. A port stays, as
+disk goes under <code class="docutils literal notranslate"><span class="pre">local/</span></code>, by its folder’s name and a short hash of its
+whole path: the path in full would make one in the cache longer than
+the 260 characters Windows lets git work in. Nothing of a URL’s user
+name or password is in it, and no component can climb out of the
+cache. A port stays, as
 <code class="docutils literal notranslate"><span class="pre">host_8443</span></code>, and a component with a character that is not kept gets
 a short hash of itself, so that two different repositories never share
 a clone.</p>
@@ -1071,6 +1084,7 @@ a clone.</p>
 </ul>
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.DEFAULT_REF"><code class="docutils literal notranslate"><span class="pre">DEFAULT_REF</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GIT"><code class="docutils literal notranslate"><span class="pre">GIT</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GIT_LOCATION_VARIABLES"><code class="docutils literal notranslate"><span class="pre">GIT_LOCATION_VARIABLES</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GitCache"><code class="docutils literal notranslate"><span class="pre">GitCache</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.gitcache.GitCache.checkout"><code class="docutils literal notranslate"><span class="pre">GitCache.checkout()</span></code></a></li>

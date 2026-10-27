@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -994,10 +994,12 @@
         <span class="n">said</span> <span class="o">=</span> <span class="n">nothing_to_read</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">said</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="c1"># With / on every system: DuckDB reads it so on Windows too, and SQL</span>
+        <span class="c1"># with a path in it reads the same wherever it is pasted</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
             <span class="c1"># A directory pinned from another pipeline: the files its record lists</span>
-            <span class="n">listed</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">quote_literal</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">))</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+            <span class="n">listed</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">quote_literal</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">())</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"read_parquet([</span><span class="si">{</span><span class="n">listed</span><span class="si">}</span><span class="s2">], hive_partitioning = true)"</span>
         <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"read_parquet(</span><span class="si">{</span><span class="n">quote_literal</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2">, hive_partitioning = true)"</span>

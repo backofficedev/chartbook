@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -878,6 +878,8 @@
         <span class="n">found</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
             <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-C"</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--show-superproject-working-tree"</span><span class="p">,</span> <span class="s2">"--show-toplevel"</span><span class="p">],</span>
             <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">_git_environment</span><span class="p">(),</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span>
+            <span class="c1"># A path: its bytes as they are, as the file system takes them back</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"surrogateescape"</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -1125,6 +1127,87 @@
                     <span class="ne">UserWarning</span><span class="p">,</span>
                     <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
                 <span class="p">)</span>
+    <span class="k">return</span> <span class="n">problems</span></div>
+
+
+
+<div class="viewcode-block" id="check_dependency_cycles">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.check.html#chartbook.check.check_dependency_cycles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_dependency_cycles</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Problem</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Report a pipeline that depends, through what it depends on, on itself.</span>
+
+<span class="sd">    Dependencies between pipelines must form a directed acyclic graph:</span>
+<span class="sd">    ``chartbook run``, ``chartbook build`` and ``chartbook snapshot`` refuse</span>
+<span class="sd">    a cycle, and this says so without building. The graph is walked as</span>
+<span class="sd">    :func:`chartbook.lineage.cycle` walks it: through the folders on this</span>
+<span class="sd">    machine, and through the pins in the store when the store is a folder</span>
+<span class="sd">    on this disk. A check uses no network, so a store at a URL is not read,</span>
+<span class="sd">    and a cycle that only its snapshots would show is not seen here. The</span>
+<span class="sd">    problem is addressed to the pipeline's own dependency that is in the</span>
+<span class="sd">    cycle, or that leads to one among the pipelines it depends on. A</span>
+<span class="sd">    pipeline that depends on itself directly, by its own folder or its own</span>
+<span class="sd">    ID, is reported by :func:`check_dependencies`, not here.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lineage</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">SnapshotError</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">FolderStore</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
+
+    <span class="n">store</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># the user's store, read once some pipeline here has dependencies</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">folder_store</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">store</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="n">default_store</span><span class="p">()</span>
+                <span class="n">store</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">found</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">FolderStore</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="n">store</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">store</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">problems</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">in_build</span> <span class="o">=</span> <span class="n">get_pipeline_dirs</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+    <span class="c1"># A catalog's pipelines, by ID: one named by its ID is walked through its folder</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="p">{(</span><span class="n">_id_at</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span><span class="p">):</span> <span class="n">folder</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">in_build</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># the store read once for every pipeline's walk</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">pipeline_dir</span> <span class="ow">in</span> <span class="n">in_build</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">dependencies</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dependencies"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">dependencies</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">readable</span> <span class="o">=</span> <span class="n">folder_store</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span>
+                <span class="n">pipeline_dir</span><span class="p">,</span> <span class="n">readable</span><span class="p">,</span> <span class="n">follow_pins</span><span class="o">=</span><span class="n">readable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="n">members</span><span class="o">=</span><span class="n">members</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="n">shared</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">SnapshotError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+            <span class="k">continue</span>  <span class="c1"># said by the checks of the manifest itself</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">way_in</span> <span class="ow">or</span> <span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">dependencies</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">found</span><span class="o">.</span><span class="n">way_in</span><span class="p">:</span>
+            <span class="n">there</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"_resolved_path"</span><span class="p">])</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_resolved_path"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">there</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">there</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="n">there</span><span class="o">.</span><span class="n">samefile</span><span class="p">(</span><span class="n">pipeline_dir</span><span class="p">)):</span>
+                <span class="k">continue</span>  <span class="c1"># its own folder or its own ID: check_dependencies says so</span>
+        <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">way_in</span><span class="p">:</span>
+            <span class="n">lead</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"a pipeline this one depends on depends on itself"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+                <span class="k">else</span> <span class="s2">"pipelines this one depends on depend on each other"</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lead</span> <span class="o">=</span> <span class="s2">"this pipeline depends on itself"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">"these pipelines depend on each other"</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="s2">"git"</span> <span class="k">if</span> <span class="s2">"git"</span> <span class="ow">in</span> <span class="n">entry</span> <span class="k">else</span> <span class="s2">"path"</span> <span class="k">if</span> <span class="s2">"path"</span> <span class="ow">in</span> <span class="n">entry</span> <span class="k">else</span> <span class="s2">"id"</span>
+        <span class="n">around</span> <span class="o">=</span> <span class="s2">" -&gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">edge</span><span class="o">.</span><span class="n">pipeline</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">pipeline</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">two_places</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">remedy</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">two_places_said</span><span class="p">(</span><span class="o">*</span><span class="n">found</span><span class="o">.</span><span class="n">two_places</span><span class="p">)</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">remedy</span> <span class="o">=</span> <span class="s2">"Take one of these out of its [dependencies]"</span>
+        <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">Problem</span><span class="p">(</span>
+                <span class="n">pipeline_dir</span> <span class="o">/</span> <span class="s2">"chartbook.toml"</span><span class="p">,</span>
+                <span class="n">_dependency_table</span><span class="p">(</span><span class="n">first</span><span class="o">.</span><span class="n">key</span><span class="p">),</span>
+                <span class="n">field</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">around</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">lead</span><span class="si">}</span><span class="s2">, so there is no order to build in. </span><span class="si">{</span><span class="n">remedy</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">problems</span></div>
 
 
@@ -1658,6 +1741,7 @@
         <span class="p">),</span>
         <span class="o">*</span><span class="n">check_paths</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">skip_outputs</span><span class="o">=</span><span class="n">skip_outputs</span><span class="p">),</span>
         <span class="o">*</span><span class="n">check_dependencies</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">),</span>
+        <span class="o">*</span><span class="n">check_dependency_cycles</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">),</span>
         <span class="o">*</span><span class="n">check_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">),</span>
         <span class="o">*</span><span class="n">check_build_tool</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">),</span>
         <span class="o">*</span><span class="n">check_model_metrics</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">),</span>

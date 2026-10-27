@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -518,6 +518,7 @@
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.hashes"><code class="docutils literal notranslate"><span class="pre">FolderStore.hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.incomplete"><code class="docutils literal notranslate"><span class="pre">FolderStore.incomplete()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.is_users_own"><code class="docutils literal notranslate"><span class="pre">FolderStore.is_users_own()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.lacks"><code class="docutils literal notranslate"><span class="pre">FolderStore.lacks()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.note_origin"><code class="docutils literal notranslate"><span class="pre">FolderStore.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.object_path"><code class="docutils literal notranslate"><span class="pre">FolderStore.object_path()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.origins"><code class="docutils literal notranslate"><span class="pre">FolderStore.origins()</span></code></a></li>
@@ -565,6 +566,7 @@
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.has"><code class="docutils literal notranslate"><span class="pre">Store.has()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.hashes"><code class="docutils literal notranslate"><span class="pre">Store.hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.incomplete"><code class="docutils literal notranslate"><span class="pre">Store.incomplete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.lacks"><code class="docutils literal notranslate"><span class="pre">Store.lacks()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.note_origin"><code class="docutils literal notranslate"><span class="pre">Store.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.origins"><code class="docutils literal notranslate"><span class="pre">Store.origins()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.put"><code class="docutils literal notranslate"><span class="pre">Store.put()</span></code></a></li>
@@ -604,6 +606,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.default_store"><code class="docutils literal notranslate"><span class="pre">default_store()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.is_record_name"><code class="docutils literal notranslate"><span class="pre">is_record_name()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.is_root_name"><code class="docutils literal notranslate"><span class="pre">is_root_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.link_target"><code class="docutils literal notranslate"><span class="pre">link_target()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.on_disk"><code class="docutils literal notranslate"><span class="pre">on_disk()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.plain_parts"><code class="docutils literal notranslate"><span class="pre">plain_parts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.read_root"><code class="docutils literal notranslate"><span class="pre">read_root()</span></code></a></li>
@@ -755,40 +758,43 @@ a copy is passed over; a copy of a note of a lockfile is read
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.is_root_name" title="chartbook.store.is_root_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_root_name</span></code></a></p></td>
 <td><p>Whether a file is named as a store names its note of a lockfile; a sync service’s copy of one is not.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.on_disk" title="chartbook.store.on_disk"><code class="xref py py-obj docutils literal notranslate"><span class="pre">on_disk</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.link_target" title="chartbook.store.link_target"><code class="xref py py-obj docutils literal notranslate"><span class="pre">link_target</span></code></a></p></td>
+<td><p>Where a symlink points, as a path is written: on Windows without the <code class="docutils literal notranslate"><span class="pre">\\?\</span></code> that <code class="docutils literal notranslate"><span class="pre">os.readlink</span></code> may give.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.on_disk" title="chartbook.store.on_disk"><code class="xref py py-obj docutils literal notranslate"><span class="pre">on_disk</span></code></a></p></td>
 <td><p>The file at these parts of a path under a folder, as the disk names it.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.plain_parts" title="chartbook.store.plain_parts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plain_parts</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.plain_parts" title="chartbook.store.plain_parts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plain_parts</span></code></a></p></td>
 <td><p>The parts of a path inside an object, if it is a plain relative path; else None.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.read_root" title="chartbook.store.read_root"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_root</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.read_root" title="chartbook.store.read_root"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_root</span></code></a></p></td>
 <td><p>A note of a lockfile, from what a store kept in the file named <em>note</em>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.root_document" title="chartbook.store.root_document"><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_document</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.root_document" title="chartbook.store.root_document"><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_document</span></code></a></p></td>
 <td><p>A note of a lockfile on this machine, named <em>machine</em>, as a store keeps it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.root_name" title="chartbook.store.root_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_name</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.root_name" title="chartbook.store.root_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">root_name</span></code></a></p></td>
 <td><p>The name of a store’s note of one lockfile: a hash of the machine and the lockfile’s path.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.store_for_url" title="chartbook.store.store_for_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_for_url</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.store_for_url" title="chartbook.store.store_for_url"><code class="xref py py-obj docutils literal notranslate"><span class="pre">store_for_url</span></code></a></p></td>
 <td><p>The store a URL names: a folder, or a kind a plugin provides.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.this_host" title="chartbook.store.this_host"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_host</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.this_host" title="chartbook.store.this_host"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_host</span></code></a></p></td>
 <td><p>This machine’s host name, as a note records it, for a person to read.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.this_machine" title="chartbook.store.this_machine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_machine</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.this_machine" title="chartbook.store.this_machine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_machine</span></code></a></p></td>
 <td><p>The name this machine goes by in a store’s notes of lockfiles (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.config.get_machine_id</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.this_node" title="chartbook.store.this_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_node</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.this_node" title="chartbook.store.this_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">this_node</span></code></a></p></td>
 <td><p>The hardware address of one of this machine’s network interfaces, as twelve hex digits; empty if it has none to give.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.unreadable_detail" title="chartbook.store.unreadable_detail"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unreadable_detail</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.unreadable_detail" title="chartbook.store.unreadable_detail"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unreadable_detail</span></code></a></p></td>
 <td><p>What is wrong with a JSON file that could not be read, for a message: <code class="docutils literal notranslate"><span class="pre">the</span> <span class="pre">file</span> <span class="pre">is</span> <span class="pre">empty</span></code> for one of no bytes, else the error.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.unsynced_part" title="chartbook.store.unsynced_part"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unsynced_part</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.unsynced_part" title="chartbook.store.unsynced_part"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unsynced_part</span></code></a></p></td>
 <td><p>What of an object’s folder is not as its record gives it, in a few words; None when nothing is.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.store.what_is_wrong" title="chartbook.store.what_is_wrong"><code class="xref py py-obj docutils literal notranslate"><span class="pre">what_is_wrong</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.store.what_is_wrong" title="chartbook.store.what_is_wrong"><code class="xref py py-obj docutils literal notranslate"><span class="pre">what_is_wrong</span></code></a></p></td>
 <td><p>What is wrong with one object, laid out as a folder; None if nothing is.</p></td>
 </tr>
 </tbody>
@@ -985,6 +991,12 @@ which reads nothing.</p>
 <dd><p>Whether this is this user’s own store: a folder under <code class="docutils literal notranslate"><span class="pre">~/.chartbook</span></code>, as the default store is.</p>
 <p>There, a note from before notes named their machine can only be this
 machine’s: <code class="docutils literal notranslate"><span class="pre">~/.chartbook</span></code> is never to be shared or synced.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.store.FolderStore.lacks">
+<span class="sig-name descname"><span class="pre">lacks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/store.html#FolderStore.lacks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.store.FolderStore.lacks" title="Link to this definition">#</a></dt>
+<dd><p>Whether the object of one file lacks it under this name: a put of the same bytes adds a name to such an object only, never a file to a directory’s (:meth:<code class="docutils literal notranslate"><span class="pre">_move_into_place</span></code>).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1374,6 +1386,21 @@ that cannot tell without reading says None.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="chartbook.store.Store.lacks">
+<span class="sig-name descname"><span class="pre">lacks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/store.html#Store.lacks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.store.Store.lacks" title="Link to this definition">#</a></dt>
+<dd><p>Whether a put of the same bytes would add a file the store’s object lacks under one of these names.</p>
+<p>Two assets with the same bytes share one object, under each one’s
+name; put back one at a time, the object may hold one name and not
+the other. False when nothing would be added, or that cannot be
+told without reading. Reads nothing.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>single</strong> – Whether the bytes are one file, not a directory.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="chartbook.store.Store.note_origin">
 <span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">note_origin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">top</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/store.html#Store.note_origin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.store.Store.note_origin" title="Link to this definition">#</a></dt>
 <dd><p>Note, beside a pipeline’s records at a commit, the repository folder they came from.</p>
@@ -1616,6 +1643,12 @@ That copy is not a record the store wrote, and is passed over.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.store.link_target">
+<span class="sig-prename descclassname"><span class="pre">chartbook.store.</span></span><span class="sig-name descname"><span class="pre">link_target</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/store.html#link_target"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.store.link_target" title="Link to this definition">#</a></dt>
+<dd><p>Where a symlink points, as a path is written: on Windows without the <code class="docutils literal notranslate"><span class="pre">\\?\</span></code> that <code class="docutils literal notranslate"><span class="pre">os.readlink</span></code> may give.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.store.on_disk">
 <span class="sig-prename descclassname"><span class="pre">chartbook.store.</span></span><span class="sig-name descname"><span class="pre">on_disk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">parts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/store.html#on_disk"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.store.on_disk" title="Link to this definition">#</a></dt>
 <dd><p>The file at these parts of a path under a folder, as the disk names it.</p>
@@ -1823,6 +1856,7 @@ in any store that keeps or caches objects on a disk.</p>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.hashes"><code class="docutils literal notranslate"><span class="pre">FolderStore.hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.incomplete"><code class="docutils literal notranslate"><span class="pre">FolderStore.incomplete()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.is_users_own"><code class="docutils literal notranslate"><span class="pre">FolderStore.is_users_own()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.lacks"><code class="docutils literal notranslate"><span class="pre">FolderStore.lacks()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.note_origin"><code class="docutils literal notranslate"><span class="pre">FolderStore.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.object_path"><code class="docutils literal notranslate"><span class="pre">FolderStore.object_path()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.FolderStore.origins"><code class="docutils literal notranslate"><span class="pre">FolderStore.origins()</span></code></a></li>
@@ -1870,6 +1904,7 @@ in any store that keeps or caches objects on a disk.</p>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.has"><code class="docutils literal notranslate"><span class="pre">Store.has()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.hashes"><code class="docutils literal notranslate"><span class="pre">Store.hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.incomplete"><code class="docutils literal notranslate"><span class="pre">Store.incomplete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.lacks"><code class="docutils literal notranslate"><span class="pre">Store.lacks()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.note_origin"><code class="docutils literal notranslate"><span class="pre">Store.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.origins"><code class="docutils literal notranslate"><span class="pre">Store.origins()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.Store.put"><code class="docutils literal notranslate"><span class="pre">Store.put()</span></code></a></li>
@@ -1909,6 +1944,7 @@ in any store that keeps or caches objects on a disk.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.default_store"><code class="docutils literal notranslate"><span class="pre">default_store()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.is_record_name"><code class="docutils literal notranslate"><span class="pre">is_record_name()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.is_root_name"><code class="docutils literal notranslate"><span class="pre">is_root_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.link_target"><code class="docutils literal notranslate"><span class="pre">link_target()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.on_disk"><code class="docutils literal notranslate"><span class="pre">on_disk()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.plain_parts"><code class="docutils literal notranslate"><span class="pre">plain_parts()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.store.read_root"><code class="docutils literal notranslate"><span class="pre">read_root()</span></code></a></li>

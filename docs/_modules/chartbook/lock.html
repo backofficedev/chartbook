@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -521,6 +521,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">hashing</span><span class="p">,</span> <span class="n">snapshot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GIT</span> <span class="k">as</span> <span class="n">_GIT</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GIT_LOCATION_VARIABLES</span> <span class="k">as</span> <span class="n">_GIT_LOCATION_VARIABLES</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GitCache</span><span class="p">,</span> <span class="n">GitError</span><span class="p">,</span> <span class="n">check_git_url</span><span class="p">,</span> <span class="n">default_git_cache</span><span class="p">,</span> <span class="n">local_url</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">derive_pipeline_id</span><span class="p">,</span> <span class="n">get_git_remote_url</span><span class="p">,</span> <span class="n">in_another_case</span><span class="p">,</span> <span class="n">repository_key</span><span class="p">,</span> <span class="n">strip_url_credentials</span>
@@ -533,7 +534,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetRef</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span> <span class="n">_same_directory</span><span class="p">,</span> <span class="n">declared_files</span><span class="p">,</span> <span class="n">locate_pipeline</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">asset_record</span> <span class="k">as</span> <span class="n">_asset_record</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">ObjectNotFoundError</span><span class="p">,</span> <span class="n">ReadOnlyStoreError</span><span class="p">,</span> <span class="n">Store</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">LINKS</span> <span class="k">as</span> <span class="n">STORE_LINKS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">ObjectNotFoundError</span><span class="p">,</span> <span class="n">ReadOnlyStoreError</span><span class="p">,</span> <span class="n">Store</span><span class="p">,</span> <span class="n">StoredObject</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
 
 <span class="c1">#: The lockfile's name, beside ``chartbook.toml``.</span>
 <span class="n">LOCK_FILE</span> <span class="o">=</span> <span class="s2">"chartbook.lock"</span>
@@ -765,7 +767,7 @@
     <span class="c1"># other's half-written file and then rename it away</span>
     <span class="n">temporary</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp"</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">temporary</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+        <span class="n">temporary</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">temporary</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">temporary</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -890,6 +892,12 @@
 <span class="sd">            for this user, as a store a team shares may be for everyone but</span>
 <span class="sd">            its owner. The lockfile is written all the same; the store's</span>
 <span class="sd">            ``gc`` goes by the note it has, if any.</span>
+<span class="sd">        refused: Why the lockfile was not written, when the pin's guard</span>
+<span class="sd">            refused it (the default one refuses a lockfile that would make</span>
+<span class="sd">            the pipeline's dependencies cyclic; a caller's</span>
+<span class="sd">            ``before_writing`` takes its place): neither the lockfile, nor</span>
+<span class="sd">            the store's note of it, nor any object was written. Empty</span>
+<span class="sd">            otherwise.</span>
 <span class="sd">    """</span>
 
     <span class="n">lockfile</span><span class="p">:</span> <span class="n">Path</span>
@@ -898,6 +906,7 @@
     <span class="n">git</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">set</span><span class="p">)</span>
     <span class="n">snapshots</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="n">unrooted</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">refused</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
 
 <div class="viewcode-block" id="PinReport.count">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lock.html#chartbook.lock.PinReport.count">[docs]</a>
@@ -1065,8 +1074,8 @@
     <span class="n">environment</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_GIT_LOCATION_VARIABLES</span><span class="p">}</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"rev-list"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--max-count=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">commit</span><span class="p">],</span>
-            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span>
+            <span class="p">[</span><span class="o">*</span><span class="n">_GIT</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"rev-list"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--max-count=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">commit</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">[]</span>
@@ -1192,8 +1201,8 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">present</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"cat-file"</span><span class="p">,</span> <span class="s2">"-e"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">^</span><span class="se">{{</span><span class="s2">commit</span><span class="se">}}</span><span class="s2">"</span><span class="p">],</span>
-                <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span>
+                <span class="p">[</span><span class="o">*</span><span class="n">_GIT</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"cat-file"</span><span class="p">,</span> <span class="s2">"-e"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">^</span><span class="se">{{</span><span class="s2">commit</span><span class="se">}}</span><span class="s2">"</span><span class="p">],</span>
+                <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -1224,8 +1233,8 @@
     <span class="n">environment</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_GIT_LOCATION_VARIABLES</span><span class="p">}</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"rev-list"</span><span class="p">,</span> <span class="s2">"--max-parents=0"</span><span class="p">,</span> <span class="s2">"--first-parent"</span><span class="p">,</span> <span class="n">commit</span><span class="p">],</span>
-            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span>
+            <span class="p">[</span><span class="o">*</span><span class="n">_GIT</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">git_cache</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"rev-list"</span><span class="p">,</span> <span class="s2">"--max-parents=0"</span><span class="p">,</span> <span class="s2">"--first-parent"</span><span class="p">,</span> <span class="n">commit</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">environment</span><span class="p">,</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">},</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">""</span>
@@ -1289,6 +1298,51 @@
 
 
 <span class="n">_in_process_locks</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="s2">"threading.Lock"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<div class="viewcode-block" id="held_elsewhere">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lock.html#chartbook.lock.held_elsewhere">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">held_elsewhere</span><span class="p">(</span><span class="n">lock_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether another thread or process holds :func:`_one_at_a_time`'s lock for this path now; False where that cannot be told.</span>
+
+<span class="sd">    Asked without waiting, so that a command can say it is about to wait.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cache_path</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">lock_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">24</span><span class="p">]</span>
+    <span class="n">guard</span> <span class="o">=</span> <span class="n">_in_process_locks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">guard</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">guard</span><span class="o">.</span><span class="n">locked</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="c1"># Only "someone holds it" counts: a filesystem with no locks says</span>
+    <span class="c1"># something else, and there nothing waits</span>
+    <span class="n">held</span> <span class="o">=</span> <span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">EWOULDBLOCK</span><span class="p">,</span> <span class="n">errno</span><span class="o">.</span><span class="n">EAGAIN</span><span class="p">,</span> <span class="n">errno</span><span class="o">.</span><span class="n">EACCES</span><span class="p">,</span> <span class="n">errno</span><span class="o">.</span><span class="n">EDEADLK</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">get_cache_path</span><span class="p">()</span> <span class="o">/</span> <span class="s2">"locks"</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.lock"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"a+b"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span><span class="p">:</span>
+                <span class="kn">import</span><span class="w"> </span><span class="nn">msvcrt</span>
+
+                <span class="n">handle</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">msvcrt</span><span class="o">.</span><span class="n">locking</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">msvcrt</span><span class="o">.</span><span class="n">LK_NBLCK</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">error</span><span class="o">.</span><span class="n">errno</span> <span class="ow">in</span> <span class="n">held</span>
+                <span class="n">handle</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">msvcrt</span><span class="o">.</span><span class="n">locking</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">msvcrt</span><span class="o">.</span><span class="n">LK_UNLCK</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">fcntl</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_EX</span> <span class="o">|</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_NB</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">error</span><span class="o">.</span><span class="n">errno</span> <span class="ow">in</span> <span class="n">held</span>
+            <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_UN</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
 
 
 <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
@@ -1358,10 +1412,11 @@
     <span class="n">only</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clone_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">built_here</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">before_writing</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Lock</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PinReport</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">""":func:`_sync_now`, one at a time for each lockfile."""</span>
     <span class="k">with</span> <span class="n">_one_at_a_time</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">LOCK_FILE</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_sync_now</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">move</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span> <span class="n">only</span><span class="p">,</span> <span class="n">clone_missing</span><span class="p">,</span> <span class="n">built_here</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_sync_now</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">move</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span> <span class="n">only</span><span class="p">,</span> <span class="n">clone_missing</span><span class="p">,</span> <span class="n">built_here</span><span class="p">,</span> <span class="n">before_writing</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sync_now</span><span class="p">(</span>
@@ -1372,6 +1427,7 @@
     <span class="n">only</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clone_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">built_here</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">before_writing</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Lock</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PinReport</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Bring a pipeline's lockfile and the store in line with its manifest.</span>
 
@@ -1388,9 +1444,22 @@
 <span class="sd">        catalog's own), which are never cloned.</span>
 <span class="sd">    :param git_cache: Where ``git`` dependencies are fetched to; this</span>
 <span class="sd">        user's by default.</span>
+<span class="sd">    :param before_writing: Called with the lockfile as it would be written,</span>
+<span class="sd">        whether or not that is what it holds now. What it returns, if</span>
+<span class="sd">        anything, is why it is not to be written: then nothing is written,</span>
+<span class="sd">        neither the lockfile, nor the store's note of it, nor any object</span>
+<span class="sd">        (what the pin puts in the store is held until then), and the</span>
+<span class="sd">        report's ``refused`` says why. By default a lockfile whose new or</span>
+<span class="sd">        moved entries would close a cycle of dependencies, or lead into</span>
+<span class="sd">        one, is refused (:func:`_refuse_a_cycle`); a caller that gives its</span>
+<span class="sd">        own guard decides instead.</span>
 <span class="sd">    """</span>
     <span class="n">project_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
     <span class="n">store</span> <span class="o">=</span> <span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">()</span>
+    <span class="n">the_store</span> <span class="o">=</span> <span class="n">store</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">_PutLater</span><span class="p">):</span>
+        <span class="c1"># What the pin puts in the store is put only once the lockfile may be written</span>
+        <span class="n">store</span> <span class="o">=</span> <span class="n">_PutLater</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
     <span class="n">root</span><span class="p">,</span> <span class="n">dependencies</span> <span class="o">=</span> <span class="n">_read_pipeline</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
     <span class="c1"># The store's snapshots, read once for every dependency named by its ID</span>
     <span class="n">read</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1403,6 +1472,8 @@
     <span class="n">host</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># the default host, read when a dependency is named by its ID</span>
     <span class="n">lock_path</span> <span class="o">=</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">LOCK_FILE</span>
     <span class="n">before</span> <span class="o">=</span> <span class="n">read_lock</span><span class="p">(</span><span class="n">lock_path</span><span class="p">)</span> <span class="ow">or</span> <span class="n">Lock</span><span class="p">(</span><span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">before_writing</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">before_writing</span> <span class="o">=</span> <span class="n">_refuse_a_cycle</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">the_store</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">before</span><span class="p">)</span>
 
     <span class="n">moving</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">move</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1691,6 +1762,15 @@
             <span class="n">listed</span><span class="p">[</span><span class="s2">"pinned_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">overall</span>
         <span class="n">after</span><span class="o">.</span><span class="n">dependencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
         <span class="n">after</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">before_writing</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">refused</span> <span class="o">=</span> <span class="n">before_writing</span><span class="p">(</span><span class="n">after</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">refused</span><span class="p">:</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">refused</span> <span class="o">=</span> <span class="n">refused</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">forget_held</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">report</span>
+        <span class="n">store</span><span class="o">.</span><span class="n">put_held</span><span class="p">(</span><span class="n">after</span><span class="p">,</span> <span class="n">report</span><span class="p">)</span>
+        <span class="n">store</span> <span class="o">=</span> <span class="n">the_store</span>
 
     <span class="c1"># With nothing to lock and no lockfile yet, do not make an empty one; nor</span>
     <span class="c1"># for a pin of some dependencies only (the first read of one) that found</span>
@@ -2960,6 +3040,31 @@
         <span class="n">current</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">same</span> <span class="o">=</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">current</span><span class="o">.</span><span class="n">content_hash</span> <span class="o">==</span> <span class="n">old</span>
     <span class="n">unsynced</span> <span class="o">=</span> <span class="n">_incomplete</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">had</span><span class="p">)</span> <span class="k">if</span> <span class="n">store</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">old</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">files_read</span><span class="p">(</span><span class="n">had</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="c1"># The bytes are one file, as its record and the checkout have them</span>
+    <span class="n">single</span> <span class="o">=</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">had</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">),</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">absolute</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">lacking</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">unsynced</span> <span class="ow">and</span> <span class="n">same</span> <span class="ow">and</span> <span class="n">names</span><span class="p">)</span> <span class="ow">and</span> <span class="n">store</span><span class="o">.</span><span class="n">lacks</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">single</span><span class="o">=</span><span class="n">single</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">):</span>
+        <span class="n">lacking</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># a store that cannot be asked now: said as before</span>
+    <span class="k">if</span> <span class="n">lacking</span><span class="p">:</span>
+        <span class="c1"># The store has these bytes under another name only: two assets with</span>
+        <span class="c1"># the same bytes, put back one at a time, or pinned by another</span>
+        <span class="c1"># pipeline. The file here is what was pinned, so it is put in again,</span>
+        <span class="c1"># which adds the name. A file that is there and still arriving is</span>
+        <span class="c1"># not this, and is still said to be</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">absolute</span><span class="p">,</span> <span class="n">links</span><span class="o">=</span><span class="n">PIN_LINKS</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">):</span>
+            <span class="n">stored</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># a store this user cannot write, or the file gone: said as before</span>
+        <span class="k">if</span> <span class="n">stored</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">_PutLater</span><span class="p">):</span>
+            <span class="c1"># Put once the lockfile may be written, and said restored then if that makes it whole</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">recheck</span><span class="p">[</span><span class="n">stored</span><span class="o">.</span><span class="n">content_hash</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">asset_id</span><span class="p">,</span> <span class="n">had</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">stored</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">unsynced</span> <span class="o">=</span> <span class="n">_incomplete</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">had</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">unsynced</span><span class="p">:</span>
+                <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PinEvent</span><span class="p">(</span><span class="s2">"restored"</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">asset_id</span><span class="p">,</span> <span class="n">old</span><span class="o">=</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="o">=</span><span class="n">old</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">had</span>
     <span class="k">if</span> <span class="n">unsynced</span><span class="p">:</span>
         <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PinEvent</span><span class="p">(</span><span class="s2">"unsynced"</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">asset_id</span><span class="p">,</span> <span class="n">old</span><span class="o">=</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="o">=</span><span class="n">old</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="n">unsynced</span><span class="p">))</span>
     <span class="k">elif</span> <span class="n">store</span><span class="o">.</span><span class="n">has</span><span class="p">(</span><span class="n">old</span><span class="p">):</span>
@@ -2993,6 +3098,7 @@
     <span class="n">only</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clone_missing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">built_here</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+    <span class="n">before_writing</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Lock</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PinReport</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Pin whatever a pipeline depends on that has no pin yet.</span>
 
@@ -3000,9 +3106,10 @@
 <span class="sd">    other pipeline has done since: :func:`update` is what moves one.</span>
 
 <span class="sd">    A ``path`` dependency is pinned from its newest **snapshot**: what its</span>
-<span class="sd">    owner declared ready, at a commit (:mod:`chartbook.snapshot`). Nothing</span>
-<span class="sd">    in its folder is read. One that has no snapshot cannot be pinned, and</span>
-<span class="sd">    the report says what its owner has to do.</span>
+<span class="sd">    owner declared ready, at a commit (:mod:`chartbook.snapshot`). None of</span>
+<span class="sd">    its data in its folder is read: its manifest and lockfile are, to see</span>
+<span class="sd">    that the pin makes no cycle. One that has no snapshot cannot be pinned,</span>
+<span class="sd">    and the report says what its owner has to do.</span>
 
 <span class="sd">    A ``git`` dependency is fetched into the git cache and pinned from the</span>
 <span class="sd">    checkout, at the commit the lockfile names if it names one. It has only</span>
@@ -3026,6 +3133,12 @@
 <span class="sd">        pinned from the clone (:func:`clone_instead`).</span>
 <span class="sd">    :param built_here: The IDs of pipelines a run builds itself (a</span>
 <span class="sd">        catalog's own), which are never cloned.</span>
+<span class="sd">    :param before_writing: Called with the lockfile as it would be written;</span>
+<span class="sd">        what it returns, if anything, is why nothing is written. It takes</span>
+<span class="sd">        the place of the default guard, which refuses a lockfile that would</span>
+<span class="sd">        make the pipeline's dependencies cyclic (``chartbook run`` gives its</span>
+<span class="sd">        own, which walks the run's other pipelines too). The report's</span>
+<span class="sd">        ``refused`` says why.</span>
 <span class="sd">    :returns: What was done.</span>
 <span class="sd">    :raises LockError: If *project_dir* is not a pipeline, or its lockfile</span>
 <span class="sd">        cannot be read.</span>
@@ -3036,7 +3149,242 @@
         <span class="n">only</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">only</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">({</span><span class="n">only</span><span class="p">}</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">only</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">set</span><span class="p">(</span><span class="n">only</span><span class="p">)),</span>
         <span class="n">clone_missing</span><span class="o">=</span><span class="n">clone_missing</span><span class="p">,</span>
         <span class="n">built_here</span><span class="o">=</span><span class="n">built_here</span><span class="p">,</span>
+        <span class="n">before_writing</span><span class="o">=</span><span class="n">before_writing</span><span class="p">,</span>
     <span class="p">)</span></div>
+
+
+
+<span class="c1">#: What a store does that writes, besides ``put``: refused by :class:`_PutLater`</span>
+<span class="n">_STORE_WRITES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"add_root"</span><span class="p">,</span> <span class="s2">"remove_root"</span><span class="p">,</span> <span class="s2">"delete"</span><span class="p">,</span> <span class="s2">"note_origin"</span><span class="p">,</span> <span class="s2">"write_snapshot"</span><span class="p">,</span> <span class="s2">"remove_snapshot"</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_PutLater</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A store read as it is, into which what a pin puts goes only once the lockfile may be written.</span>
+
+<span class="sd">    ``put`` reads nothing and holds the path, under a stand-in for its hash;</span>
+<span class="sd">    :meth:`put_held` puts each, once a pin's ``before_writing`` lets its</span>
+<span class="sd">    lockfile through, and gives the records their hashes from what was put,</span>
+<span class="sd">    so that each file is read once and a refused pin writes no object. With</span>
+<span class="sd">    *hold* off (:func:`would_pin`), nothing is held: the records carry no</span>
+<span class="sd">    hash, which is enough to see where a pin leads. Every other write is</span>
+<span class="sd">    refused: none is reached before the lockfile is let through.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">hold</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_store</span> <span class="o">=</span> <span class="n">store</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hold</span> <span class="o">=</span> <span class="n">hold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">#: Puts of bytes the store had under another name only, by stand-in:</span>
+        <span class="c1">#: the asset and its record, said restored once put if that makes it whole</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recheck</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_STORE_WRITES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"nothing is written to the store before a lockfile is let through (</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">links</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">STORE_LINKS</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StoredObject</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">hashing</span><span class="o">.</span><span class="n">find_files</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Nothing at </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">stand_in</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hold</span><span class="p">:</span>
+            <span class="c1"># No hash a lockfile could hold, however it was written</span>
+            <span class="n">stand_in</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"held:</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">"</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="p">[</span><span class="n">stand_in</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">links</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">StoredObject</span><span class="p">(</span><span class="n">content_hash</span><span class="o">=</span><span class="n">stand_in</span><span class="p">,</span> <span class="n">size_bytes</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">files</span><span class="o">=</span><span class="p">(),</span> <span class="n">created</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forget_held</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">report</span><span class="p">:</span> <span class="s2">"PinReport"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Let go of what was held, for a pin that was refused: the report names no stand-in."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hold</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">held</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">held</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recheck</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="n">event</span><span class="p">,</span> <span class="n">old</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">old</span> <span class="ow">in</span> <span class="n">held</span> <span class="k">else</span> <span class="n">event</span><span class="o">.</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">new</span> <span class="ow">in</span> <span class="n">held</span> <span class="k">else</span> <span class="n">event</span><span class="o">.</span><span class="n">new</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">events</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">put_held</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">after</span><span class="p">:</span> <span class="s2">"Lock"</span><span class="p">,</span> <span class="n">report</span><span class="p">:</span> <span class="s2">"PinReport"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Put what was held, and give the lockfile and the report the hashes of what was put."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hold</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">StoreError</span><span class="p">(</span><span class="s2">"a pin that is only worked out is never put in the store"</span><span class="p">)</span>
+        <span class="n">stored</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">stand_in</span><span class="p">,</span> <span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">links</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">held</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">stand_in</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">recheck</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">stored</span><span class="p">[</span><span class="n">stand_in</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">links</span><span class="o">=</span><span class="n">links</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">):</span>
+                    <span class="k">pass</span>  <span class="c1"># only a name to add: it stays said as not whole</span>
+                <span class="k">continue</span>
+            <span class="n">stored</span><span class="p">[</span><span class="n">stand_in</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">links</span><span class="o">=</span><span class="n">links</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">held</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">rechecked</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">recheck</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">recheck</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="n">restored</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">asset_id</span> <span class="k">for</span> <span class="n">stand_in</span><span class="p">,</span> <span class="p">(</span><span class="n">asset_id</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span> <span class="ow">in</span> <span class="n">rechecked</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">stand_in</span> <span class="ow">in</span> <span class="n">stored</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_incomplete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_store</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">restored</span><span class="p">:</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="s2">"restored"</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"unsynced"</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">asset</span> <span class="ow">in</span> <span class="n">restored</span> <span class="k">else</span> <span class="n">event</span>
+                <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">events</span>
+            <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">stored</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">changed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">after</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">put</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">put</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">],</span> <span class="n">record</span><span class="p">[</span><span class="s2">"size_bytes"</span><span class="p">]</span> <span class="o">=</span> <span class="n">put</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span> <span class="n">put</span><span class="o">.</span><span class="n">size_bytes</span>
+            <span class="k">if</span> <span class="s2">"files"</span> <span class="ow">in</span> <span class="n">record</span><span class="p">:</span>
+                <span class="n">record</span><span class="p">[</span><span class="s2">"files"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s2">"size_bytes"</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">,</span> <span class="s2">"content_hash"</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">content_hash</span><span class="p">}</span>
+                    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">put</span><span class="o">.</span><span class="n">entries</span>
+                <span class="p">]</span>
+            <span class="n">changed</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">after</span><span class="o">.</span><span class="n">dependencies</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="ow">in</span> <span class="n">changed</span><span class="p">:</span>
+                <span class="n">entry</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"pinned_hash"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">overall</span> <span class="o">=</span> <span class="n">pinned_hash</span><span class="p">(</span><span class="n">after</span><span class="o">.</span><span class="n">assets_of</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">overall</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">entry</span><span class="p">[</span><span class="s2">"pinned_hash"</span><span class="p">]</span> <span class="o">=</span> <span class="n">overall</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">as_put</span><span class="p">(</span><span class="n">event</span><span class="p">:</span> <span class="n">PinEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PinEvent</span><span class="p">:</span>
+            <span class="n">old</span> <span class="o">=</span> <span class="n">stored</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">old</span><span class="p">]</span><span class="o">.</span><span class="n">content_hash</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">old</span> <span class="ow">in</span> <span class="n">stored</span> <span class="k">else</span> <span class="n">event</span><span class="o">.</span><span class="n">old</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">new</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stored</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">old</span><span class="o">=</span><span class="n">old</span><span class="p">)</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="n">stored</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">new</span><span class="p">]</span><span class="o">.</span><span class="n">content_hash</span>
+            <span class="c1"># `update` put the same bytes again: what it took for a move is none</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">"kept"</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"moved"</span> <span class="ow">and</span> <span class="n">new</span> <span class="o">==</span> <span class="n">old</span> <span class="k">else</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span>
+            <span class="k">return</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span> <span class="n">old</span><span class="o">=</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="o">=</span><span class="n">new</span><span class="p">)</span>
+
+        <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">as_put</span><span class="p">(</span><span class="n">event</span><span class="p">)</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">events</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_refuse_a_cycle</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GitCache</span><span class="p">],</span> <span class="n">read</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">before</span><span class="p">:</span> <span class="s2">"Lock"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""The guard a pin has unless its caller gives one: a lockfile whose new pins close a cycle, or lead into one, is not written.</span>
+
+<span class="sd">    Dependencies between pipelines must form a directed acyclic graph</span>
+<span class="sd">    (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook</span>
+<span class="sd">    pin``, ``update`` and ``add``, and the first read of a dependency. The</span>
+<span class="sd">    walk goes from the dependencies whose entry the pin makes, or whose</span>
+<span class="sd">    location or snapshot it changes (all the walk reads of an entry),</span>
+<span class="sd">    with the lockfile as it would be written: one that leads back to this</span>
+<span class="sd">    pipeline, or into pipelines that depend on each other, is refused. A</span>
+<span class="sd">    cycle reached only through pins made before is not this pin's doing:</span>
+<span class="sd">    ``chartbook run`` and ``chartbook check`` say it, and the pin, a read of</span>
+<span class="sd">    another dependency say, is not refused for it. A pin that changes no</span>
+<span class="sd">    entry walks nothing.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">refuse</span><span class="p">(</span><span class="n">after</span><span class="p">:</span> <span class="n">Lock</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lineage</span>
+
+        <span class="c1"># Where each is pinned from, which is all the walk reads: a hash a pin</span>
+        <span class="c1"># holds back until the lockfile is let through is no change</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">pinned_from</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snapshot"</span><span class="p">)</span>
+
+        <span class="n">filed</span> <span class="o">=</span> <span class="p">{</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">):</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">before</span><span class="o">.</span><span class="n">dependencies</span><span class="p">}</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="p">{</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">after</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">pinned_from</span><span class="p">(</span><span class="n">filed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)))</span> <span class="o">!=</span> <span class="n">pinned_from</span><span class="p">(</span><span class="n">entry</span><span class="p">)}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">new</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span>
+                <span class="n">project_dir</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">git_cache</span><span class="o">=</span><span class="n">git_cache</span><span class="p">,</span> <span class="n">lockfiles</span><span class="o">=</span><span class="p">{</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">after</span><span class="p">},</span>
+                <span class="n">shared</span><span class="o">=</span><span class="p">{</span><span class="s2">"found"</span><span class="p">:</span> <span class="n">read</span><span class="p">[</span><span class="mi">0</span><span class="p">]}</span> <span class="k">if</span> <span class="n">read</span> <span class="k">else</span> <span class="p">{},</span> <span class="n">through</span><span class="o">=</span><span class="n">new</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># no pipeline here: the pin itself said so</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">lineage</span><span class="o">.</span><span class="n">cycle_lead</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="si">}</span><span class="s2">, so there is no order to build in.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">lineage</span><span class="o">.</span><span class="n">explain_cycle</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">The lockfile was left as it was."</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">refuse</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_has_a_pin</span><span class="p">(</span><span class="n">listed</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">records</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">declared</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether a lockfile's entry for a dependency is a pin that `pin` keeps as it is.</span>
+
+<span class="sd">    As ``pin`` decides it: a ``git`` dependency is pinned once its entry</span>
+<span class="sd">    names a commit; one named by its ID and got from its repository, once</span>
+<span class="sd">    something of it was pinned from that repository with its bytes</span>
+<span class="sd">    (:func:`clone_instead`); any other once something of it was pinned with</span>
+<span class="sd">    its bytes. One that names a snapshot and holds no hash is pinned again.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">listed</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">listed</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">"git"</span> <span class="ow">in</span> <span class="n">declared</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">declared</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">bool</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">))</span>
+            <span class="ow">and</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">)</span> <span class="o">==</span> <span class="n">declared</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">]</span>
+            <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ref"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"rev"</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="would_pin">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lock.html#chartbook.lock.would_pin">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">would_pin</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"."</span><span class="p">,</span>
+    <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">git_cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">GitCache</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">built_here</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Lock</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The lockfile as :func:`pin` would write it now, worked out and not written; None if it would pin nothing new.</span>
+
+<span class="sd">    Only the dependencies with no pin yet are worked out: one that has a</span>
+<span class="sd">    pin keeps it, as ``pin`` keeps it. Nothing is written: not the</span>
+<span class="sd">    lockfile, not the store's note of it, and no object. What a pin would</span>
+<span class="sd">    put in the store is not even read, so its records carry no hash: the</span>
+<span class="sd">    lockfile says where each dependency would be pinned from, which is</span>
+<span class="sd">    what ``chartbook run`` walks to find a cycle a pin would close before</span>
+<span class="sd">    anything is pinned or built. A ``git`` dependency may be fetched into</span>
+<span class="sd">    the git cache, and one named by its ID cloned there, as ``pin`` would.</span>
+
+<span class="sd">    :raises LockError: If *project_dir* is not a pipeline, or its lockfile</span>
+<span class="sd">        cannot be read.</span>
+<span class="sd">    :raises ValueError: If its ``[dependencies]`` table is malformed.</span>
+<span class="sd">    """</span>
+    <span class="n">project_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">dependencies</span> <span class="o">=</span> <span class="n">_read_pipeline</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
+    <span class="n">locked</span> <span class="o">=</span> <span class="n">read_lock</span><span class="p">(</span><span class="n">project_dir</span> <span class="o">/</span> <span class="n">LOCK_FILE</span><span class="p">)</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="p">{</span><span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]:</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">locked</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])}</span>
+    <span class="n">unpinned</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dependencies</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_has_a_pin</span><span class="p">(</span><span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">locked</span><span class="o">.</span><span class="n">assets_of</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">if</span> <span class="n">locked</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{},</span> <span class="n">dependencies</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">unpinned</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">worked_out</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">keep</span><span class="p">(</span><span class="n">after</span><span class="p">:</span> <span class="n">Lock</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">worked_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">after</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">"only worked out"</span>
+
+    <span class="n">_sync</span><span class="p">(</span>
+        <span class="n">project_dir</span><span class="p">,</span> <span class="n">_PutLater</span><span class="p">(</span><span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">(),</span> <span class="n">hold</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">move</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">git_cache</span><span class="o">=</span><span class="n">git_cache</span><span class="p">,</span> <span class="n">only</span><span class="o">=</span><span class="n">unpinned</span><span class="p">,</span> <span class="n">built_here</span><span class="o">=</span><span class="n">built_here</span><span class="p">,</span> <span class="n">before_writing</span><span class="o">=</span><span class="n">keep</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">worked_out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">worked_out</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
 

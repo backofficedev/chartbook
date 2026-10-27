@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -822,7 +822,9 @@
 <span class="sd">        reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,</span>
 <span class="sd">            ``"not_built"``, ``"not_in_store"``, ``"not_synced"`` (the</span>
 <span class="sd">            store has the object, and not all of its bytes yet),</span>
-<span class="sd">            ``"no_snapshot"`` (nothing to pin from), ``"working"`` (a batch</span>
+<span class="sd">            ``"no_snapshot"`` (nothing to pin from), ``"cycle"`` (the pin</span>
+<span class="sd">            would close a cycle of dependencies, or lead into one, so it</span>
+<span class="sd">            was not written), ``"working"`` (a batch</span>
 <span class="sd">            run does not read a working folder), ``"in_source"`` (a table</span>
 <span class="sd">            the pinned snapshot did not write out), or ``"no_pipeline"`` (a</span>
 <span class="sd">            batch run outside any pipeline, where nothing records a read).</span>

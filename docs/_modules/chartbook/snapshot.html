@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -2560,6 +2560,28 @@
 
 
 
+<div class="viewcode-block" id="require_acyclic">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.require_acyclic">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">require_acyclic</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Refuse a snapshot of a pipeline that depends, through what it depends on, on itself (:func:`chartbook.lineage.cycle`).</span>
+
+<span class="sd">    Dependencies between pipelines must form a directed acyclic graph: a</span>
+<span class="sd">    snapshot carries its lineage, and this one's would lead back to it.</span>
+
+<span class="sd">    :raises SnapshotError: Saying who depends on whom, where each was read,</span>
+<span class="sd">        and what to do.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.lineage</span><span class="w"> </span><span class="kn">import</span> <span class="n">cycle</span><span class="p">,</span> <span class="n">cycle_lead</span><span class="p">,</span> <span class="n">explain_cycle</span>
+
+    <span class="n">found</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SnapshotError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> cannot have a snapshot: </span><span class="si">{</span><span class="n">cycle_lead</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="si">}</span><span class="s2">, so its lineage would carry a cycle.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">explain_cycle</span><span class="p">(</span><span class="n">found</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span></div>
+
+
+
 <div class="viewcode-block" id="require_committed">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.require_committed">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">require_committed</span><span class="p">(</span>
@@ -2673,6 +2695,12 @@
     <span class="k">return</span> <span class="p">[]</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_inputs_key</span><span class="p">(</span><span class="n">inputs</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A snapshot's inputs in one order and form, to tell whether two say the same."""</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">inputs</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_scores</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""A model's scores as its metrics file has them now, if it has a readable one."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_metrics</span>
@@ -2728,9 +2756,10 @@
 <span class="sd">    commit. An asset that is declared and not built is in the record</span>
 <span class="sd">    without a hash, and in the report.</span>
 
-<span class="sd">    If nothing has changed since the newest snapshot at this commit, no</span>
-<span class="sd">    new one is made; unless that one took its owner's word and this one</span>
-<span class="sd">    follows a build, which is worth recording.</span>
+<span class="sd">    If nothing has changed since the newest snapshot at this commit (its</span>
+<span class="sd">    bytes, and what the pipeline is pinned to), no new one is made; unless</span>
+<span class="sd">    that one took its owner's word and this one follows a build, which is</span>
+<span class="sd">    worth recording.</span>
 
 <span class="sd">    :param project_dir: The pipeline's folder.</span>
 <span class="sd">    :param store: The store; this user's by default.</span>
@@ -2752,6 +2781,7 @@
 
     <span class="n">store</span> <span class="o">=</span> <span class="n">store</span> <span class="k">if</span> <span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">()</span>
     <span class="n">require_lineage</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+    <span class="n">require_acyclic</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">deep</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.lineage</span><span class="w"> </span><span class="kn">import</span> <span class="n">walk</span>
 
@@ -2839,12 +2869,15 @@
     <span class="n">before</span> <span class="o">=</span> <span class="p">[</span><span class="n">taken</span> <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">find</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">code</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">code</span><span class="o">.</span><span class="n">subdirectory</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">made_in_the_future</span><span class="p">(</span><span class="n">taken</span><span class="p">)]</span>
     <span class="c1"># The newest record of this commit that says at least as much of its</span>
     <span class="c1"># repository as this one would, with nothing newer that holds other</span>
-    <span class="c1"># bytes: a clone with a path remote, or a shallow one, reuses its main</span>
-    <span class="c1"># checkout's, and the main checkout makes its own once. A newer record</span>
-    <span class="c1"># with other bytes would otherwise be the one a pin takes.</span>
+    <span class="c1"># bytes or other pins: a clone with a path remote, or a shallow one,</span>
+    <span class="c1"># reuses its main checkout's, and the main checkout makes its own once.</span>
+    <span class="c1"># A newer record with other bytes, or pinned to other snapshots (a clone</span>
+    <span class="c1"># whose own lockfile has moved, with nothing committed), would otherwise</span>
+    <span class="c1"># be the one a pin takes. What it was pinned to is part of what a</span>
+    <span class="c1"># snapshot says, so one whose pins have moved since is not given back</span>
     <span class="n">same</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">before</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">taken</span><span class="o">.</span><span class="n">content</span><span class="p">()</span> <span class="o">!=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">content</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">taken</span><span class="o">.</span><span class="n">content</span><span class="p">()</span> <span class="o">!=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">content</span><span class="p">()</span> <span class="ow">or</span> <span class="n">_inputs_key</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span> <span class="o">!=</span> <span class="n">_inputs_key</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">inputs</span><span class="p">):</span>
             <span class="k">break</span>
         <span class="c1"># One made under another ID is not this pipeline's, whose ID has</span>
         <span class="c1"># changed since (a remote added, a folder renamed): it gets its own</span>
@@ -2864,7 +2897,8 @@
             <span class="n">store</span><span class="o">.</span><span class="n">note_origin</span><span class="p">(</span><span class="n">code</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">record_name</span><span class="p">(</span><span class="n">code</span><span class="o">.</span><span class="n">subdirectory</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">code</span><span class="o">.</span><span class="n">top</span><span class="p">))</span>
             <span class="k">return</span> <span class="n">SnapshotReport</span><span class="p">(</span><span class="n">same</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">not_built</span><span class="p">,</span> <span class="n">skipped_labels</span><span class="o">=</span><span class="n">labels_skipped</span><span class="p">(</span><span class="n">raw</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">same</span><span class="o">.</span><span class="n">built_by_run</span><span class="p">:</span>
-            <span class="c1"># Made again for what the one before lacks: the bytes are still the ones a run built</span>
+            <span class="c1"># Made again for what the one before lacks: the bytes are still</span>
+            <span class="c1"># the ones a run built, from these same pins</span>
             <span class="n">snapshot</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">built_with</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">built_with</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 
     <span class="c1"># A model whose bytes no snapshot of this pipeline has had is a new version</span>
@@ -3287,7 +3321,7 @@
     <span class="n">code_changed_at</span> <span class="o">=</span> <span class="n">_code_changed_at</span><span class="p">(</span><span class="n">taken</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">code_changed_at</span><span class="p">:</span>
         <span class="n">marker</span><span class="p">[</span><span class="s2">"code_changed_at"</span><span class="p">]</span> <span class="o">=</span> <span class="n">code_changed_at</span>
-    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">VERSION_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">VERSION_FILE</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="n">held</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]))</span>
     <span class="k">for</span> <span class="n">relative</span> <span class="ow">in</span> <span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">,</span> <span class="p">[]):</span>
@@ -3527,7 +3561,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="n">target</span> <span class="o">=</span> <span class="n">folder</span> <span class="o">/</span> <span class="n">plain</span>
             <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">target</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"metrics"</span><span class="p">],</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+            <span class="n">target</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"metrics"</span><span class="p">],</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
             <span class="n">report</span><span class="o">.</span><span class="n">left_out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="sa">f</span><span class="s2">"model/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"its scores could not be written to </span><span class="si">{</span><span class="n">plain</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
     <span class="n">site_dir</span> <span class="o">=</span> <span class="n">safe_relative</span><span class="p">((</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"site_dir"</span><span class="p">))</span>

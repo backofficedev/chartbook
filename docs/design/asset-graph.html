@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
@@ -1149,7 +1149,8 @@ directory with <code class="docutils literal notranslate"><span class="pre">bash
 maintainer: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> builds the pipeline it is run in, and never builds in a folder
 that pipeline depends on. That folder is somebody’s work, and the pipeline reads what is
 pinned, not what is there. A first version did walk the graph and run <code class="docutils literal notranslate"><span class="pre">build</span></code> in each
-pipeline’s folder; it was taken out before it was merged. Two things are left of the graph.
+pipeline’s folder; it was taken out before it was merged. <em>(2026-10-26: <code class="docutils literal notranslate"><span class="pre">--upstream</span></code> builds and
+snapshots a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency with no snapshot to pin, when asked.)</em> Two things are left of the graph.
 A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is built, once for a commit, in a writable copy of its checkout, which is
 how its built data comes to be pinned; <code class="docutils literal notranslate"><span class="pre">--force</span></code> builds it again. And in a catalog, the
 script is run in each of the catalog’s pipelines, one that another depends on first.

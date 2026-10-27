@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -624,6 +624,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.remove"><code class="docutils literal notranslate"><span class="pre">remove()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.renamed"><code class="docutils literal notranslate"><span class="pre">renamed()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.repository_groups"><code class="docutils literal notranslate"><span class="pre">repository_groups()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_acyclic"><code class="docutils literal notranslate"><span class="pre">require_acyclic()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_committed"><code class="docutils literal notranslate"><span class="pre">require_committed()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_lineage"><code class="docutils literal notranslate"><span class="pre">require_lineage()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.restore"><code class="docutils literal notranslate"><span class="pre">restore()</span></code></a></li>
@@ -859,43 +860,46 @@ secrets, and a store is something to share.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.repository_groups" title="chartbook.snapshot.repository_groups"><code class="xref py py-obj docutils literal notranslate"><span class="pre">repository_groups</span></code></a></p></td>
 <td><p>Snapshots of one pipeline ID, grouped by the repository each was made in.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.require_committed" title="chartbook.snapshot.require_committed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_committed</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.require_acyclic" title="chartbook.snapshot.require_acyclic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_acyclic</span></code></a></p></td>
+<td><p>Refuse a snapshot of a pipeline that depends, through what it depends on, on itself (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.lineage.cycle</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.require_committed" title="chartbook.snapshot.require_committed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_committed</span></code></a></p></td>
 <td><p>Check that a pipeline can have a snapshot now, and say where it is in git.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.require_lineage" title="chartbook.snapshot.require_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_lineage</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.require_lineage" title="chartbook.snapshot.require_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">require_lineage</span></code></a></p></td>
 <td><p>Refuse a snapshot whose pins do not give its full lineage (:func:<code class="docutils literal notranslate"><span class="pre">lineage_gaps</span></code>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.restore" title="chartbook.snapshot.restore"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.restore" title="chartbook.snapshot.restore"><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore</span></code></a></p></td>
 <td><p>Put a pipeline’s own assets back on disk from its snapshots: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.safe_relative" title="chartbook.snapshot.safe_relative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">safe_relative</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.safe_relative" title="chartbook.snapshot.safe_relative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">safe_relative</span></code></a></p></td>
 <td><p>A path from a manifest or a record, if it is a plain path inside a folder; else None.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.schema_path" title="chartbook.snapshot.schema_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">schema_path</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.schema_path" title="chartbook.snapshot.schema_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">schema_path</span></code></a></p></td>
 <td><p>The JSON Schema file for a snapshot record’s envelope.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.source_record" title="chartbook.snapshot.source_record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_record</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.source_record" title="chartbook.snapshot.source_record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">source_record</span></code></a></p></td>
 <td><p>A dataframe that is a table or a query in a source, as a snapshot records it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.stored_assets" title="chartbook.snapshot.stored_assets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stored_assets</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.stored_assets" title="chartbook.snapshot.stored_assets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stored_assets</span></code></a></p></td>
 <td><p>The assets the index a snapshot holds lists, each as <code class="docutils literal notranslate"><span class="pre">{&quot;kind&quot;,</span> <span class="pre">&quot;id&quot;,</span> <span class="pre">&quot;name&quot;}</span></code>, by ID; empty when it has none.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.stored_pipeline_record" title="chartbook.snapshot.stored_pipeline_record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stored_pipeline_record</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.stored_pipeline_record" title="chartbook.snapshot.stored_pipeline_record"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stored_pipeline_record</span></code></a></p></td>
 <td><p>The snapshot’s own Pipeline record, from the index it holds; empty when it has none or it cannot be read.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.training_inputs" title="chartbook.snapshot.training_inputs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">training_inputs</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.training_inputs" title="chartbook.snapshot.training_inputs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">training_inputs</span></code></a></p></td>
 <td><p>For each model with <code class="docutils literal notranslate"><span class="pre">trained_on</span></code>, the content hash of each input now.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.uncommitted" title="chartbook.snapshot.uncommitted"><code class="xref py py-obj docutils literal notranslate"><span class="pre">uncommitted</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.uncommitted" title="chartbook.snapshot.uncommitted"><code class="xref py py-obj docutils literal notranslate"><span class="pre">uncommitted</span></code></a></p></td>
 <td><p>What in a pipeline’s folder is not committed, as <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">status</span></code> lists it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.version_name" title="chartbook.snapshot.version_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">version_name</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.version_name" title="chartbook.snapshot.version_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">version_name</span></code></a></p></td>
 <td><p>The name of a version: the start of its content hash, as git names a commit.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.versions_of" title="chartbook.snapshot.versions_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">versions_of</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.versions_of" title="chartbook.snapshot.versions_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">versions_of</span></code></a></p></td>
 <td><p>The versions of one asset: each content it has had in a snapshot.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.versions_of_pipeline" title="chartbook.snapshot.versions_of_pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">versions_of_pipeline</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.versions_of_pipeline" title="chartbook.snapshot.versions_of_pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">versions_of_pipeline</span></code></a></p></td>
 <td><p>The versions of one asset of a pipeline, from the store alone.</p></td>
 </tr>
 </tbody>
@@ -1751,9 +1755,10 @@ the newest, and so be pinned and kept, for as long as its date says.</p>
 as its own frozen copy, and a record of them is written under the
 commit. An asset that is declared and not built is in the record
 without a hash, and in the report.</p>
-<p>If nothing has changed since the newest snapshot at this commit, no
-new one is made; unless that one took its owner’s word and this one
-follows a build, which is worth recording.</p>
+<p>If nothing has changed since the newest snapshot at this commit (its
+bytes, and what the pipeline is pinned to), no new one is made; unless
+that one took its owner’s word and this one follows a build, which is
+worth recording.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2092,6 +2097,20 @@ one repository with it, as another branch would be.</p>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The groups, each in the order given, and the snapshots that
 name neither (made before snapshots recorded their repository).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.snapshot.require_acyclic">
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">require_acyclic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.Store" title="chartbook.store.Store"><span class="pre">chartbook.store.Store</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#require_acyclic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.require_acyclic" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a snapshot of a pipeline that depends, through what it depends on, on itself (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.lineage.cycle</span></code>).</p>
+<p>Dependencies between pipelines must form a directed acyclic graph: a
+snapshot carries its lineage, and this one’s would lead back to it.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.snapshot.SnapshotError" title="chartbook.snapshot.SnapshotError"><strong>SnapshotError</strong></a> – Saying who depends on whom, where each was read,
+and what to do.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2477,6 +2496,7 @@ oldest first.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.remove"><code class="docutils literal notranslate"><span class="pre">remove()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.renamed"><code class="docutils literal notranslate"><span class="pre">renamed()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.repository_groups"><code class="docutils literal notranslate"><span class="pre">repository_groups()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_acyclic"><code class="docutils literal notranslate"><span class="pre">require_acyclic()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_committed"><code class="docutils literal notranslate"><span class="pre">require_committed()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.require_lineage"><code class="docutils literal notranslate"><span class="pre">require_lineage()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.restore"><code class="docutils literal notranslate"><span class="pre">restore()</span></code></a></li>

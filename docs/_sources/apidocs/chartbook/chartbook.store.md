@@ -59,6 +59,10 @@
   - ```{autodoc2-docstring} chartbook.store.is_root_name
     :summary:
     ```
+* - {py:obj}`link_target <chartbook.store.link_target>`
+  - ```{autodoc2-docstring} chartbook.store.link_target
+    :summary:
+    ```
 * - {py:obj}`on_disk <chartbook.store.on_disk>`
   - ```{autodoc2-docstring} chartbook.store.on_disk
     :summary:
@@ -262,6 +266,14 @@ Bases: {py:obj}`chartbook.store.Store`
 :canonical: chartbook.store.FolderStore.is_users_own
 
 ```{autodoc2-docstring} chartbook.store.FolderStore.is_users_own
+```
+
+````
+
+````{py:method} lacks(content_hash: str, names: typing.Iterable[str], single: bool = True) -> bool
+:canonical: chartbook.store.FolderStore.lacks
+
+```{autodoc2-docstring} chartbook.store.FolderStore.lacks
 ```
 
 ````
@@ -661,6 +673,14 @@ Bases: {py:obj}`abc.ABC`
 
 ````
 
+````{py:method} lacks(content_hash: str, names: typing.Iterable[str], single: bool = True) -> bool
+:canonical: chartbook.store.Store.lacks
+
+```{autodoc2-docstring} chartbook.store.Store.lacks
+```
+
+````
+
 ````{py:method} note_origin(commit: str, name: str, top: str) -> None
 :canonical: chartbook.store.Store.note_origin
 :abstractmethod:
@@ -980,6 +1000,13 @@ Bases: {py:obj}`chartbook.store.StoreError`
 :canonical: chartbook.store.is_root_name
 
 ```{autodoc2-docstring} chartbook.store.is_root_name
+```
+````
+
+````{py:function} link_target(path) -> str
+:canonical: chartbook.store.link_target
+
+```{autodoc2-docstring} chartbook.store.link_target
 ```
 ````
 

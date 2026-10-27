@@ -59,6 +59,10 @@
   - ```{autodoc2-docstring} chartbook.lock.clone_instead
     :summary:
     ```
+* - {py:obj}`held_elsewhere <chartbook.lock.held_elsewhere>`
+  - ```{autodoc2-docstring} chartbook.lock.held_elsewhere
+    :summary:
+    ```
 * - {py:obj}`is_read_only <chartbook.lock.is_read_only>`
   - ```{autodoc2-docstring} chartbook.lock.is_read_only
     :summary:
@@ -109,6 +113,10 @@
     ```
 * - {py:obj}`verify <chartbook.lock.verify>`
   - ```{autodoc2-docstring} chartbook.lock.verify
+    :summary:
+    ```
+* - {py:obj}`would_pin <chartbook.lock.would_pin>`
+  - ```{autodoc2-docstring} chartbook.lock.would_pin
     :summary:
     ```
 * - {py:obj}`write_lock <chartbook.lock.write_lock>`
@@ -772,6 +780,16 @@ Bases: {py:obj}`Exception`
 
 ````
 
+````{py:attribute} refused
+:canonical: chartbook.lock.PinReport.refused
+:type: str
+:value: <Multiline-String>
+
+```{autodoc2-docstring} chartbook.lock.PinReport.refused
+```
+
+````
+
 ````{py:attribute} snapshots
 :canonical: chartbook.lock.PinReport.snapshots
 :type: dict
@@ -847,6 +865,13 @@ Bases: {py:obj}`Exception`
 ```
 ````
 
+````{py:function} held_elsewhere(lock_path: pathlib.Path) -> bool
+:canonical: chartbook.lock.held_elsewhere
+
+```{autodoc2-docstring} chartbook.lock.held_elsewhere
+```
+````
+
 ````{py:function} is_read_only(error: Exception) -> bool
 :canonical: chartbook.lock.is_read_only
 
@@ -875,7 +900,7 @@ Bases: {py:obj}`Exception`
 ```
 ````
 
-````{py:function} pin(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, only: typing.Optional[typing.Iterable[str]] = None, clone_missing: bool = True, built_here: typing.Iterable[str] = ()) -> chartbook.lock.PinReport
+````{py:function} pin(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, only: typing.Optional[typing.Iterable[str]] = None, clone_missing: bool = True, built_here: typing.Iterable[str] = (), before_writing: typing.Optional[typing.Callable[[chartbook.lock.Lock], typing.Optional[str]]] = None) -> chartbook.lock.PinReport
 :canonical: chartbook.lock.pin
 
 ```{autodoc2-docstring} chartbook.lock.pin
@@ -935,6 +960,13 @@ Bases: {py:obj}`Exception`
 :canonical: chartbook.lock.verify
 
 ```{autodoc2-docstring} chartbook.lock.verify
+```
+````
+
+````{py:function} would_pin(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, built_here: typing.Iterable[str] = ()) -> typing.Optional[chartbook.lock.Lock]
+:canonical: chartbook.lock.would_pin
+
+```{autodoc2-docstring} chartbook.lock.would_pin
 ```
 ````
 

@@ -294,6 +294,17 @@ Bases: {py:obj}`Exception`
 
 ````
 
+````{py:attribute} snapshot_first
+:canonical: chartbook.run.Step.snapshot_first
+:type: bool
+:value: >
+   False
+
+```{autodoc2-docstring} chartbook.run.Step.snapshot_first
+```
+
+````
+
 ````{py:attribute} source
 :canonical: chartbook.run.Step.source
 :type: str
@@ -328,14 +339,14 @@ Bases: {py:obj}`Exception`
 ```
 ````
 
-````{py:function} plan(project_dir: typing.Union[str, pathlib.Path] = '.', git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, git: bool = True, force: bool = False, store: typing.Optional[chartbook.store.Store] = None) -> list[chartbook.run.Step]
+````{py:function} plan(project_dir: typing.Union[str, pathlib.Path] = '.', git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, git: bool = True, force: bool = False, store: typing.Optional[chartbook.store.Store] = None, upstream: bool = False) -> list[chartbook.run.Step]
 :canonical: chartbook.run.plan
 
 ```{autodoc2-docstring} chartbook.run.plan
 ```
 ````
 
-````{py:function} run(project_dir: typing.Union[str, pathlib.Path] = '.', script: str = BUILD_SCRIPT, store: typing.Optional[chartbook.store.Store] = None, git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, echo: typing.Callable[[str], None] = print, on_pin: typing.Optional[typing.Callable] = None, force: bool = False, snapshot: bool = False, frozen: bool = False, on_verify: typing.Optional[typing.Callable] = None, on_snapshot: typing.Optional[typing.Callable] = None, remake: bool = False, remake_command: str = 'chartbook run --remake') -> chartbook.run.RunReport
+````{py:function} run(project_dir: typing.Union[str, pathlib.Path] = '.', script: str = BUILD_SCRIPT, store: typing.Optional[chartbook.store.Store] = None, git_cache: typing.Optional[chartbook.gitcache.GitCache] = None, echo: typing.Callable[[str], None] = print, on_pin: typing.Optional[typing.Callable] = None, force: bool = False, snapshot: bool = False, frozen: bool = False, on_verify: typing.Optional[typing.Callable] = None, on_snapshot: typing.Optional[typing.Callable] = None, remake: bool = False, remake_command: str = 'chartbook run --remake', upstream: bool = False) -> chartbook.run.RunReport
 :canonical: chartbook.run.run
 
 ```{autodoc2-docstring} chartbook.run.run

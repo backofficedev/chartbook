@@ -195,6 +195,10 @@
   - ```{autodoc2-docstring} chartbook.snapshot.repository_groups
     :summary:
     ```
+* - {py:obj}`require_acyclic <chartbook.snapshot.require_acyclic>`
+  - ```{autodoc2-docstring} chartbook.snapshot.require_acyclic
+    :summary:
+    ```
 * - {py:obj}`require_committed <chartbook.snapshot.require_committed>`
   - ```{autodoc2-docstring} chartbook.snapshot.require_committed
     :summary:
@@ -1267,6 +1271,13 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 :canonical: chartbook.snapshot.repository_groups
 
 ```{autodoc2-docstring} chartbook.snapshot.repository_groups
+```
+````
+
+````{py:function} require_acyclic(directory: typing.Union[str, pathlib.Path], pipeline: str, store: typing.Optional[chartbook.store.Store] = None) -> None
+:canonical: chartbook.snapshot.require_acyclic
+
+```{autodoc2-docstring} chartbook.snapshot.require_acyclic
 ```
 ````
 

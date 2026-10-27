@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
@@ -560,6 +560,21 @@ every clone of the repository has the folder too. A <code class="docutils litera
 machine only: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns about one, and shows the line that names it by its ID.</p>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns while you have not pinned it yet, and for a <code class="docutils literal notranslate"><span class="pre">path</span></code> it also confirms that
 the other pipeline is there and that it declares that dataframe.</p>
+<p>Dependencies between pipelines form a directed acyclic graph: a pipeline cannot depend, through
+what it depends on, on itself. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> stop
+when they find a cycle, and say who depends on whom and where each dependency was read, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports it. A run looks before it pins or builds anything, including at the pins
+it is about to make, so a refused run leaves your lockfile and the store as they were. If what a
+pin would take changes while the run goes on, that pin is refused when its turn comes and is not
+written, though the pipelines before it in the run were pinned and built by then, and with
+<code class="docutils literal notranslate"><span class="pre">--snapshot</span></code> snapshotted. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code> and the first read
+of a dependency refuse a pin whose new entries would close a cycle, or lead into one, and write
+nothing.</p>
+<p>A cycle is found in the folders on your machine as soon as it is declared, and through the
+snapshot each pin names, since a pin does not move whatever the folder says now. A <code class="docutils literal notranslate"><span class="pre">git</span></code>
+dependency, or one named by its ID and got from its repository, is followed through its copy once
+it is fetched. Take one of the dependencies out; where a snapshot records it, that pipeline makes a new
+snapshot, and the one that pins it runs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>.</p>
 </section>
 <section id="they-declare-a-build-ready">
 <h2>They declare a build ready<a class="headerlink" href="#they-declare-a-build-ready" title="Link to this heading">#</a></h2>
@@ -699,7 +714,9 @@ example’s data. <a class="reference internal" href="../reference/configuration
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> does not build <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code>, and does not read its folder. That folder
 is somebody’s work, perhaps in the middle of a change. Whoever owns it builds it and makes the
-snapshot.</p>
+snapshot. When the folder is yours, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--upstream</span></code> does that for you: a <code class="docutils literal notranslate"><span class="pre">path</span></code>
+dependency with no snapshot to pin is built and snapshotted first, once you trust it and its
+changes are committed.</p>
 <p>It never moves a pin either. If the other pipeline has a newer snapshot, yours is still built
 against the one you pinned, and the command tells you so. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> is what moves a pin.
 See <a class="reference internal" href="../reference/cli.html#chartbook-run"><span class="std std-ref">chartbook run</span></a>.</p>

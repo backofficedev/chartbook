@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -675,7 +675,8 @@
             <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-            <span class="n">env</span><span class="o">=</span><span class="n">_git_environment</span><span class="p">(),</span>
+            <span class="c1"># An address goes into the index, which is UTF-8: a byte that is not is replaced</span>
+            <span class="n">env</span><span class="o">=</span><span class="n">_git_environment</span><span class="p">(),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -1089,7 +1090,7 @@
             <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
-            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">_git_environment</span><span class="p">(),</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">,</span> <span class="s2">"GIT_LITERAL_PATHSPECS"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">},</span>
+            <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="n">_git_environment</span><span class="p">(),</span> <span class="s2">"GIT_OPTIONAL_LOCKS"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">,</span> <span class="s2">"GIT_LITERAL_PATHSPECS"</span><span class="p">:</span> <span class="s2">"1"</span><span class="p">},</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>

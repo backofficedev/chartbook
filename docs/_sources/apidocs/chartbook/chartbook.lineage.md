@@ -15,6 +15,14 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`Cycle <chartbook.lineage.Cycle>`
+  - ```{autodoc2-docstring} chartbook.lineage.Cycle
+    :summary:
+    ```
+* - {py:obj}`Edge <chartbook.lineage.Edge>`
+  - ```{autodoc2-docstring} chartbook.lineage.Edge
+    :summary:
+    ```
 * - {py:obj}`Lineage <chartbook.lineage.Lineage>`
   - ```{autodoc2-docstring} chartbook.lineage.Lineage
     :summary:
@@ -31,6 +39,22 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`cycle <chartbook.lineage.cycle>`
+  - ```{autodoc2-docstring} chartbook.lineage.cycle
+    :summary:
+    ```
+* - {py:obj}`cycle_lead <chartbook.lineage.cycle_lead>`
+  - ```{autodoc2-docstring} chartbook.lineage.cycle_lead
+    :summary:
+    ```
+* - {py:obj}`explain_cycle <chartbook.lineage.explain_cycle>`
+  - ```{autodoc2-docstring} chartbook.lineage.explain_cycle
+    :summary:
+    ```
+* - {py:obj}`two_places_said <chartbook.lineage.two_places_said>`
+  - ```{autodoc2-docstring} chartbook.lineage.two_places_said
+    :summary:
+    ```
 * - {py:obj}`walk <chartbook.lineage.walk>`
   - ```{autodoc2-docstring} chartbook.lineage.walk
     :summary:
@@ -59,6 +83,47 @@
 
 ### API
 
+`````{py:class} Cycle
+:canonical: chartbook.lineage.Cycle
+
+```{autodoc2-docstring} chartbook.lineage.Cycle
+```
+
+````{py:attribute} edges
+:canonical: chartbook.lineage.Cycle.edges
+:type: list[chartbook.lineage.Edge]
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Cycle.edges
+```
+
+````
+
+````{py:attribute} two_places
+:canonical: chartbook.lineage.Cycle.two_places
+:type: typing.Optional[tuple]
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Cycle.two_places
+```
+
+````
+
+````{py:attribute} way_in
+:canonical: chartbook.lineage.Cycle.way_in
+:type: list[chartbook.lineage.Edge]
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lineage.Cycle.way_in
+```
+
+````
+
+`````
+
 ````{py:data} DEEPEST
 :canonical: chartbook.lineage.DEEPEST
 :value: >
@@ -68,6 +133,58 @@
 ```
 
 ````
+
+`````{py:class} Edge
+:canonical: chartbook.lineage.Edge
+
+```{autodoc2-docstring} chartbook.lineage.Edge
+```
+
+````{py:attribute} dependency
+:canonical: chartbook.lineage.Edge.dependency
+:type: str
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Edge.dependency
+```
+
+````
+
+````{py:attribute} key
+:canonical: chartbook.lineage.Edge.key
+:type: str
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Edge.key
+```
+
+````
+
+````{py:attribute} pipeline
+:canonical: chartbook.lineage.Edge.pipeline
+:type: str
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Edge.pipeline
+```
+
+````
+
+````{py:attribute} where
+:canonical: chartbook.lineage.Edge.where
+:type: str
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.lineage.Edge.where
+```
+
+````
+
+`````
 
 `````{py:class} Lineage
 :canonical: chartbook.lineage.Lineage
@@ -278,6 +395,34 @@
 ````
 
 `````
+
+````{py:function} cycle(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, follow_pins: bool = True, pipeline: typing.Optional[str] = None, git_cache=None, lockfiles: typing.Optional[dict] = None, shared: typing.Optional[dict] = None, members: typing.Optional[dict] = None, through: typing.Optional[typing.Iterable[str]] = None) -> typing.Optional[chartbook.lineage.Cycle]
+:canonical: chartbook.lineage.cycle
+
+```{autodoc2-docstring} chartbook.lineage.cycle
+```
+````
+
+````{py:function} cycle_lead(found: chartbook.lineage.Cycle) -> str
+:canonical: chartbook.lineage.cycle_lead
+
+```{autodoc2-docstring} chartbook.lineage.cycle_lead
+```
+````
+
+````{py:function} explain_cycle(found: chartbook.lineage.Cycle) -> str
+:canonical: chartbook.lineage.explain_cycle
+
+```{autodoc2-docstring} chartbook.lineage.explain_cycle
+```
+````
+
+````{py:function} two_places_said(pipeline: str, one: pathlib.Path, other: pathlib.Path) -> str
+:canonical: chartbook.lineage.two_places_said
+
+```{autodoc2-docstring} chartbook.lineage.two_places_said
+```
+````
 
 ````{py:function} walk(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, rehash: bool = False) -> chartbook.lineage.Lineage
 :canonical: chartbook.lineage.walk

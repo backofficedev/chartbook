@@ -224,7 +224,7 @@
 ```
 ````
 
-````{py:function} build(remake, **site)
+````{py:function} build(remake, upstream, **site)
 :canonical: chartbook.cli.build
 
 ```{autodoc2-docstring} chartbook.cli.build
@@ -469,7 +469,7 @@
 ```
 ````
 
-````{py:function} run_command(script, project_dir, force, make_snapshot, frozen, remake)
+````{py:function} run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream)
 :canonical: chartbook.cli.run_command
 
 ```{autodoc2-docstring} chartbook.cli.run_command

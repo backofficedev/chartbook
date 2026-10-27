@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -473,6 +473,13 @@
 <span class="sd">A ``git`` dependency is pinned from its clone, not from a snapshot, so the</span>
 <span class="sd">walk stops there and says so. A snapshot met twice is walked once. Nothing</span>
 <span class="sd">is written.</span>
+
+<span class="sd">:func:`cycle` walks the same graph for another reason: dependencies between</span>
+<span class="sd">pipelines must form a directed acyclic graph, and a pipeline that depends,</span>
+<span class="sd">through what it depends on, on itself is refused by ``chartbook run``,</span>
+<span class="sd">``chartbook build`` and ``chartbook snapshot``, and reported by ``chartbook</span>
+<span class="sd">check``. That walk reads a folder on this machine before the store, so a</span>
+<span class="sd">cycle is found as soon as it is declared.</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -480,7 +487,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">dataclasses</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">tomli</span>
 
@@ -905,6 +913,519 @@
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">owners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span> <span class="p">[]):</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"holds </span><span class="si">{</span><span class="n">problem</span><span class="o">.</span><span class="n">content_hash</span><span class="p">[:</span><span class="mi">19</span><span class="p">]</span><span class="si">}</span><span class="s2">…, which is not what its name says: </span><span class="si">{</span><span class="n">problem</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">lineage</span><span class="o">.</span><span class="n">rehashed</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">present</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Edge">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Edge</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One pipeline depending on another, as met on the way to and round a cycle.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        pipeline: The ID of the pipeline that depends.</span>
+<span class="sd">        dependency: The ID of the pipeline it depends on.</span>
+<span class="sd">        key: The key ``pipeline`` declares it under in ``[dependencies]``.</span>
+<span class="sd">        where: Where the dependency was read: the manifest that declares it,</span>
+<span class="sd">            or the snapshot whose record lists it among its inputs.</span>
+<span class="sd">    """</span>
+
+    <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">dependency</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">where</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+
+<div class="viewcode-block" id="Cycle">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Cycle</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A cycle :func:`cycle` found, and how the pipeline it started from reaches it.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        edges: The edges round the cycle, starting at the pipeline in it</span>
+<span class="sd">            that the walk met first, and ending with the edge back to it.</span>
+<span class="sd">        way_in: The edges from the pipeline the walk started from down to</span>
+<span class="sd">            that one; empty when the pipeline is in the cycle itself.</span>
+<span class="sd">        two_places: ``(ID, folder, folder)`` when the cycle closes on its</span>
+<span class="sd">            ID in another folder than the one it was met in: two checkouts</span>
+<span class="sd">            of one repository, or two pipelines that share the ID. None</span>
+<span class="sd">            otherwise.</span>
+<span class="sd">    """</span>
+
+    <span class="n">edges</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Edge</span><span class="p">]</span>
+    <span class="n">way_in</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Edge</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">two_places</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="cycle">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.cycle">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cycle</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"."</span><span class="p">,</span>
+    <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">follow_pins</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">pipeline</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">git_cache</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">lockfiles</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">members</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">through</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Cycle</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.</span>
+
+<span class="sd">    Dependencies between pipelines form a directed graph, and it has to be</span>
+<span class="sd">    acyclic: a pipeline that depends, through what it depends on, on itself</span>
+<span class="sd">    has no order to be built in, and its snapshot would carry itself in its</span>
+<span class="sd">    lineage. The graph is walked from the pipeline's folder, each edge read</span>
+<span class="sd">    from where it is best known:</span>
+
+<span class="sd">    - a dependency whose folder is on this machine (a ``path`` one, or one</span>
+<span class="sd">      named by the ID of a pipeline in *members*): that folder's own</span>
+<span class="sd">      ``[dependencies]``, so a cycle is found as soon as it is declared,</span>
+<span class="sd">      and the snapshot its pin names as well, since ``pin`` does not move</span>
+<span class="sd">      a pin whatever the folder says now;</span>
+<span class="sd">    - a ``git`` dependency, and one named by its ID that was got from its</span>
+<span class="sd">      repository: its copy at the commit its pin names, if it is fetched;</span>
+<span class="sd">    - any other (named by its ID, or a folder not on this machine): the</span>
+<span class="sd">      snapshot its pin names, and what that snapshot recorded it was</span>
+<span class="sd">      pinned to (a snapshot, or a clone that is fetched here), and so on</span>
+<span class="sd">      up through the store.</span>
+
+<span class="sd">    A pipeline is known by its ID, so one met as a folder and again as a</span>
+<span class="sd">    snapshot is one node, and a cycle is a pipeline met again on the way up</span>
+<span class="sd">    from itself. An ID names one pipeline: two folders, or two snapshots,</span>
+<span class="sd">    under one ID are that pipeline (two clones or worktrees of one</span>
+<span class="sd">    repository are). A copy that kept its original's ID and reads the</span>
+<span class="sd">    original depends on itself; where the cycle closes on its ID in</span>
+<span class="sd">    another folder (``two_places``), it names both, and says what to do</span>
+<span class="sd">    whether they are one pipeline or two. A folder or a snapshot walked once is not walked again</span>
+<span class="sd">    unless something above it is reachable from it, which is a cycle.</span>
+<span class="sd">    Nothing is said of what cannot be read here: a dependency with no pin</span>
+<span class="sd">    and no folder, a ``git`` one not fetched, a folder whose manifest or</span>
+<span class="sd">    lockfile cannot be read, or a record in the store that is not one</span>
+<span class="sd">    ChartBook wrote. ``chartbook check`` and ``chartbook pin`` say what is</span>
+<span class="sd">    wrong with those.</span>
+
+<span class="sd">    :param project_dir: The pipeline's folder.</span>
+<span class="sd">    :param store: The store; this user's by default.</span>
+<span class="sd">    :param follow_pins: Whether to read the store for what the pins name.</span>
+<span class="sd">        False keeps the walk to the folders on this machine, for a check</span>
+<span class="sd">        that must not use the network.</span>
+<span class="sd">    :param pipeline: What to call the pipeline walked from; its own ID by</span>
+<span class="sd">        default. ``chartbook run`` names a ``git`` dependency's working</span>
+<span class="sd">        copy by the key it is declared under, as the pipeline that declares</span>
+<span class="sd">        it does.</span>
+<span class="sd">    :param git_cache: Where ``git`` dependencies are fetched to; this</span>
+<span class="sd">        user's by default.</span>
+<span class="sd">    :param lockfiles: Lockfiles as they would be written, by the folder</span>
+<span class="sd">        they belong to, read in place of the files there: ``chartbook run``</span>
+<span class="sd">        walks the pins it is about to make before it makes them. A ``git``</span>
+<span class="sd">        dependency's folder is its working copy, where ``chartbook run``</span>
+<span class="sd">        builds and pins it.</span>
+<span class="sd">    :param shared: A dict that walks share, so that the store is read</span>
+<span class="sd">        once for all of them. A caller that writes snapshots between walks</span>
+<span class="sd">        sets ``shared["may_be_old"]``: a walk then reads the store again</span>
+<span class="sd">        when a pin names a snapshot the reading lacks, once for each.</span>
+<span class="sd">    :param through: The keys of the pipeline's own ``[dependencies]`` to</span>
+<span class="sd">        walk from; all of them by default. A pin's guard walks from those it</span>
+<span class="sd">        pins or moves: a cycle reached only through what was pinned before</span>
+<span class="sd">        is not that pin's doing.</span>
+<span class="sd">    :param members: The pipelines of a run or a catalog, their folders by</span>
+<span class="sd">        their IDs. A dependency named by the ID of one is followed through</span>
+<span class="sd">        its folder, as a ``path`` dependency is: that is what the run</span>
+<span class="sd">        builds, pins and makes a snapshot of.</span>
+<span class="sd">    :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.</span>
+<span class="sd">    :raises ValueError: If the pipeline's own ``[dependencies]`` is malformed.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_dependencies</span>
+
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">pipeline</span> <span class="ow">or</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">pipeline_in</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">finder</span> <span class="o">=</span> <span class="n">_Finder</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">follow_pins</span><span class="p">,</span> <span class="n">git_cache</span><span class="p">,</span> <span class="n">lockfiles</span><span class="p">,</span> <span class="n">shared</span><span class="p">,</span> <span class="n">members</span><span class="p">)</span>
+    <span class="c1"># The pipeline's own table is read as the command would read it: an</span>
+    <span class="c1"># error in it is the command's to say, where one upstream is passed over</span>
+    <span class="n">validate_dependencies</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dependencies"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">directory</span><span class="p">)</span>
+    <span class="c1">#: The pipelines on the way down, by ID, and where each was met</span>
+    <span class="n">chain</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">root</span><span class="p">]</span>
+    <span class="n">places</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">directory</span><span class="p">]</span>
+    <span class="n">walk_from</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">through</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">set</span><span class="p">(</span><span class="n">through</span><span class="p">)</span>
+    <span class="n">edges</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Edge</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1">#: Every pipeline reachable from each folder or snapshot walked, by what</span>
+    <span class="c1">#: names that place, once its walk is done</span>
+    <span class="n">reach</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">visit</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">place</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Cycle</span><span class="p">],</span> <span class="nb">set</span><span class="p">]:</span>
+        <span class="n">below</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chain</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">DEEPEST</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">below</span>  <span class="c1"># not recorded: a shorter way to it may still walk it</span>
+        <span class="k">for</span> <span class="n">edge</span><span class="p">,</span> <span class="n">child</span><span class="p">,</span> <span class="n">named</span> <span class="ow">in</span> <span class="n">finder</span><span class="o">.</span><span class="n">children</span><span class="p">(</span><span class="n">chain</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">source</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">walk_from</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">chain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">edge</span><span class="o">.</span><span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">walk_from</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">dependency</span> <span class="ow">in</span> <span class="n">chain</span><span class="p">:</span>
+                <span class="n">at</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">dependency</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">Cycle</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="n">at</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">edge</span><span class="p">],</span> <span class="n">edges</span><span class="p">[:</span><span class="n">at</span><span class="p">],</span> <span class="n">_two_places</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">dependency</span><span class="p">,</span> <span class="n">places</span><span class="p">[</span><span class="n">at</span><span class="p">],</span> <span class="n">child</span><span class="p">)),</span> <span class="n">below</span>
+            <span class="n">below</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">dependency</span><span class="p">)</span>
+            <span class="n">known</span> <span class="o">=</span> <span class="n">reach</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">named</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">known</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">chain</span><span class="p">)):</span>
+                <span class="n">below</span> <span class="o">|=</span> <span class="n">known</span>  <span class="c1"># walked already, and nothing above here is reachable from it</span>
+                <span class="k">continue</span>
+            <span class="n">chain</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="o">.</span><span class="n">dependency</span><span class="p">)</span>
+            <span class="n">places</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+            <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="p">)</span>
+            <span class="n">found</span><span class="p">,</span> <span class="n">theirs</span> <span class="o">=</span> <span class="n">visit</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">named</span><span class="p">)</span>
+            <span class="n">chain</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">places</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">edges</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">found</span><span class="p">,</span> <span class="n">below</span>
+            <span class="n">below</span> <span class="o">|=</span> <span class="n">theirs</span>
+        <span class="n">reach</span><span class="p">[</span><span class="n">place</span><span class="p">]</span> <span class="o">=</span> <span class="n">below</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">below</span>
+
+    <span class="n">found</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">visit</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">found</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_two_places</span><span class="p">(</span><span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">one</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Where a cycle closes on its ID, when that is another folder than the one it was met in: ``(ID, folder, folder)``; None otherwise."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">Path</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Path</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">one</span><span class="p">,</span> <span class="n">other</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">one</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span> <span class="n">Path</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">_same_folder</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">one</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="two_places_said">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.two_places_said">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">two_places_said</span><span class="p">(</span><span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">one</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What to say of an ID met in one folder and again in another: both, and what to do either way."""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> is met in </span><span class="si">{</span><span class="n">one</span><span class="si">}</span><span class="s2"> and again in </span><span class="si">{</span><span class="n">other</span><span class="si">}</span><span class="s2">, and an ID names one pipeline. If they are one "</span>
+        <span class="sa">f</span><span class="s2">"pipeline, as two checkouts of one repository are, take one of these dependencies out. If they are "</span>
+        <span class="sa">f</span><span class="s2">"two pipelines that share the ID (one kept another's `[project] id` or `repo_url`, say), give one of "</span>
+        <span class="sa">f</span><span class="s2">"them an ID of its own with `[project] id` in its chartbook.toml."</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_same_folder</span><span class="p">(</span><span class="n">one</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether two paths are one folder, on a disk that may not tell case apart too."""</span>
+    <span class="k">if</span> <span class="n">one</span> <span class="o">==</span> <span class="n">other</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">samefile</span><span class="p">(</span><span class="n">one</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="explain_cycle">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.explain_cycle">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">explain_cycle</span><span class="p">(</span><span class="n">found</span><span class="p">:</span> <span class="n">Cycle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The edges to and round a cycle, one line each with where it was read, and what to do about it."""</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">found</span><span class="o">.</span><span class="n">way_in</span><span class="p">,</span> <span class="o">*</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">]:</span>
+        <span class="n">named</span> <span class="o">=</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">edge</span><span class="o">.</span><span class="n">key</span> <span class="o">==</span> <span class="n">edge</span><span class="o">.</span><span class="n">dependency</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">" (as </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">key</span><span class="si">!r}</span><span class="s2">)"</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> depends on </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">dependency</span><span class="si">}{</span><span class="n">named</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">edge</span><span class="o">.</span><span class="n">where</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">two_places</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">two_places_said</span><span class="p">(</span><span class="o">*</span><span class="n">found</span><span class="o">.</span><span class="n">two_places</span><span class="p">))</span>
+        <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="s2">"Dependencies between pipelines must form a graph with no cycles. Take one of these out of its "</span>
+        <span class="s2">"[dependencies]; where a snapshot records it, that pipeline makes a new snapshot, and what pins "</span>
+        <span class="s2">"it runs `chartbook update`."</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="cycle_lead">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.cycle_lead">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">cycle_lead</span><span class="p">(</span><span class="n">found</span><span class="p">:</span> <span class="n">Cycle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How a cycle is announced, after the name of the pipeline walked from: who is in it, in one clause."""</span>
+    <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">way_in</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="s2">"a pipeline it depends on depends on itself"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="k">else</span> <span class="s2">"pipelines it depends on depend on each other"</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"it depends on itself"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">"these pipelines depend on each other"</span></div>
+
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_Finder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Where each pipeline's dependencies are read from, for :func:`cycle`: folders here, and the store once it is needed."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">store</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Store</span><span class="p">],</span> <span class="n">follow_pins</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">git_cache</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lockfiles</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">shared</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">members</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="o">=</span> <span class="n">store</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">follow_pins</span> <span class="o">=</span> <span class="n">follow_pins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="o">=</span> <span class="n">git_cache</span>
+        <span class="c1">#: A folder's lockfile as it would be written, read in place of its file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lockfiles</span> <span class="o">=</span> <span class="p">{</span><span class="n">Path</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">():</span> <span class="n">locked</span> <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">locked</span> <span class="ow">in</span> <span class="p">(</span><span class="n">lockfiles</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="c1">#: The store's snapshots, once read; shared between walks when the caller says so</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span> <span class="k">if</span> <span class="n">shared</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="c1">#: The folders of the pipelines a run builds, by their IDs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">members</span> <span class="o">=</span> <span class="p">{</span><span class="n">pipeline</span><span class="p">:</span> <span class="n">Path</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">for</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">folder</span> <span class="ow">in</span> <span class="p">(</span><span class="n">members</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="c1">#: Whether this walk read the store itself, rather than taking another walk's reading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_here</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">children</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="nb">object</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Each dependency of a pipeline as ``(edge, where to read its own from, what names that place)``.</span>
+
+<span class="sd">        *source* is the pipeline's folder, the snapshot it was met as, or</span>
+<span class="sd">        None for one known by its ID alone, which has nothing to read.</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">Path</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_from_folder</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">Snapshot</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_from_snapshot</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a folder or a record that is not as it should be: not this walk's to say</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_dependencies</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span>
+
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+        <span class="n">dependencies</span> <span class="o">=</span> <span class="n">validate_dependencies</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dependencies"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">folder</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">on_file</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">read_lock</span><span class="p">(</span><span class="n">folder</span> <span class="o">/</span> <span class="n">lock</span><span class="o">.</span><span class="n">LOCK_FILE</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">:</span>
+            <span class="n">on_file</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># `chartbook pin` says so; its pins cannot be followed</span>
+        <span class="n">would_be</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lockfiles</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">folder</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">by_key</span><span class="p">(</span><span class="n">locked</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]:</span> <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">locked</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">),</span> <span class="nb">str</span><span class="p">)</span>
+            <span class="p">}</span>
+
+        <span class="n">filed</span> <span class="o">=</span> <span class="n">by_key</span><span class="p">(</span><span class="n">on_file</span><span class="p">)</span>
+        <span class="n">pinned</span> <span class="o">=</span> <span class="n">by_key</span><span class="p">(</span><span class="n">would_be</span><span class="p">)</span> <span class="k">if</span> <span class="n">would_be</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">filed</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"declared in </span><span class="si">{</span><span class="n">folder</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">MANIFEST_NAME</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dependencies</span><span class="p">):</span>
+            <span class="c1"># A pin the run would make, and has not: said as such</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="n">would_be</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">pinned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">!=</span> <span class="n">filed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">children</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_declared</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">pinned</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">where</span><span class="p">,</span> <span class="n">new</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - one that cannot be read here; the others are still followed</span>
+                <span class="k">continue</span>
+        <span class="k">return</span> <span class="n">children</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_declared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">listed</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""One entry of a folder's ``[dependencies]``, as the edges it gives.</span>
+
+<span class="sd">        A ``git`` dependency, and one named by its ID that was got from its</span>
+<span class="sd">        repository, is read from its copy at the commit its pin names. A</span>
+<span class="sd">        dependency whose folder is here (a ``path`` one, or one named by</span>
+<span class="sd">        the ID of a pipeline of the run) is read from that folder, and from</span>
+<span class="sd">        the snapshot its pin names too: ``pin`` does not move a pin, so the</span>
+<span class="sd">        pipeline is built from that snapshot, whatever its folder says now.</span>
+<span class="sd">        Any other is read from the snapshot its pin names. *new* says the</span>
+<span class="sd">        pin is one the run would make, not one in the lockfile.</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">clone_url_for</span><span class="p">,</span> <span class="n">get_default_host</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_git_cache</span><span class="p">,</span> <span class="n">local_url</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">derive_pipeline_id</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_project_type</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span>
+
+        <span class="n">location</span> <span class="o">=</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="s2">"git"</span> <span class="ow">in</span> <span class="n">entry</span> <span class="ow">or</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">):</span>
+            <span class="c1"># Fetched at the commit its pin names, or nothing of it is here</span>
+            <span class="n">commit</span> <span class="o">=</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">"git"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="n">local_url</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"git"</span><span class="p">],</span> <span class="n">folder</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Got from its repository by its ID, as `pin` finds that repository</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"repository"</span><span class="p">)</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_repository"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="n">clone_url_for</span><span class="p">(</span>
+                    <span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">],</span> <span class="n">get_default_host</span><span class="p">()</span>
+                <span class="p">)</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_git_cache</span><span class="p">()</span>
+            <span class="c1"># Its working copy, where `chartbook run` builds and pins it, else its checkout</span>
+            <span class="n">checkout</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span> <span class="k">if</span> <span class="n">commit</span> <span class="ow">and</span> <span class="n">url</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">):</span>
+                <span class="n">checkout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clone_of</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">],</span> <span class="n">commit</span><span class="p">)</span>  <span class="c1"># the default host may have moved since</span>
+            <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="n">checkout</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">return</span> <span class="p">[(</span><span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">],</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"id:</span><span class="si">{</span><span class="n">entry</span><span class="p">[</span><span class="s1">'_store'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)]</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+            <span class="n">project</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">checkout</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span>
+            <span class="n">project</span> <span class="o">=</span> <span class="n">project</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="c1"># A checkout's folder is named after a commit, so only an ID the</span>
+            <span class="c1"># manifest gives means something; else the ID it was named by, or</span>
+            <span class="c1"># the key it is declared under, as `chartbook run` names it</span>
+            <span class="n">named</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">checkout</span><span class="p">)</span> <span class="k">if</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">else</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">named</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="n">checkout</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkout</span><span class="p">))]</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">there</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Path</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"_resolved_path"</span><span class="p">])</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_resolved_path"</span><span class="p">)</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">))</span> <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">there</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">there</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">theirs</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">there</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">theirs</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">there</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">))</span> <span class="o">!=</span> <span class="s2">"pipeline"</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># a catalog: `chartbook check` says so</span>
+            <span class="n">project</span> <span class="o">=</span> <span class="n">theirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span>
+            <span class="n">named</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{},</span> <span class="n">there</span><span class="p">)</span>
+            <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">named</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="n">there</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">there</span><span class="p">)))</span>
+        <span class="c1"># The snapshot its pin names, if the store has it</span>
+        <span class="n">taken</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinned</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)),</span> <span class="n">_text</span><span class="p">(</span><span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snapshot"</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">taken</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">at</span> <span class="o">=</span> <span class="n">_text</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">)[:</span><span class="mi">7</span><span class="p">]</span>
+            <span class="n">said</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">; it would now be pinned to its snapshot at </span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">new</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">; pinned to its snapshot at </span><span class="si">{</span><span class="n">at</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">said</span><span class="p">),</span> <span class="n">taken</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">path</span><span class="p">)))</span>
+        <span class="k">elif</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"_store"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">children</span><span class="p">:</span>
+            <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"_store"</span><span class="p">],</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"id:</span><span class="si">{</span><span class="n">entry</span><span class="p">[</span><span class="s1">'_store'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">children</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""A repository's copy at a commit, if it is fetched here: its working copy, else its checkout."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">default_git_cache</span>
+
+        <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_git_cache</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">cache</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span> <span class="k">if</span> <span class="n">url</span> <span class="ow">and</span> <span class="n">commit</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clone_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""A copy at a commit, in the git cache, of the repository whose manifest names this ID; None if there is none.</span>
+
+<span class="sd">        For one got from its repository by its ID: its lockfile records no</span>
+<span class="sd">        address, which is worked out from the default host, and that may</span>
+<span class="sd">        have changed since the pin, which stays where it was. A commit and</span>
+<span class="sd">        the ID its manifest gives are enough to find it. Working copies</span>
+<span class="sd">        come first, as ``chartbook run`` builds and pins one there.</span>
+<span class="sd">        """</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">CHECKOUTS_DIR</span><span class="p">,</span> <span class="n">WORK_DIR</span><span class="p">,</span> <span class="n">default_git_cache</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pipeline_id</span> <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[0-9a-f]</span><span class="si">{40}</span><span class="s2">"</span><span class="p">,</span> <span class="n">commit</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">git_cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_git_cache</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">top</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">WORK_DIR</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">CHECKOUTS_DIR</span><span class="p">):</span>
+            <span class="c1"># Down the repositories' folders (host/owner/name, or a cache that</span>
+            <span class="c1"># laid a repository on this disk out under its whole path), never</span>
+            <span class="c1"># into a copy's own files</span>
+            <span class="n">stack</span> <span class="o">=</span> <span class="p">[(</span><span class="n">top</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+            <span class="k">while</span> <span class="n">stack</span><span class="p">:</span>
+                <span class="n">folder</span><span class="p">,</span> <span class="n">depth</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">entries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">scandir</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">for</span> <span class="n">found</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="o">.</span><span class="n">is_dir</span><span class="p">(</span><span class="n">follow_symlinks</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="k">if</span> <span class="n">found</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">commit</span><span class="p">:</span>
+                        <span class="n">there</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">project</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">there</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="n">there</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - a copy whose manifest cannot be read names nothing</span>
+                            <span class="n">project</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">pipeline_id</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">there</span>
+                    <span class="k">elif</span> <span class="n">depth</span> <span class="o">&lt;</span> <span class="mi">64</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[0-9a-f]</span><span class="si">{40}</span><span class="s2">"</span><span class="p">,</span> <span class="n">found</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
+                        <span class="n">stack</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">Path</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_from_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">taken</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="n">listed</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">inputs</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">inputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"recorded by the snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">_text</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">)[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">_text</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">[:</span><span class="n">MOST_INPUTS</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">child</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recorded</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">entry</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - an input not as ChartBook records one; the others are still followed</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">child</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">children</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_recorded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">object</span><span class="p">,</span> <span class="n">where</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""One input a snapshot recorded: the snapshot it names, if the store has it, else the ID it names."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">_text</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"git"</span><span class="p">:</span>
+            <span class="c1"># Pinned from a clone, not a snapshot: known by the ID it was</span>
+            <span class="c1"># named by, else by the key it was declared under, as a folder's</span>
+            <span class="c1"># fetched git dependency is named; walked through the clone if</span>
+            <span class="c1"># it is fetched here</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">clone_url_for</span><span class="p">,</span> <span class="n">get_default_host</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">local_url</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">derive_pipeline_id</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span>
+
+            <span class="n">named</span> <span class="o">=</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">))</span> <span class="ow">or</span> <span class="n">key</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">url</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">":"</span> <span class="ow">in</span> <span class="n">url</span><span class="p">):</span>
+                    <span class="n">url</span> <span class="o">=</span> <span class="s2">""</span>  <span class="c1"># a path relative to a folder the record does not name</span>
+                <span class="k">elif</span> <span class="n">url</span><span class="p">:</span>
+                    <span class="n">url</span> <span class="o">=</span> <span class="n">local_url</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
+                <span class="n">checkout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clone</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)))</span> <span class="k">if</span> <span class="n">url</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">)):</span>
+                    <span class="c1"># Got from its repository by its ID: the address recorded, else the default host's</span>
+                    <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"repository"</span><span class="p">)),</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">clone_url_for</span><span class="p">(</span><span class="n">location</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">],</span> <span class="n">get_default_host</span><span class="p">())):</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">checkout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clone</span><span class="p">(</span><span class="n">candidate</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">,</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)))</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - not an address the git cache takes: the next</span>
+                            <span class="n">checkout</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">break</span>
+                    <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">checkout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clone_of</span><span class="p">(</span><span class="n">location</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">],</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">checkout</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                    <span class="n">project</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">checkout</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project"</span><span class="p">)</span>
+                    <span class="n">project</span> <span class="o">=</span> <span class="n">project</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+                    <span class="n">named</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">project</span><span class="p">,</span> <span class="n">checkout</span><span class="p">)</span> <span class="k">if</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="k">else</span> <span class="n">named</span>
+                    <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">named</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="n">checkout</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkout</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - no clone to be found from this record: known by its ID</span>
+                <span class="k">pass</span>
+            <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">named</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"id:</span><span class="si">{</span><span class="n">named</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">below</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pinned</span><span class="p">(</span><span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"commit"</span><span class="p">)),</span> <span class="n">_text</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"snapshot"</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">below</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">below</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="n">below</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">below</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"store"</span> <span class="ow">and</span> <span class="n">_text</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">Edge</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">location</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">],</span> <span class="n">key</span><span class="p">,</span> <span class="n">where</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"id:</span><span class="si">{</span><span class="n">location</span><span class="p">[</span><span class="s1">'pipeline'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pinned</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">made_at</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""The snapshot a pin names, if the store has one whose record names a pipeline."""</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">commit</span> <span class="ow">and</span> <span class="n">made_at</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">follow_pins</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">"found"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">()</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">taken</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">taken</span><span class="o">.</span><span class="n">same_moment</span><span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">made_at</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_text</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">taken</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"missing"</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_here</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"may_be_old"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">commit</span><span class="p">,</span> <span class="n">made_at</span><span class="p">)</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
+                <span class="n">missing</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">commit</span><span class="p">,</span> <span class="n">made_at</span><span class="p">))</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="c1"># Another walk's reading, made before snapshots this pin may name: read once more</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_read</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_read</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Read the store's snapshots, for this walk and those it shares with."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">store</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_store</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">readable_snapshots</span><span class="p">(</span><span class="n">store</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">#: The pins this reading was found not to have: not read again for</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared</span><span class="p">[</span><span class="s2">"missing"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_here</span> <span class="o">=</span> <span class="kc">True</span>
 </pre></div>
 
                 </article>

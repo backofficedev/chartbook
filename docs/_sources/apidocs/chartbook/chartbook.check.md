@@ -35,6 +35,10 @@
   - ```{autodoc2-docstring} chartbook.check.check_dependencies
     :summary:
     ```
+* - {py:obj}`check_dependency_cycles <chartbook.check.check_dependency_cycles>`
+  - ```{autodoc2-docstring} chartbook.check.check_dependency_cycles
+    :summary:
+    ```
 * - {py:obj}`check_ids <chartbook.check.check_ids>`
   - ```{autodoc2-docstring} chartbook.check.check_ids
     :summary:
@@ -234,6 +238,13 @@
 :canonical: chartbook.check.check_dependencies
 
 ```{autodoc2-docstring} chartbook.check.check_dependencies
+```
+````
+
+````{py:function} check_dependency_cycles(manifest: dict, base_dir: pathlib.Path) -> list[chartbook.check.Problem]
+:canonical: chartbook.check.check_dependency_cycles
+
+```{autodoc2-docstring} chartbook.check.check_dependency_cycles
 ```
 ````
 

@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
@@ -1088,7 +1088,7 @@
         <span class="n">site_pages</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"site_pages"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="n">index_toc_content</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="k">if</span> <span class="s2">"index_toc.md"</span> <span class="ow">in</span> <span class="n">site_pages</span> <span class="ow">and</span> <span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"site_dir"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved_path"</span><span class="p">):</span>
-            <span class="n">index_toc_content</span> <span class="o">=</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">"site_dir"</span><span class="p">][</span><span class="s2">"resolved_path"</span><span class="p">])</span> <span class="o">/</span> <span class="s2">"index_toc.md"</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
+            <span class="n">index_toc_content</span> <span class="o">=</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">"site_dir"</span><span class="p">][</span><span class="s2">"resolved_path"</span><span class="p">])</span> <span class="o">/</span> <span class="s2">"index_toc.md"</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
         <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"index.md"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
             <span class="n">pipeline_manifest</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>

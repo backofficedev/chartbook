@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -506,7 +506,20 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle"><code class="docutils literal notranslate"><span class="pre">Cycle</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.edges"><code class="docutils literal notranslate"><span class="pre">Cycle.edges</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.two_places"><code class="docutils literal notranslate"><span class="pre">Cycle.two_places</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.way_in"><code class="docutils literal notranslate"><span class="pre">Cycle.way_in</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.DEEPEST"><code class="docutils literal notranslate"><span class="pre">DEEPEST</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.dependency"><code class="docutils literal notranslate"><span class="pre">Edge.dependency</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.key"><code class="docutils literal notranslate"><span class="pre">Edge.key</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.pipeline"><code class="docutils literal notranslate"><span class="pre">Edge.pipeline</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.where"><code class="docutils literal notranslate"><span class="pre">Edge.where</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage"><code class="docutils literal notranslate"><span class="pre">Lineage</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage.gaps"><code class="docutils literal notranslate"><span class="pre">Lineage.gaps()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage.rehashed"><code class="docutils literal notranslate"><span class="pre">Lineage.rehashed</span></code></a></li>
@@ -532,6 +545,10 @@
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Node.to_dict"><code class="docutils literal notranslate"><span class="pre">Node.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.cycle"><code class="docutils literal notranslate"><span class="pre">cycle()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.cycle_lead"><code class="docutils literal notranslate"><span class="pre">cycle_lead()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.explain_cycle"><code class="docutils literal notranslate"><span class="pre">explain_cycle()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.two_places_said"><code class="docutils literal notranslate"><span class="pre">two_places_said()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.walk"><code class="docutils literal notranslate"><span class="pre">walk()</span></code></a></li>
 </ul>
 </li>
@@ -571,12 +588,27 @@ hashes to its name.</p></li>
 <p>A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency is pinned from its clone, not from a snapshot, so the
 walk stops there and says so. A snapshot met twice is walked once. Nothing
 is written.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">cycle</span></code> walks the same graph for another reason: dependencies between
+pipelines must form a directed acyclic graph, and a pipeline that depends,
+through what it depends on, on itself is refused by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>,
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>, and reported by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>. That walk reads a folder on this machine before the store, so a
+cycle is found as soon as it is declared.</p>
+</dd>
+</dl>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
 <section id="classes">
 <h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.lineage.Cycle" title="chartbook.lineage.Cycle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Cycle</span></code></a></p></td>
+<td><p>A cycle :func:<code class="docutils literal notranslate"><span class="pre">cycle</span></code> found, and how the pipeline it started from reaches it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.lineage.Edge" title="chartbook.lineage.Edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code></a></p></td>
+<td><p>One pipeline depending on another, as met on the way to and round a cycle.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.lineage.Lineage" title="chartbook.lineage.Lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Lineage</span></code></a></p></td>
 <td><p>What :func:<code class="docutils literal notranslate"><span class="pre">walk</span></code> found.</p></td>
 </tr>
@@ -591,6 +623,18 @@ is written.</p>
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.lineage.cycle" title="chartbook.lineage.cycle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cycle</span></code></a></p></td>
+<td><p>The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.lineage.cycle_lead" title="chartbook.lineage.cycle_lead"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cycle_lead</span></code></a></p></td>
+<td><p>How a cycle is announced, after the name of the pipeline walked from: who is in it, in one clause.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.lineage.explain_cycle" title="chartbook.lineage.explain_cycle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">explain_cycle</span></code></a></p></td>
+<td><p>The edges to and round a cycle, one line each with where it was read, and what to do about it.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.lineage.two_places_said" title="chartbook.lineage.two_places_said"><code class="xref py py-obj docutils literal notranslate"><span class="pre">two_places_said</span></code></a></p></td>
+<td><p>What to say of an ID met in one folder and again in another: both, and what to do either way.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.lineage.walk" title="chartbook.lineage.walk"><code class="xref py py-obj docutils literal notranslate"><span class="pre">walk</span></code></a></p></td>
 <td><p>Walk a pipeline’s lineage up from its lockfile, through every snapshot it leads to, and check each edge.</p></td>
 </tr>
@@ -617,10 +661,79 @@ is written.</p>
 </section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.lineage.Cycle">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">Cycle</span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#Cycle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.Cycle" title="Link to this definition">#</a></dt>
+<dd><p>A cycle :func:<code class="docutils literal notranslate"><span class="pre">cycle</span></code> found, and how the pipeline it started from reaches it.</p>
+<p>Attributes:
+edges: The edges round the cycle, starting at the pipeline in it
+that the walk met first, and ending with the edge back to it.
+way_in: The edges from the pipeline the walk started from down to
+that one; empty when the pipeline is in the cycle itself.
+two_places: <code class="docutils literal notranslate"><span class="pre">(ID,</span> <span class="pre">folder,</span> <span class="pre">folder)</span></code> when the cycle closes on its
+ID in another folder than the one it was met in: two checkouts
+of one repository, or two pipelines that share the ID. None
+otherwise.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Cycle.edges">
+<span class="sig-name descname"><span class="pre">edges</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lineage.Edge" title="chartbook.lineage.Edge"><span class="pre">chartbook.lineage.Edge</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lineage.Cycle.edges" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Cycle.two_places">
+<span class="sig-name descname"><span class="pre">two_places</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lineage.Cycle.two_places" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Cycle.way_in">
+<span class="sig-name descname"><span class="pre">way_in</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lineage.Edge" title="chartbook.lineage.Edge"><span class="pre">chartbook.lineage.Edge</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lineage.Cycle.way_in" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py data">
 <dt class="sig sig-object py" id="chartbook.lineage.DEEPEST">
 <span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">DEEPEST</span></span><a class="headerlink" href="#chartbook.lineage.DEEPEST" title="Link to this definition">#</a></dt>
 <dd><p>64</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.lineage.Edge">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#Edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.Edge" title="Link to this definition">#</a></dt>
+<dd><p>One pipeline depending on another, as met on the way to and round a cycle.</p>
+<p>Attributes:
+pipeline: The ID of the pipeline that depends.
+dependency: The ID of the pipeline it depends on.
+key: The key <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> declares it under in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>.
+where: Where the dependency was read: the manifest that declares it,
+or the snapshot whose record lists it among its inputs.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Edge.dependency">
+<span class="sig-name descname"><span class="pre">dependency</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lineage.Edge.dependency" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Edge.key">
+<span class="sig-name descname"><span class="pre">key</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lineage.Edge.key" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Edge.pipeline">
+<span class="sig-name descname"><span class="pre">pipeline</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lineage.Edge.pipeline" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.lineage.Edge.where">
+<span class="sig-name descname"><span class="pre">where</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lineage.Edge.where" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -771,6 +884,102 @@ before snapshots checked their pins.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.lineage.cycle">
+<span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">cycle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.Store" title="chartbook.store.Store"><span class="pre">chartbook.store.Store</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">follow_pins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">git_cache</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lockfiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">through</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lineage.Cycle" title="chartbook.lineage.Cycle"><span class="pre">chartbook.lineage.Cycle</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#cycle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.cycle" title="Link to this definition">#</a></dt>
+<dd><p>The first cycle among the pipelines upstream of this one, with the way to it; None if there is none.</p>
+<p>Dependencies between pipelines form a directed graph, and it has to be
+acyclic: a pipeline that depends, through what it depends on, on itself
+has no order to be built in, and its snapshot would carry itself in its
+lineage. The graph is walked from the pipeline’s folder, each edge read
+from where it is best known:</p>
+<ul class="simple">
+<li><p>a dependency whose folder is on this machine (a <code class="docutils literal notranslate"><span class="pre">path</span></code> one, or one
+named by the ID of a pipeline in <em>members</em>): that folder’s own
+<code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, so a cycle is found as soon as it is declared,
+and the snapshot its pin names as well, since <code class="docutils literal notranslate"><span class="pre">pin</span></code> does not move
+a pin whatever the folder says now;</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency, and one named by its ID that was got from its
+repository: its copy at the commit its pin names, if it is fetched;</p></li>
+<li><p>any other (named by its ID, or a folder not on this machine): the
+snapshot its pin names, and what that snapshot recorded it was
+pinned to (a snapshot, or a clone that is fetched here), and so on
+up through the store.</p></li>
+</ul>
+<p>A pipeline is known by its ID, so one met as a folder and again as a
+snapshot is one node, and a cycle is a pipeline met again on the way up
+from itself. An ID names one pipeline: two folders, or two snapshots,
+under one ID are that pipeline (two clones or worktrees of one
+repository are). A copy that kept its original’s ID and reads the
+original depends on itself; where the cycle closes on its ID in
+another folder (<code class="docutils literal notranslate"><span class="pre">two_places</span></code>), it names both, and says what to do
+whether they are one pipeline or two. A folder or a snapshot walked once is not walked again
+unless something above it is reachable from it, which is a cycle.
+Nothing is said of what cannot be read here: a dependency with no pin
+and no folder, a <code class="docutils literal notranslate"><span class="pre">git</span></code> one not fetched, a folder whose manifest or
+lockfile cannot be read, or a record in the store that is not one
+ChartBook wrote. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> say what is
+wrong with those.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_dir</strong> – The pipeline’s folder.</p></li>
+<li><p><strong>store</strong> – The store; this user’s by default.</p></li>
+<li><p><strong>follow_pins</strong> – Whether to read the store for what the pins name.
+False keeps the walk to the folders on this machine, for a check
+that must not use the network.</p></li>
+<li><p><strong>pipeline</strong> – What to call the pipeline walked from; its own ID by
+default. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> names a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s working
+copy by the key it is declared under, as the pipeline that declares
+it does.</p></li>
+<li><p><strong>git_cache</strong> – Where <code class="docutils literal notranslate"><span class="pre">git</span></code> dependencies are fetched to; this
+user’s by default.</p></li>
+<li><p><strong>lockfiles</strong> – Lockfiles as they would be written, by the folder
+they belong to, read in place of the files there: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>
+walks the pins it is about to make before it makes them. A <code class="docutils literal notranslate"><span class="pre">git</span></code>
+dependency’s folder is its working copy, where <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>
+builds and pins it.</p></li>
+<li><p><strong>shared</strong> – A dict that walks share, so that the store is read
+once for all of them. A caller that writes snapshots between walks
+sets <code class="docutils literal notranslate"><span class="pre">shared[&quot;may_be_old&quot;]</span></code>: a walk then reads the store again
+when a pin names a snapshot the reading lacks, once for each.</p></li>
+<li><p><strong>through</strong> – The keys of the pipeline’s own <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> to
+walk from; all of them by default. A pin’s guard walks from those it
+pins or moves: a cycle reached only through what was pinned before
+is not that pin’s doing.</p></li>
+<li><p><strong>members</strong> – The pipelines of a run or a catalog, their folders by
+their IDs. A dependency named by the ID of one is followed through
+its folder, as a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency is: that is what the run
+builds, pins and makes a snapshot of.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.snapshot.html#chartbook.snapshot.SnapshotError" title="chartbook.snapshot.SnapshotError"><strong>chartbook.snapshot.SnapshotError</strong></a> – If the folder holds no pipeline.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the pipeline’s own <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> is malformed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.lineage.cycle_lead">
+<span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">cycle_lead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">found</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.lineage.Cycle" title="chartbook.lineage.Cycle"><span class="pre">chartbook.lineage.Cycle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#cycle_lead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.cycle_lead" title="Link to this definition">#</a></dt>
+<dd><p>How a cycle is announced, after the name of the pipeline walked from: who is in it, in one clause.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.lineage.explain_cycle">
+<span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">explain_cycle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">found</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.lineage.Cycle" title="chartbook.lineage.Cycle"><span class="pre">chartbook.lineage.Cycle</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#explain_cycle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.explain_cycle" title="Link to this definition">#</a></dt>
+<dd><p>The edges to and round a cycle, one line each with where it was read, and what to do about it.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.lineage.two_places_said">
+<span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">two_places_said</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">one</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#two_places_said"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.two_places_said" title="Link to this definition">#</a></dt>
+<dd><p>What to say of an ID met in one folder and again in another: both, and what to do either way.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.lineage.walk">
 <span class="sig-prename descclassname"><span class="pre">chartbook.lineage.</span></span><span class="sig-name descname"><span class="pre">walk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.Store" title="chartbook.store.Store"><span class="pre">chartbook.store.Store</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rehash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.lineage.Lineage" title="chartbook.lineage.Lineage"><span class="pre">chartbook.lineage.Lineage</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lineage.html#walk"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lineage.walk" title="Link to this definition">#</a></dt>
 <dd><p>Walk a pipeline’s lineage up from its lockfile, through every snapshot it leads to, and check each edge.</p>
@@ -847,7 +1056,20 @@ model version a label pinned, which reads all their bytes.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle"><code class="docutils literal notranslate"><span class="pre">Cycle</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.edges"><code class="docutils literal notranslate"><span class="pre">Cycle.edges</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.two_places"><code class="docutils literal notranslate"><span class="pre">Cycle.two_places</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Cycle.way_in"><code class="docutils literal notranslate"><span class="pre">Cycle.way_in</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.DEEPEST"><code class="docutils literal notranslate"><span class="pre">DEEPEST</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.dependency"><code class="docutils literal notranslate"><span class="pre">Edge.dependency</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.key"><code class="docutils literal notranslate"><span class="pre">Edge.key</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.pipeline"><code class="docutils literal notranslate"><span class="pre">Edge.pipeline</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Edge.where"><code class="docutils literal notranslate"><span class="pre">Edge.where</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage"><code class="docutils literal notranslate"><span class="pre">Lineage</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage.gaps"><code class="docutils literal notranslate"><span class="pre">Lineage.gaps()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Lineage.rehashed"><code class="docutils literal notranslate"><span class="pre">Lineage.rehashed</span></code></a></li>
@@ -873,6 +1095,10 @@ model version a label pinned, which reads all their bytes.</p></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.Node.to_dict"><code class="docutils literal notranslate"><span class="pre">Node.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.cycle"><code class="docutils literal notranslate"><span class="pre">cycle()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.cycle_lead"><code class="docutils literal notranslate"><span class="pre">cycle_lead()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.explain_cycle"><code class="docutils literal notranslate"><span class="pre">explain_cycle()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.two_places_said"><code class="docutils literal notranslate"><span class="pre">two_places_said()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lineage.walk"><code class="docutils literal notranslate"><span class="pre">walk()</span></code></a></li>
 </ul>
 </li>

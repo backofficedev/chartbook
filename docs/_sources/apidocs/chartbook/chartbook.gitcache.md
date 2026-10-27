@@ -87,6 +87,10 @@
   - ```{autodoc2-docstring} chartbook.gitcache.DEFAULT_REF
     :summary:
     ```
+* - {py:obj}`GIT <chartbook.gitcache.GIT>`
+  - ```{autodoc2-docstring} chartbook.gitcache.GIT
+    :summary:
+    ```
 * - {py:obj}`GIT_LOCATION_VARIABLES <chartbook.gitcache.GIT_LOCATION_VARIABLES>`
   - ```{autodoc2-docstring} chartbook.gitcache.GIT_LOCATION_VARIABLES
     :summary:
@@ -191,6 +195,16 @@
    'refs/chartbook/default'
 
 ```{autodoc2-docstring} chartbook.gitcache.DEFAULT_REF
+```
+
+````
+
+````{py:data} GIT
+:canonical: chartbook.gitcache.GIT
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.gitcache.GIT
 ```
 
 ````

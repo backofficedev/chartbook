@@ -62,7 +62,7 @@ chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook pin --frozen       # Write nothing but the store's note for gc; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
-chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
+chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
 chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)

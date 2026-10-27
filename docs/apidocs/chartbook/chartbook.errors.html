@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -624,7 +624,9 @@ asset: The asset’s ID, as the lockfile would have it.
 reason: What is missing: <code class="docutils literal notranslate"><span class="pre">&quot;no_lockfile&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;not_in_lockfile&quot;</span></code>,
 <code class="docutils literal notranslate"><span class="pre">&quot;not_built&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;not_in_store&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;not_synced&quot;</span></code> (the
 store has the object, and not all of its bytes yet),
-<code class="docutils literal notranslate"><span class="pre">&quot;no_snapshot&quot;</span></code> (nothing to pin from), <code class="docutils literal notranslate"><span class="pre">&quot;working&quot;</span></code> (a batch
+<code class="docutils literal notranslate"><span class="pre">&quot;no_snapshot&quot;</span></code> (nothing to pin from), <code class="docutils literal notranslate"><span class="pre">&quot;cycle&quot;</span></code> (the pin
+would close a cycle of dependencies, or lead into one, so it
+was not written), <code class="docutils literal notranslate"><span class="pre">&quot;working&quot;</span></code> (a batch
 run does not read a working folder), <code class="docutils literal notranslate"><span class="pre">&quot;in_source&quot;</span></code> (a table
 the pinned snapshot did not write out), or <code class="docutils literal notranslate"><span class="pre">&quot;no_pipeline&quot;</span></code> (a
 batch run outside any pipeline, where nothing records a read).</p>

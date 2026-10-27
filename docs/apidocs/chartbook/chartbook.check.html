@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -520,6 +520,7 @@
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_build_tool"><code class="docutils literal notranslate"><span class="pre">check_build_tool()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_dependencies"><code class="docutils literal notranslate"><span class="pre">check_dependencies()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_dependency_cycles"><code class="docutils literal notranslate"><span class="pre">check_dependency_cycles()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_ids"><code class="docutils literal notranslate"><span class="pre">check_ids()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_licenses"><code class="docutils literal notranslate"><span class="pre">check_licenses()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_labels"><code class="docutils literal notranslate"><span class="pre">check_model_labels()</span></code></a></li>
@@ -590,49 +591,52 @@ checks (row counts, null rates, schema assertions) are a separate concern.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_dependencies" title="chartbook.check.check_dependencies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_dependencies</span></code></a></p></td>
 <td><p>Report every declared dependency that cannot be found.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_ids" title="chartbook.check.check_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_ids</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_dependency_cycles" title="chartbook.check.check_dependency_cycles"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_dependency_cycles</span></code></a></p></td>
+<td><p>Report a pipeline that depends, through what it depends on, on itself.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_ids" title="chartbook.check.check_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_ids</span></code></a></p></td>
 <td><p>Warn where a pipeline is named by an ID its folder no longer gives itself, or will be named by another repository’s.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_licenses" title="chartbook.check.check_licenses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_licenses</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_licenses" title="chartbook.check.check_licenses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_licenses</span></code></a></p></td>
 <td><p>Report dataframe licenses that are expired or expire within the window.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_labels" title="chartbook.check.check_model_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_labels</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_labels" title="chartbook.check.check_model_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_labels</span></code></a></p></td>
 <td><p>Look at each model’s labels: does each point at a version that is here?</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_lineage" title="chartbook.check.check_model_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_lineage</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_lineage" title="chartbook.check.check_model_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_lineage</span></code></a></p></td>
 <td><p>Report training data that names a dataframe which is known not to exist.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_metrics" title="chartbook.check.check_model_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_metrics</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_metrics" title="chartbook.check.check_model_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_metrics</span></code></a></p></td>
 <td><p>Report every model metrics file that is there and is not well formed.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_staleness" title="chartbook.check.check_model_staleness"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_staleness</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_staleness" title="chartbook.check.check_model_staleness"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_staleness</span></code></a></p></td>
 <td><p>Warn about a model trained on inputs that have since moved.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_paths" title="chartbook.check.check_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_paths</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_paths" title="chartbook.check.check_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_paths</span></code></a></p></td>
 <td><p>Report every declared file that does not exist on disk.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_required_fields" title="chartbook.check.check_required_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_required_fields</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_required_fields" title="chartbook.check.check_required_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_required_fields</span></code></a></p></td>
 <td><p>Report every field the active policy requires that is missing or empty.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_sources" title="chartbook.check.check_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_sources</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_sources" title="chartbook.check.check_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_sources</span></code></a></p></td>
 <td><p>Report a source that is not there: a DuckDB file that does not exist.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.display_path" title="chartbook.check.display_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">display_path</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.display_path" title="chartbook.check.display_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">display_path</span></code></a></p></td>
 <td><p>Return <em>path</em> relative to <em>relative_to</em> when it lies beneath it.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.load_policy" title="chartbook.check.load_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_policy</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.load_policy" title="chartbook.check.load_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_policy</span></code></a></p></td>
 <td><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a catalog’s chartbook.toml.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.not_built_hint" title="chartbook.check.not_built_hint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">not_built_hint</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.not_built_hint" title="chartbook.check.not_built_hint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">not_built_hint</span></code></a></p></td>
 <td><p>What to run when :func:<code class="docutils literal notranslate"><span class="pre">check_paths</span></code> found a lone pipeline that has built nothing yet.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.parse_expiration" title="chartbook.check.parse_expiration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_expiration</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.parse_expiration" title="chartbook.check.parse_expiration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_expiration</span></code></a></p></td>
 <td><p>Interpret a <code class="docutils literal notranslate"><span class="pre">license_expiration</span></code> value.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.read_policy" title="chartbook.check.read_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_policy</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.read_policy" title="chartbook.check.read_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_policy</span></code></a></p></td>
 <td><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a file, and whether it has one.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.run_checks" title="chartbook.check.run_checks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_checks</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.run_checks" title="chartbook.check.run_checks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_checks</span></code></a></p></td>
 <td><p>Run every check over a loaded manifest.</p></td>
 </tr>
 </tbody>
@@ -762,6 +766,27 @@ yet, and <code class="docutils literal notranslate"><span class="pre">chartbook<
 snapshot, as the first read of it does. That is a warning and not a
 problem because a fresh clone is in that state on purpose, and
 <code class="docutils literal notranslate"><span class="pre">--frozen</span></code> is the gate that fails on it.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.check.check_dependency_cycles">
+<span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">check_dependency_cycles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.check.Problem" title="chartbook.check.Problem"><span class="pre">chartbook.check.Problem</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/check.html#check_dependency_cycles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.check_dependency_cycles" title="Link to this definition">#</a></dt>
+<dd><p>Report a pipeline that depends, through what it depends on, on itself.</p>
+<p>Dependencies between pipelines must form a directed acyclic graph:
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> refuse
+a cycle, and this says so without building. The graph is walked as</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.lineage.cycle</span></code> walks it: through the folders on this
+machine, and through the pins in the store when the store is a folder
+on this disk. A check uses no network, so a store at a URL is not read,
+and a cycle that only its snapshots would show is not seen here. The
+problem is addressed to the pipeline’s own dependency that is in the
+cycle, or that leads to one among the pipelines it depends on. A
+pipeline that depends on itself directly, by its own folder or its own
+ID, is reported by :func:<code class="docutils literal notranslate"><span class="pre">check_dependencies</span></code>, not here.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -1091,6 +1116,7 @@ healthy project.</p>
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_build_tool"><code class="docutils literal notranslate"><span class="pre">check_build_tool()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_dependencies"><code class="docutils literal notranslate"><span class="pre">check_dependencies()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_dependency_cycles"><code class="docutils literal notranslate"><span class="pre">check_dependency_cycles()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_ids"><code class="docutils literal notranslate"><span class="pre">check_ids()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_licenses"><code class="docutils literal notranslate"><span class="pre">check_licenses()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_labels"><code class="docutils literal notranslate"><span class="pre">check_model_labels()</span></code></a></li>

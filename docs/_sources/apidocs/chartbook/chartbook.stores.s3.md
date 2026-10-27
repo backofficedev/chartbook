@@ -111,6 +111,14 @@ Bases: {py:obj}`chartbook.store.Store`
 
 ````
 
+````{py:method} lacks(content_hash: str, names: typing.Iterable[str], single: bool = True) -> bool
+:canonical: chartbook.stores.s3.S3Store.lacks
+
+```{autodoc2-docstring} chartbook.stores.s3.S3Store.lacks
+```
+
+````
+
 ````{py:method} note_origin(commit: str, name: str, top: str) -> None
 :canonical: chartbook.stores.s3.S3Store.note_origin
 

@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -512,6 +512,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">stat</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -541,6 +542,11 @@
 <span class="c1">#: The transports git may use for a dependency. Git's ``ext::`` transport</span>
 <span class="c1">#: runs a command; a manifest must not be able to ask for it.</span>
 <span class="n">ALLOWED_PROTOCOLS</span> <span class="o">=</span> <span class="s2">"file:git:http:https:ssh"</span>
+
+<span class="c1">#: git as the cache runs it. A clone of a local repository is kept under a</span>
+<span class="c1">#: folder named after that repository's own path, so its files' paths can be</span>
+<span class="c1">#: longer than the 260 characters Windows otherwise allows a path.</span>
+<span class="n">GIT</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="s2">"core.longpaths=true"</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span> <span class="k">else</span> <span class="p">(</span><span class="s2">"git"</span><span class="p">,)</span>
 
 <span class="n">_FULL_COMMIT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[0-9a-f]</span><span class="si">{40}</span><span class="s2">$"</span><span class="p">)</span>
 <span class="n">_HEX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[0-9a-f]{7,40}$"</span><span class="p">)</span>
@@ -640,6 +646,39 @@
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_paths_ignore_case</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether one folder's path may be written in either case: on Windows."""</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_remove_staging</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remove a folder made on the way, its read-only files too, as far as it can be.</span>
+
+<span class="sd">    git's objects are read-only, and Windows does not remove a read-only</span>
+<span class="sd">    file: each is made writable and tried again. What still cannot be</span>
+<span class="sd">    removed is left; it is a temporary folder no one reads.</span>
+<span class="sd">    """</span>
+
+    <span class="n">top</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">writable_then_again</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">_error</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">function</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">rmdir</span><span class="p">):</span>
+            <span class="k">return</span>  <span class="c1"># a folder that could not be listed: left</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">!=</span> <span class="n">top</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IRWXU</span><span class="p">)</span>  <span class="c1"># what holds it, on POSIX: in the staging folder</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">islink</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IRWXU</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">else</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IWRITE</span> <span class="o">|</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IREAD</span><span class="p">)</span>
+            <span class="n">function</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">onexc</span><span class="o">=</span><span class="n">writable_then_again</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">writable_then_again</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="repository_slug">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.repository_slug">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -647,8 +686,11 @@
 
 <span class="sd">    The same repository reached two ways (``https://host/a/b.git``,</span>
 <span class="sd">    ``git@host:a/b``) gets one path, and so one clone. A repository on this</span>
-<span class="sd">    disk goes under ``local/``. Nothing of a URL's user name or password is</span>
-<span class="sd">    in it, and no component can climb out of the cache. A port stays, as</span>
+<span class="sd">    disk goes under ``local/``, by its folder's name and a short hash of its</span>
+<span class="sd">    whole path: the path in full would make one in the cache longer than</span>
+<span class="sd">    the 260 characters Windows lets git work in. Nothing of a URL's user</span>
+<span class="sd">    name or password is in it, and no component can climb out of the</span>
+<span class="sd">    cache. A port stays, as</span>
 <span class="sd">    ``host_8443``, and a component with a character that is not kept gets</span>
 <span class="sd">    a short hash of itself, so that two different repositories never share</span>
 <span class="sd">    a clone.</span>
@@ -665,6 +707,19 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">"local"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^file://"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\.git/?$"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="o">==</span> <span class="s2">"local"</span><span class="p">:</span>
+        <span class="c1"># One folder: its name, and a hash of the whole path written one</span>
+        <span class="c1"># way: with /, so that C:\\repos\\x, C:/repos/x and file:///C:/repos/x</span>
+        <span class="c1"># are one repository; on Windows, whose paths are one in any case,</span>
+        <span class="c1"># in lower case, as a terminal may give c:\\ where another gives C:\\</span>
+        <span class="n">whole</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[/</span><span class="se">\\</span><span class="s2">]+"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^/[A-Za-z]:"</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
+            <span class="n">whole</span> <span class="o">=</span> <span class="n">whole</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">_paths_ignore_case</span><span class="p">()</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z]:"</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
+            <span class="n">whole</span> <span class="o">=</span> <span class="n">whole</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="n">_paths_ignore_case</span><span class="p">()</span> <span class="k">else</span> <span class="n">whole</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">+</span> <span class="n">whole</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">part</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span> <span class="k">if</span> <span class="n">part</span> <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">"."</span><span class="p">}),</span> <span class="s2">"repository"</span><span class="p">)</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"local"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^A-Za-z0-9._-]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"~"</span> <span class="o">+</span> <span class="n">digest</span><span class="p">)</span>
     <span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">host</span><span class="p">,</span> <span class="o">*</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[/</span><span class="se">\\</span><span class="s2">]+"</span><span class="p">,</span> <span class="n">path</span><span class="p">)]</span>
     <span class="n">safe</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
@@ -784,7 +839,7 @@
                     <span class="k">raise</span>
         <span class="k">finally</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">staging</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">staging</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">_remove_staging</span><span class="p">(</span><span class="n">staging</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">final</span></div>
 
 
@@ -806,7 +861,7 @@
         <span class="n">environment</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"GIT_SSH_COMMAND"</span><span class="p">,</span> <span class="s2">"ssh -o BatchMode=yes"</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span>
+                <span class="p">[</span><span class="o">*</span><span class="n">GIT</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span>
@@ -840,7 +895,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">staging</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
-                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">staging</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">_remove_staging</span><span class="p">(</span><span class="n">staging</span><span class="p">)</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">"HEAD"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                     <span class="k">raise</span>
         <span class="c1"># The URL is given here and now, and is not kept in the clone</span>
@@ -936,7 +991,7 @@
             <span class="k">if</span> <span class="n">index</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="n">index</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">staging</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">staging</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">_remove_staging</span><span class="p">(</span><span class="n">staging</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">final</span></div>
 
 
@@ -993,7 +1048,7 @@
 <span class="sd">    been, so that the next run leaves it alone.</span>
 <span class="sd">    """</span>
     <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">work_copy</span><span class="p">)</span> <span class="o">/</span> <span class="n">BUILT_MARKER</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
-        <span class="s2">"chartbook run finished this pipeline's build here.</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span>
+        <span class="s2">"chartbook run finished this pipeline's build here.</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
     <span class="p">)</span></div>
 
 

@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -778,7 +778,12 @@
     <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">help</span><span class="o">=</span><span class="s2">"Build even though an asset marked keep = true is not on disk while the store has a version of it (see `chartbook run --remake`)"</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span><span class="n">remake</span><span class="p">,</span> <span class="o">**</span><span class="n">site</span><span class="p">):</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">"--upstream"</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"First build and snapshot each pipeline this one depends on by path that has no snapshot to pin (see `chartbook run --upstream`)"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">build</span><span class="p">(</span><span class="n">remake</span><span class="p">,</span> <span class="n">upstream</span><span class="p">,</span> <span class="o">**</span><span class="n">site</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Make everything current: run the build script, then render the site.</span>
 
 <span class="sd">    The same as `chartbook run` followed by `chartbook docs generate`, and</span>
@@ -797,10 +802,15 @@
 <span class="sd">    `keep = true` is not on disk while the store has a version of it:</span>
 <span class="sd">    `chartbook restore` puts it back, and --remake builds without it.</span>
 
+<span class="sd">    --upstream first builds and snapshots each pipeline this one depends</span>
+<span class="sd">    on by path that has no snapshot to pin, as `chartbook run --upstream`</span>
+<span class="sd">    does.</span>
+
 <span class="sd">    \b</span>
 <span class="sd">    Examples:</span>
 <span class="sd">        chartbook build -f</span>
 <span class="sd">        chartbook build -f --project-dir ../rate_forecast</span>
+<span class="sd">        chartbook build -f --upstream</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">runner</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">BUILD_SCRIPT</span>
@@ -821,19 +831,60 @@
             <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">elif</span> <span class="n">_has_script</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">BUILD_SCRIPT</span><span class="p">):</span>
-        <span class="n">_stop_where_a_build_tool_says_chartbook_build</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">BUILD_SCRIPT</span><span class="p">,</span> <span class="n">may_render</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"render"</span><span class="p">:</span>
+        <span class="n">_stop_where_a_build_tool_says_chartbook_build</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">BUILD_SCRIPT</span><span class="p">,</span> <span class="n">may_render</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"render"</span><span class="p">:</span>
             <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"The build command was not run; only the site is rendered."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">_stop_on_a_cycle</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">_run_script</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">BUILD_SCRIPT</span><span class="p">,</span> <span class="n">remake</span><span class="o">=</span><span class="n">remake</span><span class="p">,</span> <span class="n">remake_command</span><span class="o">=</span><span class="s2">"chartbook build --remake"</span><span class="p">)</span>
+            <span class="n">_run_script</span><span class="p">(</span>
+                <span class="n">project_dir</span><span class="p">,</span> <span class="n">BUILD_SCRIPT</span><span class="p">,</span> <span class="n">remake</span><span class="o">=</span><span class="n">remake</span><span class="p">,</span> <span class="n">remake_command</span><span class="o">=</span><span class="s2">"chartbook build --remake"</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span>
+            <span class="p">)</span>
             <span class="c1"># So what the script did not make is an error, not "not built yet"</span>
             <span class="n">after_build</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"No `build` script here, so only the site is rendered."</span><span class="p">)</span>
+        <span class="n">_stop_on_a_cycle</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
     <span class="n">_render_site</span><span class="p">(</span><span class="o">**</span><span class="n">site</span><span class="p">,</span> <span class="n">after_build</span><span class="o">=</span><span class="n">after_build</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_stop_where_a_build_tool_says_chartbook_build</span><span class="p">(</span><span class="n">project_dir</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_stop_on_a_cycle</span><span class="p">(</span><span class="n">project_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Stop before rendering when a pipeline here depends, through what it depends on, on itself.</span>
+
+<span class="sd">    Dependencies between pipelines form a directed acyclic graph, and</span>
+<span class="sd">    `chartbook run` refuses a cycle before it pins or builds anything</span>
+<span class="sd">    (:func:`chartbook.lineage.cycle`).</span>
+<span class="sd">    Where `chartbook build` runs no build command, nothing has looked yet,</span>
+<span class="sd">    so it looks here: at the pipeline, or at each pipeline of a catalog.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lineage</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">runner</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">SnapshotError</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="c1"># the render says what is wrong</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="p">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">}</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># the store read once for every pipeline's walk</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">!=</span> <span class="s2">"asked"</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">step</span><span class="o">.</span><span class="n">has_dependencies</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">loop</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">members</span><span class="o">=</span><span class="n">members</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="n">shared</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">SnapshotError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+            <span class="k">continue</span>  <span class="c1"># `chartbook check` says what is wrong with the manifest</span>
+        <span class="k">if</span> <span class="n">loop</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
+                <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="o">+</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">lineage</span><span class="o">.</span><span class="n">cycle_lead</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span><span class="si">}</span><span class="s2">, so there is no order to build in.</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="o">+</span> <span class="n">lineage</span><span class="o">.</span><span class="n">explain_cycle</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span>
+                <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">Nothing was rendered."</span><span class="p">,</span>
+                <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stop_where_a_build_tool_says_chartbook_build</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Stop before any build runs when a pipeline's build tool has a task that says `chartbook build`.</span>
 
 <span class="sd">    Written when `chartbook build` rendered the site (before 0.2.0). Now it</span>
@@ -846,13 +897,15 @@
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">runner</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">BUILD_SCRIPT</span>
 
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">steps</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">):</span>
         <span class="k">return</span>  <span class="c1"># the run says what is wrong</span>
     <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span><span class="p">:</span>
-        <span class="n">command</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">BUILD_SCRIPT</span><span class="p">)</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">BUILD_SCRIPT</span><span class="p">)</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"asked"</span><span class="p">,</span> <span class="s2">"upstream"</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">clash</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">build_tool_runs_chartbook_build</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span> <span class="k">if</span> <span class="n">command</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">clash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">name</span><span class="p">,</span> <span class="n">number</span><span class="p">,</span> <span class="n">line</span> <span class="o">=</span> <span class="n">clash</span>
@@ -1230,7 +1283,7 @@
     <span class="k">return</span> <span class="kc">True</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">may_render</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">may_render</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""At a terminal, ask about each folder whose script would run and is not trusted to run: ``"go"`` or ``"render"``.</span>
 
 <span class="sd">    ``"render"``, for `chartbook build` alone, is the answer r: the site is</span>
@@ -1243,14 +1296,16 @@
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_can_ask</span><span class="p">():</span>
         <span class="k">return</span> <span class="s2">"go"</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">steps</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">"go"</span>  <span class="c1"># the run says what is wrong</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">waiting</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">step</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span>
-            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">script</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span>
+            <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"asked"</span><span class="p">,</span> <span class="s2">"upstream"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">directory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">script</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span>
             <span class="ow">and</span> <span class="n">trust_of</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">"run"</span>
         <span class="p">]</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
@@ -1266,7 +1321,10 @@
             <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"Nothing was run."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="s2">"go"</span>
-    <span class="n">folders</span> <span class="o">=</span> <span class="p">[(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">waiting</span><span class="p">]</span>
+    <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s2">"an upstream: built, then snapshotted"</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"upstream"</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">waiting</span>
+    <span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">_ask_to_trust_folders</span><span class="p">(</span><span class="n">folders</span><span class="p">,</span> <span class="n">running</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">script</span><span class="o">=</span><span class="n">script</span><span class="p">):</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"Nothing was run."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -2733,11 +2791,12 @@
     <span class="c1"># Add each pipeline</span>
     <span class="n">added</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">fills</span> <span class="ow">in</span> <span class="n">planned</span><span class="p">:</span>
+        <span class="c1"># With / on every system, so a catalog file is read the same on each</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">catalog_dir</span><span class="p">)</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">catalog_dir</span><span class="p">))</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="c1"># Cross-drive on Windows</span>
-            <span class="n">rel_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+            <span class="n">rel_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
 
         <span class="c1"># What is added is enabled, whatever the disabled list said of its ID</span>
         <span class="n">listed</span> <span class="o">=</span> <span class="n">_off_the_disabled_list</span><span class="p">(</span><span class="n">raw_catalog</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
@@ -3207,8 +3266,12 @@
     <span class="k">return</span> <span class="n">content_hash</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_run_pin</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_run_pin</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">on_refused</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Run a pin, or an update when *dependencies* is given; exit 1 on a problem.</span>
+
+<span class="sd">    :param on_refused: Called before exiting when the lockfile was not</span>
+<span class="sd">        written because its new pins would close a cycle, or lead into one.</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lock</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
 
@@ -3220,6 +3283,12 @@
             <span class="n">report</span> <span class="o">=</span> <span class="n">lock</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_explain_os_error</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">refused</span><span class="p">:</span>
+        <span class="c1"># Nothing was written, so what it would have pinned is not shown as pinned</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">report</span><span class="o">.</span><span class="n">refused</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">on_refused</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">on_refused</span><span class="p">()</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">_echo_pin_report</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">unrooted</span><span class="p">:</span>
@@ -3279,9 +3348,12 @@
 <span class="sd">    hash of each of its assets is written to chartbook.lock. Commit that</span>
 <span class="sd">    file: a change to what the project depends on then shows in a diff.</span>
 
-<span class="sd">    Nothing in the other pipeline's folder is read. It can be half-way</span>
-<span class="sd">    through a change, and what you pin is still the build that was</span>
-<span class="sd">    declared ready.</span>
+<span class="sd">    None of the other pipeline's data in its folder is read. It can be</span>
+<span class="sd">    half-way through a change, and what you pin is still the build that</span>
+<span class="sd">    was declared ready. Its chartbook.toml and chartbook.lock are read, to</span>
+<span class="sd">    see that the pin makes no cycle: a pin whose new or moved entries would</span>
+<span class="sd">    lead back to this pipeline, or into pipelines that depend on each</span>
+<span class="sd">    other, is not written.</span>
 
 <span class="sd">    A pin that already exists is never moved, whatever the other pipeline</span>
 <span class="sd">    has done since; `chartbook update` moves pins. What `pin` does do again</span>
@@ -3356,6 +3428,25 @@
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">_echo_frozen_report</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">report</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">problems</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Built from its lockfile alone, as `chartbook run --frozen` would: not in a cycle</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lineage</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">SnapshotError</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">pipeline_in</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">resolve_project_dir</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
+        <span class="n">loop</span><span class="p">,</span> <span class="n">pipeline_id</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">folder</span><span class="p">),</span> <span class="n">pipeline_in</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">SnapshotError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">loop</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
+            <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="o">+</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">lineage</span><span class="o">.</span><span class="n">cycle_lead</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span><span class="si">}</span><span class="s2">, so there is no order to build in.</span><span class="se">\n</span><span class="s2">"</span>
+            <span class="o">+</span> <span class="n">lineage</span><span class="o">.</span><span class="n">explain_cycle</span><span class="p">(</span><span class="n">loop</span><span class="p">),</span>
+            <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
 
@@ -3438,7 +3529,14 @@
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">changed</span><span class="p">)</span>
     <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Added to [dependencies] in </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">dependency_line</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">entry</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-    <span class="n">_run_pin</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">put_back</span><span class="p">():</span>
+        <span class="c1"># A dependency whose pin would close a cycle, or lead into one, is not added either</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">manifest_file</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">""</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> was not added: </span><span class="si">{</span><span class="n">manifest_file</span><span class="si">}</span><span class="s2"> is as it was."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">_run_pin</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">on_refused</span><span class="o">=</span><span class="n">put_back</span><span class="p">)</span>
 
 
 <span class="nd">@main</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
@@ -3599,7 +3697,12 @@
     <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">help</span><span class="o">=</span><span class="s2">"Build even though an asset marked keep = true is not on disk while the store has a version of it, so that the build makes it again (`chartbook restore` puts it back instead)"</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">run_command</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">make_snapshot</span><span class="p">,</span> <span class="n">frozen</span><span class="p">,</span> <span class="n">remake</span><span class="p">):</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">"--upstream"</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_command</span><span class="p">(</span><span class="n">script</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">force</span><span class="p">,</span> <span class="n">make_snapshot</span><span class="p">,</span> <span class="n">frozen</span><span class="p">,</span> <span class="n">remake</span><span class="p">,</span> <span class="n">upstream</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Run a script in this pipeline: `build`, unless another is named.</span>
 
 <span class="sd">    SCRIPT is a name from [scripts] in chartbook.toml.</span>
@@ -3614,9 +3717,9 @@
 <span class="sd">    pinned, so its code can read it. A pin that exists is never moved: you</span>
 <span class="sd">    are told what has changed, and `chartbook update` moves pins.</span>
 
-<span class="sd">    It never builds in a folder this pipeline depends on. That folder is</span>
-<span class="sd">    somebody's work, and this pipeline reads what is pinned, not what is</span>
-<span class="sd">    there.</span>
+<span class="sd">    It never builds in a folder this pipeline depends on, unless you say</span>
+<span class="sd">    --upstream (below). That folder is somebody's work, and this pipeline</span>
+<span class="sd">    reads what is pinned, not what is there.</span>
 
 <span class="sd">    A dependency that is a git repository is built once, in ChartBook's own</span>
 <span class="sd">    clean copy of the commit, so that what it builds can be pinned. --force</span>
@@ -3636,6 +3739,7 @@
 <span class="sd">        chartbook run --force</span>
 <span class="sd">        chartbook run --snapshot</span>
 <span class="sd">        chartbook run --frozen</span>
+<span class="sd">        chartbook run --upstream</span>
 
 <span class="sd">    --frozen pins nothing and writes nothing before the build but, where</span>
 <span class="sd">    the store can be written, its note that this machine reads these pins:</span>
@@ -3648,13 +3752,22 @@
 <span class="sd">    one is not on disk while the store has a version of it, `build` stops</span>
 <span class="sd">    before anything runs and says so: `chartbook restore` puts it back,</span>
 <span class="sd">    and --remake runs the build without it, which makes it again.</span>
+
+<span class="sd">    --upstream is for folders that are yours. A pipeline this one depends</span>
+<span class="sd">    on by path, on this machine, that has no snapshot to pin and is not</span>
+<span class="sd">    pinned yet is built first, and snapshotted once its build succeeds, so</span>
+<span class="sd">    that this one can pin it; its own the same way, each before what</span>
+<span class="sd">    depends on it. Each must be trusted to run, have a `build` script and</span>
+<span class="sd">    have everything committed, and its build must leave it so. The first</span>
+<span class="sd">    that fails stops the run.</span>
 <span class="sd">    """</span>
     <span class="n">project_dir</span> <span class="o">=</span> <span class="n">resolve_project_dir</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">BUILD_SCRIPT</span>
 
     <span class="c1"># Not for arguments the run refuses anyway: it says why, and nothing is recorded</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">((</span><span class="n">frozen</span> <span class="ow">and</span> <span class="n">make_snapshot</span><span class="p">)</span> <span class="ow">or</span> <span class="p">((</span><span class="n">frozen</span> <span class="ow">or</span> <span class="n">make_snapshot</span><span class="p">)</span> <span class="ow">and</span> <span class="n">script</span> <span class="o">!=</span> <span class="n">BUILD_SCRIPT</span><span class="p">)):</span>
-        <span class="n">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">may_render</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">refused</span> <span class="o">=</span> <span class="p">(</span><span class="n">frozen</span> <span class="ow">and</span> <span class="p">(</span><span class="n">make_snapshot</span> <span class="ow">or</span> <span class="n">upstream</span><span class="p">))</span> <span class="ow">or</span> <span class="p">((</span><span class="n">frozen</span> <span class="ow">or</span> <span class="n">make_snapshot</span> <span class="ow">or</span> <span class="n">upstream</span><span class="p">)</span> <span class="ow">and</span> <span class="n">script</span> <span class="o">!=</span> <span class="n">BUILD_SCRIPT</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">refused</span><span class="p">:</span>
+        <span class="n">_ask_before_running</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">may_render</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">)</span>
     <span class="n">_run_script</span><span class="p">(</span>
         <span class="n">project_dir</span><span class="p">,</span>
         <span class="n">script</span><span class="p">,</span>
@@ -3662,6 +3775,7 @@
         <span class="n">snapshot</span><span class="o">=</span><span class="n">make_snapshot</span><span class="p">,</span>
         <span class="n">frozen</span><span class="o">=</span><span class="n">frozen</span><span class="p">,</span>
         <span class="n">remake</span><span class="o">=</span><span class="n">remake</span><span class="p">,</span>
+        <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">,</span>
     <span class="p">)</span>
 
 
@@ -3677,7 +3791,7 @@
     <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">script</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">scripts</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steps</span> <span class="k">if</span> <span class="n">step</span><span class="o">.</span><span class="n">source</span> <span class="o">==</span> <span class="s2">"asked"</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_echo_snapshot</span><span class="p">(</span><span class="n">report</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_echo_snapshot</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Print what making a snapshot did."""</span>
     <span class="n">taken</span> <span class="o">=</span> <span class="n">report</span><span class="o">.</span><span class="n">snapshot</span>
     <span class="n">built</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">))</span>
@@ -3703,7 +3817,9 @@
             <span class="sa">f</span><span class="s2">"'_' and '-', does not read as a hash, and names a version by twelve or more "</span>
             <span class="sa">f</span><span class="s2">"of its digits; `chartbook check` says the same."</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">made</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">made</span> <span class="ow">and</span> <span class="n">upstream</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"Snapshot made, for what depends on it in this run to pin."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">report</span><span class="o">.</span><span class="n">made</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
             <span class="s2">"Snapshot made. A pipeline that depends on this one gets it with "</span>
             <span class="s2">"`chartbook update`."</span>
@@ -3716,7 +3832,8 @@
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_run_script</span><span class="p">(</span>
-    <span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">remake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">remake_command</span><span class="o">=</span><span class="s2">"chartbook run --remake"</span>
+    <span class="n">project_dir</span><span class="p">,</span> <span class="n">script</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">snapshot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">frozen</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">remake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">remake_command</span><span class="o">=</span><span class="s2">"chartbook run --remake"</span><span class="p">,</span>
+    <span class="n">upstream</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Run a named script as `chartbook run` does; exit with its code if it fails."""</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">lock</span>
@@ -3739,11 +3856,12 @@
             <span class="n">on_pin</span><span class="o">=</span><span class="n">show_pins</span><span class="p">,</span>
             <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
             <span class="n">snapshot</span><span class="o">=</span><span class="n">snapshot</span><span class="p">,</span>
-            <span class="n">on_snapshot</span><span class="o">=</span><span class="k">lambda</span> <span class="n">step</span><span class="p">,</span> <span class="n">made</span><span class="p">:</span> <span class="n">_echo_snapshot</span><span class="p">(</span><span class="n">made</span><span class="p">),</span>
+            <span class="n">on_snapshot</span><span class="o">=</span><span class="k">lambda</span> <span class="n">step</span><span class="p">,</span> <span class="n">made</span><span class="p">:</span> <span class="n">_echo_snapshot</span><span class="p">(</span><span class="n">made</span><span class="p">,</span> <span class="n">upstream</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">snapshot_first</span><span class="p">),</span>
             <span class="n">frozen</span><span class="o">=</span><span class="n">frozen</span><span class="p">,</span>
             <span class="n">on_verify</span><span class="o">=</span><span class="n">_echo_frozen_report</span><span class="p">,</span>
             <span class="n">remake</span><span class="o">=</span><span class="n">remake</span><span class="p">,</span>
             <span class="n">remake_command</span><span class="o">=</span><span class="n">remake_command</span><span class="p">,</span>
+            <span class="n">upstream</span><span class="o">=</span><span class="n">upstream</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">RunError</span><span class="p">,</span> <span class="n">lock</span><span class="o">.</span><span class="n">LockError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_explain_os_error</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

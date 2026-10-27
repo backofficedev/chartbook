@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=83f9ed06" />
@@ -1105,8 +1105,6 @@
         <li><a href="apidocs/chartbook/chartbook.stores.html#module-chartbook.stores">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.stores.s3
 
@@ -1114,6 +1112,8 @@
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#module-chartbook.stores.s3">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.versions
 
@@ -1157,6 +1157,8 @@
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.check_build_tree">check_build_tree() (in module chartbook.incremental)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_dependencies">check_dependencies() (in module chartbook.check)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_dependency_cycles">check_dependency_cycles() (in module chartbook.check)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.check_front_matter">check_front_matter() (in module chartbook.writers.sphinx)</a>
 </li>
@@ -1400,6 +1402,12 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.CRUFT_MARKER">CRUFT_MARKER (in module chartbook.scaffold)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle">Cycle (class in chartbook.lineage)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.cycle">cycle() (in module chartbook.lineage)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.cycle_lead">cycle_lead() (in module chartbook.lineage)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1482,9 +1490,11 @@
         <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.Lock.dependencies">(chartbook.lock.Lock attribute)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.FrozenProblem.dependency">dependency (chartbook.lock.FrozenProblem attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge.dependency">dependency (chartbook.lineage.Edge attribute)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.FrozenProblem.dependency">(chartbook.lock.FrozenProblem attribute)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.PinEvent.dependency">(chartbook.lock.PinEvent attribute)</a>
 </li>
       </ul></li>
@@ -1576,6 +1586,10 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge">Edge (class in chartbook.lineage)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle.edges">edges (chartbook.lineage.Cycle attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.GcPlan.elsewhere">elsewhere (chartbook.lock.GcPlan attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.IndexDiff.empty">empty (chartbook.indexdiff.IndexDiff property)</a>
@@ -1600,10 +1614,10 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.claude_skill.html#chartbook.claude_skill.ENTRY">ENTRY (in module chartbook.claude_skill)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#chartbook.plotting.backends.ENTRY_POINT_GROUP">ENTRY_POINT_GROUP (in module chartbook.plotting.backends)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#chartbook.plotting.backends.ENTRY_POINT_GROUP">ENTRY_POINT_GROUP (in module chartbook.plotting.backends)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.IndexDiff.envelope">envelope (chartbook.indexdiff.IndexDiff attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.ENVELOPE_FIELDS">ENVELOPE_FIELDS (in module chartbook.indexdiff)</a>
@@ -1622,6 +1636,8 @@
         <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.exit_with_message">(chartbook.errors.MissingSourceFilesError method)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.explain_cycle">explain_cycle() (in module chartbook.lineage)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.EXTRA">EXTRA (in module chartbook.writers.mkdocs)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.extra_kwargs">extra_kwargs (chartbook.plotting._types.ChartConfig attribute)</a>
@@ -1852,10 +1868,10 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_catalog_path">get_global_catalog_path() (in module chartbook.config)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_config_dir">get_global_config_dir() (in module chartbook.config)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_docs_dir">get_global_docs_dir() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_settings_path">get_global_settings_path() (in module chartbook.config)</a>
@@ -1891,6 +1907,8 @@
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_trust_path">get_trust_path() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.PinReport.git">git (chartbook.lock.PinReport attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GIT">GIT (in module chartbook.gitcache)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.GIT_CACHE_ENV_VAR">GIT_CACHE_ENV_VAR (in module chartbook.config)</a>
 </li>
@@ -1962,6 +1980,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.held_elsewhere">held_elsewhere() (in module chartbook.lock)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.hint">hint (chartbook.errors.ChartBookError attribute)</a>
 
       <ul>
@@ -2132,6 +2152,10 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.KeptVersion">KeptVersion (class in chartbook.snapshot)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge.key">key (chartbook.lineage.Edge attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.Change.kind">kind (chartbook.indexdiff.Change attribute)</a>
 
       <ul>
@@ -2152,8 +2176,6 @@
         <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.TableLocation.kind">(chartbook.resolve.TableLocation attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.refs.html#chartbook.refs.KIND_TABLES">KIND_TABLES (in module chartbook.refs)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.refs.html#chartbook.refs.KindMismatchError">KindMismatchError</a>
@@ -2192,6 +2214,14 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.labels_skipped">labels_skipped() (in module chartbook.snapshot)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.lacks">lacks() (chartbook.store.FolderStore method)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.lacks">(chartbook.store.Store method)</a>
+</li>
+        <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.lacks">(chartbook.stores.s3.S3Store method)</a>
+</li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.Restored.left">left (chartbook.snapshot.Restored attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.left_colors">left_colors (chartbook.plotting._types.DualAxisConfig attribute)</a>
@@ -2220,10 +2250,12 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered.link_command">link_command() (chartbook.scaffold.Rendered method)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe">link_to_dataframe() (chartbook.writers.sphinx.SphinxWriter method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.link_target">link_target() (in module chartbook.store)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe">link_to_dataframe() (chartbook.writers.sphinx.SphinxWriter method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoredObject.links">links (chartbook.store.StoredObject attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.LINKS">LINKS (in module chartbook.snapshot)</a>
@@ -2775,9 +2807,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.FrozenReport.pins">pins (chartbook.lock.FrozenReport attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node.pipeline">pipeline (chartbook.lineage.Node attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge.pipeline">pipeline (chartbook.lineage.Edge attribute)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node.pipeline">(chartbook.lineage.Node attribute)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.pipeline">(chartbook.refs.AssetRef attribute)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.PipelineLocation.pipeline">(chartbook.resolve.PipelineLocation attribute)</a>
@@ -2797,10 +2831,10 @@
         <li><a href="apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.pipeline_id">(chartbook.refs.AssetRef property)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.pipeline_in">pipeline_in() (in module chartbook.snapshot)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.pipeline_in">pipeline_in() (in module chartbook.snapshot)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.pipeline_input_files">pipeline_input_files() (in module chartbook.incremental)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.pipeline_owned_paths">pipeline_owned_paths() (in module chartbook.incremental)</a>
@@ -3005,6 +3039,8 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.backends.html#chartbook.backends.refuse_in_an_untrusted_build">refuse_in_an_untrusted_build() (in module chartbook.backends)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.PinReport.refused">refused (chartbook.lock.PinReport attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.BuildPlan.regenerate">regenerate (chartbook.incremental.BuildPlan attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.build_docs.html#chartbook.build_docs.IncrementalBuildSummary.regenerated">regenerated (chartbook.build_docs.IncrementalBuildSummary attribute)</a>
@@ -3080,6 +3116,8 @@
       <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.repository_key">repository_key() (in module chartbook.identity)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.repository_slug">repository_slug() (in module chartbook.gitcache)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.require_acyclic">require_acyclic() (in module chartbook.snapshot)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.require_chartbook">require_chartbook() (in module chartbook.manifest)</a>
 </li>
@@ -3363,6 +3401,8 @@
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.snapshot_files">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.run.html#chartbook.run.Step.snapshot_first">snapshot_first (chartbook.run.Step attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_folder">snapshot_folder() (chartbook.store.FolderStore method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.snapshot_inputs">snapshot_inputs() (in module chartbook.incremental)</a>
@@ -3593,10 +3633,10 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.TMP_DIR">TMP_DIR (in module chartbook.store)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ValidationError.to_chartbook_error">to_chartbook_error() (chartbook.errors.ValidationError method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.to_dict">to_dict() (chartbook.diagnostics.DiagnosticRow method)</a>
 
       <ul>
@@ -3644,6 +3684,10 @@
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.TRUST_LEVELS">TRUST_LEVELS (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.trust_of">trust_of() (in module chartbook.config)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle.two_places">two_places (chartbook.lineage.Cycle attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.two_places_said">two_places_said() (in module chartbook.lineage)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -3823,12 +3867,18 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.watch">watch() (in module chartbook.incremental)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle.way_in">way_in (chartbook.lineage.Cycle attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.web_link">web_link() (in module chartbook.identity)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.what_is_wrong">what_is_wrong() (in module chartbook.store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.claude_skill.html#chartbook.claude_skill.Copy.where">where (chartbook.claude_skill.Copy attribute)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Edge.where">(chartbook.lineage.Edge attribute)</a>
 </li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered.why">why (chartbook.scaffold.Rendered attribute)</a>
 
       <ul>
@@ -3849,10 +3899,12 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_path">work_path() (chartbook.gitcache.GitCache method)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.WorkingVersionWarning">WorkingVersionWarning</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.WorkingVersionWarning">WorkingVersionWarning</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.would_pin">would_pin() (in module chartbook.lock)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.write_cruft_file">write_cruft_file() (in module chartbook.scaffold)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.write_diagnostics_csv">write_diagnostics_csv() (in module chartbook.diagnostics)</a>

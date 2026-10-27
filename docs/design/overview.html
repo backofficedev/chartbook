@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
@@ -1690,7 +1690,10 @@ the answer to the question 3e left open: how a <code class="docutils literal not
 first version of 4a did, as <a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a> describes: it ran <code class="docutils literal notranslate"><span class="pre">build</span></code> in every pipeline
 of the dependency graph, each in its own folder. That was taken out before it was merged.
 It was also pointless once pins did not move: the other pipeline was rebuilt, and this one
-went on reading its pinned copy.</p></li>
+went on reading its pinned copy. <em>(2026-10-26: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--upstream</span></code>, asked for by
+the maintainer, builds and snapshots a <code class="docutils literal notranslate"><span class="pre">path</span></code> dependency that has no snapshot to pin,
+when the folder is trusted and committed: only when asked, and only where there is
+nothing to pin.)</em></p></li>
 <li><p><strong>A build is refreshed on purpose.</strong> A git dependency is built once for a commit, and
 <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--force</span></code> builds it again. A pipeline that pulls live data is not rebuilt
 because a day has passed.</p></li>
@@ -3356,6 +3359,10 @@ maintainer.</p>
 <tr class="row-odd"><td><p>2026-10-16</p></td>
 <td><p>Index and snapshot stay two documents sharing one record format; a snapshot holds the index of its version and the files a writer needs, so any version renders from the store alone. A catalog shows every snapshot in the store of every pipeline plus each pipeline’s working version (never “latest”); links follow pins; a version list on each pipeline page. Written up in <code class="docutils literal notranslate"><span class="pre">versioned-catalog.md</span></code>; the self-sufficient snapshot first</p></td>
 <td><p>Jeremy, me</p></td>
+</tr>
+<tr class="row-even"><td><p>2026-10-25</p></td>
+<td><p>Dependencies between pipelines must form a directed acyclic graph. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> refuse a cycle (a run before it pins or builds anything, with the pins it would make worked out first and not written, <code class="docutils literal notranslate"><span class="pre">lock.would_pin</span></code>; a pin is held back until it is let through, so a refused one writes nothing), and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports one, naming who depends on whom and where it was read. The graph is read from the folders on this machine first (a cycle is found as soon as it is declared) and through the pins and snapshots in the store otherwise (<code class="docutils literal notranslate"><span class="pre">chartbook.lineage.cycle</span></code>)</p></td>
+<td><p>Jeremy, me; <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a></p></td>
 </tr>
 </tbody>
 </table>

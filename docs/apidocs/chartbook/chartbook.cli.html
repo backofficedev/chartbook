@@ -31,7 +31,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
@@ -746,7 +746,7 @@ chartbook add acme/rates –commit 3f2a9c1</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.build">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remake</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">site</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.build" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remake</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upstream</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">site</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.build" title="Link to this definition">#</a></dt>
 <dd><p>Make everything current: run the build script, then render the site.</p>
 <p>The same as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> followed by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code>, and
 it takes the arguments of <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code>. In a catalog, the
@@ -760,10 +760,14 @@ says so.</p>
 <p>As <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, it stops before the build when an asset marked
 <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code> is not on disk while the store has a version of it:
 <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code> puts it back, and –remake builds without it.</p>
+<p>–upstream first builds and snapshots each pipeline this one depends
+on by path that has no snapshot to pin, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--upstream</span></code>
+does.</p>
 <p>
 Examples:
 chartbook build -f
-chartbook build -f –project-dir …/rate_forecast</p>
+chartbook build -f –project-dir …/rate_forecast
+chartbook build -f –upstream</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1130,9 +1134,12 @@ chartbook path fed_yield_curve:treasury_rates</p>
 owner declared ready, at a commit (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>). The content
 hash of each of its assets is written to chartbook.lock. Commit that
 file: a change to what the project depends on then shows in a diff.</p>
-<p>Nothing in the other pipeline’s folder is read. It can be half-way
-through a change, and what you pin is still the build that was
-declared ready.</p>
+<p>None of the other pipeline’s data in its folder is read. It can be
+half-way through a change, and what you pin is still the build that
+was declared ready. Its chartbook.toml and chartbook.lock are read, to
+see that the pin makes no cycle: a pin whose new or moved entries would
+lead back to this pipeline, or into pipelines that depend on each
+other, is not written.</p>
 <p>A pin that already exists is never moved, whatever the other pipeline
 has done since; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves pins. What <code class="docutils literal notranslate"><span class="pre">pin</span></code> does do again
 is pin a dependency that has no pin yet.</p>
@@ -1216,7 +1223,7 @@ chartbook restore model/forecaster chart/curve</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.cli.run_command">
-<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">run_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frozen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remake</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.run_command" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.cli.</span></span><span class="sig-name descname"><span class="pre">run_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">make_snapshot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frozen</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remake</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upstream</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#chartbook.cli.run_command" title="Link to this definition">#</a></dt>
 <dd><p>Run a script in this pipeline: <code class="docutils literal notranslate"><span class="pre">build</span></code>, unless another is named.</p>
 <p>SCRIPT is a name from [scripts] in chartbook.toml.</p>
 <p>
@@ -1227,9 +1234,9 @@ test = “pytest”</p>
 runs, whatever this pipeline depends on and has not pinned yet is
 pinned, so its code can read it. A pin that exists is never moved: you
 are told what has changed, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves pins.</p>
-<p>It never builds in a folder this pipeline depends on. That folder is
-somebody’s work, and this pipeline reads what is pinned, not what is
-there.</p>
+<p>It never builds in a folder this pipeline depends on, unless you say
+–upstream (below). That folder is somebody’s work, and this pipeline
+reads what is pinned, not what is there.</p>
 <p>A dependency that is a git repository is built once, in ChartBook’s own
 clean copy of the commit, so that what it builds can be pinned. –force
 builds it again, which is how data it pulls from outside is refreshed.</p>
@@ -1244,7 +1251,8 @@ chartbook run
 chartbook run test
 chartbook run –force
 chartbook run –snapshot
-chartbook run –frozen</p>
+chartbook run –frozen
+chartbook run –upstream</p>
 <p>–frozen pins nothing and writes nothing before the build but, where
 the store can be written, its note that this machine reads these pins:
 not the lockfile, no object, and no git dependency is fetched or built.
@@ -1255,6 +1263,13 @@ For CI, and for a store you may only read.</p>
 one is not on disk while the store has a version of it, <code class="docutils literal notranslate"><span class="pre">build</span></code> stops
 before anything runs and says so: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">restore</span></code> puts it back,
 and –remake runs the build without it, which makes it again.</p>
+<p>–upstream is for folders that are yours. A pipeline this one depends
+on by path, on this machine, that has no snapshot to pin and is not
+pinned yet is built first, and snapshotted once its build succeeds, so
+that this one can pin it; its own the same way, each before what
+depends on it. Each must be trusted to run, have a <code class="docutils literal notranslate"><span class="pre">build</span></code> script and
+have everything committed, and its build must leave it so. The first
+that fails stops the run.</p>
 </dd></dl>
 
 <dl class="py function">
