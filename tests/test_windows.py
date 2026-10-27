@@ -75,8 +75,9 @@ class TestRemovingAStagingFolder:
         above = tmp_path / "slug"
         above.mkdir()
         os.chmod(above, 0o755)
+        before = os.stat(above).st_mode  # on Windows, a folder's mode is 0o777 whatever chmod says
         _remove_staging(above / "gone-already.tmp")
-        assert (os.stat(above).st_mode & 0o777) == 0o755
+        assert os.stat(above).st_mode == before
 
     @pytest.mark.skipif(os.name == "nt", reason="a folder no one may list is a POSIX one")
     def test_a_folder_that_cannot_be_listed_raises_nothing(self, tmp_path):
