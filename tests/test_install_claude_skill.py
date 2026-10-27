@@ -35,10 +35,10 @@ def _old_copy(directory: Path, version: str = "0.1.1", stamp: bool = True, front
     """A copy as an older ChartBook installed it: no version in SKILL.md, a stamp beside it."""
     directory.mkdir(parents=True, exist_ok=True)
     head = f'---\nname: chartbook\nmetadata:\n  chartbook-version: "{version}"\n---\n' if front_matter else "---\nname: chartbook\n---\n"
-    (directory / "SKILL.md").write_text(head + "# ChartBook Assistant\nchartbook build renders the site\n")
-    (directory / "catalog_system.md").write_text("old\n")
+    (directory / "SKILL.md").write_text(head + "# ChartBook Assistant\nchartbook build renders the site\n", encoding="utf-8", newline="\n")
+    (directory / "catalog_system.md").write_text("old\n", encoding="utf-8", newline="\n")
     if stamp:
-        (directory / claude_skill.OLD_STAMP).write_text(f"{version}\n")
+        (directory / claude_skill.OLD_STAMP).write_text(f"{version}\n", encoding="utf-8", newline="\n")
     return directory
 
 
@@ -49,12 +49,13 @@ class TestInstalling:
         target = _skill_dir(claude_config_dir)
         assert {p.name for p in target.iterdir()} == EXPECTED_FILES  # no stamp file any more
         assert claude_skill.version_of(target) == __version__
-        assert f"Installed 3 skill file(s) to {target} (ChartBook {__version__})" in result.output
+        assert f"Installed 3 skill file(s) to {claude_skill.shown(target)} (ChartBook {__version__})" in result.output
 
     def test_default_falls_back_to_home(self, tmp_path, monkeypatch):
         """Without CLAUDE_CONFIG_DIR, the target is ~/.claude/skills/chartbook."""
         monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         result = CliRunner().invoke(main, ["install", "claude-skill"])
         assert result.exit_code == 0
         assert (_skill_dir(tmp_path / ".claude") / "SKILL.md").exists()
@@ -71,13 +72,13 @@ class TestInstalling:
         assert runner.invoke(main, ["install", "claude-skill"]).exit_code == 0
         result = runner.invoke(main, ["install", "claude-skill"])
         assert result.exit_code == 0
-        assert f"already up to date in {_skill_dir(claude_config_dir)} (ChartBook {__version__})" in result.output
+        assert f"already up to date in {claude_skill.shown(_skill_dir(claude_config_dir))} (ChartBook {__version__})" in result.output
         assert "Installed" not in result.output
 
     def test_stale_old_layout_files_removed(self, claude_config_dir):
         target = _skill_dir(claude_config_dir)
         target.mkdir(parents=True)
-        (target / "REFERENCE.md").write_text("old layout")
+        (target / "REFERENCE.md").write_text("old layout", encoding="utf-8", newline="\n")
         result = CliRunner().invoke(main, ["install", "claude-skill", "-f"])
         assert result.exit_code == 0
         assert "removed stale REFERENCE.md" in result.output
@@ -88,28 +89,28 @@ class TestInstalling:
         runner = CliRunner()
         runner.invoke(main, ["install", "claude-skill"])
         target = _skill_dir(claude_config_dir)
-        (target / "SKILL.md").write_text("locally modified")
+        (target / "SKILL.md").write_text("locally modified", encoding="utf-8", newline="\n")
         result = runner.invoke(main, ["install", "claude-skill", "-f"])
         assert result.exit_code == 0
-        assert (target / "SKILL.md").read_text() != "locally modified"
+        assert (target / "SKILL.md").read_text(encoding="utf-8") != "locally modified"
 
     def test_prompt_declined_leaves_files_untouched(self, claude_config_dir):
         runner = CliRunner()
         runner.invoke(main, ["install", "claude-skill"])
         target = _skill_dir(claude_config_dir)
-        (target / "SKILL.md").write_text("locally modified")
+        (target / "SKILL.md").write_text("locally modified", encoding="utf-8", newline="\n")
         result = runner.invoke(main, ["install", "claude-skill"], input="n\n")
         assert result.exit_code == 0
-        assert (target / "SKILL.md").read_text() == "locally modified"
+        assert (target / "SKILL.md").read_text(encoding="utf-8") == "locally modified"
 
     def test_a_copy_for_this_version_changed_by_hand_is_asked_about(self, claude_config_dir):
         runner = CliRunner()
         runner.invoke(main, ["install", "claude-skill"])
         target = _skill_dir(claude_config_dir)
-        (target / "catalog_system.md").write_text("my notes\n")  # SKILL.md, and so the version, untouched
+        (target / "catalog_system.md").write_text("my notes\n", encoding="utf-8", newline="\n")  # SKILL.md, and so the version, untouched
         result = runner.invoke(main, ["install", "claude-skill"], input="n\n")
         assert "is this version's, with files changed since it was installed" in result.output
-        assert (target / "catalog_system.md").read_text() == "my notes\n"
+        assert (target / "catalog_system.md").read_text(encoding="utf-8") == "my notes\n"
 
     def test_hidden_files_do_not_break_idempotency(self, claude_config_dir):
         runner = CliRunner()
@@ -142,7 +143,7 @@ class TestUpgrading:
         target = _old_copy(_skill_dir(claude_config_dir))
         result = CliRunner().invoke(main, ["install", "claude-skill"])  # no input: no question
         assert result.exit_code == 0, result.output
-        assert f"Updated the skill in {target} from ChartBook 0.1.1 to {__version__}" in result.output
+        assert f"Updated the skill in {claude_skill.shown(target)} from ChartBook 0.1.1 to {__version__}" in result.output
         assert not (target / claude_skill.OLD_STAMP).exists()
         assert claude_skill.version_of(target) == __version__
         assert {p.name for p in target.iterdir()} == EXPECTED_FILES
@@ -157,13 +158,13 @@ class TestUpgrading:
         target = _old_copy(_skill_dir(claude_config_dir), stamp=False)
         result = CliRunner().invoke(main, ["install", "claude-skill"], input="n\n")
         assert "naming no ChartBook version" in result.output
-        assert "chartbook build renders the site" in (target / "SKILL.md").read_text()
+        assert "chartbook build renders the site" in (target / "SKILL.md").read_text(encoding="utf-8")
 
     def test_a_copy_for_a_newer_chartbook_is_not_stale_and_is_asked_about(self, tmp_path, claude_config_dir):
         """Found by a reviewer: each pipeline has its own environment, and two on two versions would
         take turns replacing the one user-level copy, each told the other's was stale."""
         target = _old_copy(_skill_dir(claude_config_dir), "99.0.0", stamp=False, front_matter=True)
-        (target / "my_notes.md").write_text("mine\n")
+        (target / "my_notes.md").write_text("mine\n", encoding="utf-8", newline="\n")
         assert claude_skill.stale(tmp_path) == []
         result = CliRunner().invoke(main, ["install", "claude-skill"], input="n\n")
         assert f"is for ChartBook 99.0.0, newer than this one, {__version__}" in result.output
@@ -173,7 +174,7 @@ class TestUpgrading:
         runner = CliRunner()
         runner.invoke(main, ["install", "claude-skill"])
         target = _skill_dir(claude_config_dir)
-        (target / claude_skill.OLD_STAMP).write_text("0.1.1\n")
+        (target / claude_skill.OLD_STAMP).write_text("0.1.1\n", encoding="utf-8", newline="\n")
         result = runner.invoke(main, ["install", "claude-skill"])
         assert "already up to date" in result.output
         assert not (target / claude_skill.OLD_STAMP).exists()
@@ -199,7 +200,7 @@ class TestTheVersion:
         ],
     )
     def test_the_version_is_read_from_the_front_matter(self, tmp_path, head, version):
-        (tmp_path / "SKILL.md").write_text(head + "body\n")
+        (tmp_path / "SKILL.md").write_text(head + "body\n", encoding="utf-8", newline="\n")
         assert claude_skill.version_of(tmp_path) == version
 
     def test_an_old_stamp_is_read_where_the_front_matter_names_none(self, tmp_path):
@@ -238,6 +239,7 @@ class TestFindingAStaleCopy:
         """A walk up from the home folder meets ~/.claude, which is the user's copy."""
         monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         _old_copy(tmp_path / ".claude" / "skills" / "chartbook")
         (tmp_path / "work").mkdir()
         assert claude_skill.project_dir(tmp_path / "work") is None
@@ -260,6 +262,7 @@ class TestFindingAStaleCopy:
         """Found by a reviewer: with CLAUDE_CONFIG_DIR elsewhere, ~/.claude was "this project's", with
         `--project` to be run in `~/.`."""
         monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Windows reads home from here
         monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "elsewhere"))
         _old_copy(tmp_path / ".claude" / "skills" / "chartbook")
         (tmp_path / "work" / "deep").mkdir(parents=True)
@@ -284,13 +287,13 @@ class TestFindingAStaleCopy:
     def test_what_the_notice_says(self, tmp_path, claude_config_dir):
         user = claude_skill.Copy("user", _skill_dir(claude_config_dir), "0.1.1")
         assert claude_skill.notice(user) == (
-            f"your Claude Code skill, {_skill_dir(claude_config_dir)}, is for ChartBook 0.1.1, and this is ChartBook "
+            f"your Claude Code skill, {claude_skill.shown(_skill_dir(claude_config_dir))}, is for ChartBook 0.1.1, and this is ChartBook "
             f"{__version__}: `chartbook install claude-skill` installs this version's."
         )
         project = claude_skill.Copy("project", tmp_path / "repo" / ".claude" / "skills" / "chartbook", None)
         said = claude_skill.notice(project)
         assert "names no ChartBook version (it is from before 0.2.0)" in said
-        assert f"`chartbook install claude-skill --project` in {tmp_path / 'repo'} installs this version's." in said
+        assert f"`chartbook install claude-skill --project` in {claude_skill.shown(tmp_path / 'repo')} installs this version's." in said
 
 
 class TestSayingIt:
@@ -312,7 +315,7 @@ class TestSayingIt:
         if present != "nothing":
             target.mkdir(parents=True)
         if present == "a stray old stamp":
-            (target / claude_skill.OLD_STAMP).write_text("0.1.1\n")
+            (target / claude_skill.OLD_STAMP).write_text("0.1.1\n", encoding="utf-8", newline="\n")
         monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
         monkeypatch.chdir(pipeline_project)
         assert claude_skill.stale(pipeline_project) == []
@@ -340,7 +343,7 @@ class TestSayingIt:
         assert result.exit_code == 0, result.output  # it fails nothing
 
     def test_check_warns_before_a_manifest_that_stops_it(self, stale_user_copy, tmp_path):
-        (tmp_path / "chartbook.toml").write_text("this = [not toml\n")
+        (tmp_path / "chartbook.toml").write_text("this = [not toml\n", encoding="utf-8", newline="\n")
         result = CliRunner().invoke(main, ["check", "--project-dir", str(tmp_path)])
         assert result.exit_code != 0 and "warning: your Claude Code skill" in result.output
 

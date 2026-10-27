@@ -613,7 +613,8 @@ directory with `bash -e`.*
 maintainer: `chartbook run` builds the pipeline it is run in, and never builds in a folder
 that pipeline depends on. That folder is somebody's work, and the pipeline reads what is
 pinned, not what is there. A first version did walk the graph and run `build` in each
-pipeline's folder; it was taken out before it was merged. Two things are left of the graph.
+pipeline's folder; it was taken out before it was merged. *(2026-10-26: `--upstream` builds and
+snapshots a `path` dependency with no snapshot to pin, when asked.)* Two things are left of the graph.
 A `git` dependency is built, once for a commit, in a writable copy of its checkout, which is
 how its built data comes to be pinned; `--force` builds it again. And in a catalog, the
 script is run in each of the catalog's pipelines, one that another depends on first.

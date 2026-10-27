@@ -68,6 +68,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
 from chartbook import hashing, snapshot
+from chartbook.gitcache import GIT as _GIT
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, get_git_remote_url, in_another_case, repository_key, strip_url_credentials
@@ -80,7 +81,8 @@ from chartbook.manifest import (
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
-from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoreError, default_store
+from chartbook.store import LINKS as STORE_LINKS
+from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -283,7 +285,7 @@ def write_lock(lock: Lock, path: Union[str, Path]) -> bool:
     # other's half-written file and then rename it away
     temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        temporary.write_text(text, encoding="utf-8")
+        temporary.write_text(text, encoding="utf-8", newline="\n")
         os.replace(temporary, path)
     finally:
         if temporary.exists():
@@ -399,6 +401,12 @@ class PinReport:
             for this user, as a store a team shares may be for everyone but
             its owner. The lockfile is written all the same; the store's
             ``gc`` goes by the note it has, if any.
+        refused: Why the lockfile was not written, when the pin's guard
+            refused it (the default one refuses a lockfile that would make
+            the pipeline's dependencies cyclic; a caller's
+            ``before_writing`` takes its place): neither the lockfile, nor
+            the store's note of it, nor any object was written. Empty
+            otherwise.
     """
 
     lockfile: Path
@@ -407,6 +415,7 @@ class PinReport:
     git: set = field(default_factory=set)
     snapshots: dict = field(default_factory=dict)
     unrooted: str = ""
+    refused: str = ""
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -564,8 +573,8 @@ def _history(git_cache: GitCache, url: str, commit: str, limit: int = 200000) ->
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", f"--max-count={limit}", commit],
-            capture_output=True, text=True, timeout=120, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+            [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "rev-list", f"--max-count={limit}", commit],
+            capture_output=True, text=True, timeout=120, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return []
@@ -688,8 +697,8 @@ def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False)
     def present() -> bool:
         try:
             result = subprocess.run(
-                ["git", f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
-                capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+                [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
+                capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
             )
         except (OSError, subprocess.SubprocessError, ValueError):
             return False
@@ -720,8 +729,8 @@ def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", "--max-parents=0", "--first-parent", commit],
-            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+            [*_GIT, f"--git-dir={git_cache.repo_path(url)}", "rev-list", "--max-parents=0", "--first-parent", commit],
+            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return ""
@@ -785,6 +794,48 @@ def _dependency_entry(key: str, entry: dict) -> dict:
 
 
 _in_process_locks: dict[str, "threading.Lock"] = {}
+
+
+def held_elsewhere(lock_path: Path) -> bool:
+    """Whether another thread or process holds :func:`_one_at_a_time`'s lock for this path now; False where that cannot be told.
+
+    Asked without waiting, so that a command can say it is about to wait.
+    """
+    from chartbook.config import get_cache_path
+
+    name = hashlib.sha256(str(Path(lock_path).resolve()).encode()).hexdigest()[:24]
+    guard = _in_process_locks.get(name)
+    if guard is not None and guard.locked():
+        return True
+    # Only "someone holds it" counts: a filesystem with no locks says
+    # something else, and there nothing waits
+    held = (errno.EWOULDBLOCK, errno.EAGAIN, errno.EACCES, errno.EDEADLK)
+    try:
+        path = get_cache_path() / "locks" / f"{name}.lock"
+        if not path.exists():
+            return False
+        with open(path, "a+b") as handle:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                except OSError as error:
+                    return error.errno in held
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+            import fcntl
+
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as error:
+                return error.errno in held
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            return False
+    except (OSError, ValueError):
+        return False
 
 
 @contextlib.contextmanager
@@ -854,10 +905,11 @@ def _sync(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here)
+        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here, before_writing)
 
 
 def _sync_now(
@@ -868,6 +920,7 @@ def _sync_now(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -884,9 +937,22 @@ def _sync_now(
         catalog's own), which are never cloned.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
+    :param before_writing: Called with the lockfile as it would be written,
+        whether or not that is what it holds now. What it returns, if
+        anything, is why it is not to be written: then nothing is written,
+        neither the lockfile, nor the store's note of it, nor any object
+        (what the pin puts in the store is held until then), and the
+        report's ``refused`` says why. By default a lockfile whose new or
+        moved entries would close a cycle of dependencies, or lead into
+        one, is refused (:func:`_refuse_a_cycle`); a caller that gives its
+        own guard decides instead.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
+    the_store = store
+    if not isinstance(store, _PutLater):
+        # What the pin puts in the store is put only once the lockfile may be written
+        store = _PutLater(store)
     root, dependencies = _read_pipeline(project_dir)
     # The store's snapshots, read once for every dependency named by its ID
     read = []
@@ -899,6 +965,8 @@ def _sync_now(
     host: Optional[str] = None  # the default host, read when a dependency is named by its ID
     lock_path = project_dir / LOCK_FILE
     before = read_lock(lock_path) or Lock(root=root)
+    if before_writing is None:
+        before_writing = _refuse_a_cycle(project_dir, root, the_store, git_cache, read, before)
 
     moving: set = set()
     if move is not None:
@@ -1187,6 +1255,15 @@ def _sync_now(
             listed["pinned_hash"] = overall
         after.dependencies.append(listed)
         after.assets.update(records)
+
+    if before_writing is not None:
+        refused = before_writing(after)
+        if refused:
+            report.refused = refused
+            store.forget_held(report)
+            return report
+        store.put_held(after, report)
+        store = the_store
 
     # With nothing to lock and no lockfile yet, do not make an empty one; nor
     # for a pin of some dependencies only (the first read of one) that found
@@ -2432,6 +2509,31 @@ def _pin_asset(
         current = None
     same = current is not None and current.content_hash == old
     unsynced = _incomplete(store, had) if store.has(old) else None
+    names = snapshot.files_read(had) or {}
+    # The bytes are one file, as its record and the checkout have them
+    single = not isinstance(had.get("files"), list) and os.path.isfile(absolute)
+    try:
+        lacking = bool(unsynced and same and names) and store.lacks(old, names, single=single)
+    except (OSError, StoreError):
+        lacking = False  # a store that cannot be asked now: said as before
+    if lacking:
+        # The store has these bytes under another name only: two assets with
+        # the same bytes, put back one at a time, or pinned by another
+        # pipeline. The file here is what was pinned, so it is put in again,
+        # which adds the name. A file that is there and still arriving is
+        # not this, and is still said to be
+        try:
+            stored = store.put(absolute, links=PIN_LINKS)
+        except (OSError, StoreError):
+            stored = None  # a store this user cannot write, or the file gone: said as before
+        if stored is not None and isinstance(store, _PutLater):
+            # Put once the lockfile may be written, and said restored then if that makes it whole
+            store.recheck[stored.content_hash] = (asset_id, had)
+        elif stored is not None:
+            unsynced = _incomplete(store, had)
+            if not unsynced:
+                report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
+                return had
     if unsynced:
         report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
     elif store.has(old):
@@ -2463,6 +2565,7 @@ def pin(
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
+    before_writing: Optional[Callable[[Lock], Optional[str]]] = None,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -2470,9 +2573,10 @@ def pin(
     other pipeline has done since: :func:`update` is what moves one.
 
     A ``path`` dependency is pinned from its newest **snapshot**: what its
-    owner declared ready, at a commit (:mod:`chartbook.snapshot`). Nothing
-    in its folder is read. One that has no snapshot cannot be pinned, and
-    the report says what its owner has to do.
+    owner declared ready, at a commit (:mod:`chartbook.snapshot`). None of
+    its data in its folder is read: its manifest and lockfile are, to see
+    that the pin makes no cycle. One that has no snapshot cannot be pinned,
+    and the report says what its owner has to do.
 
     A ``git`` dependency is fetched into the git cache and pinned from the
     checkout, at the commit the lockfile names if it names one. It has only
@@ -2496,6 +2600,12 @@ def pin(
         pinned from the clone (:func:`clone_instead`).
     :param built_here: The IDs of pipelines a run builds itself (a
         catalog's own), which are never cloned.
+    :param before_writing: Called with the lockfile as it would be written;
+        what it returns, if anything, is why nothing is written. It takes
+        the place of the default guard, which refuses a lockfile that would
+        make the pipeline's dependencies cyclic (``chartbook run`` gives its
+        own, which walks the run's other pipelines too). The report's
+        ``refused`` says why.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -2506,7 +2616,239 @@ def pin(
         only=None if only is None else ({only} if isinstance(only, str) else set(only)),
         clone_missing=clone_missing,
         built_here=built_here,
+        before_writing=before_writing,
     )
+
+
+#: What a store does that writes, besides ``put``: refused by :class:`_PutLater`
+_STORE_WRITES = ("add_root", "remove_root", "delete", "note_origin", "write_snapshot", "remove_snapshot")
+
+
+class _PutLater:
+    """A store read as it is, into which what a pin puts goes only once the lockfile may be written.
+
+    ``put`` reads nothing and holds the path, under a stand-in for its hash;
+    :meth:`put_held` puts each, once a pin's ``before_writing`` lets its
+    lockfile through, and gives the records their hashes from what was put,
+    so that each file is read once and a refused pin writes no object. With
+    *hold* off (:func:`would_pin`), nothing is held: the records carry no
+    hash, which is enough to see where a pin leads. Every other write is
+    refused: none is reached before the lockfile is let through.
+    """
+
+    def __init__(self, store: Store, hold: bool = True):
+        self._store = store
+        self._hold = hold
+        self.held: dict = {}
+        #: Puts of bytes the store had under another name only, by stand-in:
+        #: the asset and its record, said restored once put if that makes it whole
+        self.recheck: dict = {}
+
+    def __getattr__(self, name: str):
+        if name in _STORE_WRITES:
+            raise StoreError(f"nothing is written to the store before a lockfile is let through ({name})")
+        return getattr(self._store, name)
+
+    def __str__(self) -> str:
+        return str(self._store)
+
+    def __repr__(self) -> str:
+        return repr(self._store)
+
+    def put(self, path: Union[str, Path], links: Iterable[str] = STORE_LINKS) -> StoredObject:
+        if hashing.find_files(path) is None:
+            raise FileNotFoundError(f"Nothing at {path}")
+        stand_in = ""
+        if self._hold:
+            # No hash a lockfile could hold, however it was written
+            stand_in = f"held:{uuid.uuid4().hex}"
+            self.held[stand_in] = (path, tuple(links))
+        return StoredObject(content_hash=stand_in, size_bytes=0, path=Path(path), files=(), created=False)
+
+    def forget_held(self, report: "PinReport") -> None:
+        """Let go of what was held, for a pin that was refused: the report names no stand-in."""
+        if not self._hold:
+            return
+        held, self.held = self.held, {}
+        self.recheck = {}
+        report.events[:] = [
+            dataclasses.replace(
+                event, old=None if event.old in held else event.old, new=None if event.new in held else event.new
+            )
+            for event in report.events
+        ]
+
+    def put_held(self, after: "Lock", report: "PinReport") -> None:
+        """Put what was held, and give the lockfile and the report the hashes of what was put."""
+        if not self._hold:
+            raise StoreError("a pin that is only worked out is never put in the store")
+        stored = {}
+        for stand_in, (path, links) in self.held.items():
+            if stand_in in self.recheck:
+                try:
+                    stored[stand_in] = self._store.put(path, links=links)
+                except (OSError, StoreError):
+                    pass  # only a name to add: it stays said as not whole
+                continue
+            stored[stand_in] = self._store.put(path, links=links)
+        self.held = {}
+        rechecked, self.recheck = self.recheck, {}
+        restored = {
+            asset_id for stand_in, (asset_id, record) in rechecked.items()
+            if stand_in in stored and not _incomplete(self._store, record)
+        }
+        if restored:
+            report.events[:] = [
+                dataclasses.replace(event, status="restored", detail="")
+                if event.status == "unsynced" and event.asset in restored else event
+                for event in report.events
+            ]
+        if not stored:
+            return
+        changed = set()
+        for record in after.assets.values():
+            put = stored.get(record.get("content_hash"))
+            if put is None:
+                continue
+            record["content_hash"], record["size_bytes"] = put.content_hash, put.size_bytes
+            if "files" in record:
+                record["files"] = [
+                    {"path": entry.path, "size_bytes": entry.size_bytes, "content_hash": entry.content_hash}
+                    for entry in put.entries
+                ]
+            changed.add(record.get("pipeline"))
+        for entry in after.dependencies:
+            if entry.get("id") in changed:
+                entry.pop("pinned_hash", None)
+                overall = pinned_hash(after.assets_of(entry["id"]).values())
+                if overall is not None:
+                    entry["pinned_hash"] = overall
+        def as_put(event: PinEvent) -> PinEvent:
+            old = stored[event.old].content_hash if event.old in stored else event.old
+            if event.new not in stored:
+                return dataclasses.replace(event, old=old)
+            new = stored[event.new].content_hash
+            # `update` put the same bytes again: what it took for a move is none
+            status = "kept" if event.status == "moved" and new == old else event.status
+            return dataclasses.replace(event, status=status, old=old, new=new)
+
+        report.events[:] = [as_put(event) for event in report.events]
+
+
+def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list, before: "Lock"):
+    """The guard a pin has unless its caller gives one: a lockfile whose new pins close a cycle, or lead into one, is not written.
+
+    Dependencies between pipelines must form a directed acyclic graph
+    (:func:`chartbook.lineage.cycle`), whichever command pins: ``chartbook
+    pin``, ``update`` and ``add``, and the first read of a dependency. The
+    walk goes from the dependencies whose entry the pin makes, or whose
+    location or snapshot it changes (all the walk reads of an entry),
+    with the lockfile as it would be written: one that leads back to this
+    pipeline, or into pipelines that depend on each other, is refused. A
+    cycle reached only through pins made before is not this pin's doing:
+    ``chartbook run`` and ``chartbook check`` say it, and the pin, a read of
+    another dependency say, is not refused for it. A pin that changes no
+    entry walks nothing.
+    """
+
+    def refuse(after: Lock) -> Optional[str]:
+        from chartbook import lineage
+
+        # Where each is pinned from, which is all the walk reads: a hash a pin
+        # holds back until the lockfile is let through is no change
+        def pinned_from(entry: Optional[dict]) -> tuple:
+            entry = entry or {}
+            return json.dumps(entry.get("location"), sort_keys=True, default=str), entry.get("snapshot")
+
+        filed = {entry.get("id"): entry for entry in before.dependencies}
+        new = {entry.get("id") for entry in after.dependencies if pinned_from(filed.get(entry.get("id"))) != pinned_from(entry)}
+        if not new:
+            return None
+        try:
+            found = lineage.cycle(
+                project_dir, store, git_cache=git_cache, lockfiles={project_dir: after},
+                shared={"found": read[0]} if read else {}, through=new,
+            )
+        except snapshot.SnapshotError:
+            return None  # no pipeline here: the pin itself said so
+        if found is None:
+            return None
+        return (
+            f"{root}: {lineage.cycle_lead(found)}, so there is no order to build in.\n"
+            f"{lineage.explain_cycle(found)}\nThe lockfile was left as it was."
+        )
+
+    return refuse
+
+
+def _has_a_pin(listed: object, records: dict, declared: dict) -> bool:
+    """Whether a lockfile's entry for a dependency is a pin that `pin` keeps as it is.
+
+    As ``pin`` decides it: a ``git`` dependency is pinned once its entry
+    names a commit; one named by its ID and got from its repository, once
+    something of it was pinned from that repository with its bytes
+    (:func:`clone_instead`); any other once something of it was pinned with
+    its bytes. One that names a snapshot and holds no hash is pinned again.
+    """
+    if not isinstance(listed, dict) or not isinstance(listed.get("location"), dict):
+        return False
+    location = listed["location"]
+    if "git" in declared:
+        return location.get("kind") == "git" and bool(location.get("commit"))
+    if declared.get("_store") and location.get("kind") == "git":
+        return (
+            bool(location.get("commit"))
+            and location.get("pipeline") == declared["_store"]
+            and any(isinstance(record, dict) and record.get("content_hash") for record in records.values())
+        )
+    return any(
+        isinstance(record, dict) and record.get("content_hash") and not (record.get("ref") or {}).get("rev")
+        for record in records.values()
+    )
+
+
+def would_pin(
+    project_dir: Union[str, Path] = ".",
+    store: Optional[Store] = None,
+    git_cache: Optional[GitCache] = None,
+    built_here: Iterable[str] = (),
+) -> Optional[Lock]:
+    """The lockfile as :func:`pin` would write it now, worked out and not written; None if it would pin nothing new.
+
+    Only the dependencies with no pin yet are worked out: one that has a
+    pin keeps it, as ``pin`` keeps it. Nothing is written: not the
+    lockfile, not the store's note of it, and no object. What a pin would
+    put in the store is not even read, so its records carry no hash: the
+    lockfile says where each dependency would be pinned from, which is
+    what ``chartbook run`` walks to find a cycle a pin would close before
+    anything is pinned or built. A ``git`` dependency may be fetched into
+    the git cache, and one named by its ID cloned there, as ``pin`` would.
+
+    :raises LockError: If *project_dir* is not a pipeline, or its lockfile
+        cannot be read.
+    :raises ValueError: If its ``[dependencies]`` table is malformed.
+    """
+    project_dir = Path(project_dir).resolve()
+    _, dependencies = _read_pipeline(project_dir)
+    locked = read_lock(project_dir / LOCK_FILE)
+    listed = {entry["id"]: entry for entry in (locked.dependencies if locked is not None else [])}
+    unpinned = {
+        key for key in dependencies
+        if not _has_a_pin(listed.get(key), locked.assets_of(key) if locked is not None else {}, dependencies[key])
+    }
+    if not unpinned:
+        return None
+    worked_out: list = []
+
+    def keep(after: Lock) -> str:
+        worked_out.append(after)
+        return "only worked out"
+
+    _sync(
+        project_dir, _PutLater(store if store is not None else default_store(), hold=False), move=None,
+        git_cache=git_cache, only=unpinned, built_here=built_here, before_writing=keep,
+    )
+    return worked_out[0] if worked_out else None
 
 
 def update(

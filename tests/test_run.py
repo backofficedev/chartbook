@@ -38,13 +38,13 @@ def _pipeline(directory: Path, scripts=None, dependencies=None, **tables) -> Pat
     if dependencies is not None:
         table["dependencies"] = dependencies
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
 def _order(work: Path) -> list:
     log = work / "order.log"
-    return log.read_text().split() if log.exists() else []
+    return log.read_text(encoding="utf-8").split() if log.exists() else []
 
 
 def _git(directory: Path, *arguments: str) -> str:
@@ -53,7 +53,7 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
@@ -69,7 +69,7 @@ def _commit(work: Path) -> None:
     Built data, lockfiles and logs are git-ignored, as in a real project.
     """
     if not (work / ".git").exists():
-        (work / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n*.log\n")
+        (work / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n*.log\n", encoding="utf-8", newline="\n")
         _git(work, "init", "--quiet", "-b", "main")
     _git(work, "add", "-A")
     _git(work, "commit", "--quiet", "--allow-empty", "-m", "Work")
@@ -110,7 +110,7 @@ def _catalog(work: Path, *members: str) -> Path:
                 "project": {"type": "catalog"},
                 "pipelines": {name: {"path": name} for name in members},
             }
-        )
+        ), encoding="utf-8", newline="\n"
     )
     return work
 
@@ -163,7 +163,7 @@ class TestScripts:
         assert new_place["project"]["build"] == "doit"
 
         old_place = _pipeline(work / "b")
-        (old_place / "chartbook.toml").write_text('[project]\nid = "b"\nbuild = "make"\n')
+        (old_place / "chartbook.toml").write_text('[project]\nid = "b"\nbuild = "make"\n', encoding="utf-8", newline="\n")
         loaded = load_manifest(old_place)
         assert loaded["scripts"] == {"build": "make"} and loaded["project"]["build"] == "make"
         assert "scripts" not in load_manifest(_pipeline(work / "c"))
@@ -183,7 +183,7 @@ class TestScripts:
                     "pipelines": {"p": {"path": "p"}},
                     "scripts": {"build": "doit"},
                 }
-            )
+            ), encoding="utf-8", newline="\n"
         )
         with pytest.raises(ValueError, match=r"a catalog has no \[scripts\]"):
             load_manifest(work)
@@ -246,7 +246,7 @@ class TestPlan:
     def test_a_manifest_that_cannot_be_read_names_the_file(self, work):
         """A catalog reads several in one run, so the error says which."""
         bad = _pipeline(work / "bad")
-        (bad / "chartbook.toml").write_text("this is not toml\n")
+        (bad / "chartbook.toml").write_text("this is not toml\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError) as e:
             plan(bad)
         assert str(bad / "chartbook.toml") in str(e.value)
@@ -266,13 +266,13 @@ class TestPlan:
 class TestExecute:
     def test_it_runs_in_the_pipelines_directory(self, work):
         assert execute("pwd > here.txt", work) == 0
-        assert Path((work / "here.txt").read_text().strip()).resolve() == work
+        assert Path((work / "here.txt").read_text(encoding="utf-8").strip()).resolve() == work
 
     def test_several_lines_are_one_script(self, work):
         """What one line sets up, the next can use."""
         script = "NAME=rates\ncd .\necho $NAME > name.txt\n"
         assert execute(script, work) == 0
-        assert (work / "name.txt").read_text().strip() == "rates"
+        assert (work / "name.txt").read_text(encoding="utf-8").strip() == "rates"
 
     def test_it_stops_at_the_first_command_that_fails(self, work):
         code = execute("echo one > one.txt\nfalse\necho two > two.txt\n", work)
@@ -294,7 +294,7 @@ class TestExecute:
             "print('after')\n"
         )
         result = subprocess.run(
-            [sys.executable, "-c", program], cwd=work, capture_output=True, text=True
+            [sys.executable, "-c", program], cwd=work, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
         assert result.stdout.split() == ["before", "during", "after"], result.stderr
 
@@ -336,7 +336,7 @@ class TestBatchScript:
 
         def fake_run(arguments, **options):
             given["arguments"] = arguments
-            with open(arguments[-1]) as f:  # not Path: with os.name patched, Path() makes a WindowsPath
+            with open(arguments[-1], encoding="utf-8") as f:  # not Path: with os.name patched, Path() makes a WindowsPath
                 given["text"] = f.read()
             given["cwd"] = options["cwd"]
             return subprocesses.CompletedProcess(arguments, 7)
@@ -468,7 +468,7 @@ class TestFrozen:
         lock.pin(reader)
         report = run.run(reader, echo=_quiet, frozen=True)
         assert report.failed is None and (reader / "_output" / "read.txt").exists()
-        assert (work / "upstream_runs.log").read_text().count("ran") == 1
+        assert (work / "upstream_runs.log").read_text(encoding="utf-8").count("ran") == 1
 
     def test_frozen_and_snapshot_are_one_or_the_other(self, reader):
         with pytest.raises(RunError, match="One or the other"):
@@ -536,23 +536,23 @@ class TestPinning:
         assert report.failed is None, report.reason
         assert [name for name, _ in pinned] == ["reader"]
         assert {e.status for e in pinned[0][1].events} == {"pinned"}
-        assert (reader / "_output" / "read.txt").read_text() == (
+        assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") == (
             work / "upstream" / "_data" / "x.parquet"
-        ).read_text()
-        assert (work / "upstream_runs.log").read_text().split() == ["ran"]
+        ).read_text(encoding="utf-8")
+        assert (work / "upstream_runs.log").read_text(encoding="utf-8").split() == ["ran"]
 
     def test_a_rebuild_that_is_not_declared_ready_is_not_seen(self, reader, work):
         """Its owner can rebuild as often as they like. Nothing here is told."""
         _ready(work / "upstream")
         run.run(reader, echo=_quiet)
-        first = (reader / "_output" / "read.txt").read_text()
+        first = (reader / "_output" / "read.txt").read_text(encoding="utf-8")
 
         run.run(work / "upstream", echo=_quiet)  # rebuilt, and no snapshot
-        assert (work / "upstream" / "_data" / "x.parquet").read_text() != first
+        assert (work / "upstream" / "_data" / "x.parquet").read_text(encoding="utf-8") != first
         pinned = []
         run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
         assert {e.status for e in pinned[0].events} == {"kept"}
-        assert (reader / "_output" / "read.txt").read_text() == first
+        assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") == first
 
         # Not even an update moves to it: there is nothing newer to move to
         moved = lock.update(reader)
@@ -562,20 +562,20 @@ class TestPinning:
         """Its owner declares a newer build ready, and this pipeline keeps its copy."""
         _ready(work / "upstream")
         run.run(reader, echo=_quiet)
-        first = (reader / "_output" / "read.txt").read_text()
+        first = (reader / "_output" / "read.txt").read_text(encoding="utf-8")
         before = (reader / lock.LOCK_FILE).read_bytes()
 
         _ready(work / "upstream")
         pinned = []
         run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
-        assert (reader / "_output" / "read.txt").read_text() == first
+        assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") == first
         assert (reader / lock.LOCK_FILE).read_bytes() == before
         assert pinned[0].count("stale") == 1
 
         # `chartbook update` is what moves it
         lock.update(reader)
         run.run(reader, echo=_quiet)
-        assert (reader / "_output" / "read.txt").read_text() != first
+        assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") != first
 
     def test_a_pipeline_with_nothing_to_run_is_not_pinned_for(self, work):
         """No script runs in it, so nothing in it needs a pin."""
@@ -605,11 +605,11 @@ class TestPinning:
     def test_a_dependency_that_has_gone_is_no_trouble_once_it_is_pinned(self, reader, work):
         _ready(work / "upstream")
         run.run(reader, echo=_quiet)
-        first = (reader / "_output" / "read.txt").read_text()
+        first = (reader / "_output" / "read.txt").read_text(encoding="utf-8")
         os.rename(work / "upstream", work / "moved_away")
         report = run.run(reader, echo=_quiet)
         assert report.failed is None, report.reason
-        assert (reader / "_output" / "read.txt").read_text() == first
+        assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") == first
 
 
 @posix
@@ -634,7 +634,7 @@ class TestRunThenSnapshot:
 
     def test_uncommitted_changes_stop_it_before_it_builds(self, reader, work):
         """Found out now, and not after an hour of building."""
-        (work / "upstream" / "pull.py").write_text("print('new')\n")
+        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         with pytest.raises(RunError) as e:
             run.run(work / "upstream", echo=_quiet, snapshot=True)
         assert "upstream has changes that are not committed:" in str(e.value)
@@ -645,10 +645,10 @@ class TestRunThenSnapshot:
     def test_the_lockfile_it_writes_does_not_count_as_uncommitted(self, reader, work):
         """A real project commits chartbook.lock. The pin before the build
         changes it, and that is ChartBook's doing, not the build's."""
-        (work / ".gitignore").write_text("_data/\n_output/\n*.log\n")  # the lockfile is tracked
+        (work / ".gitignore").write_text("_data/\n_output/\n*.log\n", encoding="utf-8", newline="\n")  # the lockfile is tracked
         _commit(work)
         _ready(work / "upstream")
-        with open(work / "reader" / "chartbook.toml", "a") as f:
+        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
         _commit(work)
         report = run.run(reader, echo=_quiet, snapshot=True)  # writes a new, untracked lockfile
@@ -665,9 +665,9 @@ class TestRunThenSnapshot:
 
     def test_a_path_that_reaches_out_is_refused_before_the_build(self, work):
         directory = _with_data(work / "upstream", {"build": "echo ran >> ../upstream_runs.log"})
-        with open(directory / "chartbook.toml", "a") as f:
+        with open(directory / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.other]\npath = "../secret.txt"\ndocs = "d"\n')
-        (work / "secret.txt").write_text("mine\n")
+        (work / "secret.txt").write_text("mine\n", encoding="utf-8", newline="\n")
         _commit(work)
         with pytest.raises(RunError, match="outside the pipeline's folder") as e:
             run.run(directory, echo=_quiet, snapshot=True)
@@ -677,7 +677,7 @@ class TestRunThenSnapshot:
     def test_a_build_that_commits_gets_no_snapshot(self, work):
         """The label would name a commit that did not run the build."""
         directory = _with_data(work / "upstream", {"build": "echo more >> notes.md && git add -A && git -c user.name=T -c user.email=t@e.org commit -q -m built"})
-        (directory / "notes.md").write_text("notes\n")
+        (directory / "notes.md").write_text("notes\n", encoding="utf-8", newline="\n")
         _commit(work)
         before = _git(work, "rev-parse", "HEAD")
         report = run.run(directory, echo=_quiet, snapshot=True)
@@ -707,7 +707,7 @@ class TestRunThenSnapshot:
 
     def test_in_a_catalog_each_is_built_and_declared_ready_in_turn(self, reader, work):
         """So the second pins what the first has just declared ready."""
-        with open(work / "reader" / "chartbook.toml", "a") as f:
+        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
         _commit(work)
         _catalog(work, "reader", "upstream")
@@ -746,7 +746,7 @@ class TestRunThenSnapshot:
         ]
 
     def test_the_command_refuses_before_building(self, reader, work, monkeypatch):
-        (work / "upstream" / "pull.py").write_text("print('new')\n")
+        (work / "upstream" / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(work / "upstream")
         result = CliRunner().invoke(main, ["run", "--snapshot"])
         assert result.exit_code == 1
@@ -774,7 +774,7 @@ class TestGitDependencies:
         )
         (directory / "data").mkdir()
         (directory / "data" / "committed.parquet").write_bytes(b"hello")
-        (directory / ".gitignore").write_text("/_data/\n/build.log\n")
+        (directory / ".gitignore").write_text("/_data/\n/build.log\n", encoding="utf-8", newline="\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
@@ -813,7 +813,7 @@ class TestGitDependencies:
         the store and its hash into the committed lockfile.
         """
         secret = work / "secret.txt"
-        secret.write_text("the user's own file\n")
+        secret.write_text("the user's own file\n", encoding="utf-8", newline="\n")
         repository = _pipeline(
             work / "sneaky",
             None,
@@ -846,7 +846,7 @@ class TestGitDependencies:
     def test_a_script_in_a_repository_can_be_run(self, work, cache):
         """A checkout is read-only, and a build script is still a program."""
         repository = _pipeline(work / "scripted", {"build": "./build.sh"})
-        (repository / "build.sh").write_text("#!/bin/sh\necho ran > built.txt\n")
+        (repository / "build.sh").write_text("#!/bin/sh\necho ran > built.txt\n", encoding="utf-8", newline="\n")
         (repository / "build.sh").chmod(0o755)
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "add", "-A")
@@ -855,7 +855,7 @@ class TestGitDependencies:
         report = run.run(top, echo=_quiet)
         assert report.failed is None, report.reason
         copy = self._copy(cache, repository)
-        assert (copy / "built.txt").read_text() == "ran\n"
+        assert (copy / "built.txt").read_text(encoding="utf-8") == "ran\n"
         checkout = cache.find(str(repository), _git(repository, "rev-parse", "HEAD"))
         assert os.access(checkout / "build.sh", os.X_OK) and not os.access(checkout / "build.sh", os.W_OK)
 
@@ -872,19 +872,19 @@ class TestGitDependencies:
         commit = _git(repository, "rev-parse", "HEAD")
         copy = cache.find_work(str(repository), commit)
         assert said[0] == f"upstream: build    in {copy}"
-        assert (copy / "_data" / "built.parquet").read_text() == "built-by-its-build\n"
+        assert (copy / "_data" / "built.parquet").read_text(encoding="utf-8") == "built-by-its-build\n"
         assert not (cache.find(str(repository), commit) / "_data").exists()
         assert not (repository / "_data").exists()
 
         # ...and the downstream read the pinned copy of what was built
-        assert (downstream / "_output" / "read.txt").read_text() == "built-by-its-build\n"
+        assert (downstream / "_output" / "read.txt").read_text(encoding="utf-8") == "built-by-its-build\n"
         locked = lock.read_lock(downstream)
         assert locked.assets["acme/upstream:built"]["content_hash"].startswith("sha256:")
         path = subprocess.run(
             [str(Path(sys.executable).with_name("chartbook")), "path", "upstream:built"],
             cwd=downstream,
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8", errors="replace"
         ).stdout.strip()
         assert default_store().root in Path(path).parents
 
@@ -902,7 +902,7 @@ class TestGitDependencies:
         assert [(step.id, why) for step, why in report.skipped] == [
             ("upstream", "it is built already")
         ]
-        assert (copy / "build.log").read_text().split() == ["ran"]
+        assert (copy / "build.log").read_text(encoding="utf-8").split() == ["ran"]
 
     def test_force_builds_it_again(self, downstream, repository, cache):
         """How data that is pulled from outside is refreshed, on purpose."""
@@ -910,7 +910,7 @@ class TestGitDependencies:
         report = run.run(downstream, echo=_quiet, force=True)
         assert [step.id for step in report.ran] == ["upstream", "downstream"]
         copy = self._copy(cache, repository)
-        assert (copy / "build.log").read_text().split() == ["ran", "ran"]
+        assert (copy / "build.log").read_text(encoding="utf-8").split() == ["ran", "ran"]
         assert is_built(copy)
 
     def test_a_build_that_failed_is_not_a_built_one(self, work, cache):
@@ -925,7 +925,7 @@ class TestGitDependencies:
         copy = self._copy(cache, repository)
         assert not is_built(copy)
 
-        (copy / "ready").write_text("")  # whatever was wrong is put right
+        (copy / "ready").write_text("", encoding="utf-8", newline="\n")  # whatever was wrong is put right
         report = run.run(top, echo=_quiet)
         assert report.failed is None and [step.id for step in report.ran] == ["flaky", "top"]
         assert is_built(copy)
@@ -939,7 +939,7 @@ class TestGitDependencies:
         run.run(top, echo=_quiet)
         copy = self._copy(cache, repository)
         assert is_built(copy)
-        (copy / "broken").write_text("")
+        (copy / "broken").write_text("", encoding="utf-8", newline="\n")
         assert run.run(top, echo=_quiet, force=True).failed.id == "flaky"
         assert not is_built(copy)
 
@@ -970,9 +970,9 @@ class TestGitDependencies:
         run.run(downstream, echo=_quiet)
         first = _git(repository, "rev-parse", "HEAD")
         (repository / "chartbook.toml").write_text(
-            (repository / "chartbook.toml").read_text().replace(
+            (repository / "chartbook.toml").read_text(encoding="utf-8").replace(
                 "built-by-its-build", "built-by-a-later-commit"
-            )
+            ), encoding="utf-8", newline="\n"
         )
         _git(repository, "commit", "--quiet", "-am", "A new build")
         second = _git(repository, "rev-parse", "HEAD")
@@ -983,7 +983,7 @@ class TestGitDependencies:
             cache.work_path(str(repository), first)
         ]
         assert cache.find_work(str(repository), second) is None
-        assert (downstream / "_output" / "read.txt").read_text() == "built-by-its-build\n"
+        assert (downstream / "_output" / "read.txt").read_text(encoding="utf-8") == "built-by-its-build\n"
 
         # `chartbook update` moves to the new commit. What was built at the
         # old one is let go: it did not come from the commit now named.
@@ -998,7 +998,7 @@ class TestGitDependencies:
         report = run.run(downstream, echo=_quiet)
         assert report.failed is None, report.reason
         assert report.ran[0].directory == cache.work_path(str(repository), second)
-        assert (downstream / "_output" / "read.txt").read_text() == "built-by-a-later-commit\n"
+        assert (downstream / "_output" / "read.txt").read_text(encoding="utf-8") == "built-by-a-later-commit\n"
 
     def test_an_update_that_does_not_move_the_commit_keeps_what_was_built(self, downstream):
         """Only a new commit lets a built asset's pin go."""
@@ -1027,7 +1027,7 @@ class TestGitDependencies:
         """Its working copy's directory is named after a commit, which says nothing."""
         directory = work / "ref_data"
         directory.mkdir()
-        (directory / "chartbook.toml").write_text('[scripts]\nbuild = "true"\n')
+        (directory / "chartbook.toml").write_text('[scripts]\nbuild = "true"\n', encoding="utf-8", newline="\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
@@ -1044,9 +1044,9 @@ class TestGitDependencies:
         assert copy == cache.work_path(str(repository), checkout.commit)
         assert os.access(copy / "chartbook.toml", os.W_OK)
         assert not os.access(checkout.path / "chartbook.toml", os.W_OK)
-        (copy / "marker").write_text("kept")
+        (copy / "marker").write_text("kept", encoding="utf-8", newline="\n")
         assert cache.work_copy(str(repository), checkout.commit) == copy
-        assert (copy / "marker").read_text() == "kept"
+        assert (copy / "marker").read_text(encoding="utf-8") == "kept"
         assert cache.files(str(repository), checkout.commit) == copy
         with pytest.raises(ValueError, match="is not a full commit hash"):
             cache.work_path(str(repository), "abc")
@@ -1134,7 +1134,7 @@ class TestCommand:
         assert "1 pinned asset(s) have changed upstream. `chartbook update` moves the pins." in (
             second.output
         )
-        assert (work / "upstream_runs.log").read_text().split() == ["ran", "ran"]
+        assert (work / "upstream_runs.log").read_text(encoding="utf-8").split() == ["ran", "ran"]
 
     def test_an_unchanged_dependency_is_not_mentioned(self, work, monkeypatch):
         _with_data(work / "upstream")
@@ -1163,7 +1163,7 @@ class TestCommand:
 
     def test_force_is_passed_on(self, work, monkeypatch):
         repository = _pipeline(work / "ref", {"build": "echo ran >> build.log"})
-        (repository / ".gitignore").write_text("/build.log\n")
+        (repository / ".gitignore").write_text("/build.log\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
         _git(repository, "add", "-A")
         _git(repository, "commit", "--quiet", "-m", "A pipeline")

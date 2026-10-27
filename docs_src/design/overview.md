@@ -869,7 +869,10 @@ check is that the lockfile is complete and that every pin can be had.
    first version of 4a did, as {doc}`asset-graph` describes: it ran `build` in every pipeline
    of the dependency graph, each in its own folder. That was taken out before it was merged.
    It was also pointless once pins did not move: the other pipeline was rebuilt, and this one
-   went on reading its pinned copy.
+   went on reading its pinned copy. *(2026-10-26: `chartbook run --upstream`, asked for by
+   the maintainer, builds and snapshots a `path` dependency that has no snapshot to pin,
+   when the folder is trusted and committed: only when asked, and only where there is
+   nothing to pin.)*
 4. **A build is refreshed on purpose.** A git dependency is built once for a commit, and
    `chartbook run --force` builds it again. A pipeline that pulls live data is not rebuilt
    because a day has passed.
@@ -2189,6 +2192,7 @@ maintainer.
 | 2026-10-16 | Cross-pipeline dependencies mean two pipelines on one machine; several machines use a shared store or a database adapter, never a transport feature. A table or query in a DuckDB file is pinned as parquet (#65). The store is a setting of the machine or the organization, never of the pipeline: settings layers env → user → system-wide → default, the store as a URL; backends stay per pipeline; plugins behind extras; a warehouse pins by version. Written up in `stores-and-backends.md`; settings layers and the store interface first | Jeremy, me |
 | 2026-10-16 | The S3 store is built behind `chartbook[s3]` (#68): the bucket laid out as a folder store, read through a cache on the machine so readers take paths as before; `data.path()` is the cached copy. A URL-returning `get()` is left open, not built | me |
 | 2026-10-16 | Index and snapshot stay two documents sharing one record format; a snapshot holds the index of its version and the files a writer needs, so any version renders from the store alone. A catalog shows every snapshot in the store of every pipeline plus each pipeline's working version (never "latest"); links follow pins; a version list on each pipeline page. Written up in `versioned-catalog.md`; the self-sufficient snapshot first | Jeremy, me |
+| 2026-10-25 | Dependencies between pipelines must form a directed acyclic graph. `chartbook run`, `chartbook build` and `chartbook snapshot` refuse a cycle (a run before it pins or builds anything, with the pins it would make worked out first and not written, `lock.would_pin`; a pin is held back until it is let through, so a refused one writes nothing), and `chartbook check` reports one, naming who depends on whom and where it was read. The graph is read from the folders on this machine first (a cycle is found as soon as it is declared) and through the pins and snapshots in the store otherwise (`chartbook.lineage.cycle`) | Jeremy, me; {doc}`../guide/depending-on-pipelines` |
 
 ## Open questions, collected
 

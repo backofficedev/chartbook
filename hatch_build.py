@@ -60,7 +60,8 @@ def git(root, *arguments) -> Optional[str]:
     environment = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", "-C", str(root), *arguments], capture_output=True, text=True, env=environment, timeout=60
+            ["git", "-C", str(root), *arguments], capture_output=True, text=True, env=environment, timeout=60,
+            encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -94,11 +95,12 @@ def template_files(root, checkout: bool) -> list[str]:
     """
     folder = Path(root) / "template"
     if not checkout:
-        return sorted(str(path.relative_to(folder)) for path in folder.rglob("*") if path.is_file())
+        # With /, as a wheel names its files, on every system
+        return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file())
     listed = git(root, "ls-files", "-z", "--", "template")
     if listed is None:
         raise RuntimeError(f"git could not list the files of {folder}, so the package would carry no template.")
-    names = [str(Path(name).relative_to("template")) for name in listed.split("\0") if name]
+    names = [Path(name).relative_to("template").as_posix() for name in listed.split("\0") if name]
     missing = [name for name in names if not (folder / name).is_file()]
     if missing:
         raise RuntimeError(
@@ -155,7 +157,7 @@ class CustomBuildHook(BuildHookInterface):
         # Written aside, never into the tree; force-included, which overrides a stray copy there
         self._folder = Path(tempfile.mkdtemp(prefix="chartbook-build-"))
         written = self._folder / BUILT_FROM
-        written.write_text(commit + "\n", encoding="utf-8")
+        written.write_text(commit + "\n", encoding="utf-8", newline="\n")
         target = "chartbook" if self.target_name == "wheel" else "src/chartbook"
         build_data["force_include"][str(written)] = f"{target}/{BUILT_FROM}"
 

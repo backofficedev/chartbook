@@ -84,7 +84,7 @@ class TestGeneratedPages:
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
         page = (
             tmp_path / "_docs" / "cb" / "dataframes" / pipeline_id / "dataframe_0.md"
-        ).read_text()
+        ).read_text(encoding="utf-8")
 
         facts = _facts(page)
         # Only facts about this dataframe. When the pipeline's code changed is
@@ -98,7 +98,7 @@ class TestGeneratedPages:
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
         page = (
             tmp_path / "_docs" / "cb" / "dataframes" / pipeline_id / "dataframe_0.md"
-        ).read_text()
+        ).read_text(encoding="utf-8")
         lines = [l for l in page.splitlines() if l.strip()]
         assert lines[0].startswith("# Dataframe: ")
         assert lines[1] == "```{raw} html"
@@ -115,7 +115,7 @@ class TestGeneratedPages:
             data_moment,
         )
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
-        page = (tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md").read_text()
+        page = (tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md").read_text(encoding="utf-8")
 
         facts = _facts(page)
         assert list(facts) == ["Chart updated", "Data updated"]
@@ -136,14 +136,14 @@ class TestGeneratedPages:
         first, second = tmp_path / "first", tmp_path / "second"
         pipeline_id = _generate(pipeline_project, first)
         source_file = pipeline_project / "src" / "dummy.py"
-        source_file.write_text("# edited\n")
+        source_file.write_text("# edited\n", encoding="utf-8", newline="\n")
         os.utime(source_file, (source_file.stat().st_atime, source_file.stat().st_mtime + 3600))
         _generate(pipeline_project, second)
         for relative in (
             Path("cb") / "dataframes" / pipeline_id / "dataframe_0.md",
             Path("cb") / "charts" / f"{pipeline_id}.chart_0_0.md",
         ):
-            assert (first / relative).read_text() == (second / relative).read_text()
+            assert (first / relative).read_text(encoding="utf-8") == (second / relative).read_text(encoding="utf-8")
 
     def test_absolute_time_is_available_on_hover(self, pipeline_project, tmp_path):
         _set_mtime(
@@ -153,7 +153,7 @@ class TestGeneratedPages:
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
         page = (
             tmp_path / "_docs" / "cb" / "dataframes" / pipeline_id / "dataframe_0.md"
-        ).read_text()
+        ).read_text(encoding="utf-8")
         match = TIME_TAG.search(page)
         in_utc = datetime(2024, 3, 5, 12, 0, 0).astimezone(timezone.utc)
         assert match["title"] == in_utc.strftime("%Y-%m-%d %H:%M UTC")
@@ -171,7 +171,7 @@ class TestGeneratedPages:
             tmp_path / "_docs" / "cb" / "dataframes" / pipeline_id / "dataframe_0.md",
             tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md",
         ):
-            facts = _facts(page_path.read_text())
+            facts = _facts(page_path.read_text(encoding="utf-8"))
             assert facts["Data updated"] == moment.astimezone()
 
     def test_pages_do_not_change_between_builds(self, pipeline_project, tmp_path):
@@ -183,15 +183,15 @@ class TestGeneratedPages:
             Path("cb") / "dataframes" / pipeline_id / "dataframe_0.md",
             Path("cb") / "charts" / f"{pipeline_id}.chart_0_0.md",
         ):
-            text = (first / relative).read_text()
-            assert text == (second / relative).read_text()
+            text = (first / relative).read_text(encoding="utf-8")
+            assert text == (second / relative).read_text(encoding="utf-8")
             assert " ago" not in text
 
     def test_chart_frontmatter_still_parses(self, pipeline_project, tmp_path):
         import yaml
 
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
-        page = (tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md").read_text()
+        page = (tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md").read_text(encoding="utf-8")
         frontmatter = yaml.safe_load(page.split("---", 2)[1])
         assert set(frontmatter) == {"date", "tags", "category"}
 
@@ -208,13 +208,13 @@ class TestBuiltSite:
 
         script = output_dir / "_static" / "chartbook-freshness.js"
         assert script.is_file()
-        assert "cb-relative-time" in script.read_text()
+        assert "cb-relative-time" in script.read_text(encoding="utf-8")
 
         pages = list((output_dir / "cb" / "dataframes").rglob("dataframe_0.html"))
         pages += list((output_dir / "cb" / "charts").glob("*chart_0_0.html"))
         assert len(pages) >= 2
         for page in pages:
-            html = page.read_text()
+            html = page.read_text(encoding="utf-8")
             assert '<p class="cb-freshness">' in html
             assert TIME_TAG.search(html), page
             assert "_static/chartbook-freshness.js" in html
@@ -222,17 +222,17 @@ class TestBuiltSite:
 
         # The pipeline's own page is where the code's date is given
         if theme == "pipeline":
-            front_page = (output_dir / "index.html").read_text()
+            front_page = (output_dir / "index.html").read_text(encoding="utf-8")
             assert 'Code updated <time class="cb-relative-time"' in front_page
             assert "Date of Last Code Update" in front_page
         else:
             assert "Date of Last Code Update" in (
                 output_dir / "cb" / "pipelines.html"
-            ).read_text()
+            ).read_text(encoding="utf-8")
 
     def test_script_is_identical_in_both_themes(self):
         scripts = [
-            (get_docs_src_path(theme) / "_static" / "chartbook-freshness.js").read_text()
+            (get_docs_src_path(theme) / "_static" / "chartbook-freshness.js").read_text(encoding="utf-8")
             for theme in ("pipeline", "catalog")
         ]
         assert scripts[0] == scripts[1]

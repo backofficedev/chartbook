@@ -357,7 +357,7 @@ def strip_mathjax2_from_notebook(notebook_path):
                         output["data"]["text/html"] = cleaned
 
     if modified:
-        with open(notebook_path, "w", encoding="utf-8") as f:
+        with open(notebook_path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(nb, f, indent=1, ensure_ascii=False)
             f.write("\n")
 

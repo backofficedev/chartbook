@@ -73,7 +73,7 @@ class ScaffoldError(Exception):
 
 def _run(command: list[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
     """Run a git or gh command, capturing its output."""
-    return subprocess.run(command, cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(command, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def _detail(result: subprocess.CompletedProcess) -> str:
@@ -172,7 +172,7 @@ def _git(checkout: Path, *arguments: str) -> Optional[str]:
     environment = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", "-C", str(checkout), *arguments], capture_output=True, text=True, env=environment, timeout=30
+            ["git", "-C", str(checkout), *arguments], capture_output=True, text=True, env=environment, timeout=30, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -468,7 +468,7 @@ def write_cruft_file(project_dir: Path, context: dict, commit: str) -> Path:
     }
     path = Path(project_dir) / CRUFT_MARKER
     # cruft's own layout (cruft._commands.utils.cruft.json_dumps)
-    path.write_text(json.dumps(state, ensure_ascii=False, indent=2, separators=(",", ": ")) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2, separators=(",", ": ")) + "\n", encoding="utf-8", newline="\n")
     return path
 
 

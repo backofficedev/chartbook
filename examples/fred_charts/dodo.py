@@ -128,10 +128,16 @@ def delete_file(file_path):
 ##################################
 
 
+def _make_folders():
+    """The data and output folders, made in Python: Windows has no `mkdir -p`."""
+    for folder in (DATA_DIR, OUTPUT_DIR):
+        Path(folder).mkdir(parents=True, exist_ok=True)
+
+
 def task_config():
     """Create empty directories for data and output if they don't exist"""
     return {
-        "actions": [f"mkdir -p {DATA_DIR} {OUTPUT_DIR}"],
+        "actions": [_make_folders],
         "targets": [DATA_DIR, OUTPUT_DIR],
         "file_dep": [],
         "clean": [],

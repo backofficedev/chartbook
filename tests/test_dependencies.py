@@ -48,9 +48,9 @@ from tests.fixtures import create_catalog_project, create_pipeline_project, pin_
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
     toml_path = Path(project_dir) / "chartbook.toml"
-    config = tomli.loads(toml_path.read_text())
+    config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
-    toml_path.write_text(tomli_w.dumps(config))
+    toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
 
 
 def _depend(project_dir: Path, **dependencies) -> None:
@@ -62,7 +62,7 @@ def _depend(project_dir: Path, **dependencies) -> None:
 def _add_model(project_dir: Path, trained_on: list) -> None:
     """Give a pipeline one model, trained on the given references."""
     (project_dir / "_models").mkdir(exist_ok=True)
-    (project_dir / "_models" / "m.json").write_text("{}")
+    (project_dir / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
     _edit_toml(
         project_dir,
         lambda config: config.update(
@@ -73,7 +73,7 @@ def _add_model(project_dir: Path, trained_on: list) -> None:
 
 def _page_text(path: Path) -> str:
     """A built page as running text: tags removed, whitespace collapsed."""
-    text = re.sub(r"<[^>]+>", " ", path.read_text())
+    text = re.sub(r"<[^>]+>", " ", path.read_text(encoding="utf-8"))
     return re.sub(r"\s+", " ", text)
 
 
@@ -548,14 +548,14 @@ class TestInTheIndex:
             acme__rates={"path": "../rates"},
             zeta={"git": "https://example.org/acme/zeta", "rev": "a1b2c3d"},
         )
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         full = index.build_index(load_manifest(downstream))
         for built in (full, index.published(full)):
             record = self._pipeline_record(built, "downstream")
             jsonschema.validate(record, schema)
 
     def test_the_schema_refuses_a_dependency_without_a_location(self):
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         record = {
             "kind": "Pipeline",
             "version": "chartbook/v1",
@@ -613,7 +613,7 @@ class TestInTheIndex:
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
-        built = json.loads((downstream / "docs" / "index.json").read_text())
+        built = json.loads((downstream / "docs" / "index.json").read_text(encoding="utf-8"))
         (dependency,) = self._pipeline_record(built, "downstream")["dependencies"]
         assert dependency == {
             "id": "acme/rates",
@@ -624,7 +624,7 @@ class TestInTheIndex:
         # the site is of this pipeline alone
         page = downstream / "docs" / "cb" / "models" / "downstream" / "m.html"
         assert "acme/rates:dataframe_0 (in another pipeline" in _page_text(page)
-        assert "dataframes/acme--rates" not in page.read_text()
+        assert "dataframes/acme--rates" not in page.read_text(encoding="utf-8")
 
 
 class TestCheck:
@@ -675,14 +675,14 @@ class TestCheck:
 
     def test_a_manifest_that_cannot_be_read(self, two_pipelines):
         downstream, rates = two_pipelines
-        (rates / "chartbook.toml").write_text("[project\n")
+        (rates / "chartbook.toml").write_text("[project\n", encoding="utf-8", newline="\n")
         _depend(downstream, rates={"path": "../rates"})
         (problem,) = self._problems(downstream)
         assert problem.message.startswith(f"{rates / 'chartbook.toml'} is not valid TOML: ")
 
     def test_an_old_format_manifest_says_so_once(self, two_pipelines):
         downstream, rates = two_pipelines
-        (rates / "chartbook.toml").write_text('[config]\ntype = "pipeline"\n')
+        (rates / "chartbook.toml").write_text('[config]\ntype = "pipeline"\n', encoding="utf-8", newline="\n")
         _depend(downstream, rates={"path": "../rates"})
         (problem,) = self._problems(downstream)
         assert "old v1 format" in problem.message
@@ -734,7 +734,7 @@ class TestCheck:
 
         downstream, rates = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
-        (downstream / lock.LOCK_FILE).write_text('schema = "chartbook/lock/v9"\n')
+        (downstream / lock.LOCK_FILE).write_text('schema = "chartbook/lock/v9"\n', encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning) as caught:
             assert check_dependencies(load_manifest(downstream), downstream) == []
         (warning,) = caught  # the lockfile, and no dependency blamed for it
@@ -825,7 +825,7 @@ class TestCheckCommand:
         """Run ``chartbook check`` in a project, against a policy that asks for nothing."""
         policy = project.parent / "policy.toml"
         required = {"required": {table: [] for table in DEFAULT_REQUIRED_FIELDS}}
-        policy.write_text(tomli_w.dumps({"policy": required}))
+        policy.write_text(tomli_w.dumps({"policy": required}), encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
         return CliRunner().invoke(main, ["check", "--policy", str(policy)])
 
@@ -895,5 +895,5 @@ class TestPages:
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         page = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
-        assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page.read_text()
+        assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page.read_text(encoding="utf-8")
         assert "acme/pipeline_b:dataframe_0 - Dataframe 0" in _page_text(page)

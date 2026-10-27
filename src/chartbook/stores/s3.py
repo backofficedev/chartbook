@@ -422,7 +422,7 @@ class S3Store(Store):
         note.parent.mkdir(parents=True, exist_ok=True)
         names = sorted(f.relative_to(local).as_posix() for f in hashing.directory_files(local))
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
-        temporary.write_text("\n".join(names) + "\n", encoding="utf-8")
+        temporary.write_text("\n".join(names) + "\n", encoding="utf-8", newline="\n")
         os.replace(temporary, note)
 
     def _forget_verified(self, content_hash: str) -> None:
@@ -438,6 +438,11 @@ class S3Store(Store):
     def has(self, content_hash: str) -> bool:
         self._check_layout()
         return bool(self._object_files(content_hash))
+
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
+        """Whether the bucket's object lacks a key under one of these names: a put uploads the keys an object lacks."""
+        remote = self._object_files(content_hash)
+        return bool(remote) and any(name not in remote for name in names)
 
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False

@@ -23,7 +23,7 @@ def work(tmp_path):
     rates, forecast = work / "rates", work / "forecast"
     for directory in (rates, forecast):
         (directory / "_data").mkdir(parents=True)
-        (directory / "README.md").write_text("# A pipeline\n")
+        (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8", newline="\n")
     (rates / "chartbook.toml").write_text(
         tomli_w.dumps(
             {
@@ -35,7 +35,7 @@ def work(tmp_path):
                     "slopes": {"source": "local", "query": "select d, y10 - y02 as slope from curve order by d", "docs": "A query."},
                 },
             }
-        )
+        ), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(rates / "_data" / "treasury.parquet")
     con = duckdb.connect(str(rates / "_data" / "local.duckdb"))
@@ -48,14 +48,14 @@ def work(tmp_path):
                 "dependencies": {"rates": {"path": "../rates"}},
                 "models": {"m": {"path": "./_models/m.json", "trained_on": ["rates:curve", "rates:slopes"], "docs": "A model."}},
             }
-        )
+        ), encoding="utf-8", newline="\n"
     )
     (forecast / "_models").mkdir()
     (forecast / "_models" / "m.json").write_bytes(b"weights-1")
     # The repository first, then the ignore file: `_commit` writes one of its
     # own into a folder that is not a repository yet, and it lacks `_data/`
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\n_models/\n_output/\n_docs*/\ndocs/\nchartbook.lock\n")
+    (work / ".gitignore").write_text("_data/\n_models/\n_output/\n_docs*/\ndocs/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     return rates, forecast
 
@@ -84,11 +84,11 @@ class TestTheSnapshotWritesTablesOut:
         rates, _ = work
         import tomli
 
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["sources"]["memory"] = {"backend": "duckdb", "url": "duckdb:///:memory:"}
         config["dataframes"]["gone"] = {"source": "local", "table": "nope", "docs": "Not there."}
         config["dataframes"]["fleeting"] = {"source": "memory", "table": "t", "docs": "In memory."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         report = snapshot.make(rates)
         reasons = dict(report.not_built)
@@ -145,15 +145,15 @@ class TestAnotherPipelineReadsThem:
         import tomli
 
         rates, forecast = work
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         curve = config["dataframes"].pop("curve")
         config["dataframes"].pop("slopes")
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         snapshot.make(rates)
         lock.pin(forecast)
         config["dataframes"]["curve"] = curve
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         monkeypatch.chdir(forecast)
         with pytest.raises(AssetNotPinnedError, match="`chartbook snapshot` in that pipeline's folder writes it out"):
             data.load("rates:curve")
@@ -170,7 +170,7 @@ class TestAnotherPipelineReadsThem:
         assert "rates: 3 pinned" in pinned.output
         shown = CliRunner().invoke(main, ["path", "rates:slopes"])
         assert shown.exit_code == 0 and shown.output.strip().endswith("slopes.parquet")
-        locked = json.loads((forecast / "chartbook.lock").read_text())
+        locked = json.loads((forecast / "chartbook.lock").read_text(encoding="utf-8"))
         (record,) = [r for r in locked["records"] if r["id"] == "rates:curve"]
         assert record["location"]["kind"] == "table" and record["content_hash"]
 
@@ -185,9 +185,9 @@ class TestWhatTheReviewFound:
         con = duckdb.connect(str(rates / "_data" / "local.duckdb"))
         con.sql("create table big as select (i % 7) as k, i as v from range(200000) t(i)")
         con.close()
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["agg"] = {"source": "local", "query": "select k, sum(v) as s from big group by k", "docs": "Grouped."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         first = snapshot.make(rates)
         assert first.made and first.snapshot.assets["agg"]["content_hash"]
@@ -207,9 +207,9 @@ class TestWhatTheReviewFound:
         con = duckdb.connect(str(rates / "_data" / "local.duckdb"))
         con.sql("create table spans as select interval '1 day' as span, 1 as n")
         con.close()
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["spans"] = {"source": "local", "table": "spans", "docs": "Intervals."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         report = snapshot.make(rates)
         reasons = dict(report.not_built)
@@ -222,10 +222,10 @@ class TestWhatTheReviewFound:
         import tomli
 
         rates, forecast = work
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["sources"]["memory"] = {"backend": "duckdb", "url": "duckdb:///:memory:"}
         config["dataframes"]["fleeting"] = {"source": "memory", "table": "t", "docs": "In memory."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         snapshot.make(rates)
         lock.pin(forecast)
@@ -244,9 +244,9 @@ class TestWhatTheReviewFound:
         con = duckdb.connect(str(rates / "_data" / "local.duckdb"))
         con.sql("create table noise as select (i % 13) as k, random() * 1e6 as v from range(400000) t(i)")
         con.close()
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["sums"] = {"source": "local", "query": "select k, sum(v) as s, avg(v) as m from noise group by k", "docs": "Sums."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         first = snapshot.make(rates).snapshot.assets["sums"]["content_hash"]
         for _ in range(3):
@@ -259,10 +259,10 @@ class TestWhatTheReviewFound:
         import tomli
 
         rates, forecast = work
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["latest_first"] = {"source": "local", "query": "select y10, d from curve order by d desc", "docs": "Newest first."}
         config["dataframes"]["top"] = {"source": "local", "query": "select d, y10 from curve order by y10 desc limit 1", "docs": "The top."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         snapshot.make(rates)
         lock.pin(forecast)
@@ -278,9 +278,9 @@ class TestWhatTheReviewFound:
         import tomli
 
         rates, _ = work
-        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config = tomli.loads((rates / "chartbook.toml").read_text(encoding="utf-8"))
         config["dataframes"]["typo"] = {"source": "local", "query": "selec d from curve", "docs": "A typo."}
-        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         _commit(rates.parent)
         reasons = dict(snapshot.make(rates).not_built)
         assert "could not be read" in reasons["acme/rates:typo"]

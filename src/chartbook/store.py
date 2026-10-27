@@ -343,6 +343,33 @@ def _link(source: str, destination: str, links: Iterable[str]) -> str:
     )
 
 
+def _read_marker(marker: Path):
+    """The layout a store's marker names.
+
+    On Windows a file another thread or process is replacing cannot be
+    opened for a moment (it is "delete pending"): it is tried again for a
+    second before that is said.
+    """
+    for attempt in range(20):
+        try:
+            with open(marker, encoding="utf-8") as f:
+                return json.load(f).get("schema")
+        except PermissionError:
+            if os.name != "nt" or attempt == 19:
+                raise
+            time.sleep(0.05)
+
+
+def link_target(path) -> str:
+    """Where a symlink points, as a path is written: on Windows without the ``\\\\?\\`` that ``os.readlink`` may give."""
+    target = os.readlink(path)
+    if os.name == "nt" and target.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + target[8:]  # \\?\UNC\server\share is \\server\share
+    if os.name == "nt" and target.startswith("\\\\?\\"):
+        target = target[4:]
+    return target
+
+
 def _make_removable(path: str) -> None:
     """Give back the permissions that removing *path* needs, to the store only.
 
@@ -808,6 +835,18 @@ class Store(abc.ABC):
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
         """Hash objects again, and report each that is not what its name says."""
 
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
+        """Whether a put of the same bytes would add a file the store's object lacks under one of these names.
+
+        Two assets with the same bytes share one object, under each one's
+        name; put back one at a time, the object may hold one name and not
+        the other. False when nothing would be added, or that cannot be
+        told without reading. Reads nothing.
+
+        :param single: Whether the bytes are one file, not a directory.
+        """
+        return False
+
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
     ) -> Optional[str]:
@@ -934,7 +973,7 @@ class FolderStore(Store):
             final = folder / f"{stamp}-{count}.json"
         temporary = folder / f"{uuid.uuid4().hex}.tmp"
         try:
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(document, f, indent=2, ensure_ascii=False)
                 f.write("\n")
             os.replace(temporary, final)
@@ -984,7 +1023,7 @@ class FolderStore(Store):
         except FileNotFoundError:
             known = []
         if top not in known:
-            with open(note, "a", encoding="utf-8") as f:
+            with open(note, "a", encoding="utf-8", newline="\n") as f:
                 f.write(top + "\n")
 
     def origins(self, commit: str, name: str) -> list[str]:
@@ -1132,18 +1171,28 @@ class FolderStore(Store):
             return
         marker = self.root / MARKER_FILE
         try:
-            with open(marker, encoding="utf-8") as f:
-                schema = json.load(f).get("schema")
+            schema = _read_marker(marker)
         except FileNotFoundError:
             if not create:
                 return  # nothing here yet; nothing to misread
             self.root.mkdir(parents=True, exist_ok=True)
             # Written whole or not at all, for another process reading it
             temporary = marker.with_name(f"{MARKER_FILE}.{uuid.uuid4().hex}.tmp")
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump({"schema": SCHEMA}, f)
                 f.write("\n")
-            os.replace(temporary, marker)
+            try:
+                os.replace(temporary, marker)
+            except PermissionError:
+                # Windows does not replace a file that another thread or
+                # process has open: another made it first, and is reading it
+                try:
+                    os.remove(temporary)
+                except OSError:
+                    pass
+                if not marker.is_file():
+                    raise
+                return self._check_layout()
             self._layout_checked = True
             return
         except (OSError, ValueError, AttributeError) as error:
@@ -1253,7 +1302,7 @@ class FolderStore(Store):
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
-            with open(temporary, "w", encoding="utf-8") as f:
+            with open(temporary, "w", encoding="utf-8", newline="\n") as f:
                 json.dump(root_document(lockfile, hashes, snapshots, machine, labelled), f, indent=1)
                 f.write("\n")
             os.replace(temporary, note)
@@ -1348,6 +1397,19 @@ class FolderStore(Store):
             return f"{self}/{path.relative_to(self.root).as_posix()}"
         except ValueError:
             return str(path)
+
+    def lacks(self, content_hash: str, names: Iterable[str], single: bool = True) -> bool:
+        """Whether the object of one file lacks it under this name: a put of the same bytes adds a name to such an object only, never a file to a directory's (:meth:`_move_into_place`)."""
+        names = list(names)
+        if not single or len(names) != 1:
+            return False
+        parts = plain_parts(names[0])
+        path = self.object_path(content_hash)
+        if parts is None or len(parts) != 1 or not path.is_dir() or path.is_symlink():
+            return False
+        if not os.access(path, os.W_OK):
+            return False  # a name it could not add: a store this user cannot write
+        return not os.path.lexists(on_disk(path, parts))
 
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
@@ -1496,7 +1558,7 @@ def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
         if file.is_symlink() and not file.exists():
             return (
                 f"{file.relative_to(path).as_posix()} is a link to "
-                f"{os.readlink(file)}, which is no longer there"
+                f"{link_target(file)}, which is no longer there"
             )
 
     cache = hashing.HashCache()  # fresh, so every byte is read
@@ -1523,7 +1585,7 @@ def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
     if linked:
         name = linked[0].relative_to(path).as_posix()
         where = (
-            f"a link to {os.readlink(linked[0])}"
+            f"a link to {link_target(linked[0])}"
             if linked[0].is_symlink()
             else "a hard link to a file outside the store"
         )

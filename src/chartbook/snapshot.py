@@ -1957,6 +1957,25 @@ def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[
         )
 
 
+def require_acyclic(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> None:
+    """Refuse a snapshot of a pipeline that depends, through what it depends on, on itself (:func:`chartbook.lineage.cycle`).
+
+    Dependencies between pipelines must form a directed acyclic graph: a
+    snapshot carries its lineage, and this one's would lead back to it.
+
+    :raises SnapshotError: Saying who depends on whom, where each was read,
+        and what to do.
+    """
+    from chartbook.lineage import cycle, cycle_lead, explain_cycle
+
+    found = cycle(directory, store)
+    if found is not None:
+        raise SnapshotError(
+            f"{pipeline} cannot have a snapshot: {cycle_lead(found)}, so its lineage would carry a cycle.\n"
+            f"{explain_cycle(found)}"
+        )
+
+
 def require_committed(
     directory: Union[str, Path], pipeline: str, ignoring: tuple = ()
 ) -> Code:
@@ -2064,6 +2083,12 @@ def _inputs(directory: Path) -> list:
     return []
 
 
+def _inputs_key(inputs: object) -> list:
+    """A snapshot's inputs in one order and form, to tell whether two say the same."""
+    listed = inputs if isinstance(inputs, list) else []
+    return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in listed)
+
+
 def _scores(directory: Path, entry) -> Optional[dict]:
     """A model's scores as its metrics file has them now, if it has a readable one."""
     from chartbook.models import read_metrics
@@ -2114,9 +2139,10 @@ def make(
     commit. An asset that is declared and not built is in the record
     without a hash, and in the report.
 
-    If nothing has changed since the newest snapshot at this commit, no
-    new one is made; unless that one took its owner's word and this one
-    follows a build, which is worth recording.
+    If nothing has changed since the newest snapshot at this commit (its
+    bytes, and what the pipeline is pinned to), no new one is made; unless
+    that one took its owner's word and this one follows a build, which is
+    worth recording.
 
     :param project_dir: The pipeline's folder.
     :param store: The store; this user's by default.
@@ -2138,6 +2164,7 @@ def make(
 
     store = store if store is not None else default_store()
     require_lineage(directory, pipeline, store)
+    require_acyclic(directory, pipeline, store)
     if deep:
         from chartbook.lineage import walk
 
@@ -2225,12 +2252,15 @@ def make(
     before = [taken for taken in find(store, code.commit, code.subdirectory) if not made_in_the_future(taken)]
     # The newest record of this commit that says at least as much of its
     # repository as this one would, with nothing newer that holds other
-    # bytes: a clone with a path remote, or a shallow one, reuses its main
-    # checkout's, and the main checkout makes its own once. A newer record
-    # with other bytes would otherwise be the one a pin takes.
+    # bytes or other pins: a clone with a path remote, or a shallow one,
+    # reuses its main checkout's, and the main checkout makes its own once.
+    # A newer record with other bytes, or pinned to other snapshots (a clone
+    # whose own lockfile has moved, with nothing committed), would otherwise
+    # be the one a pin takes. What it was pinned to is part of what a
+    # snapshot says, so one whose pins have moved since is not given back
     same = None
     for taken in before:
-        if taken.content() != snapshot.content():
+        if taken.content() != snapshot.content() or _inputs_key(taken.inputs) != _inputs_key(snapshot.inputs):
             break
         # One made under another ID is not this pipeline's, whose ID has
         # changed since (a remote added, a folder renamed): it gets its own
@@ -2250,7 +2280,8 @@ def make(
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
         if same.built_by_run:
-            # Made again for what the one before lacks: the bytes are still the ones a run built
+            # Made again for what the one before lacks: the bytes are still
+            # the ones a run built, from these same pins
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
@@ -2658,7 +2689,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     code_changed_at = _code_changed_at(taken, store)
     if code_changed_at:
         marker["code_changed_at"] = code_changed_at
-    (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+    (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     held = Path(store.get(taken.documents["content_hash"]))
     for relative in taken.documents.get("files", []):
@@ -2888,7 +2919,7 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
         try:
             target = folder / plain
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8")
+            target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8", newline="\n")
         except OSError:
             report.left_out.append((f"model/{name}", f"its scores could not be written to {plain}"))
     site_dir = safe_relative((raw.get("project") or {}).get("site_dir"))

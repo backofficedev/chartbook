@@ -29,7 +29,7 @@ from chartbook.run import build_tool_runs_chartbook_build
 
 def _manifest(directory: Path, table: dict) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
@@ -114,21 +114,21 @@ class TestEveryCommandStops:
 
     def test_a_catalog_member_that_needs_a_newer_one_stops_the_catalog_and_names_the_way_out(self, newer, tmp_path):
         catalog = _manifest(tmp_path / "catalog", {"project": {"type": "catalog"}, "pipelines": {"rates": {"path": "../rates"}}})
-        with pytest.raises(ValueError, match=r"rates/chartbook.toml requires ChartBook >=99.0") as error:
+        with pytest.raises(ValueError, match=r"rates[/\\]chartbook.toml requires ChartBook >=99.0") as error:
             load_manifest(catalog)
         assert "`chartbook catalog disable rates`" in str(error.value)
         members = _manifest(tmp_path / "by_members", {"pipelines": {"members": ["../rates"]}})
-        with pytest.raises(ValueError, match=r"catalog member .*rates/chartbook.toml requires ChartBook >=99.0") as error:
+        with pytest.raises(ValueError, match=r"catalog member .*rates[/\\]chartbook.toml requires ChartBook >=99.0") as error:
             load_manifest(members)
         assert "`chartbook catalog disable rates`" in str(error.value)
 
     def test_add_writes_nothing_to_a_manifest_for_a_newer_chartbook(self, newer, monkeypatch):
         """Found by a reviewer: `add` wrote [dependencies], and only then did the pin stop."""
-        before = (newer / "chartbook.toml").read_text()
+        before = (newer / "chartbook.toml").read_text(encoding="utf-8")
         monkeypatch.chdir(newer)
         result = CliRunner().invoke(main, ["add", "acme/thing"])
         assert result.exit_code == 1 and "requires ChartBook >=99.0" in result.output
-        assert (newer / "chartbook.toml").read_text() == before
+        assert (newer / "chartbook.toml").read_text(encoding="utf-8") == before
 
     @pytest.mark.parametrize("words", [["catalog", "add"], ["catalog", "disable", "x"], ["catalog", "enable", "x"]])
     def test_the_catalog_commands_say_it_without_a_traceback(self, tmp_path, words):
@@ -145,7 +145,7 @@ class TestEveryCommandStops:
 
         root = Path(__file__).parent.parent / "template"
         made = Path(cookiecutter(str(root), no_input=True, output_dir=str(tmp_path)))
-        assert f'requires_chartbook = ">={__version__}"' in (made / "chartbook.toml").read_text()
+        assert f'requires_chartbook = ">={__version__}"' in (made / "chartbook.toml").read_text(encoding="utf-8")
         load_manifest(made)  # and this ChartBook meets it
 
 
@@ -154,7 +154,7 @@ DODO_0_1 = 'def task_docs():\n    return {"actions": ["chartbook build -f"], "ve
 
 class TestABuildToolThatSaysChartbookBuild:
     def test_the_line_is_found_and_a_comment_is_not(self, tmp_path):
-        (tmp_path / "dodo.py").write_text("## `doit` (and so `chartbook build`) runs every task\n" + DODO_0_1)
+        (tmp_path / "dodo.py").write_text("## `doit` (and so `chartbook build`) runs every task\n" + DODO_0_1, encoding="utf-8", newline="\n")
         assert build_tool_runs_chartbook_build(tmp_path, "doit") == ("dodo.py", 3, "chartbook build -f")
 
     @pytest.mark.parametrize(
@@ -178,16 +178,16 @@ class TestABuildToolThatSaysChartbookBuild:
         ],
     )
     def test_which_lines_count(self, tmp_path, name, command, text, found):
-        (tmp_path / name).write_text(text)
+        (tmp_path / name).write_text(text, encoding="utf-8", newline="\n")
         assert (build_tool_runs_chartbook_build(tmp_path, command) is not None) is found
 
     def test_the_file_is_named_as_it_is_on_disk(self, tmp_path):
-        (tmp_path / "Justfile").write_text("docs:\n    chartbook build\n")
+        (tmp_path / "Justfile").write_text("docs:\n    chartbook build\n", encoding="utf-8", newline="\n")
         assert build_tool_runs_chartbook_build(tmp_path, "just")[0] == "Justfile"
 
     def test_build_stops_before_building_anything(self, tmp_path, monkeypatch):
         folder = _manifest(tmp_path / "p", {"project": {"name": "p"}, "scripts": {"build": "doit"}})
-        (folder / "dodo.py").write_text(DODO_0_1 + 'def task_mark():\n    return {"actions": ["echo ran > ran.log"]}\n')
+        (folder / "dodo.py").write_text(DODO_0_1 + 'def task_mark():\n    return {"actions": ["echo ran > ran.log"]}\n', encoding="utf-8", newline="\n")
         monkeypatch.chdir(folder)
         result = CliRunner().invoke(main, ["build", "./site", "-f"])
         assert result.exit_code == 1
@@ -198,7 +198,7 @@ class TestABuildToolThatSaysChartbookBuild:
     def test_a_catalog_names_each_members_line_before_building_any(self, tmp_path, monkeypatch):
         for name in ("a", "b"):
             member = _manifest(tmp_path / name, {"project": {"name": name}, "scripts": {"build": "doit"}})
-            (member / "dodo.py").write_text(DODO_0_1)
+            (member / "dodo.py").write_text(DODO_0_1, encoding="utf-8", newline="\n")
         catalog = _manifest(tmp_path / "catalog", {"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}})
         monkeypatch.chdir(catalog)
         result = CliRunner().invoke(main, ["build", "./site", "-f"])
@@ -207,7 +207,7 @@ class TestABuildToolThatSaysChartbookBuild:
         assert f"{tmp_path / 'a' / 'dodo.py'}, line 2" in result.output and f"{tmp_path / 'b' / 'dodo.py'}, line 2" in result.output
 
     def test_with_no_build_command_build_still_only_renders(self, pipeline_project, monkeypatch):
-        (pipeline_project / "dodo.py").write_text(DODO_0_1)
+        (pipeline_project / "dodo.py").write_text(DODO_0_1, encoding="utf-8", newline="\n")
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
@@ -215,20 +215,20 @@ class TestABuildToolThatSaysChartbookBuild:
 
     @pytest.mark.parametrize("table", ["scripts", "project"])
     def test_check_reports_it_on_the_build_field_where_it_is_written(self, pipeline_project, table):
-        (pipeline_project / "dodo.py").write_text(DODO_0_1)
-        text = (pipeline_project / "chartbook.toml").read_text()
+        (pipeline_project / "dodo.py").write_text(DODO_0_1, encoding="utf-8", newline="\n")
+        text = (pipeline_project / "chartbook.toml").read_text(encoding="utf-8")
         if table == "scripts":
             text += '\n[scripts]\nbuild = "doit"\n'
         else:
             text = text.replace("[project]\n", '[project]\nbuild = "doit"\n', 1)
-        (pipeline_project / "chartbook.toml").write_text(text)
+        (pipeline_project / "chartbook.toml").write_text(text, encoding="utf-8", newline="\n")
         (problem,) = check_build_tool(load_manifest(pipeline_project), pipeline_project)
         assert (problem.table, problem.field) == (table, "build")
         assert problem.message.startswith("dodo.py, line 2, runs `chartbook build` (chartbook build -f)")
         assert problem.message.endswith("the command that renders the site is `chartbook docs generate -f`: say that in dodo.py")
 
     def test_check_warns_of_it_with_no_build_command_by_a_relative_path(self, pipeline_project, monkeypatch):
-        (pipeline_project / "dodo.py").write_text(DODO_0_1)
+        (pipeline_project / "dodo.py").write_text(DODO_0_1, encoding="utf-8", newline="\n")
         monkeypatch.chdir(pipeline_project)
         with pytest.warns(UserWarning, match=r"^dodo.py, line 2: `chartbook build` renders the site here only because no build command is declared"):
             assert check_build_tool(load_manifest(pipeline_project), pipeline_project) == []

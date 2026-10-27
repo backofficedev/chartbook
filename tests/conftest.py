@@ -76,9 +76,12 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     # The scratch store and caches go with their test. Found on CI on
     # 2026-10-21: the suite's temporary files, every test's stores and sites
     # kept until the end, filled the runner's disk at 99% of the run
-    import shutil
+    from tests.fixtures import remove_tree
 
-    shutil.rmtree(scratch, ignore_errors=True)
+    try:
+        remove_tree(scratch)  # the store's read-only objects too, which Windows does not remove alone
+    except OSError:
+        pass
 
 
 @pytest.fixture

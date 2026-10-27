@@ -184,7 +184,7 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
                 root / "_static" / slug / f"{name}.html",
             ):
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_text(page, encoding="utf-8")
+                destination.write_text(page, encoding="utf-8", newline="\n")
         else:
             title = " ".join(str(record.get("name", name)).split())
             # One code span on one line, whatever the manifest wrote
@@ -207,7 +207,7 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
             }
             destination = root / "cb" / "notebooks" / slug / Path(location["path"]).name
             destination.parent.mkdir(parents=True, exist_ok=True)
-            with open(destination, "w", encoding="utf-8") as file:
+            with open(destination, "w", encoding="utf-8", newline="\n") as file:
                 json.dump(notebook, file, indent=1, ensure_ascii=False)
                 file.write("\n")
 
@@ -239,7 +239,7 @@ def ensure_notebook_titles(index: dict, docs_build_dir: Path, skip: Iterable[str
         notebook.setdefault("cells", []).insert(
             0, {"cell_type": "markdown", "metadata": {}, "source": [f"# {title}\n"]}
         )
-        with open(copied, "w", encoding="utf-8") as file:
+        with open(copied, "w", encoding="utf-8", newline="\n") as file:
             json.dump(notebook, file, indent=1, ensure_ascii=False)
             file.write("\n")
 
@@ -399,7 +399,7 @@ def write_site(
             continue
         page = docs_build_dir / writer.page_path(record)
         page.parent.mkdir(parents=True, exist_ok=True)
-        page.write_text(writer.page(record), encoding="utf-8")
+        page.write_text(writer.page(record), encoding="utf-8", newline="\n")
         if kind == "Chart":
             check_front_matter(page, owner, record["ref"]["name"])
 
@@ -423,5 +423,5 @@ def write_site(
     for page_path in own_pages:
         page = docs_build_dir / page_path
         page.parent.mkdir(parents=True, exist_ok=True)
-        page.write_text(writer.own_page(page_path), encoding="utf-8")
+        page.write_text(writer.own_page(page_path), encoding="utf-8", newline="\n")
     return built_index

@@ -32,6 +32,7 @@ from chartbook.store import (
     StoreError,
     StoreProblem,
     default_store,
+    link_target,
 )
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
@@ -149,6 +150,7 @@ class TestLayout:
         monkeypatch.chdir(work)
         assert FolderStore("relative/store").root == work / "relative" / "store"
         monkeypatch.setenv("HOME", str(work))
+        monkeypatch.setenv("USERPROFILE", str(work))  # Windows reads home from here
         assert FolderStore("~/store").root == work / "store"
 
     def test_looking_makes_nothing(self, store):
@@ -161,12 +163,12 @@ class TestLayout:
 
     def test_the_first_put_says_which_layout_this_is(self, store, rates):
         store.put(rates)
-        marker = json.loads((store.root / MARKER_FILE).read_text())
+        marker = json.loads((store.root / MARKER_FILE).read_text(encoding="utf-8"))
         assert marker == {"schema": SCHEMA}
 
     def test_a_store_laid_out_differently_is_refused(self, store, rates):
         store.put(rates)
-        (store.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}')
+        (store.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8", newline="\n")
         newer = FolderStore(store.root)
         for operation in (
             lambda: newer.put(rates),
@@ -179,7 +181,7 @@ class TestLayout:
 
     def test_a_marker_that_cannot_be_read_is_refused(self, store, rates):
         store.put(rates)
-        (store.root / MARKER_FILE).write_text("not json")
+        (store.root / MARKER_FILE).write_text("not json", encoding="utf-8", newline="\n")
         with pytest.raises(StoreError, match="Cannot read"):
             FolderStore(store.root).put(rates)
 
@@ -278,7 +280,7 @@ class TestPut:
         alias = work / "alias.parquet"
         alias.symlink_to(rates)
         stored = store.put(alias, links=("symlink",))
-        assert os.readlink(stored.path / "alias.parquet") == str(rates)
+        assert link_target(stored.path / "alias.parquet") == str(rates)
 
 
 class TestLinks:
@@ -327,7 +329,7 @@ class TestLinks:
         stored = store.put(rates, links=("symlink",))
         held = stored.path / "rates.parquet"
         assert stored.frozen is False
-        assert held.is_symlink() and os.readlink(held) == str(rates)
+        assert held.is_symlink() and link_target(held) == str(rates)
 
     def test_each_kind_is_tried_in_turn(self, store, rates, monkeypatch):
         def refuse(*args, **kwargs):
@@ -476,6 +478,7 @@ class TestGetHasDelete:
         store_module._make_removable(str(stored.path / "rates.parquet"))
         assert _mode(rates) == 0o444
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows keeps one read-only flag, not POSIX permission bits")
     def test_a_retried_removal_frees_the_stores_own_copy(self, store, rates):
         stored = store.put(rates, links=("copy",))
         held = stored.path / "rates.parquet"
@@ -492,7 +495,7 @@ class TestGetHasDelete:
     def test_hashes_are_in_order_and_skip_what_is_not_an_object(self, store, rates, partitioned):
         first = store.put(rates).content_hash
         second = store.put(partitioned).content_hash
-        (store.root / "objects" / "sha256" / "README").write_text("not an object")
+        (store.root / "objects" / "sha256" / "README").write_text("not an object", encoding="utf-8", newline="\n")
         (store.root / "objects" / "sha256" / "zz").mkdir()
         (store.root / "objects" / "sha256" / "zz" / "nope").mkdir()
         assert list(store.hashes()) == sorted([first, second])
@@ -592,6 +595,7 @@ class TestVerify:
         elif change == "add":
             (stored.path / "year=2024" / "part-2.parquet").write_bytes(b"extra")
         else:
+            os.chmod(target, 0o644)  # the store's files are read-only, which Windows will not remove
             target.unlink()
         (problem,) = store.verify()
         assert problem.content_hash == stored.content_hash
@@ -606,6 +610,7 @@ class TestVerify:
 
     def test_an_emptied_object(self, store, rates):
         stored = store.put(rates, links=("copy",))
+        os.chmod(stored.path / "rates.parquet", 0o644)  # read-only, which Windows will not remove
         (stored.path / "rates.parquet").unlink()
         (problem,) = store.verify()
         assert problem.message == "the object is empty"
@@ -676,13 +681,13 @@ class TestWhereTheStoreIs:
     def test_the_settings_file_can_move_it(self, fake_config_dir, work):
         fake_config_dir.mkdir()
         settings = {"catalog": {"path": "/c/chartbook.toml"}, "store": {"path": str(work / "big")}}
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps(settings))
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps(settings), encoding="utf-8", newline="\n")
         assert config.get_store_path() == work / "big"
 
     def test_the_environment_wins(self, fake_config_dir, work, monkeypatch):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"store": {"path": str(work / "big")}})
+            tomli_w.dumps({"store": {"path": str(work / "big")}}), encoding="utf-8", newline="\n"
         )
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "shared"))
         assert config.get_store_path() == work / "shared"
@@ -694,13 +699,14 @@ class TestWhereTheStoreIs:
 
     def test_a_home_directory_is_expanded(self, fake_config_dir, work, monkeypatch):
         monkeypatch.setenv("HOME", str(work))
+        monkeypatch.setenv("USERPROFILE", str(work))  # Windows reads home from here
         monkeypatch.setenv(config.STORE_ENV_VAR, "~/elsewhere")
         assert config.get_store_path() == work / "elsewhere"
 
     @pytest.mark.parametrize("table", [{}, {"url": ""}, {"url": 3}, {"path": ""}, {"dir": "/x"}])
     def test_a_store_table_without_a_url_is_an_error(self, fake_config_dir, table):
         fake_config_dir.mkdir()
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"store": table}))
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"store": table}), encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"\[store\] needs a 'url'"):
             config.get_store_path()
 
@@ -742,7 +748,7 @@ class TestVerifyCommand:
 
     def test_a_store_it_cannot_read_is_a_clean_error(self, here, rates):
         here.put(rates)
-        (here.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}')
+        (here.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}', encoding="utf-8", newline="\n")
         result = self._verify()
         assert result.exit_code == 1
         assert result.output.startswith("Error: The store at")
@@ -770,3 +776,15 @@ class TestAFrozenPutOverALinkedObject:
         (work / "a.parquet").write_bytes(b"rewritten")
         assert (held / "a.parquet").read_bytes() == b"same bytes"
 
+
+
+def test_a_folder_store_says_what_an_object_of_one_file_lacks(tmp_path):
+    store = store_module.FolderStore(tmp_path / "store")
+    (tmp_path / "rates.parquet").write_bytes(b"rates")
+    stored = store.put(tmp_path / "rates.parquet")
+    assert not store.lacks(stored.content_hash, ["rates.parquet"])
+    assert store.lacks(stored.content_hash, ["twin.parquet"])
+    # A put adds a name to an object of one file only: not a file to a directory's
+    assert not store.lacks(stored.content_hash, ["twin.parquet"], single=False)
+    assert not store.lacks(stored.content_hash, ["a.parquet", "b.parquet"])
+    assert not store.lacks(stored.content_hash, ["../twin.parquet"])  # not a name in the object

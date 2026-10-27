@@ -18,6 +18,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+import tomli
 import tomli_w
 from click.testing import CliRunner
 
@@ -53,7 +54,7 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
@@ -67,7 +68,7 @@ def _commit(repository: Path, message: str) -> str:
 
 def _write_manifest(directory: Path, table: dict) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
 
 
 def _statuses(report) -> dict:
@@ -105,7 +106,7 @@ def upstream(work):
     )
     (repository / "data").mkdir()
     (repository / "data" / "committed.parquet").write_bytes(b"hello")
-    (repository / ".gitignore").write_text("/_data/\n")
+    (repository / ".gitignore").write_text("/_data/\n", encoding="utf-8", newline="\n")
     # What a pipeline builds and does not commit: on this disk, not in git
     (repository / "_data").mkdir()
     (repository / "_data" / "ignored.parquet").write_bytes(b"built here, never committed")
@@ -151,11 +152,16 @@ class TestSlug:
             ("git@github.com:acme/rates.git", "github.com/acme/rates"),
             ("ssh://git@github.com:2222/acme/rates", "github.com_2222/acme/rates"),
             ("https://host/group/sub/group/name.git", "host/group/sub/group/name"),
-            ("/srv/git/x.git", "local/srv/git/x"),
-            ("file:///srv/git/x.git", "local/srv/git/x"),
+            # A repository on this disk: its folder's name and a hash of its whole path,
+            # short enough for Windows; one repository, however its path is written
+            ("/srv/git/x.git", "local/x~5d13374a"),
+            ("file:///srv/git/x.git", "local/x~5d13374a"),
+            ("C:/repos/x", "local/x~1012a9e9"),
+            ("C:\\repos\\x", "local/x~1012a9e9"),
+            ("c:\\repos\\x", "local/x~1012a9e9"),
+            ("file:///C:/repos/x", "local/x~1012a9e9"),
             # A component with a character that is not kept carries a hash
             # of itself, so that `a b` and `a_b` are two repositories
-            ("C:\\repos\\x", "local/C_~82179da1/repos/x"),
             ("https://host/a/../../etc/b", "host/a/etc/b"),
             ("https://host/we ird/na;me", "host/we_ird~260a1c9a/na_me~f029f14e"),
         ],
@@ -242,7 +248,7 @@ class TestGitCache:
     def test_the_url_is_not_kept_in_the_clone(self, cache, upstream):
         """So a token in a URL is never written to disk by ChartBook."""
         repo = cache.fetch(str(upstream))
-        configuration = (repo / "config").read_text()
+        configuration = (repo / "config").read_text(encoding="utf-8")
         assert "url" not in configuration and "remote" not in configuration
 
     def test_a_revision_becomes_a_commit(self, cache, upstream):
@@ -374,21 +380,21 @@ class TestWhereTheCacheIs:
     def test_the_settings_file_can_move_it(self, fake_config_dir, work):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"git": {"path": str(work / "big")}})
+            tomli_w.dumps({"git": {"path": str(work / "big")}}), encoding="utf-8", newline="\n"
         )
         assert config.get_git_cache_path() == work / "big"
 
     def test_the_environment_wins(self, fake_config_dir, work, monkeypatch):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(
-            tomli_w.dumps({"git": {"path": str(work / "big")}})
+            tomli_w.dumps({"git": {"path": str(work / "big")}}), encoding="utf-8", newline="\n"
         )
         monkeypatch.setenv(config.GIT_CACHE_ENV_VAR, str(work / "shared"))
         assert config.get_git_cache_path() == work / "shared"
 
     def test_a_git_table_without_a_path_is_an_error(self, fake_config_dir):
         fake_config_dir.mkdir()
-        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"git": {"dir": "/x"}}))
+        (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"git": {"dir": "/x"}}), encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"\[git\] needs a 'path'"):
             config.get_git_cache_path()
 
@@ -435,7 +441,7 @@ class TestPinning:
 
     def test_the_lockfile_has_no_absolute_path_and_no_token(self, downstream, cache, work):
         lock.pin(downstream, git_cache=cache)
-        text = (downstream / LOCK_FILE).read_text()
+        text = (downstream / LOCK_FILE).read_text(encoding="utf-8")
         assert str(work) not in text
         assert json.loads(text)["records"][0]["dependencies"][0]["location"]["url"] == "../upstream"
 
@@ -530,7 +536,7 @@ class TestPinning:
         assert problem.status == "unfetched" and problem.dependency == "crsp"
         assert problem.detail.startswith("could not fetch https://localhost:1/acme/crsp.git: ")
         assert "s3cret" not in problem.detail
-        text = (downstream / LOCK_FILE).read_text()
+        text = (downstream / LOCK_FILE).read_text(encoding="utf-8")
         assert "s3cret" not in text
         assert lock.read_lock(downstream).dependencies == [
             {
@@ -567,6 +573,95 @@ class TestPinning:
         assert _statuses(report) == {"committed": "restored", "ignored": "not_built"}
         assert report.problems == [] and default_store().has(HELLO)
         assert (downstream / LOCK_FILE).read_bytes() == before
+
+    def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
+        """The store lost one object that two assets share: put back for one, it lacked the other's name."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "twin.parquet").write_bytes(b"hello")  # the same bytes as committed.parquet
+        _commit(upstream, "A twin")
+        lock.pin(downstream, git_cache=cache)
+        before = (downstream / LOCK_FILE).read_bytes()
+        assert default_store().delete(HELLO)
+
+        store_module._found_whole.clear()  # this process may have found it whole before
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report) == {"committed": "restored", "ignored": "not_built", "twin": "restored"}
+        assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
+        held = Path(default_store().get(HELLO))
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
+
+    def _twin_with_one_name(self, downstream, upstream, cache) -> Path:
+        """Both twins pinned, and their shared object holds one name only, as another pipeline's pin of the same bytes leaves it."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "twin.parquet").write_bytes(b"hello")
+        _commit(upstream, "A twin")
+        lock.pin(downstream, git_cache=cache)
+        held = Path(default_store().get(HELLO))
+        os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "twin.parquet", 0o644)  # read-only, which Windows will not remove
+        (held / "twin.parquet").unlink()
+        store_module._found_whole.clear()
+        return held
+
+    def test_a_name_held_back_by_a_guarded_pin_is_said_restored_once_put(self, downstream, upstream, cache):
+        """`chartbook run` pins with a guard, which holds what it puts until the lockfile may be written."""
+        held = self._twin_with_one_name(downstream, upstream, cache)
+        report = lock.pin(downstream, git_cache=cache, before_writing=lambda would_be_written: None)
+        assert _statuses(report)["twin"] == "restored" and report.problems == []
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
+
+    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
+    def test_a_store_this_user_cannot_write_says_what_it_lacks(self, downstream, upstream, cache):
+        held = self._twin_with_one_name(downstream, upstream, cache)
+        root = Path(default_store().root)
+        everything = [root, *root.rglob("*")]
+        modes = {path: path.stat().st_mode for path in everything if not path.is_symlink()}
+        try:
+            for path in everything:
+                if path.is_dir() and not path.is_symlink():
+                    os.chmod(path, stat.S_IRUSR | stat.S_IXUSR)
+            for guard in (None, lambda would_be_written: None):
+                report = lock.pin(downstream, git_cache=cache, before_writing=guard)
+                assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]
+        finally:
+            for path, mode in modes.items():
+                os.chmod(path, mode)
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet"]
+
+    def test_a_directory_still_arriving_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        """A put adds no file to a directory's object in a folder store, so nothing is put while one is short."""
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
+        short.write_bytes(b"pa")
+        store_module._found_whole.clear()
+        puts = []
+        original = store_module.FolderStore.put
+        monkeypatch.setattr(store_module.FolderStore, "put", lambda self, *a, **k: puts.append(a) or original(self, *a, **k))
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and puts == [] and short.read_bytes() == b"pa"
+
+    def test_a_file_still_arriving_is_still_said_to_be(self, downstream, cache):
+        """Putting the bytes in again adds a missing name; it never changes a file the object has."""
+        lock.pin(downstream, git_cache=cache)
+        held = Path(default_store().get(HELLO)) / "committed.parquet"
+        os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
+        held.write_bytes(b"he")  # as a sync in progress leaves it
+        store_module._found_whole.clear()  # this process may have found it whole before
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and held.read_bytes() == b"he"
 
     def test_a_repository_that_holds_no_pipeline_cannot_be_pinned(self, downstream, upstream, cache):
         (upstream / "chartbook.toml").unlink()
@@ -623,8 +718,8 @@ class TestPinning:
 class TestCheck:
     def _add_model(self, directory: Path, trained_on: list) -> None:
         (directory / "_models").mkdir(exist_ok=True)
-        (directory / "_models" / "m.json").write_text("{}")
-        with open(directory / "chartbook.toml", "a") as f:
+        (directory / "_models" / "m.json").write_text("{}", encoding="utf-8", newline="\n")
+        with open(directory / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
             table = {"models": {"m": {"path": "./_models/m.json", "trained_on": trained_on}}}
             f.write("\n" + tomli_w.dumps(table))
 
@@ -689,11 +784,11 @@ class TestInTheIndex:
             "commit": commit,
         }
         assert dependency["via"] == "rev" and dependency["pinned_hash"].startswith("sha256:")
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         jsonschema.validate(built["records"][0], schema)
 
     def test_the_schema_wants_a_whole_commit(self):
-        schema = json.loads(index.schema_path("Pipeline").read_text())
+        schema = json.loads(index.schema_path("Pipeline").read_text(encoding="utf-8"))
         record = {
             "kind": "Pipeline",
             "version": "chartbook/v1",
@@ -771,3 +866,129 @@ class TestCommands:
         result = self._run("path", "upstream:committed")
         assert result.exit_code == 0, result.output
         assert result.stdout.strip() == str(default_store().get(HELLO) / "committed.parquet")
+
+
+def _twin(upstream: Path) -> None:
+    """Give the upstream a second dataframe with the same bytes as `committed`."""
+    manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+    manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
+    (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+    (upstream / "data" / "twin.parquet").write_bytes(b"hello")
+    _commit(upstream, "A twin")
+
+
+def _puts(monkeypatch) -> list:
+    """Every FolderStore.put from now on."""
+    calls = []
+    original = store_module.FolderStore.put
+    monkeypatch.setattr(store_module.FolderStore, "put", lambda self, *a, **k: calls.append(a) or original(self, *a, **k))
+    return calls
+
+
+class TestWhatTheSecondReviewOfPuttingBackFound:
+    def test_a_directory_of_one_file_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        held = Path(default_store().get(record["content_hash"]))
+        os.chmod(held / "a.parquet", stat.S_IRUSR | stat.S_IWUSR)
+        (held / "a.parquet").unlink()
+        store_module._found_whole.clear()
+        puts = _puts(monkeypatch)
+        (problem,) = lock.pin(downstream, git_cache=cache).problems
+        assert problem.status == "unsynced" and puts == []
+
+    def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
+        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (upstream / "data" / "parts").mkdir()
+        (upstream / "data" / "parts" / "a.parquet").write_bytes(b"part a")
+        (upstream / "data" / "parts" / "b.parquet").write_bytes(b"part b")
+        _commit(upstream, "Parts")
+        lock.pin(downstream, git_cache=cache)
+        document = json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8"))
+        for record in document["records"]:
+            if str(record.get("id", "")).endswith(":parts"):
+                record.pop("files", None)
+        (downstream / LOCK_FILE).write_text(json.dumps(document, indent=2), encoding="utf-8", newline="\n")
+        (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
+        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
+        short.write_bytes(b"pa")
+        store_module._found_whole.clear()
+        puts = _puts(monkeypatch)
+        lock.pin(downstream, git_cache=cache)
+        assert puts == [] and short.read_bytes() == b"pa"
+
+    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache):
+        """Another repository commits the same bytes; downstream pins both, and the store keeps one object for the two."""
+        other = work / "other"
+        _write_manifest(other, {"project": {"id": "other"}, "dataframes": {"same": {"path": "./data/same.parquet", "docs": "d"}}})
+        (other / "data").mkdir()
+        (other / "data" / "same.parquet").write_bytes(b"hello")
+        _git(other, "init", "--quiet", "-b", "main")
+        _commit(other, "The same bytes")
+        _write_manifest(
+            downstream,
+            {"project": {"id": "downstream"}, "dependencies": {"acme/upstream": {"git": "../upstream"}, "acme/other": {"git": "../other"}}},
+        )
+        lock.pin(downstream, git_cache=cache)
+        assert default_store().delete(HELLO)
+        for guard in (None, lambda would_be_written: None):
+            store_module._found_whole.clear()
+            report = lock.pin(downstream, git_cache=cache, before_writing=guard)
+            assert report.problems == [] and {"committed", "same"} <= set(_statuses(report))
+        held = Path(default_store().get(HELLO))
+        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "same.parquet"]
+
+
+class TestPuttingBackInAnS3Store:
+    @pytest.fixture
+    def client(self, monkeypatch):
+        pytest.importorskip("moto")
+        from tests.mocked_s3 import mocked_s3
+
+        with mocked_s3(monkeypatch) as client:
+            yield client
+
+    def _twin_key_gone(self, work, upstream, downstream, cache, client):
+        from tests.mocked_s3 import BUCKET, URL
+        from chartbook.stores.s3 import S3Store
+
+        _twin(upstream)
+        store = S3Store(URL, cache=work / "s3cache", client=client)
+        lock.pin(downstream, store=store, git_cache=cache)
+        digest = HELLO.split(":")[1]
+        prefix = f"stores/one/objects/sha256/{digest[:2]}/{digest[2:]}/"
+        client.delete_object(Bucket=BUCKET, Key=prefix + "twin.parquet")
+        store_module._found_whole.clear()
+        return prefix
+
+    @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
+    def test_a_key_the_object_lacks_is_uploaded(self, work, upstream, downstream, cache, client, guarded):
+        from tests.mocked_s3 import BUCKET, URL
+        from chartbook.stores.s3 import S3Store
+
+        prefix = self._twin_key_gone(work, upstream, downstream, cache, client)
+        store = S3Store(URL, cache=work / "s3cache", client=client)
+        report = lock.pin(downstream, store=store, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
+        assert report.problems == [] and _statuses(report)["twin"] == "restored"
+        keys = client.list_objects_v2(Bucket=BUCKET, Prefix=prefix).get("Contents", ())
+        assert sorted(entry["Key"][len(prefix):] for entry in keys) == ["committed.parquet", "twin.parquet"]
+
+    @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
+    def test_a_bucket_this_user_cannot_write_says_what_it_lacks(self, work, upstream, downstream, cache, client, guarded):
+        from tests.mocked_s3 import URL
+        from tests.test_store_s3 import _refusing
+        from chartbook.stores.s3 import S3Store
+
+        self._twin_key_gone(work, upstream, downstream, cache, client)
+        reader = S3Store(URL, cache=work / "s3cache", client=_refusing(client))
+        report = lock.pin(downstream, store=reader, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
+        assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]

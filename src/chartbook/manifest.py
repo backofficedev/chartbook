@@ -1864,9 +1864,9 @@ def _discover_member_pipelines(
                 )
 
             try:
-                rel_path = os.path.relpath(member_dir, catalog_dir)
+                rel_path = Path(os.path.relpath(member_dir, catalog_dir)).as_posix()
             except ValueError:
-                rel_path = str(member_dir)
+                rel_path = Path(member_dir).as_posix()
             discovered[member_id] = {"path": rel_path, "_member_source": member_source}
             member_dirs[member_id] = member_dir
 
@@ -2158,7 +2158,7 @@ def _git(base_dir: Path, *args: str) -> Union[str, None]:
             capture_output=True,
             text=True,
             timeout=15,
-            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"}, encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None

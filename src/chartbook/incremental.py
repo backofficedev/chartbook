@@ -339,7 +339,7 @@ def write_state(build_dir: Path, plan: BuildPlan, rendered: bool = False) -> Non
         "code_times": plan.code_times,
         "rendered": rendered,
     }
-    with open(Path(build_dir) / STATE_FILE, "w", encoding="utf-8") as f:
+    with open(Path(build_dir) / STATE_FILE, "w", encoding="utf-8", newline="\n") as f:
         json.dump(state, f, indent=2, sort_keys=True)
         f.write("\n")
 
@@ -446,7 +446,7 @@ def prepare_build_tree(build_dir: Path, fresh: bool) -> None:
     build_dir.mkdir(parents=True, exist_ok=True)
     gitignore = build_dir / GITIGNORE_FILE
     if not gitignore.is_file():
-        gitignore.write_text("*\n")
+        gitignore.write_text("*\n", encoding="utf-8", newline="\n")
 
 
 #: Suffixes of the files Sphinx turns into pages.
