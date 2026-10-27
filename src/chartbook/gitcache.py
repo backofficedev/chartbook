@@ -191,9 +191,14 @@ def _remove_staging(folder: Path) -> None:
     removed is left; it is a temporary folder no one reads.
     """
 
+    top = os.path.abspath(folder)
+
     def writable_then_again(function, path, _error):
+        if function not in (os.unlink, os.remove, os.rmdir):
+            return  # a folder that could not be listed: left
         try:
-            os.chmod(os.path.dirname(path), stat.S_IRWXU)  # what holds it, on POSIX
+            if os.path.abspath(path) != top:
+                os.chmod(os.path.dirname(path), stat.S_IRWXU)  # what holds it, on POSIX: in the staging folder
             if not os.path.islink(path):
                 os.chmod(path, stat.S_IRWXU if os.path.isdir(path) else stat.S_IWRITE | stat.S_IREAD)
             function(path)

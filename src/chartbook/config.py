@@ -297,6 +297,8 @@ def _folder_text(url: str) -> str:
             f"The store {shown_store_url(url)!r} names a host; a file:// store is a folder on this machine, "
             f"written file:///path. For a folder on a shared drive, mount it and give its path."
         )
+    if on_a_drive and len(text) == 2:
+        return text + "\\"  # C: alone is the current folder on C; file:///C: names its root
     return text
 
 

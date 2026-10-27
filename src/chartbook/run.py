@@ -869,7 +869,7 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
         # console's code page (the OEM one), with \r\n line endings
         handle, name = tempfile.mkstemp(suffix=".cmd", text=True)
         try:
-            with os.fdopen(handle, "w", encoding=_BATCH_ENCODING, newline="\r\n") as f:
+            with os.fdopen(handle, "w", encoding=_batch_encoding(), newline="\r\n") as f:
                 try:
                     f.write(_batch_script(script))
                 except UnicodeEncodeError as error:
@@ -889,18 +889,27 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
     ).returncode
 
 
-def _oem_or_utf_8() -> str:
-    """The OEM code page's codec, in which cmd reads a batch file; it is Windows' alone."""
+def _batch_encoding() -> str:
+    """The code page cmd reads a batch file in: the console's (chcp can change it), else the OEM one.
+
+    Both are Windows' alone; elsewhere it is UTF-8.
+    """
     import codecs
 
+    try:
+        import ctypes
+
+        page = ctypes.windll.kernel32.GetConsoleOutputCP()  # 0 with no console
+        if page:
+            codecs.lookup(f"cp{page}")
+            return f"cp{page}"
+    except (AttributeError, ImportError, OSError, LookupError):
+        pass
     try:
         codecs.lookup("oem")
     except LookupError:
         return "utf-8"
     return "oem"
-
-
-_BATCH_ENCODING = _oem_or_utf_8()
 
 #: Stops a batch file where the line before it failed, with that line's exit code.
 _STOP_ON_FAILURE = "if %errorlevel% neq 0 exit /b %errorlevel%"

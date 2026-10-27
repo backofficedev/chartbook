@@ -25,8 +25,8 @@ class TestAFileStoreUrl:
         ("file:///C:/store", "C:/store"),
         ("file://C:/store", "C:/store"),
         ("file://C:\\store", "C:\\store"),
-        ("file:///C:", "C:"),
-        ("file://C:", "C:"),
+        ("file:///C:", "C:\\"),
+        ("file://C:", "C:\\"),
     ])
     def test_a_drive_is_a_folder(self, monkeypatch, url, folder):
         monkeypatch.setattr(config.os, "name", "nt")
@@ -60,9 +60,33 @@ class TestALocalRepositorysClone:
 class TestABatchFile:
     def test_a_character_cmd_cannot_read_is_said_and_nothing_runs(self, monkeypatch, tmp_path):
         ran = []
-        monkeypatch.setattr(run, "_BATCH_ENCODING", "cp437")
+        monkeypatch.setattr(run, "_batch_encoding", lambda: "cp437")
         monkeypatch.setattr(run.os, "name", "nt")
         monkeypatch.setattr(run.subprocess, "run", lambda *arguments, **options: ran.append(arguments))
         with pytest.raises(run.RunError, match="cannot read in this console's code page"):
             run._execute("python src/a.py\npython src/日本.py\n", tmp_path, dict(os.environ))
         assert ran == []
+
+
+class TestRemovingAStagingFolder:
+    def test_nothing_above_it_is_touched(self, tmp_path):
+        from chartbook.gitcache import _remove_staging
+
+        above = tmp_path / "slug"
+        above.mkdir()
+        os.chmod(above, 0o755)
+        _remove_staging(above / "gone-already.tmp")
+        assert (os.stat(above).st_mode & 0o777) == 0o755
+
+    @pytest.mark.skipif(os.name == "nt", reason="a folder no one may list is a POSIX one")
+    def test_a_folder_that_cannot_be_listed_raises_nothing(self, tmp_path):
+        from chartbook.gitcache import _remove_staging
+
+        staging = tmp_path / "staging.tmp"
+        (staging / "locked").mkdir(parents=True)
+        os.chmod(staging / "locked", 0)
+        try:
+            _remove_staging(staging)
+        finally:
+            if (staging / "locked").exists():
+                os.chmod(staging / "locked", 0o700)

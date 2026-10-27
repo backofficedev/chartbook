@@ -201,8 +201,8 @@ def _ask_git(directory: str, *arguments: str) -> Optional[str]:
             capture_output=True,
             text=True,
             timeout=5,
-            # A path or an address: its bytes as they are, not replaced
-            env=_git_environment(), encoding="utf-8", errors="surrogateescape"
+            # An address goes into the index, which is UTF-8: a byte that is not is replaced
+            env=_git_environment(), encoding="utf-8", errors="replace"
         )
     except (OSError, subprocess.SubprocessError):
         return None
