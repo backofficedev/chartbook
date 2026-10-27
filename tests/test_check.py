@@ -4,6 +4,8 @@ import warnings
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import os
+
 import pytest
 import tomli
 import tomli_w
@@ -21,6 +23,7 @@ from chartbook.check import (
 )
 from chartbook.cli import main
 from chartbook.manifest import load_manifest
+from tests.fixtures import remove_tree
 
 TODAY = date(2026, 6, 15)
 
@@ -331,7 +334,7 @@ class TestLoadPolicy:
         catalog = tmp_path / "chartbook.toml"
         catalog.write_text(
             '[pipelines."acme/gone"]\npath = "../not-checked-out"\n\n'
-            '[policy.required]\nproject = ["maintainer"]\n'
+            '[policy.required]\nproject = ["maintainer"]\n', encoding="utf-8", newline="\n"
         )
         assert load_policy(catalog)["required"]["project"] == ["maintainer"]
 
@@ -341,7 +344,7 @@ class TestLoadPolicy:
 
     def test_invalid_policy(self, tmp_path):
         bad = tmp_path / "chartbook.toml"
-        bad.write_text('[policy]\nmode = "loud"\n')
+        bad.write_text('[policy]\nmode = "loud"\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="invalid policy.mode"):
             load_policy(bad)
 
@@ -353,7 +356,7 @@ class TestProblemFormat:
 
     def test_relative_when_beneath_cwd(self, tmp_path):
         problem = Problem(tmp_path / "a" / "chartbook.toml", "project", "name", "bad")
-        assert problem.format(relative_to=tmp_path).startswith("a/chartbook.toml: ")
+        assert problem.format(relative_to=tmp_path).startswith(os.path.join("a", "chartbook.toml") + ": ")
 
     def test_absolute_when_outside(self, tmp_path):
         elsewhere = tmp_path / "elsewhere" / "chartbook.toml"
@@ -441,8 +444,8 @@ class TestCheckCommand:
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
         assert "required by the catalog policy" in result.output
-        assert "pipeline_a/chartbook.toml: [project] repo_url" in result.output
-        assert "pipeline_b/chartbook.toml: [project] repo_url" in result.output
+        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url" in result.output
+        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url" in result.output
         assert "in 2 manifest(s)" in result.output
 
     def test_policy_of_a_catalog_that_sets_none_only_warns(self, pipeline_project, catalog_project):
@@ -462,10 +465,10 @@ class TestCheckCommand:
         _edit_toml(catalog_project / "pipelines" / "pipeline_a", edit)
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 0, result.output
-        assert "pipeline_a/chartbook.toml: [project] repo_url: recommended" in (
+        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url: recommended" in (
             result.stderr
         )
-        assert "pipeline_b/chartbook.toml: [project] repo_url: recommended" in (
+        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url: recommended" in (
             result.stderr
         )
 
@@ -489,7 +492,7 @@ class TestCheckCommand:
 
     def test_policy_option_overrides_and_is_named(self, pipeline_project, tmp_path):
         policy = tmp_path / "strict.toml"
-        policy.write_text('[policy.required]\nproject = ["site_dir"]\n')
+        policy.write_text('[policy.required]\nproject = ["site_dir"]\n', encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", pipeline_project, "--policy", policy)
         assert result.exit_code == 1
         assert f"[project] site_dir: required by the policy in {policy}" in result.output
@@ -499,7 +502,7 @@ class TestCheckCommand:
         """Found by a reviewer: `policy = "strict"` gave an AttributeError traceback."""
         for text, said in (('policy = "strict"\n', "[policy] must be a table"), ('[policy]\nrequired = "x"\n', "policy.required must be a table")):
             policy = tmp_path / "odd.toml"
-            policy.write_text(text)
+            policy.write_text(text, encoding="utf-8", newline="\n")
             result = _invoke("--project-dir", pipeline_project, "--policy", policy)
             assert result.exit_code == 1
             assert f"Error: {policy}: {said}" in result.output
@@ -543,8 +546,8 @@ class TestCheckCommand:
         import shutil
 
         project = pipeline_project_with_notes
-        shutil.rmtree(project / "_data")
-        shutil.rmtree(project / "_output")
+        remove_tree(project / "_data")
+        remove_tree(project / "_output")
         args = ("--project-dir", project, "--policy", lenient_policy)
 
         without = _invoke(*args)
@@ -572,8 +575,8 @@ class TestCheckCommand:
             config.setdefault("scripts", {})["build"] = "doit"
 
         _edit_toml(project, edit)
-        shutil.rmtree(project / "_data")
-        shutil.rmtree(project / "_output")
+        remove_tree(project / "_data")
+        remove_tree(project / "_output")
         result = _invoke("--project-dir", project, "--policy", lenient_policy)
         assert result.exit_code == 1
         assert "Nothing is built yet: `chartbook build` builds it" in result.output
@@ -583,8 +586,8 @@ class TestCheckCommand:
         import shutil
 
         # pipeline_a has built nothing, pipeline_b everything: "nothing is built" would be wrong
-        shutil.rmtree(catalog_project / "pipelines" / "pipeline_a" / "_data")
-        shutil.rmtree(catalog_project / "pipelines" / "pipeline_a" / "_output")
+        remove_tree(catalog_project / "pipelines" / "pipeline_a" / "_data")
+        remove_tree(catalog_project / "pipelines" / "pipeline_a" / "_output")
         result = _invoke("--project-dir", catalog_project, "--policy", lenient_policy)
         assert result.exit_code == 1, result.output
         assert "file not found" in result.output
@@ -619,7 +622,7 @@ class TestCheckCommand:
         expired = date.today() - timedelta(days=3)
         _set_license_expiration(pipeline_project, expired.isoformat())
         policy = pipeline_project.parent / "policy.toml"
-        policy.write_text('[policy.required]\nproject = ["repo_url"]\n')
+        policy.write_text('[policy.required]\nproject = ["repo_url"]\n', encoding="utf-8", newline="\n")
         result = _invoke(
             "--project-dir", pipeline_project, "--policy", policy, "--skip-outputs"
         )
@@ -666,7 +669,7 @@ class TestCheckCommand:
 
     def test_a_policy_file_that_is_not_toml_is_named(self, pipeline_project, tmp_path):
         policy = tmp_path / "policy.toml"
-        policy.write_text("[policy\n")
+        policy.write_text("[policy\n", encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", pipeline_project, "--policy", policy)
         assert result.exit_code == 1
         assert f"Error: {policy} is not valid TOML: " in result.output and "Traceback" not in result.output
@@ -674,7 +677,7 @@ class TestCheckCommand:
     def test_a_catalog_member_that_is_not_toml_is_named(self, catalog_project):
         """Found by a reviewer: the error was `Illegal character '\\n' (at line 2, column 15)` and no file."""
         member = catalog_project / "pipelines" / "pipeline_a" / "chartbook.toml"
-        member.write_text("[project]\nname = \"unterminated\n")
+        member.write_text("[project]\nname = \"unterminated\n", encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
         assert f"Error: {member} is not valid TOML: " in result.output

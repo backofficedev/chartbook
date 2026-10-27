@@ -11,11 +11,12 @@ from chartbook.errors import AssetNotPinnedError
 from chartbook.manifest import validate_dependencies
 from tests.test_default_host import _entry, _set_host, _upstream, host  # noqa: F401 - a fixture
 from tests.test_dependencies_by_id import _commit, _forecast, _git
+from tests.fixtures import remove_tree
 
 
 def _newer(repository, value: float, message: str) -> str:
     pl.DataFrame({"d": ["2024-01-01"], "r": [value]}).write_parquet(repository / "_data" / "treasury.parquet")
-    (repository / f"{message}.txt").write_text(message)
+    (repository / f"{message}.txt").write_text(message, encoding="utf-8", newline="\n")
     _commit(repository, message)
     return _git(repository, "rev-parse", "HEAD").strip()
 
@@ -120,9 +121,9 @@ class TestWhatTheReviewFound:
         before = _entry(forecast)["location"]
         assert before["commit"] and before.get("first_commit")
         # Another repository that calls itself acme/rates takes the host's place
-        shutil.rmtree(repository)
+        remove_tree(repository)
         _upstream(host, 666.0, committed=True)
-        (host / "host" / "acme" / "rates" / "another.txt").write_text("another\n")
+        (host / "host" / "acme" / "rates" / "another.txt").write_text("another\n", encoding="utf-8", newline="\n")
         _commit(host / "host" / "acme" / "rates", "Another history")
         for _ in range(2):
             lock.pin(forecast)
@@ -189,8 +190,8 @@ class TestWhatTheReviewFound:
         forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
         lock.pin(forecast)
         path = forecast / lock.LOCK_FILE
-        document = json.loads(path.read_text())
+        document = json.loads(path.read_text(encoding="utf-8"))
         document["records"] = [r for r in document["records"] if r.get("kind") == "Pipeline"]  # as a hand edit leaves it
-        path.write_text(json.dumps(document))
+        path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         lock.pin(forecast)
         assert _entry(forecast)["location"]["commit"] == main.commit

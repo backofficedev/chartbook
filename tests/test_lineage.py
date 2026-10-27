@@ -25,7 +25,7 @@ def _pipeline(folder: Path, pipeline_id: str, name: str, dependencies: dict) -> 
     }
     if dependencies:
         manifest["dependencies"] = {key: {"path": f"../{path}"} for key, path in dependencies.items()}
-    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
     pl.DataFrame({"d": ["2024-01-01"], name: [1.0]}).write_parquet(folder / "_data" / f"{name}.parquet")
 
 
@@ -38,7 +38,7 @@ def chain(tmp_path):
     _pipeline(rates, "acme/rates", "treasury", {"fred": "fred"})
     _pipeline(forecast, "acme/forecast", "outlook", {"rates": "rates"})
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     snapshot.make(fred)
     lock.pin(rates)
@@ -55,9 +55,9 @@ def _snapshot_of(pipeline: str):
 
 def _rewrite(taken, change) -> None:
     os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
-    document = json.loads(taken.path.read_text())
+    document = json.loads(taken.path.read_text(encoding="utf-8"))
     change(document)
-    taken.path.write_text(json.dumps(document))
+    taken.path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
 
 
 class TestTheWalk:
@@ -111,8 +111,8 @@ class TestTheWalk:
 
     def test_a_snapshot_met_twice_is_walked_once(self, chain):
         fred, rates, forecast = chain
-        manifest = (forecast / "chartbook.toml").read_text()
-        (forecast / "chartbook.toml").write_text(manifest + '\n[dependencies.fred]\npath = "../fred"\n')
+        manifest = (forecast / "chartbook.toml").read_text(encoding="utf-8")
+        (forecast / "chartbook.toml").write_text(manifest + '\n[dependencies.fred]\npath = "../fred"\n', encoding="utf-8", newline="\n")
         _commit(forecast.parent)
         lock.pin(forecast)
         found = lineage.walk(forecast)
@@ -184,14 +184,14 @@ def _model_pipeline(folder: Path, aliases=None) -> None:
     model = {"path": "./_models/m.json", "metrics_path": "./_output/metrics.json", "docs": "A model."}
     if aliases:
         model["aliases"] = aliases
-    (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/model"}, "models": {"m": model}}))
+    (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/model"}, "models": {"m": model}}), encoding="utf-8", newline="\n")
 
 
 def _train(folder: Path, weights: bytes) -> None:
     (folder / "_models").mkdir(exist_ok=True)
     (folder / "_models" / "m.json").write_bytes(weights)
     (folder / "_output").mkdir(exist_ok=True)
-    (folder / "_output" / "metrics.json").write_text(json.dumps({"rmse": 0.3}))
+    (folder / "_output" / "metrics.json").write_text(json.dumps({"rmse": 0.3}), encoding="utf-8", newline="\n")
 
 
 @pytest.fixture
@@ -205,7 +205,7 @@ def labelled(tmp_path):
     _pipeline(serve, "acme/serve", "served", {"model": "model"})
     _pipeline(top, "acme/top", "topdf", {"serve": "serve"})
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n_models/\n_output/\n")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n_models/\n_output/\n", encoding="utf-8", newline="\n")
     _commit(work)
     first = snapshot.make(model).new_versions[0][1]
     _train(model, b"w2")
@@ -250,9 +250,9 @@ class TestWhatTheReviewFound:
         work, model, serve, top, first = labelled
         record = _snapshot_of("acme/serve").path
         stranger = record.with_name("20991231T000000.000000Z.json")
-        document = json.loads(record.read_text())
+        document = json.loads(record.read_text(encoding="utf-8"))
         document["schema"] = "chartbook/snapshot/v99"
-        stranger.write_text(json.dumps(document))
+        stranger.write_text(json.dumps(document), encoding="utf-8", newline="\n")
         assert lineage.walk(top).gaps() == []
 
     def test_rehash_reads_the_versions_labels_pinned(self, labelled):

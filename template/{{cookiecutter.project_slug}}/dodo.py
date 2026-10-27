@@ -27,7 +27,6 @@ DATA_DIR = config("DATA_DIR")
 MANUAL_DATA_DIR = config("MANUAL_DATA_DIR")
 OUTPUT_DIR = config("OUTPUT_DIR")
 OS_TYPE = config("OS_TYPE")
-USER = config("USER")
 {%- if cookiecutter.include_jupyter_notebooks %}
 
 ## Helpers for handling Jupyter Notebook tasks

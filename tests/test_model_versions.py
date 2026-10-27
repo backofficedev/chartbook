@@ -34,14 +34,14 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     )
     return result.stdout.strip()
 
 
 def _commit(repository: Path) -> str:
     if not (repository / ".git").exists():
-        (repository / ".gitignore").write_text("chartbook.lock\n_models/\n_output/\n_docs*/\ndocs/\n")
+        (repository / ".gitignore").write_text("chartbook.lock\n_models/\n_output/\n_docs*/\ndocs/\n", encoding="utf-8", newline="\n")
         _git(repository, "init", "--quiet", "-b", "main")
     _git(repository, "add", "-A")
     _git(repository, "commit", "--quiet", "--allow-empty", "-m", "Work")
@@ -57,7 +57,7 @@ def _manifest(directory: Path, aliases=None) -> None:
     if aliases is not None:
         model["aliases"] = aliases
     (directory / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/forecast"}, "models": {"m": model}})
+        tomli_w.dumps({"project": {"id": "acme/forecast"}, "models": {"m": model}}), encoding="utf-8", newline="\n"
     )
 
 
@@ -66,7 +66,7 @@ def _train(directory: Path, weights: bytes, rmse: float) -> None:
     (directory / "_models").mkdir(exist_ok=True)
     (directory / "_models" / "m.json").write_bytes(weights)
     (directory / "_output").mkdir(exist_ok=True)
-    (directory / "_output" / "metrics.json").write_text(json.dumps({"rmse": rmse}))
+    (directory / "_output" / "metrics.json").write_text(json.dumps({"rmse": rmse}), encoding="utf-8", newline="\n")
 
 
 def _version(directory: Path) -> str:
@@ -82,7 +82,7 @@ def forecast(tmp_path):
     """A pipeline with one model, trained once, committed, with no snapshot yet."""
     directory = tmp_path.resolve() / "forecast"
     directory.mkdir()
-    (directory / "README.md").write_text("# Forecast\n")
+    (directory / "README.md").write_text("# Forecast\n", encoding="utf-8", newline="\n")
     _manifest(directory)
     _train(directory, b"weights-1", 0.30)
     _commit(directory)
@@ -110,7 +110,7 @@ class TestAVersionIsMadeByASnapshot:
 
     def test_the_same_bytes_again_are_the_same_version(self, forecast):
         first = _version(forecast)
-        (forecast / "notes.md").write_text("a commit that changes no model\n")
+        (forecast / "notes.md").write_text("a commit that changes no model\n", encoding="utf-8", newline="\n")
         _commit(forecast)
         again = snapshot.make(forecast)
         assert again.made and again.new_versions == []
@@ -120,7 +120,7 @@ class TestAVersionIsMadeByASnapshot:
         first_commit = _git(forecast, "rev-parse", "HEAD")
         _version(forecast)
         _train(forecast, b"weights-2", 0.21)  # the metrics file is written over
-        (forecast / "train.py").write_text("print('better')\n")
+        (forecast / "train.py").write_text("print('better')\n", encoding="utf-8", newline="\n")
         second_commit = _commit(forecast)
         _version(forecast)
         first, second = models.versions("m", project_dir=forecast)
@@ -132,7 +132,7 @@ class TestAVersionIsMadeByASnapshot:
     def test_one_at_a_commit_that_was_amended_away_is_still_a_version(self, forecast):
         """Amending right after a snapshot is routine; the version stays."""
         name = _version(forecast)
-        (forecast / "notes.md").write_text("fixed a typo\n")
+        (forecast / "notes.md").write_text("fixed a typo\n", encoding="utf-8", newline="\n")
         _git(forecast, "add", "-A")
         _git(forecast, "commit", "--quiet", "--amend", "--no-edit")
         assert [v.name for v in models.versions("m", project_dir=forecast)] == [name]
@@ -142,7 +142,7 @@ class TestAVersionIsMadeByASnapshot:
         on_main = _version(forecast)
         _git(forecast, "checkout", "--quiet", "-b", "experiment")
         _train(forecast, b"experimental", 0.50)
-        (forecast / "train.py").write_text("print('experiment')\n")
+        (forecast / "train.py").write_text("print('experiment')\n", encoding="utf-8", newline="\n")
         _commit(forecast)
         on_branch = _version(forecast)
         _git(forecast, "checkout", "--quiet", "main")
@@ -153,7 +153,7 @@ class TestAVersionIsMadeByASnapshot:
         """Two repositories, each with a pipeline at its top, share one store."""
         other = tmp_path.resolve() / "other"
         other.mkdir()
-        (other / "README.md").write_text("# Another project\n")
+        (other / "README.md").write_text("# Another project\n", encoding="utf-8", newline="\n")
         _manifest(other)
         _train(other, b"another-model", 0.9)
         _commit(other)
@@ -240,7 +240,7 @@ class TestNamingAVersion:
     def test_a_label_that_is_not_text_is_not_a_label(self, forecast):
         name = _version(forecast)
         (forecast / "chartbook.toml").write_text(
-            (forecast / "chartbook.toml").read_text() + '\n[models.m.aliases]\nflag = true\n'
+            (forecast / "chartbook.toml").read_text(encoding="utf-8") + '\n[models.m.aliases]\nflag = true\n', encoding="utf-8", newline="\n"
         )
         with pytest.raises(VersionNotFoundError) as e:
             models.path("m@flag", project_dir=forecast)
@@ -296,9 +296,9 @@ class TestNamingAVersion:
         (directory / "_models" / "enc").mkdir(parents=True)
         (directory / "_models" / "enc" / "weights.bin").write_bytes(b"w")
         (directory / "chartbook.toml").write_text(
-            tomli_w.dumps({"models": {"enc": {"path": "./_models/enc"}}})
+            tomli_w.dumps({"models": {"enc": {"path": "./_models/enc"}}}), encoding="utf-8", newline="\n"
         )
-        (directory / ".gitignore").write_text("")
+        (directory / ".gitignore").write_text("", encoding="utf-8", newline="\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A model kept in git")
@@ -323,9 +323,9 @@ def _serve(forecast: Path, key: str = "forecast") -> Path:
     """A pipeline beside ``forecast`` that depends on it, to serve its model."""
     serve = forecast.parent / "serve"
     serve.mkdir()
-    (serve / "README.md").write_text("# Serve\n")
+    (serve / "README.md").write_text("# Serve\n", encoding="utf-8", newline="\n")
     (serve / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {key: {"path": "../forecast"}}})
+        tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {key: {"path": "../forecast"}}}), encoding="utf-8", newline="\n"
     )
     return serve
 
@@ -353,9 +353,9 @@ def trained(tmp_path):
     forecast = work / "forecast"
     for directory in (rates, forecast):
         directory.mkdir(parents=True)
-        (directory / "README.md").write_text("# A pipeline\n")
+        (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8", newline="\n")
     (rates / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}})
+        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}), encoding="utf-8", newline="\n"
     )
     (rates / "_data").mkdir()
     (rates / "_data" / "treasury.parquet").write_bytes(b"t1")
@@ -367,13 +367,13 @@ def trained(tmp_path):
                 "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}},
                 "models": {"m": {"path": "./_models/m.json", "trained_on": ["d", "rates:treasury"], "docs": "A model."}},
             }
-        )
+        ), encoding="utf-8", newline="\n"
     )
     (forecast / "_data").mkdir()
     (forecast / "_data" / "d.parquet").write_bytes(b"d1")
     (forecast / "_models").mkdir()
     (forecast / "_models" / "m.json").write_bytes(b"weights-1")
-    (work / ".gitignore").write_text("_data/\n_models/\n_output/\n_docs/\ndocs/\n")
+    (work / ".gitignore").write_text("_data/\n_models/\n_output/\n_docs/\ndocs/\n", encoding="utf-8", newline="\n")
     _git(work, "init", "--quiet", "-b", "main")
     _commit(work)
     return rates, forecast
@@ -415,7 +415,7 @@ class TestStaleness:
         (pipeline_record,) = [r for r in built["records"] if r["kind"] == "Pipeline"]
         assert "code_changed_at" not in pipeline_record  # only a docs build works the code times out
         assert set(record["trained_with"]) == {"d", "rates:treasury"}
-        schema = json.loads(index.schema_path("Model").read_text())
+        schema = json.loads(index.schema_path("Model").read_text(encoding="utf-8"))
         jsonschema.validate(record, schema)
         with pytest.warns(UserWarning, match=r"^chartbook.toml: \[models.m\] trained_on: out of date: version [0-9a-f]{12} was trained on inputs that have since moved .*rates:treasury was sha256:.*chartbook run. retrains it"):
             check.check_model_staleness(load_manifest(forecast), forecast)
@@ -426,7 +426,7 @@ class TestStaleness:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
-        page = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text()
+        page = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text(encoding="utf-8")
         assert "**Out of date.** This file is version `" in page
         assert "- `rates:treasury`: trained with `sha256:" in page and "`chartbook run` retrains it." in page
         # Retrained: new bytes are no version yet, so nothing is said; a snapshot makes them one, up to date
@@ -575,7 +575,7 @@ class TestAnotherPipelinesVersion:
         serve = _serve(forecast)
         lock.pin(serve)  # as a path dependency: the label is pinned
         (serve / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {"forecast": {"git": str(forecast)}}})
+            tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {"forecast": {"git": str(forecast)}}}), encoding="utf-8", newline="\n"
         )
         report = lock.update(serve)
         assert _label_statuses(report)["forecast:model/m@champion"] == "let_go"
@@ -812,7 +812,7 @@ class TestTheIndex:
         assert record["versions"][1]["labels"] == ["champion"]
         assert record["versions"][0]["metrics"] == {"rmse": 0.30}
         assert "labels" not in record["versions"][0]
-        jsonschema.validate(record, json.loads(index.schema_path("Model").read_text()))
+        jsonschema.validate(record, json.loads(index.schema_path("Model").read_text(encoding="utf-8")))
 
     def test_a_model_with_no_snapshot_has_no_versions_field(self, forecast):
         built = index.build_index(load_manifest(forecast))
@@ -885,7 +885,7 @@ class TestCommands:
         monkeypatch.chdir(forecast)
         result = self._run("docs", "generate", "./docs", "-f", "--keep-build-dirs")
         assert result.exit_code == 0, result.output
-        text = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text()
+        text = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text(encoding="utf-8")
         assert "## Versions" in text
         rows = [line for line in text.splitlines() if line.startswith(f"| `{second}`")]
         assert rows and "`champion`" in rows[0] and "0.21" in rows[0]
@@ -918,8 +918,8 @@ class TestALabelPinnedKeepsItsSnapshot:
             (maker / "chartbook.toml").write_text(tomli_w.dumps({
                 "project": {"id": "acme/maker"},
                 "models": {"m": {"path": "./_output/m.json", "docs": "d", "aliases": {"champion": champion}}},
-            }))
-            (maker / "NOTE.md").write_text(note)
+            }), encoding="utf-8", newline="\n")
+            (maker / "NOTE.md").write_text(note, encoding="utf-8", newline="\n")
 
         def version(data: bytes) -> str:
             return hashlib.sha256(data).hexdigest()[:12]
@@ -933,7 +933,7 @@ class TestALabelPinnedKeepsItsSnapshot:
         _commit(work)
         second = snapshot.make(maker).snapshot
         (user / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../maker"}}})
+            tomli_w.dumps({"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../maker"}}}), encoding="utf-8", newline="\n"
         )
         _commit(work)
         assert lock.pin(user).problems == []

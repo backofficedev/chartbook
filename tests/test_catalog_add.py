@@ -545,6 +545,7 @@ class TestAHomeReachedThroughALink:
         link = tmp_path / "link-home"
         link.symlink_to(real)
         monkeypatch.setenv("HOME", str(link))
+        monkeypatch.setenv("USERPROFILE", str(link))  # Windows reads home from here
         assert Path.home() == link and Path.home().resolve() == real
         pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
         runner = CliRunner()

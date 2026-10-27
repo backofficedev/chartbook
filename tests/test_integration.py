@@ -18,6 +18,7 @@ import pytest
 
 from chartbook.build_docs import generate_docs
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+from tests.fixtures import remove_tree
 
 # Path to mock data fixtures for example projects
 MOCK_DATA_DIR = Path(__file__).parent / "fixtures" / "mock_fred_data"
@@ -67,7 +68,7 @@ class TestManifestToGeneratorPipelineWorkflow:
         assert (output_dir / ".nojekyll").exists()
 
         # Verify HTML has content
-        html_content = (output_dir / "index.html").read_text()
+        html_content = (output_dir / "index.html").read_text(encoding="utf-8")
         assert len(html_content) > 0
 
 
@@ -164,7 +165,7 @@ class TestExampleProjects:
         for dir_name in ["_data", "_output", "docs", "_docs", "_docs_src"]:
             dir_path = example_path / dir_name
             if dir_path.exists():
-                shutil.rmtree(dir_path)
+                remove_tree(dir_path)
         # Also remove doit database for clean state
         doit_db = example_path / ".doit-db.sqlite"
         if doit_db.exists():
@@ -278,7 +279,7 @@ class TestExampleProjects:
             capture_output=True,
             text=True,
             timeout=600,
-            env=self._get_env_with_pythonpath(),
+            env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
         )
 
         assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
@@ -305,7 +306,7 @@ class TestExampleProjects:
             capture_output=True,
             text=True,
             timeout=600,
-            env=self._get_env_with_pythonpath(),
+            env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
         )
 
         assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
@@ -328,7 +329,7 @@ class TestExampleProjects:
             capture_output=True,
             text=True,
             timeout=300,
-            env=env,
+            env=env, encoding="utf-8", errors="replace"
         )
         assert result.returncode == 0, (
             f"chartbook snapshot failed in {pipeline_path.name}. If you have edited "
@@ -357,7 +358,7 @@ class TestExampleProjects:
                 capture_output=True,
                 text=True,
                 timeout=600,
-                env=env,
+                env=env, encoding="utf-8", errors="replace"
             )
             assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
         self._snapshot(yield_curve_path, env)
@@ -369,7 +370,7 @@ class TestExampleProjects:
             capture_output=True,
             text=True,
             timeout=600,
-            env=env,
+            env=env, encoding="utf-8", errors="replace"
         )
         assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
         return example_path, env
@@ -396,7 +397,7 @@ class TestExampleProjects:
             assert (example_path / "docs" / "index.html").exists()
 
             # The model's record names the bytes of the dataframe it read
-            built = json.loads((example_path / "docs" / "index.json").read_text())
+            built = json.loads((example_path / "docs" / "index.json").read_text(encoding="utf-8"))
             (model,) = [r for r in built["records"] if r["kind"] == "Model"]
             input_id = "backofficedev/yield_curve:fed_yield_curve"
             assert model["inputs"] == [input_id]
@@ -405,7 +406,7 @@ class TestExampleProjects:
 
             def run(*command):
                 return subprocess.run(
-                    command, cwd=example_path, capture_output=True, text=True, env=env
+                    command, cwd=example_path, capture_output=True, text=True, env=env, encoding="utf-8", errors="replace"
                 )
 
             # ...and what it reads is the pinned copy, not the upstream's file
@@ -469,7 +470,7 @@ class TestExampleProjects:
             capture_output=True,
             text=True,
             timeout=900,
-            env=env,
+            env=env, encoding="utf-8", errors="replace"
         )
         assert built.returncode == 0, f"run failed: {built.stderr}\n{built.stdout}"
         assert built.stdout.rstrip().endswith("Ran build in 1 pipeline(s).")
@@ -484,7 +485,7 @@ class TestExampleProjects:
                 capture_output=True,
                 text=True,
                 timeout=900,
-                env=env,
+                env=env, encoding="utf-8", errors="replace"
             )
             assert result.returncode == 0, f"run failed: {result.stderr}\n{result.stdout}"
 
@@ -503,7 +504,7 @@ class TestExampleProjects:
             assert (example_path / "docs" / "index.html").exists()
 
             # Both name their build script, and the index lists it
-            built = json.loads((example_path / "docs" / "index.json").read_text())
+            built = json.loads((example_path / "docs" / "index.json").read_text(encoding="utf-8"))
             (pipeline,) = [r for r in built["records"] if r["kind"] == "Pipeline"]
             assert pipeline["scripts"] == {"build": "doit"}
         finally:
@@ -535,7 +536,7 @@ class TestExampleProjects:
                 capture_output=True,
                 text=True,
                 timeout=600,
-                env=self._get_env_with_pythonpath(),
+                env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
             )
             assert result.returncode == 0, f"fred_charts doit failed: {result.stderr}"
 
@@ -549,7 +550,7 @@ class TestExampleProjects:
                 capture_output=True,
                 text=True,
                 timeout=600,
-                env=self._get_env_with_pythonpath(),
+                env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
             )
             assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
 
@@ -564,7 +565,7 @@ class TestExampleProjects:
                 capture_output=True,
                 text=True,
                 timeout=300,
-                env=self._get_env_with_pythonpath(),
+                env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
             )
 
             assert result.returncode == 0, f"chartbook docs generate failed: {result.stderr}"
@@ -574,7 +575,7 @@ class TestExampleProjects:
 
             # In the catalog's index, the model's input is the ID of the
             # dataframe's own record, with the bytes it is pinned at
-            built = json.loads((catalog_path / "docs" / "index.json").read_text())
+            built = json.loads((catalog_path / "docs" / "index.json").read_text(encoding="utf-8"))
             (model,) = [
                 r for r in built["records"] if r["id"].endswith(":model/rate_forecast")
             ]

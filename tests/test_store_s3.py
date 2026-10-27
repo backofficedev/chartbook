@@ -28,6 +28,7 @@ pytest.importorskip("boto3")
 pytest.importorskip("moto")
 
 from chartbook.stores.s3 import S3Store, _parse_url  # noqa: E402
+from tests.fixtures import remove_tree
 
 COMMIT = "b" * 40
 
@@ -149,7 +150,7 @@ class TestTheBucketIsAFolderStore:
         assert store.has(stored.content_hash)
         assert (store.get(stored.content_hash) / "rates.parquet").read_bytes() == b"rates-1"
         assert list(store.hashes()) == [stored.content_hash]
-        assert json.loads(store.snapshot_files(COMMIT, "_top")[0].read_text())["root"] == "acme/rates"
+        assert json.loads(store.snapshot_files(COMMIT, "_top")[0].read_text(encoding="utf-8"))["root"] == "acme/rates"
         assert store.snapshot_commits() == {COMMIT}
 
     def test_a_store_with_another_layout_is_refused(self, work, client):
@@ -227,7 +228,7 @@ class TestTheCache:
         record = f"stores/one/snapshots/{COMMIT}/_top/20261016T000000Z"
         client.put_object(Bucket=BUCKET, Key=f"{record} (1).json", Body=b'{"a": 1}')
         assert sorted((str(root.lockfile), root.copy) for root in store.roots()) == [
-            (str(Path("/somewhere/chartbook.lock")), False), (str(Path("/somewhere/chartbook.lock")), True)
+            (os.path.abspath("/somewhere/chartbook.lock"), False), (os.path.abspath("/somewhere/chartbook.lock"), True)  # with a drive on Windows
         ]
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"), Body=b'{"lock')
         with pytest.raises(StoreError, match="if it is a copy nobody needs"):
@@ -387,14 +388,14 @@ def pipelines(work):
     for directory in (rates, forecast):
         (directory / "_data").mkdir(parents=True)
     (rates / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "A file."}}})
+        tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "A file."}}}), encoding="utf-8", newline="\n"
     )
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(rates / "_data" / "treasury.parquet")
     (forecast / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}})
+        tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8", newline="\n"
     )
     _git(work, "init", "--quiet", "-b", "main")
-    (work / ".gitignore").write_text("_data/\nchartbook.lock\n")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
     _commit(work)
     return rates, forecast
 
@@ -517,9 +518,9 @@ class TestWhatTheFourthReviewFound:
         # The note as anyone who can write to the store could write it
         target = str(work / named) if named == "notes.txt" else named
         if named == "notes.txt":
-            Path(target).write_text("not a lockfile")
+            Path(target).write_text("not a lockfile", encoding="utf-8", newline="\n")
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({**json.loads(note.read_text()), "lockfile": target, "hashes": [stored.content_hash]}))
+        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": target, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         assert [str(root.lockfile) for root in store.roots()] == [str(Path(target))]
         read = []
         original = lock.read_lock
@@ -537,7 +538,7 @@ class TestWhatTheFourthReviewFound:
         stored = store.put(a_file)
         store.add_root(work / "chartbook.lock", [stored.content_hash])
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({**json.loads(note.read_text()), "lockfile": named, "hashes": [stored.content_hash]}))
+        note.write_text(json.dumps({**json.loads(note.read_text(encoding="utf-8")), "lockfile": named, "hashes": [stored.content_hash]}), encoding="utf-8", newline="\n")
         plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
         assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
         assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
@@ -550,7 +551,7 @@ class TestAnotherMachineWithoutTheUpstreamFolder:
     def _machine_two(self, rates, forecast, monkeypatch):
         import shutil
 
-        shutil.rmtree(rates)
+        remove_tree(rates)
         monkeypatch.chdir(forecast)
         checked = lock.verify(forecast)
         assert checked.problems == [] and checked.pins == 1
@@ -599,18 +600,18 @@ class TestAnObjectHalfUploaded:
         parts.mkdir(parents=True)
         forecast.mkdir()
         (rates / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"parts": {"path": "./_data/parts", "docs": "Parts."}}})
+            tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"parts": {"path": "./_data/parts", "docs": "Parts."}}}), encoding="utf-8", newline="\n"
         )
         (forecast / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}})
+            tomli_w.dumps({"project": {"id": "acme/forecast"}, "dependencies": {"rates": {"path": "../rates"}}}), encoding="utf-8", newline="\n"
         )
         _git(work, "init", "--quiet", "-b", "main")
-        (work / ".gitignore").write_text("_data/\nchartbook.lock\n")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
 
         def build(value: int):
             pl.DataFrame({"a": [1]}).write_parquet(parts / "part-0.parquet")
             pl.DataFrame({"a": [value]}).write_parquet(parts / "part-1.parquet")
-            (rates / "notes.txt").write_text(f"{value}\n")
+            (rates / "notes.txt").write_text(f"{value}\n", encoding="utf-8", newline="\n")
             _commit(work)
             return snapshot.make(rates).snapshot
 

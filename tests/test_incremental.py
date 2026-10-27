@@ -31,6 +31,7 @@ from chartbook.incremental import (
 )
 from chartbook.manifest import load_manifest
 from tests.fixtures import create_catalog_project, create_pipeline_project
+from tests.fixtures import remove_tree
 
 OPTIONS = {"size_threshold": 50, "strip_mathjax2": True}
 
@@ -129,9 +130,9 @@ class TestPipelineInputFiles:
 
     def test_editor_and_os_noise_is_not_an_input(self, pipeline_project):
         for noise in (".DS_Store", ".chart.md.swp", "chart.md~"):
-            (pipeline_project / "docs_src" / noise).write_text("x")
+            (pipeline_project / "docs_src" / noise).write_text("x", encoding="utf-8", newline="\n")
         (pipeline_project / "src" / "__pycache__").mkdir()
-        (pipeline_project / "src" / "__pycache__" / "dummy.cpython-313.pyc").write_text("x")
+        (pipeline_project / "src" / "__pycache__" / "dummy.cpython-313.pyc").write_text("x", encoding="utf-8", newline="\n")
         names = {p.name for p in pipeline_input_files(load_manifest(pipeline_project))}
         assert not names & {".DS_Store", ".chart.md.swp", "chart.md~", "dummy.cpython-313.pyc"}
 
@@ -159,7 +160,7 @@ class TestPipelineFingerprint:
     def test_changes_when_a_source_file_is_added_or_removed(self, pipeline_project):
         before = _fingerprint(pipeline_project)
         extra = pipeline_project / "docs_src" / "extra.md"
-        extra.write_text("# Extra\n")
+        extra.write_text("# Extra\n", encoding="utf-8", newline="\n")
         added = _fingerprint(pipeline_project)
         assert added != before
         extra.unlink()
@@ -175,8 +176,8 @@ class TestPipelineFingerprint:
 
     def test_unaffected_by_files_no_page_uses(self, pipeline_project):
         before = _fingerprint(pipeline_project)
-        (pipeline_project / "_output" / "scratch.txt").write_text("not declared")
-        (pipeline_project / "docs_src" / ".DS_Store").write_text("finder")
+        (pipeline_project / "_output" / "scratch.txt").write_text("not declared", encoding="utf-8", newline="\n")
+        (pipeline_project / "docs_src" / ".DS_Store").write_text("finder", encoding="utf-8", newline="\n")
         assert _fingerprint(pipeline_project) == before
 
     def test_depends_on_the_pipeline_id(self, pipeline_project):
@@ -189,7 +190,7 @@ class TestGlobalFingerprint:
         manifest = load_manifest(pipeline_project)
         theme = tmp_path / "theme"
         theme.mkdir()
-        (theme / "index.md").write_text("# {{ title }}\n")
+        (theme / "index.md").write_text("# {{ title }}\n", encoding="utf-8", newline="\n")
         base = global_fingerprint(manifest, theme, OPTIONS)
         assert base == global_fingerprint(manifest, theme, OPTIONS)
         assert base != global_fingerprint(manifest, theme, {**OPTIONS, "size_threshold": 1})
@@ -224,7 +225,7 @@ class TestSyncTree:
         for relative, text in files.items():
             path = root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text)
+            path.write_text(text, encoding="utf-8", newline="\n")
         return root
 
     def test_writes_new_and_changed_files_and_leaves_identical_ones(self, tmp_path):
@@ -238,8 +239,8 @@ class TestSyncTree:
 
         assert sorted(p.as_posix() for p in result.written) == ["b.md", "d/c.md"]
         assert result.unchanged == 1
-        assert (destination / "b.md").read_text() == "B2"
-        assert (destination / "d" / "c.md").read_text() == "C"
+        assert (destination / "b.md").read_text(encoding="utf-8") == "B2"
+        assert (destination / "d" / "c.md").read_text(encoding="utf-8") == "C"
         # The identical file keeps its modification time: nothing re-reads it
         assert (destination / "a.md").stat().st_mtime_ns == untouched
 
@@ -288,7 +289,7 @@ class TestSyncTree:
         assert [p.as_posix() for p in edited.added] == ["_static/x.css"]
         assert not edited.pages_added_or_removed
 
-        (source / "b.md").write_text("B")
+        (source / "b.md").write_text("B", encoding="utf-8", newline="\n")
         assert sync_tree(source, destination).pages_added_or_removed
         (source / "b.md").unlink()
         assert sync_tree(source, destination).pages_added_or_removed
@@ -337,7 +338,7 @@ class TestPlanBuild:
             ):
                 page = build_dir / relative
                 page.parent.mkdir(parents=True, exist_ok=True)
-                page.write_text("page")
+                page.write_text("page", encoding="utf-8", newline="\n")
         write_state(build_dir, plan)
 
     def test_no_previous_build_is_fresh(self, catalog_project, tmp_path):
@@ -398,9 +399,9 @@ class TestPlanBuild:
 
     def test_unreadable_or_outdated_state_is_ignored(self, tmp_path):
         assert read_state(tmp_path) is None
-        (tmp_path / STATE_FILE).write_text("not json")
+        (tmp_path / STATE_FILE).write_text("not json", encoding="utf-8", newline="\n")
         assert read_state(tmp_path) is None
-        (tmp_path / STATE_FILE).write_text('{"version": 0, "global": "x"}')
+        (tmp_path / STATE_FILE).write_text('{"version": 0, "global": "x"}', encoding="utf-8", newline="\n")
         assert read_state(tmp_path) is None
 
 
@@ -408,32 +409,32 @@ class TestPrepareBuildTree:
     def test_creates_the_directory_and_keeps_it_out_of_git(self, tmp_path):
         build_dir = tmp_path / "_docs"
         prepare_build_tree(build_dir, fresh=True)
-        assert (build_dir / GITIGNORE_FILE).read_text() == "*\n"
+        assert (build_dir / GITIGNORE_FILE).read_text(encoding="utf-8") == "*\n"
 
     def test_fresh_build_empties_an_old_build_tree(self, tmp_path):
         build_dir = tmp_path / "_docs"
         build_dir.mkdir()
-        (build_dir / "conf.py").write_text("")
-        (build_dir / "index.md").write_text("")
-        (build_dir / "stale.md").write_text("")
+        (build_dir / "conf.py").write_text("", encoding="utf-8", newline="\n")
+        (build_dir / "index.md").write_text("", encoding="utf-8", newline="\n")
+        (build_dir / "stale.md").write_text("", encoding="utf-8", newline="\n")
         prepare_build_tree(build_dir, fresh=True)
         assert not (build_dir / "stale.md").exists()
 
     def test_kept_tree_is_left_alone_when_not_fresh(self, tmp_path):
         build_dir = tmp_path / "_docs"
         build_dir.mkdir()
-        (build_dir / STATE_FILE).write_text("{}")
-        (build_dir / "page.md").write_text("kept")
+        (build_dir / STATE_FILE).write_text("{}", encoding="utf-8", newline="\n")
+        (build_dir / "page.md").write_text("kept", encoding="utf-8", newline="\n")
         prepare_build_tree(build_dir, fresh=False)
-        assert (build_dir / "page.md").read_text() == "kept"
+        assert (build_dir / "page.md").read_text(encoding="utf-8") == "kept"
 
     def test_refuses_a_directory_that_is_not_a_build_tree(self, tmp_path):
         precious = tmp_path / "thesis"
         precious.mkdir()
-        (precious / "chapter1.tex").write_text("years of work")
+        (precious / "chapter1.tex").write_text("years of work", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="not a ChartBook build directory"):
             prepare_build_tree(precious, fresh=True)
-        assert (precious / "chapter1.tex").read_text() == "years of work"
+        assert (precious / "chapter1.tex").read_text(encoding="utf-8") == "years of work"
 
 
 # --------------------------------------------------------------------------
@@ -498,7 +499,7 @@ class TestIncrementalBuild:
         # Make Sphinx run again without changing any source
         import shutil
 
-        shutil.rmtree(project / "_docs" / "_build" / "html")
+        remove_tree(project / "_docs" / "_build" / "html")
         second = _build(project)
 
         assert second.rendered
@@ -535,7 +536,7 @@ class TestIncrementalBuild:
 
         monkeypatch.chdir(pipeline_project)
         _build(pipeline_project)
-        shutil.rmtree(pipeline_project / "docs")
+        remove_tree(pipeline_project / "docs")
         summary = _build(pipeline_project)
         assert not summary.rendered
         assert (pipeline_project / "docs" / "index.html").is_file()
@@ -549,7 +550,7 @@ class TestIncrementalBuild:
         write_up = (
             catalog_project / "pipelines" / "pipeline_b" / "docs_src" / "charts" / "chart_0_0.md"
         )
-        write_up.write_text("# Chart\n\nA freshly rewritten explanation.\n")
+        write_up.write_text("# Chart\n\nA freshly rewritten explanation.\n", encoding="utf-8", newline="\n")
         _bump(write_up)
         summary = _build(catalog_project)
 
@@ -562,7 +563,7 @@ class TestIncrementalBuild:
         assert summary.rendered
         assert 0 < summary.pages_read < len([n for n in after if n.endswith(".md")])
         html = (catalog_project / "docs" / "cb" / "charts" / "pipeline_b.chart_0_0.html")
-        assert "A freshly rewritten explanation." in html.read_text()
+        assert "A freshly rewritten explanation." in html.read_text(encoding="utf-8")
 
     def test_editing_one_write_up_re_renders_one_asset_page(
         self, pipeline_project_multi_dataframes, monkeypatch
@@ -574,7 +575,7 @@ class TestIncrementalBuild:
         before = _mtimes(project / "_docs")
 
         write_up = project / "docs_src" / "charts" / "chart_1_0.md"
-        write_up.write_text("# Chart\n\nOnly this chart's text changed.\n")
+        write_up.write_text("# Chart\n\nOnly this chart's text changed.\n", encoding="utf-8", newline="\n")
         _bump(write_up)
         summary = _build(project)
 
@@ -590,11 +591,11 @@ class TestIncrementalBuild:
         monkeypatch.chdir(pipeline_project)
         _build(pipeline_project)
         page = pipeline_project / "_docs" / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.md"
-        before = page.read_text()
+        before = page.read_text(encoding="utf-8")
         _bump(pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet", 3600)
         summary = _build(pipeline_project)
         assert summary.regenerated == ["test_pipeline"]
-        assert page.read_text() != before
+        assert page.read_text(encoding="utf-8") != before
 
     def test_removed_chart_loses_its_page(self, pipeline_project_multi_dataframes, monkeypatch):
         project = pipeline_project_multi_dataframes
@@ -654,7 +655,7 @@ class TestIncrementalBuild:
         _build(catalog)
         # An edit, a refreshed data file, a removed chart, and a removed pipeline
         (catalog / "pipelines" / "pa" / "docs_src" / "dataframes" / "dataframe_0.md").write_text(
-            "# Dataframe\n\nRewritten.\n"
+            "# Dataframe\n\nRewritten.\n", encoding="utf-8", newline="\n"
         )
         _bump(catalog / "pipelines" / "pa" / "docs_src" / "dataframes" / "dataframe_0.md")
         _bump(catalog / "pipelines" / "pb" / "_data" / "pb" / "dataframe_0.parquet", 3600)
@@ -692,7 +693,7 @@ class TestIncrementalBuild:
     ):
         monkeypatch.chdir(pipeline_project)
         _build(pipeline_project)
-        assert (pipeline_project / "_docs" / GITIGNORE_FILE).read_text() == "*\n"
+        assert (pipeline_project / "_docs" / GITIGNORE_FILE).read_text(encoding="utf-8") == "*\n"
         assert (pipeline_project / "_docs" / STATE_FILE).is_file()
         assert not (pipeline_project / "_docs_src").exists()
 
@@ -700,7 +701,7 @@ class TestIncrementalBuild:
         monkeypatch.chdir(pipeline_project)
         precious = pipeline_project / "thesis"
         precious.mkdir()
-        (precious / "chapter1.tex").write_text("years of work")
+        (precious / "chapter1.tex").write_text("years of work", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match="not a ChartBook build directory"):
             generate_docs(
                 output_dir=pipeline_project / "docs",
@@ -709,7 +710,7 @@ class TestIncrementalBuild:
                 temp_docs_src_dir=pipeline_project / "_docs_src",
                 incremental=True,
             )
-        assert (precious / "chapter1.tex").read_text() == "years of work"
+        assert (precious / "chapter1.tex").read_text(encoding="utf-8") == "years of work"
 
 
 # --------------------------------------------------------------------------
@@ -932,10 +933,10 @@ class TestCommands:
         config.set_default_catalog_path(catalog_project)
         precious = catalog_project / "_docs"
         precious.mkdir()
-        (precious / "notes.txt").write_text("not a build tree")
+        (precious / "notes.txt").write_text("not a build tree", encoding="utf-8", newline="\n")
 
         result = CliRunner().invoke(main, ["catalog", "generate", "--clean"])
 
         assert result.exit_code == 1
         assert "not a ChartBook build directory" in result.output
-        assert (precious / "notes.txt").read_text() == "not a build tree"
+        assert (precious / "notes.txt").read_text(encoding="utf-8") == "not a build tree"

@@ -245,7 +245,7 @@ class TestLoadManifestPipelineWorkflow:
         """An almost-empty chartbook.toml is a valid pipeline manifest."""
         project_dir = tmp_path / "minimal_pipeline"
         project_dir.mkdir()
-        (project_dir / "chartbook.toml").write_text("")
+        (project_dir / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
 
         manifest = load_manifest(project_dir)
 
@@ -425,7 +425,7 @@ class TestSiteDirResolution:
         """Creating docs_src/site/ enables site pages with no config."""
         site_dir = pipeline_project / "docs_src" / "site"
         site_dir.mkdir()
-        (site_dir / "page.md").write_text("# Page\n")
+        (site_dir / "page.md").write_text("# Page\n", encoding="utf-8", newline="\n")
 
         manifest = load_manifest(pipeline_project)
         resolved = manifest["project"]["_resolved_site_dir"]
@@ -642,7 +642,7 @@ class TestWhatTheReleaseReviewFound:
     def _pipeline(tmp_path, project=None, **tables) -> Path:
         folder = tmp_path / "p"
         folder.mkdir(exist_ok=True)
-        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "p", **(project or {})}, **tables}))
+        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "p", **(project or {})}, **tables}), encoding="utf-8", newline="\n")
         return folder
 
     def test_a_docs_path_that_is_not_a_string_is_named(self, tmp_path):
@@ -684,7 +684,7 @@ class TestWhatTheReleaseReviewFound:
         """Found by a reviewer of the fix: `copyright = 2025` was told to write "2026", the example."""
         project = tmp_path / "p"
         project.mkdir()
-        (project / "chartbook.toml").write_text(f'[project]\nid = "acme/p"\ncopyright = {value}\n')
+        (project / "chartbook.toml").write_text(f'[project]\nid = "acme/p"\ncopyright = {value}\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=rf"copyright = .* is (an integer|a float|a date), and copyright is a string\. Write copyright = {re.escape(shown)}\."):
             load_manifest(project)
 
@@ -767,23 +767,23 @@ class TestWhatTheReleaseReviewFound:
         """A catalog reads several manifests, and `Illegal character` alone said whose."""
         folder = tmp_path / "p"
         folder.mkdir()
-        (folder / "chartbook.toml").write_text("this = [not toml\n")
+        (folder / "chartbook.toml").write_text("this = [not toml\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'} is not valid TOML: ")):
             load_manifest(folder)
         with pytest.raises(ValueError, match="is not valid TOML"):
             validate_manifest_file(folder)
         catalog = tmp_path / "catalog"
         catalog.mkdir()
-        (catalog / "chartbook.toml").write_text('[pipelines]\nbroken = { path = "../p" }\n')
+        (catalog / "chartbook.toml").write_text('[pipelines]\nbroken = { path = "../p" }\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'} is not valid TOML: ")):
             load_manifest(catalog)
-        (catalog / "chartbook.toml").write_text('[pipelines]\nmembers = ["../p"]\n')
+        (catalog / "chartbook.toml").write_text('[pipelines]\nmembers = ["../p"]\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=re.escape(f"catalog member {folder / 'chartbook.toml'} is not valid TOML: ")):
             load_manifest(catalog)
 
     def test_a_catalog_key_that_is_not_an_id_names_the_file_and_the_table(self, tmp_path):
         catalog = tmp_path / "catalog"
         catalog.mkdir()
-        (catalog / "chartbook.toml").write_text('[pipelines]\n"acme/rates@v1" = { path = "../p" }\n')
+        (catalog / "chartbook.toml").write_text('[pipelines]\n"acme/rates@v1" = { path = "../p" }\n', encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=re.escape(f"{catalog / 'chartbook.toml'}: [pipelines] 'acme/rates@v1': Invalid pipeline id 'acme/rates@v1'")):
             load_manifest(catalog)

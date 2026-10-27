@@ -144,7 +144,7 @@ class TestExistingIdsAreUntouched:
 class TestWhereIdsEnterTheSystem:
     def test_explicit_project_id(self, pipeline_project):
         toml_path = pipeline_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["project"]["id"] = "charthub.example/acme/rates"
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         with pytest.raises(UnsupportedRegistryError, match="not yet supported"):
@@ -152,7 +152,7 @@ class TestWhereIdsEnterTheSystem:
 
     def test_catalog_key(self, catalog_project):
         toml_path = catalog_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text())
+        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
         config["pipelines"]["charthub.example/acme/rates"] = config["pipelines"].pop(
             "pipeline_a"
         )
@@ -242,7 +242,7 @@ class TestDerivedNameFromARelativePath:
         """Path('.') has no name of its own; the ID used to come out as 'pipeline'."""
         project_dir = tmp_path / "term_premium"
         project_dir.mkdir()
-        (project_dir / "chartbook.toml").write_text("")
+        (project_dir / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
         monkeypatch.chdir(project_dir)
 
         from pathlib import Path
@@ -271,7 +271,7 @@ class TestADriveLetterIsNotAHost:
         monkeypatch.setattr(manifests, "get_git_remote_url", lambda base_dir: r"C:\Users\me\repo")
         project = tmp_path / "rates"
         project.mkdir()
-        (project / "chartbook.toml").write_text("")
+        (project / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
         loaded = load_manifest(project)
         assert loaded["project"]["repo_url"] == ""
         assert loaded["project"]["id"] == "rates"

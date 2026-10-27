@@ -289,11 +289,16 @@ def _folder_text(url: str) -> str:
     text = text[len("file://"):]
     if os.name == "nt" and re.match(r"^/[A-Za-z]:", text):
         text = text[1:]  # file:///C:/x names the drive, not a root folder
-    if text and not text.startswith("/") and os.name != "nt":
+    # On Windows a drive may follow at once (file://C:/x). Anything else is
+    # a host: user:password@host would otherwise be read as drive U:
+    on_a_drive = os.name == "nt" and re.match(r"^[A-Za-z]:([\\/]|$)", text)
+    if text and not text.startswith("/") and not on_a_drive:
         raise ValueError(
             f"The store {shown_store_url(url)!r} names a host; a file:// store is a folder on this machine, "
             f"written file:///path. For a folder on a shared drive, mount it and give its path."
         )
+    if on_a_drive and len(text) == 2:
+        return text + "\\"  # C: alone is the current folder on C; file:///C: names its root
     return text
 
 
@@ -549,7 +554,7 @@ def get_machine_id(create: bool = True) -> str:
         temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
         try:
             if not path.exists():
-                temporary.write_text(json.dumps({"machines": {identity: uuid.uuid4().hex}}) + "\n", encoding="utf-8")
+                temporary.write_text(json.dumps({"machines": {identity: uuid.uuid4().hex}}) + "\n", encoding="utf-8", newline="\n")
                 try:
                     # The first of two made at once is the one: a link is not made over a file
                     os.link(temporary, path)
@@ -558,7 +563,7 @@ def get_machine_id(create: bool = True) -> str:
                 except OSError:
                     # A disk with no links: made only where there is none, so the first still wins
                     try:
-                        with open(path, "x", encoding="utf-8") as f:
+                        with open(path, "x", encoding="utf-8", newline="\n") as f:
                             f.write(temporary.read_text(encoding="utf-8"))
                     except FileExistsError:
                         pass
@@ -611,7 +616,7 @@ def _keep_machine(path: Path, identity: str, name: str) -> None:
 
     temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
     try:
-        temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8")
+        temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8", newline="\n")
         os.replace(temporary, path)
     finally:
         if temporary.exists():
@@ -638,7 +643,7 @@ def _os_machine_identity() -> str:
         if sys.platform == "darwin":
             # By its full path: cron's PATH does not have /usr/sbin
             found = subprocess.run(
-                ["/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10
+                ["/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace"
             ).stdout
             match = re.search(r'"IOPlatformUUID"\s*=\s*"([0-9A-Fa-f-]+)"', found)
             if match and _an_identity(match.group(1)):

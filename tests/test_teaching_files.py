@@ -81,6 +81,6 @@ def test_the_sites_llms_files_link_its_pages(tmp_path, name):
 
 def test_a_link_to_a_section_keeps_its_anchor(tmp_path):
     source = tmp_path / "in.txt"
-    source.write_text("[a](docs_src/guide/plotting.md#backends) [b](docs_src/guide/gallery.ipynb) [c](https://x.org/a.md)\n")
+    source.write_text("[a](docs_src/guide/plotting.md#backends) [b](docs_src/guide/gallery.ipynb) [c](https://x.org/a.md)\n", encoding="utf-8", newline="\n")
     _dodo().copy_llms_file(source, tmp_path / "out.txt")()
-    assert (tmp_path / "out.txt").read_text() == "[a](guide/plotting.html#backends) [b](guide/gallery.html) [c](https://x.org/a.md)\n"
+    assert (tmp_path / "out.txt").read_text(encoding="utf-8") == "[a](guide/plotting.html#backends) [b](guide/gallery.html) [c](https://x.org/a.md)\n"

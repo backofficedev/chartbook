@@ -59,6 +59,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -88,6 +89,11 @@ DEFAULT_REF = "refs/chartbook/default"
 #: The transports git may use for a dependency. Git's ``ext::`` transport
 #: runs a command; a manifest must not be able to ask for it.
 ALLOWED_PROTOCOLS = "file:git:http:https:ssh"
+
+#: git as the cache runs it. A clone of a local repository is kept under a
+#: folder named after that repository's own path, so its files' paths can be
+#: longer than the 260 characters Windows otherwise allows a path.
+GIT = ("git", "-c", "core.longpaths=true") if os.name == "nt" else ("git",)
 
 _FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _HEX = re.compile(r"^[0-9a-f]{7,40}$")
@@ -172,13 +178,49 @@ class Checkout:
     path: Path
 
 
+def _paths_ignore_case() -> bool:
+    """Whether one folder's path may be written in either case: on Windows."""
+    return os.name == "nt"
+
+
+def _remove_staging(folder: Path) -> None:
+    """Remove a folder made on the way, its read-only files too, as far as it can be.
+
+    git's objects are read-only, and Windows does not remove a read-only
+    file: each is made writable and tried again. What still cannot be
+    removed is left; it is a temporary folder no one reads.
+    """
+
+    top = os.path.abspath(folder)
+
+    def writable_then_again(function, path, _error):
+        if function not in (os.unlink, os.remove, os.rmdir):
+            return  # a folder that could not be listed: left
+        try:
+            if os.path.abspath(path) != top:
+                os.chmod(os.path.dirname(path), stat.S_IRWXU)  # what holds it, on POSIX: in the staging folder
+            if not os.path.islink(path):
+                os.chmod(path, stat.S_IRWXU if os.path.isdir(path) else stat.S_IWRITE | stat.S_IREAD)
+            function(path)
+        except OSError:
+            pass
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(folder, onexc=writable_then_again)
+    else:
+        shutil.rmtree(folder, onerror=writable_then_again)
+
+
 def repository_slug(url: str) -> Path:
     """A relative path for a repository, made from its URL: ``host/owner/name``.
 
     The same repository reached two ways (``https://host/a/b.git``,
     ``git@host:a/b``) gets one path, and so one clone. A repository on this
-    disk goes under ``local/``. Nothing of a URL's user name or password is
-    in it, and no component can climb out of the cache. A port stays, as
+    disk goes under ``local/``, by its folder's name and a short hash of its
+    whole path: the path in full would make one in the cache longer than
+    the 260 characters Windows lets git work in. Nothing of a URL's user
+    name or password is in it, and no component can climb out of the
+    cache. A port stays, as
     ``host_8443``, and a component with a character that is not kept gets
     a short hash of itself, so that two different repositories never share
     a clone.
@@ -195,6 +237,19 @@ def repository_slug(url: str) -> Path:
     else:
         host, path = "local", re.sub(r"^file://", "", text)
     path = re.sub(r"\.git/?$", "", path.rstrip("/"))
+    if host == "local":
+        # One folder: its name, and a hash of the whole path written one
+        # way: with /, so that C:\\repos\\x, C:/repos/x and file:///C:/repos/x
+        # are one repository; on Windows, whose paths are one in any case,
+        # in lower case, as a terminal may give c:\\ where another gives C:\\
+        whole = re.sub(r"[/\\]+", "/", path)
+        if re.match(r"^/[A-Za-z]:", whole):
+            whole = whole[1:]
+        if _paths_ignore_case() or re.match(r"^[A-Za-z]:", whole):
+            whole = whole.lower() if _paths_ignore_case() else whole[0].lower() + whole[1:]
+        name = next((part for part in reversed(whole.split("/")) if part and set(part) != {"."}), "repository")
+        digest = hashlib.sha256(whole.encode("utf-8")).hexdigest()[:8]
+        return Path("local", re.sub(r"[^A-Za-z0-9._-]", "_", name) + "~" + digest)
     components = [host, *re.split(r"[/\\]+", path)]
     safe = []
     for part in components:
@@ -291,7 +346,7 @@ class GitCache:
                     raise
         finally:
             if staging.exists():
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
         return final
 
     def _git(self, *arguments: str, url: Optional[str] = None, env=None) -> str:
@@ -312,7 +367,7 @@ class GitCache:
         environment.setdefault("GIT_SSH_COMMAND", "ssh -o BatchMode=yes")
         try:
             result = subprocess.run(
-                ["git", *arguments], capture_output=True, text=True, env=environment
+                [*GIT, *arguments], capture_output=True, text=True, env=environment, encoding="utf-8", errors="replace"
             )
         except FileNotFoundError:
             raise GitError(
@@ -344,7 +399,7 @@ class GitCache:
             try:
                 os.rename(staging, repo)
             except OSError:
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
                 if not (repo / "HEAD").is_file():
                     raise
         # The URL is given here and now, and is not kept in the clone
@@ -434,7 +489,7 @@ class GitCache:
             if index.exists():
                 index.unlink()
             if staging.exists():
-                shutil.rmtree(staging, ignore_errors=True)
+                _remove_staging(staging)
         return final
 
     def get(self, url: str, rev: Optional[str] = None, fetch: bool = True) -> Checkout:
@@ -481,7 +536,7 @@ def mark_built(work_copy: Union[str, Path]) -> None:
     been, so that the next run leaves it alone.
     """
     (Path(work_copy) / BUILT_MARKER).write_text(
-        "chartbook run finished this pipeline's build here.\n", encoding="utf-8"
+        "chartbook run finished this pipeline's build here.\n", encoding="utf-8", newline="\n"
     )
 
 

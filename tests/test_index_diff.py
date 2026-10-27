@@ -17,7 +17,7 @@ def _manifest(directory: Path, dataframes: dict, charts: dict = None) -> None:
     table = {"project": {"id": "acme/rates"}, "dataframes": dataframes}
     if charts:
         table["charts"] = charts
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
 
 
 RATES = {"rates": {"path": "./_data/rates.parquet", "docs": "Rates."}}
@@ -28,7 +28,7 @@ def before(tmp_path):
     """A pipeline with one dataframe, built, and its index."""
     directory = tmp_path.resolve() / "rates"
     directory.mkdir()
-    (directory / "README.md").write_text("# Rates\n")
+    (directory / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
     (directory / "_data").mkdir()
     _manifest(directory, RATES)
     pl.DataFrame({"d": ["2024-01-01"], "r": [4.1]}).write_parquet(directory / "_data" / "rates.parquet")
@@ -199,9 +199,9 @@ class TestCommand:
         assert "acme/rates:rates" in [c["id"] for c in json.loads(as_json.output)["changed"]]
 
     def test_not_an_index(self, tmp_path):
-        (tmp_path / "x.json").write_text("{}")
-        (tmp_path / "y.json").write_text("not json")
-        (tmp_path / "z.json").write_text(json.dumps({"records": [1]}))
+        (tmp_path / "x.json").write_text("{}", encoding="utf-8", newline="\n")
+        (tmp_path / "y.json").write_text("not json", encoding="utf-8", newline="\n")
+        (tmp_path / "z.json").write_text(json.dumps({"records": [1]}), encoding="utf-8", newline="\n")
         (tmp_path / "empty").mkdir()
         result = CliRunner().invoke(main, ["index", "diff", str(tmp_path / "x.json"), str(tmp_path / "x.json")])
         assert result.exit_code == 2 and "is not an index" in result.output
@@ -225,4 +225,4 @@ class TestStableChartFiles:
         assert (tmp_path / "a.html").read_bytes() == (tmp_path / "b.html").read_bytes()
         from chartbook.plotting import _output
 
-        assert 'div_id=f"chartbook-{chart_id}"' in Path(_output.__file__).read_text()
+        assert 'div_id=f"chartbook-{chart_id}"' in Path(_output.__file__).read_text(encoding="utf-8")

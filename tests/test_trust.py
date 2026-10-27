@@ -52,7 +52,7 @@ def _git(directory: Path, *arguments: str) -> str:
         cwd=directory,
         capture_output=True,
         text=True,
-        check=True,
+        check=True, encoding="utf-8", errors="replace"
     ).stdout.strip()
 
 
@@ -71,26 +71,26 @@ def _pipeline(directory: Path, scripts=None, **tables) -> Path:
     if scripts is not None:
         table["scripts"] = scripts
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table), encoding="utf-8", newline="\n")
     return directory
 
 
 def _catalog(work: Path, *members: str) -> Path:
     (work / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in members}})
+        tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {name: {"path": name} for name in members}}), encoding="utf-8", newline="\n"
     )
     return work
 
 
 def _order(work: Path) -> list:
     log = work / "order.log"
-    return log.read_text().split() if log.exists() else []
+    return log.read_text(encoding="utf-8").split() if log.exists() else []
 
 
 def _edit_manifest(project: Path, edit) -> None:
-    manifest = tomli.loads((project / "chartbook.toml").read_text())
+    manifest = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
     edit(manifest)
-    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (project / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
 
 
 @pytest.fixture
@@ -200,7 +200,7 @@ class TestTheRecord:
         assert entry["id"] == "acme/rates"
         assert entry["repository"] == "https://github.com/acme/rates"
         assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", entry["since"])
-        text = written.read_text()
+        text = written.read_text(encoding="utf-8")
         assert text.startswith("# Pipelines you have trusted (chartbook trust)")
         assert "[[pipeline]]" in text
         assert not list(written.parent.glob("trust.toml.*.tmp"))
@@ -246,7 +246,7 @@ class TestTheRecord:
     def test_a_file_that_cannot_be_read_stops_the_command_naming_the_file(self, work):
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("not = toml =\n")
+        path.write_text("not = toml =\n", encoding="utf-8", newline="\n")
         with pytest.raises(ValueError, match=r"trust\.toml, the trust record, is not valid TOML"):
             config.read_trust()
         with pytest.raises(ValueError, match=r"trust\.toml"):
@@ -265,7 +265,7 @@ class TestTheRecord:
                     ],
                     "repository": [{"url": "rates", "level": "run"}, {"url": "https://github.com/acme/rates", "level": "run"}],
                 }
-            )
+            ), encoding="utf-8", newline="\n"
         )
         with pytest.warns(UserWarning) as caught:
             entries = config.read_trust()
@@ -280,9 +280,9 @@ class TestTheRecord:
         """A record is rewritten whole, and an entry the reader passed over is not lost by the write."""
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(tomli_w.dumps({"pipeline": [{"path": 5, "level": "run"}], "later": {"word": 1}}))
+        path.write_text(tomli_w.dumps({"pipeline": [{"path": 5, "level": "run"}], "later": {"word": 1}}), encoding="utf-8", newline="\n")
         config.record_trust(work, "run")
-        raw = tomli.loads(path.read_text())
+        raw = tomli.loads(path.read_text(encoding="utf-8"))
         assert raw["later"] == {"word": 1}
         assert raw["pipeline"][0] == {"path": 5, "level": "run"}
         assert raw["pipeline"][1]["path"] == str(work.resolve())
@@ -291,7 +291,7 @@ class TestTheRecord:
         """Found by a review: resolved against the working directory, `path = "work"` trusted a different folder from each folder a command ran in."""
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(tomli_w.dumps({"pipeline": [{"path": "work", "level": "run"}]}))
+        path.write_text(tomli_w.dumps({"pipeline": [{"path": "work", "level": "run"}]}), encoding="utf-8", newline="\n")
         (work / "work" / "sub").mkdir(parents=True)
         monkeypatch.chdir(work)
         with pytest.warns(UserWarning, match=r"entry 1 .* has a relative path, .* write the folder's full path"):
@@ -300,37 +300,37 @@ class TestTheRecord:
             assert config.trust_of(work / "work" / "sub") is None
         # A write keeps it, and records the folder by its full path beside it
         config.record_trust(work / "work", "run")
-        raw = tomli.loads(path.read_text())
+        raw = tomli.loads(path.read_text(encoding="utf-8"))
         assert [entry["path"] for entry in raw["pipeline"]] == ["work", str((work / "work").resolve())]
 
     def test_since_is_read_from_a_toml_date_time_as_the_string_it_is_written_as(self, work):
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            f'[[pipeline]]\npath = "{work}"\nlevel = "run"\nsince = 2026-10-18T22:14:05Z\n\n'
-            f'[[repository]]\nurl = "https://github.com/acme/rates"\nlevel = "run"\nsince = 2026-10-18T17:14:05-05:00\n'
+            f"[[pipeline]]\npath = '{work}'\nlevel = \"run\"\nsince = 2026-10-18T22:14:05Z\n\n"
+            f'[[repository]]\nurl = "https://github.com/acme/rates"\nlevel = "run"\nsince = 2026-10-18T17:14:05-05:00\n', encoding="utf-8", newline="\n"
         )
         first, second = config.read_trust()
         assert first["since"] == "2026-10-18T22:14:05Z"
         assert second["since"] == "2026-10-18T22:14:05Z"
         # What is written is a string; the entries kept are kept as they were
         config.record_trust(work / "other", "run")
-        assert re.search(r'since = "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"', path.read_text())
+        assert re.search(r'since = "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"', path.read_text(encoding="utf-8"))
         assert sum(entry["since"] == "2026-10-18T22:14:05Z" for entry in config.read_trust()) == 2
 
     def test_a_table_where_an_array_should_be_is_never_dropped_by_a_write(self, work, monkeypatch):
         """Found by a review: `[pipeline]` was warned about, and then dropped by the next write."""
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        written = f'[pipeline]\npath = "{work}"\nlevel = "run"\n'
-        path.write_text(written)
+        written = f"[pipeline]\npath = '{work}'\nlevel = \"run\"\n"  # '…': a literal string, so a Windows path is as it is
+        path.write_text(written, encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning, match=r"\[\[pipeline\]\] is not an array of tables"):
             assert config.read_trust() == []
         with pytest.raises(ValueError, match=r"trust\.toml: \[pipeline\] is a table, not an array of tables, and writing the file would drop it"):
             config.record_trust(work / "other", "run")
         with pytest.raises(ValueError, match="fix it or remove it"):
             config.forget_trust(path=work)
-        assert path.read_text() == written
+        assert path.read_text(encoding="utf-8") == written
         monkeypatch.chdir(work)
         result = _trust()
         assert result.exit_code == 1
@@ -338,7 +338,7 @@ class TestTheRecord:
 
     def test_a_record_that_cannot_be_written_is_an_os_error(self, work, monkeypatch):
         blocker = work / "blocker"
-        blocker.write_text("a file where a folder should be")
+        blocker.write_text("a file where a folder should be", encoding="utf-8", newline="\n")
         monkeypatch.setattr(config, "get_global_config_dir", lambda: blocker / ".chartbook")
         with pytest.raises(OSError):
             config.record_trust(work, "run")
@@ -540,7 +540,7 @@ class TestTheCommand:
         monkeypatch.chdir(pipeline_project)
         path = config.get_trust_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("not = toml =\n")
+        path.write_text("not = toml =\n", encoding="utf-8", newline="\n")
         result = _trust()
         assert result.exit_code == 1
         assert result.output.startswith("Error: ")
@@ -552,7 +552,7 @@ class TestTheCommand:
 def leaky_project(pipeline_project, tmp_path):
     """A pipeline whose manifest would read a file of this machine: a query over a secret CSV."""
     secret = tmp_path / "secret.csv"
-    secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n")
+    secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n", encoding="utf-8", newline="\n")
 
     def edit(manifest):
         manifest["sources"] = {"mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}}
@@ -567,7 +567,7 @@ def leaky_project(pipeline_project, tmp_path):
 
 
 def _pages(output_dir: Path) -> str:
-    return "".join(p.read_text(errors="replace") for p in output_dir.rglob("*") if p.is_file())
+    return "".join(p.read_text(errors="replace", encoding="utf-8") for p in output_dir.rglob("*") if p.is_file())
 
 
 class TestDocsOfAnUntrustedPipeline:
@@ -623,7 +623,7 @@ class TestDocsOfAnUntrustedPipeline:
     def reaching_project(self, pipeline_project, tmp_path):
         """A pipeline whose manifest names a data file outside its folder."""
         secret = tmp_path / "secret.csv"
-        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n")
+        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n", encoding="utf-8", newline="\n")
         # Relative, as a monorepo's shared file would be named (an absolute path outside is refused the same way)
         _edit_manifest(pipeline_project, lambda m: m["dataframes"].__setitem__("leak", {"path": "../secret.csv", "docs": "d"}))
         return pipeline_project
@@ -641,7 +641,7 @@ class TestDocsOfAnUntrustedPipeline:
         config.record_trust(reaching_project, "render")
         result = CliRunner().invoke(main, arguments)
         assert result.exit_code == 0, result.output
-        assert "HUNTER2_LEAKED_SECRET" in (out / "data_glimpses.md").read_text()
+        assert "HUNTER2_LEAKED_SECRET" in (out / "data_glimpses.md").read_text(encoding="utf-8")
 
     def test_publish_copies_nothing_from_outside_an_untrusted_folder(self, reaching_project, tmp_path):
         """Found by a review: `publish` copied the files the manifest named from anywhere."""
@@ -698,7 +698,7 @@ class TestBuildAndRun:
 
     def test_the_commands_say_it_in_one_line_and_run_nothing(self, work, monkeypatch):
         pipeline = _pipeline(work / "rates", {"build": LOG})
-        (pipeline / "README.md").write_text("# Rates\n")
+        (pipeline / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
         monkeypatch.chdir(pipeline)
         for arguments in (["run"], ["build", "./docs", "-f"]):
             result = CliRunner().invoke(main, arguments)
@@ -776,7 +776,7 @@ def _sibling_catalog(work: Path, *pipeline_ids: str) -> Path:
                 "project": {"type": "catalog", "name": "Test Catalog", "maintainer": "Test Author", "copyright": "2024"},
                 "pipelines": {pipeline_id: {"path": f"../{pipeline_id}"} for pipeline_id in pipeline_ids},
             }
-        )
+        ), encoding="utf-8", newline="\n"
     )
     return root
 
@@ -911,7 +911,7 @@ class TestCatalogInitAndAdd:
         assert CliRunner().invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
         new = create_pipeline_project(work / "new_one", pipeline_id="new_one")
         trust_path = config.get_trust_path()
-        trust_path.write_text("not = toml =\n")
+        trust_path.write_text("not = toml =\n", encoding="utf-8", newline="\n")
         result = CliRunner().invoke(main, ["catalog", "add", str(new)])
         assert result.exit_code == 0, result.output
         assert "Added 'new_one'" in result.output
@@ -968,7 +968,7 @@ class TestInit:
 
         def render(cwd, **kwargs):
             project.mkdir()
-            (project / "chartbook.toml").write_text('[project]\nname = "Rates Study"\n')
+            (project / "chartbook.toml").write_text('[project]\nname = "Rates Study"\n', encoding="utf-8", newline="\n")
             return scaffold.Rendered(project, COMMIT, True, why="", answers={})
 
         monkeypatch.setattr(scaffold, "render", render)
@@ -987,7 +987,7 @@ class TestInit:
 
     def test_when_it_cannot_record_it_says_so_and_goes_on(self, rendered, tmp_path, monkeypatch):
         blocker = tmp_path / "blocker"
-        blocker.write_text("a file where the home folder's .chartbook should be")
+        blocker.write_text("a file where the home folder's .chartbook should be", encoding="utf-8", newline="\n")
         monkeypatch.setattr(config, "get_global_config_dir", lambda: blocker / ".chartbook")
         result = CliRunner().invoke(main, ["init"])
         assert result.exit_code == 0, result.output

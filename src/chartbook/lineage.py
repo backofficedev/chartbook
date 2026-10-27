@@ -822,8 +822,9 @@ class _Finder:
             return None
         cache = self.git_cache if self.git_cache is not None else default_git_cache()
         for top in (Path(cache.root) / WORK_DIR, Path(cache.root) / CHECKOUTS_DIR):
-            # Down the repositories' folders (a repository on this disk is laid out
-            # under its whole path), never into a copy's own files
+            # Down the repositories' folders (host/owner/name, or a cache that
+            # laid a repository on this disk out under its whole path), never
+            # into a copy's own files
             stack = [(top, 0)]
             while stack:
                 folder, depth = stack.pop()

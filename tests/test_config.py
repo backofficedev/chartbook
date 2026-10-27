@@ -33,10 +33,11 @@ def test_write_read_roundtrip(fake_config_dir):
 
 def test_get_default_catalog_path_when_configured(fake_config_dir):
     """get_default_catalog_path returns a Path when catalog.path is set."""
-    settings = {"catalog": {"path": "/my/catalog/chartbook.toml"}}
+    catalog = fake_config_dir.resolve() / "my" / "catalog" / "chartbook.toml"  # absolute, with its drive on Windows
+    settings = {"catalog": {"path": str(catalog)}}
     config.write_global_settings(settings)
     result = config.get_default_catalog_path()
-    assert result == Path("/my/catalog/chartbook.toml")
+    assert result == catalog
 
 
 def test_get_default_catalog_path_when_not_configured(fake_config_dir):

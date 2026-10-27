@@ -14,23 +14,23 @@ class TestGeneratedFrontmatterValidation:
 
     def test_valid_frontmatter_passes(self, tmp_path):
         md_file = tmp_path / "test.md"
-        md_file.write_text('---\ndate: "2026-01-01"\ntags: "source1, source2"\ncategory: "Topic"\n---\n# Hello\n')
+        md_file.write_text('---\ndate: "2026-01-01"\ntags: "source1, source2"\ncategory: "Topic"\n---\n# Hello\n', encoding="utf-8", newline="\n")
         _validate_generated_frontmatter(md_file, "pipeline1", "chart1")
 
     def test_malformed_frontmatter_exits(self, tmp_path):
         md_file = tmp_path / "test.md"
-        md_file.write_text("---\ndate: 2026-01-01\ntags: Constructed: CDS-bond basis\ncategory: test\n---\n# Hello\n")
+        md_file.write_text("---\ndate: 2026-01-01\ntags: Constructed: CDS-bond basis\ncategory: test\n---\n# Hello\n", encoding="utf-8", newline="\n")
         with pytest.raises(SystemExit):
             _validate_generated_frontmatter(md_file, "pipeline1", "chart1")
 
     def test_no_frontmatter_passes(self, tmp_path):
         md_file = tmp_path / "test.md"
-        md_file.write_text("# Just a heading\nNo frontmatter here.\n")
+        md_file.write_text("# Just a heading\nNo frontmatter here.\n", encoding="utf-8", newline="\n")
         _validate_generated_frontmatter(md_file, "pipeline1", "chart1")
 
     def test_incomplete_frontmatter_passes(self, tmp_path):
         md_file = tmp_path / "test.md"
-        md_file.write_text("---\ndate: 2026-01-01\nNo closing delimiter\n")
+        md_file.write_text("---\ndate: 2026-01-01\nNo closing delimiter\n", encoding="utf-8", newline="\n")
         _validate_generated_frontmatter(md_file, "pipeline1", "chart1")
 
 

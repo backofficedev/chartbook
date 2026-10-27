@@ -89,7 +89,7 @@ def create_dodo_file_with_mod_date(date, dodo_path, publish_dir):
 
     # Write the content to create the file
     file_path = Path(publish_dir) / filename
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(content)  # Write the specified content to the file
 
     # Convert the datetime object to a timestamp

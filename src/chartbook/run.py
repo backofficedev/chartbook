@@ -865,11 +865,19 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
             return subprocess.run(
                 script, shell=True, cwd=directory, env=environment
             ).returncode
-        # cmd takes one line; several go in a file
+        # cmd takes one line; several go in a file, which cmd reads in the
+        # console's code page (the OEM one), with \r\n line endings
         handle, name = tempfile.mkstemp(suffix=".cmd", text=True)
         try:
-            with os.fdopen(handle, "w") as f:
-                f.write(_batch_script(script))
+            with os.fdopen(handle, "w", encoding=_batch_encoding(), newline="\r\n") as f:
+                try:
+                    f.write(_batch_script(script))
+                except UnicodeEncodeError as error:
+                    raise RunError(
+                        f"{script.strip().splitlines()[0]!r}…: the script holds {error.object[error.start:error.end]!r}, "
+                        f"which cmd cannot read in this console's code page. Put the lines with it in a script "
+                        f"file of their own (a .py, say), and run that file from [scripts]."
+                    ) from None
             return subprocess.run(
                 ["cmd", "/d", "/c", name], cwd=directory, env=environment
             ).returncode
@@ -880,6 +888,28 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
         [shell, "-e", "-c", script], cwd=directory, env=environment
     ).returncode
 
+
+def _batch_encoding() -> str:
+    """The code page cmd reads a batch file in: the console's (chcp can change it), else the OEM one.
+
+    Both are Windows' alone; elsewhere it is UTF-8.
+    """
+    import codecs
+
+    try:
+        import ctypes
+
+        page = ctypes.windll.kernel32.GetConsoleOutputCP()  # 0 with no console
+        if page:
+            codecs.lookup(f"cp{page}")
+            return f"cp{page}"
+    except (AttributeError, ImportError, OSError, LookupError):
+        pass
+    try:
+        codecs.lookup("oem")
+    except LookupError:
+        return "utf-8"
+    return "oem"
 
 #: Stops a batch file where the line before it failed, with that line's exit code.
 _STOP_ON_FAILURE = "if %errorlevel% neq 0 exit /b %errorlevel%"

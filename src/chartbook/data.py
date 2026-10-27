@@ -168,7 +168,7 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     gitignore = directory / ".gitignore"
     if not gitignore.exists():
-        gitignore.write_text("*\n")
+        gitignore.write_text("*\n", encoding="utf-8", newline="\n")
     return directory
 
 
@@ -338,7 +338,7 @@ def get_docs(
     )
     if doc_mode == "path":
         doc_path = (pipeline_base_dir / doc_value).resolve()
-        return doc_path.read_text()
+        return doc_path.read_text(encoding="utf-8")
     else:  # doc_mode == "str"
         return doc_value
 

@@ -44,13 +44,13 @@ def installed_example(tmp_path, monkeypatch, fresh_registry):
     site = tmp_path / "site-packages"
     dist_info = site / "chartbook_vegalite-0.1.dist-info"
     dist_info.mkdir(parents=True)
-    (site / "chartbook_vegalite.py").write_text(EXAMPLE.read_text())
+    (site / "chartbook_vegalite.py").write_text(EXAMPLE.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
     (dist_info / "METADATA").write_text(
-        "Metadata-Version: 2.1\nName: chartbook-vegalite\nVersion: 0.1\n"
+        "Metadata-Version: 2.1\nName: chartbook-vegalite\nVersion: 0.1\n", encoding="utf-8", newline="\n"
     )
     # Exactly the registration the guide tells an author to write
     (dist_info / "entry_points.txt").write_text(
-        f"[{ENTRY_POINT_GROUP}]\nvegalite = chartbook_vegalite:backend\n"
+        f"[{ENTRY_POINT_GROUP}]\nvegalite = chartbook_vegalite:backend\n", encoding="utf-8", newline="\n"
     )
     monkeypatch.syspath_prepend(str(site))
     yield
@@ -145,18 +145,18 @@ class TestClassesAndBrokenPlugins:
         site = tmp_path / "site-packages"
         dist_info = site / "chartbook_other-0.1.dist-info"
         dist_info.mkdir(parents=True)
-        (site / "chartbook_other.py").write_text(module_source)
+        (site / "chartbook_other.py").write_text(module_source, encoding="utf-8", newline="\n")
         (dist_info / "METADATA").write_text(
-            "Metadata-Version: 2.1\nName: chartbook-other\nVersion: 0.1\n"
+            "Metadata-Version: 2.1\nName: chartbook-other\nVersion: 0.1\n", encoding="utf-8", newline="\n"
         )
         (dist_info / "entry_points.txt").write_text(
-            f"[{ENTRY_POINT_GROUP}]\nother = chartbook_other:{target}\n"
+            f"[{ENTRY_POINT_GROUP}]\nother = chartbook_other:{target}\n", encoding="utf-8", newline="\n"
         )
         monkeypatch.syspath_prepend(str(site))
 
     def test_entry_point_may_name_the_class(self, tmp_path, monkeypatch, fresh_registry):
         """The natural thing to write; it used to register an unusable class."""
-        source = EXAMPLE.read_text().replace('return "vegalite"', 'return "other"')
+        source = EXAMPLE.read_text(encoding="utf-8").replace('return "vegalite"', 'return "other"')
         self._install(tmp_path, monkeypatch, source, "VegaLiteBackend")
         try:
             backend = get_backend("other")
@@ -232,7 +232,7 @@ class TestUsingABackend:
             df, config, OverlayConfig(), output_path, size=(8, 6)
         )
 
-        spec = json.loads(output_path.read_text())
+        spec = json.loads(output_path.read_text(encoding="utf-8"))
         assert spec["mark"] == mark
         assert spec["title"] == "Growth"
         assert (spec["width"], spec["height"]) == (768, 576)
@@ -248,7 +248,7 @@ class TestUsingABackend:
         )
         output_path = tmp_path / "pie.vl.json"
         get_backend("vegalite").create_chart(df, config, OverlayConfig(), output_path, (6, 6))
-        spec = json.loads(output_path.read_text())
+        spec = json.loads(output_path.read_text(encoding="utf-8"))
         assert spec["mark"] == "arc"
         assert spec["encoding"]["theta"]["field"] == "gdp"
         assert spec["encoding"]["color"]["field"] == "sector"
@@ -279,17 +279,17 @@ class TestGuideMatchesTheCode:
     GUIDE = EXAMPLE.parent.parent / "guide" / "plotting-backends.md"
 
     def test_guide_includes_the_tested_example(self):
-        assert "{literalinclude} ../_examples/vegalite_backend.py" in self.GUIDE.read_text()
+        assert "{literalinclude} ../_examples/vegalite_backend.py" in self.GUIDE.read_text(encoding="utf-8")
 
     def test_entry_point_group_name(self, fresh_registry):
         assert backends.get_plugin_manager().project_name == ENTRY_POINT_GROUP
-        assert f"`{ENTRY_POINT_GROUP}`" in self.GUIDE.read_text()
+        assert f"`{ENTRY_POINT_GROUP}`" in self.GUIDE.read_text(encoding="utf-8")
 
     @pytest.mark.parametrize("config_class", [ChartConfig, OverlayConfig, DualAxisConfig])
     def test_every_config_field_is_documented(self, config_class):
         import dataclasses
 
-        guide = self.GUIDE.read_text()
+        guide = self.GUIDE.read_text(encoding="utf-8")
         section = guide.split(f"### `{config_class.__name__}`", 1)[1].split("\n## ", 1)[0]
         section = section.split("\n### ", 1)[0]
         for field in dataclasses.fields(config_class):

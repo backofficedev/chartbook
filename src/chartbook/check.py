@@ -398,6 +398,8 @@ def _repository_top(directory: str) -> Optional[Path]:
         found = subprocess.run(
             ["git", "-C", directory, "rev-parse", "--show-superproject-working-tree", "--show-toplevel"],
             capture_output=True, text=True, check=True, env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
+            # A path: its bytes as they are, as the file system takes them back
+            encoding="utf-8", errors="surrogateescape"
         )
     except (OSError, subprocess.CalledProcessError):
         return None
