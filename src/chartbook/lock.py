@@ -71,7 +71,15 @@ from chartbook import hashing, snapshot
 from chartbook.gitcache import GIT as _GIT
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
-from chartbook.identity import derive_pipeline_id, get_git_remote_url, in_another_case, repository_key, strip_url_credentials
+from chartbook.identity import (
+    derive_pipeline_id,
+    get_git_remote_url,
+    id_from_address,
+    in_another_case,
+    repository_key,
+    strip_url_credentials,
+    validate_pipeline_id,
+)
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR
 from chartbook.manifest import (
     _read_manifest_file,
@@ -124,7 +132,10 @@ class Lock:
         root: The ID of the pipeline the lockfile belongs to.
         dependencies: Its dependencies, as its ``Pipeline`` record lists
             them: ``id``, ``via``, ``location``, and ``pinned_hash`` when
-            something of it is pinned.
+            something of it is pinned. ``pinned_from`` is the pipeline the
+            pins came from by its own ID, whatever the key: the snapshot's,
+            or the one a ``git`` dependency's clone holds. A pin made before
+            0.3.0 has none until it is made again or moved.
         assets: One record for each asset of each dependency, by asset ID.
             A record with a ``content_hash`` is a pin.
     """
@@ -676,6 +687,43 @@ def _project_id_in(directory: Path) -> Optional[str]:
     return named if isinstance(named, str) and named else f"an id that is no name ({named!r:.40})"
 
 
+def _pipeline_of_clone(directory: Path, entry: dict, project_dir: Path) -> Optional[str]:
+    """The ID of the pipeline a ``git`` dependency's copy holds, as a clone of its repository derives it; None if nothing names one.
+
+    A checkout is one commit's files, with no ``.git`` of its own, in a
+    folder named after the commit, so the folder gives no ID. It is the ID
+    the checkout's ``[project] id`` gives; else the one it was named by in
+    ``[dependencies]``; else the one the repository's address gives, as
+    for any pipeline at the top of its repository: ``repo_url`` in its
+    manifest, else the address it was fetched from. A repository that is a
+    folder on this disk, with no address, is named as that folder names
+    itself.
+    """
+    named = _project_id_in(directory)
+    try:
+        if named:
+            return validate_pipeline_id(named)
+        if entry.get("_from_id"):
+            return validate_pipeline_id(entry["_from_id"])
+        project = _read_manifest_file(directory).get("project")
+        project = project if isinstance(project, dict) else {}
+        written = project.get("repo_url")
+        for address in (written if isinstance(written, str) else "", entry.get("git") or ""):
+            from_address = id_from_address(address) if address else None
+            if from_address:
+                return validate_pipeline_id(from_address)
+        url = local_url(entry["git"], project_dir) if entry.get("git") else ""
+        if url.startswith("file://"):
+            from urllib.parse import unquote, urlparse
+
+            url = unquote(urlparse(url).path)
+        if url and "://" not in url and Path(url).is_dir():
+            return derive_pipeline_id(project, Path(url))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False) -> bool:
     """Whether a repository's clone in the git cache has a commit; with *fetch*, after asking the repository for it by its hash.
 
@@ -1108,6 +1156,8 @@ def _sync_now(
             directory, listed, failure = _fetch(
                 key, entry, was, listed, may_move, project_dir, git_cache, report
             )
+            # Fetched at a commit of its own, not kept at the one it was pinned at
+            fetched_now = listed is not was
             report.git.add(key)
             if entry.get("_from_id"):
                 source = f"{strip_url_credentials(entry['git'])} ({entry.get('_from', '[resolve] default_host')})"
@@ -1198,6 +1248,12 @@ def _sync_now(
                 key, directory, had_assets, may_move, store, cache, report, commit_moved,
                 within=directory,
             )
+            if directory is not None and fetched_now:
+                # The pipeline its copy holds, by its own ID, whatever the key
+                of_clone = _pipeline_of_clone(Path(directory), entry, project_dir)
+                listed = {k: v for k, v in listed.items() if k != "pinned_from"}
+                if of_clone:
+                    listed["pinned_from"] = of_clone
             for asset_id, record in sorted(had_labels.items()):
                 # A git dependency has no versions: a label pinned while this
                 # was a path dependency is let go
@@ -2105,6 +2161,9 @@ def _sync_from_snapshots(
             kept["location"] = location
         if locked_made:
             kept["snapshot"] = locked_made
+        if (was or {}).get("pinned_from"):
+            # Still the pipeline the pins came from
+            kept["pinned_from"] = was["pinned_from"]
         return kept
 
     if pinned and not may_move:
@@ -2301,7 +2360,9 @@ def _sync_from_snapshots(
         for name in ("repository", "first_commit"):
             if identity.get(name):
                 location[name] = identity[name]
-    listed = {**listed, "location": location, "snapshot": newest.made_at}
+    # The pipeline the snapshot is of, by its own ID, whatever the key: the
+    # store keeps a snapshot by it
+    listed = {**listed, "location": location, "snapshot": newest.made_at, "pinned_from": newest.pipeline}
     return records, listed
 
 

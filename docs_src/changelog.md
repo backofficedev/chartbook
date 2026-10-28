@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a lockfile says which pipeline each dependency's pins came from
+
+Each dependency in `chartbook.lock` now has `pinned_from`: the pipeline its pins came from, by that pipeline's own ID rather than the key it is depended on under. For a `path` dependency, or one named by its ID, it is the pipeline of the snapshot pinned. For a `git` dependency it is the pipeline its clone holds: its `[project] id`, else the ID its repository's address gives (`repo_url` in its manifest, else the address it was fetched from), as for any clone at the top of its repository. The store keeps a snapshot by its pipeline's ID, and the layout planned for 0.3.0 keeps each pipeline's snapshots in a folder of its own ({doc}`design/plan-0.3.0`), so this is how a reader of the lockfile will know where to look without searching the store.
+
+A lockfile written by 0.2.0 is read as before. An entry gains `pinned_from` when its pin is made or moved: `chartbook update` adds it, and `chartbook pin` with nothing to pin still writes nothing. The field says where the pins are kept, not what they are, so `chartbook snapshot` does not take a lockfile that only gained it for pins that moved, and gives back the snapshot it made before.
+
 ## [0.2.0] - 2026-10-26
 
 ### Read this first: upgrading from 0.1.1

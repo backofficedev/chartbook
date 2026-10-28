@@ -467,10 +467,13 @@ One pull request each, stacked, as step 4 was. Each adds its entry to `[Unreleas
 changelog. The contract tests (`tests/test_store_contract.py`) run every part against both kinds of
 store, and the Windows CI runs the tests under a long root.
 
-1. `Store`'s methods take the pipeline, and lockfiles record each dependency's pipeline. The layout
-   is still v1, so nothing else moves.
+1. Lockfiles record each dependency's pipeline (`pinned_from`). The layout is still v1, so nothing
+   else moves. *Built 2026-10-28.*
 2. The v2 layout: `pipelines/`, a folder for each snapshot, the dictionary, reading in place or
-   gathered, `incomplete`, for the folder store and the S3 store.
+   gathered, `incomplete`, for the folder store and the S3 store; and `Store`'s methods take the
+   pipeline. *(Moved here from step 1 on 2026-10-28: in a v1 store an argument naming the pipeline
+   would be passed everywhere and read nowhere, and nothing could test it. Step 2 is where it is
+   used.)*
 3. `store gc` on snapshot folders.
 4. `chartbook store migrate`.
 5. Long paths on Windows (#136).

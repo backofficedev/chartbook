@@ -353,6 +353,8 @@ class TestPin:
                             "via": "path",
                             "location": {"kind": "path", "path": "../rates", "commit": taken.commit},
                             "snapshot": taken.made_at,
+                            # The pipeline by its own ID, not by the key it is depended on under
+                            "pinned_from": "rates",
                             "pinned_hash": overall,
                         }
                     ],
@@ -700,6 +702,45 @@ class TestUpdate:
         assert [p.status for p in report.problems] == ["no_snapshot"]
         assert "there is no folder at" in report.problems[0].detail
         assert (downstream / LOCK_FILE).read_bytes() == before
+
+
+class TestPinnedFrom:
+    """Each dependency records the pipeline its pins came from, by that pipeline's own ID.
+
+    The key a pipeline depends on another under is its own name for it;
+    the store keeps a snapshot by the other's ID (docs_src/design/plan-0.3.0.md).
+    """
+
+    def test_it_is_the_pipeline_by_its_own_id_not_the_key(self, downstream, rates, store):
+        _depend(downstream, curve={"path": "../rates"})
+        pin_from_snapshots(downstream, store)
+        (entry,) = lock.read_lock(downstream).dependencies
+        assert entry["id"] == "curve" and entry["pinned_from"] == "rates"
+        jsonschema.validate(
+            json.loads((downstream / LOCK_FILE).read_text(encoding="utf-8")),
+            json.loads(lock.schema_path().read_text(encoding="utf-8")),
+        )
+
+    def test_a_pin_kept_keeps_it(self, downstream, rates, store):
+        pin_from_snapshots(downstream, store)
+        _replace(rates / "_data" / "treasury.parquet", b"new numbers")
+        report = pin_from_snapshots(downstream, store)
+        assert _statuses(report)["treasury"] == "stale"
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "rates"
+
+    def test_pin_leaves_a_lockfile_from_before_as_it_is(self, downstream, rates, store):
+        """A pin that moves nothing writes nothing: a lockfile without it gains it when a pin is made or moved."""
+        pin_from_snapshots(downstream, store)
+        locked = lock.read_lock(downstream)
+        for entry in locked.dependencies:
+            del entry["pinned_from"]
+        lock.write_lock(locked, downstream / LOCK_FILE)
+        before = (downstream / LOCK_FILE).read_bytes()
+
+        assert pin_from_snapshots(downstream, store).written is False
+        assert (downstream / LOCK_FILE).read_bytes() == before
+        update_from_snapshots(downstream, store=store)
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "rates"
 
 
 class TestPinnedHash:

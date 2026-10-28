@@ -618,6 +618,12 @@ missing from it: one record for each asset of each dependency, with its `content
 - **IDs use the dependency's key** in `[dependencies]`, which is this pipeline's name for it.
 - **`pinned_hash`** is the SHA-256 of a listing with one line per pinned asset of that
   dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID.
+- **`pinned_from`** is the pipeline the pins came from, by its own ID and not by the key: the
+  pipeline of the snapshot they were taken from, or the one a `git` dependency's clone holds
+  (its `[project] id`, else the ID its repository's address gives). It says where the store
+  keeps them, which store v2 needs ({doc}`plan-0.3.0`), and not what they are, so a snapshot's
+  `inputs` are compared without it. A pin kept as it was keeps the one it had; one made before
+  0.3.0 has none until it is made again or moved. *(Added 2026-10-28.)*
 - **A `location` of kind `path` has `path` and no `value`**: a lockfile holds no absolute path.
 - **A `location` of kind `git` has `url`, `rev` if the manifest gives one, and `commit`**: the
   full hash that `rev` meant when the dependency was pinned. `rev` is what was asked for;

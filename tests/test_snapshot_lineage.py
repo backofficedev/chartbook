@@ -297,6 +297,22 @@ class TestASnapshotIsNotGivenBackWithOtherPins:
         assert not again.made and again.snapshot.path == made.path
 
 
+    def test_a_lockfile_that_gains_where_its_pins_came_from_is_the_same_pins(self, two):
+        """``pinned_from`` says whose pins they are, not which: an update that only adds it gives back the snapshot."""
+        rates, forecast = two
+        lock.pin(forecast)
+        locked = lock.read_lock(forecast)
+        assert locked.dependencies[0]["pinned_from"] == "acme/rates"
+        del locked.dependencies[0]["pinned_from"]  # as a lockfile from before it
+        lock.write_lock(locked, forecast / lock.LOCK_FILE)
+        made = snapshot.make(forecast).snapshot
+        assert "pinned_from" not in made.inputs[0]
+
+        assert lock.update(forecast).written  # nothing moved; the entry gains it
+        assert lock.read_lock(forecast).dependencies[0]["pinned_from"] == "acme/rates"
+        again = snapshot.make(forecast)
+        assert not again.made and again.snapshot.path == made.path
+
     def test_a_run_that_builds_with_the_moved_pins_says_so(self, two):
         rates, forecast = two
         self._moved(two)

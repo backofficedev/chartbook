@@ -95,6 +95,18 @@ class TestNoSnapshotSoItsRepository:
         assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
         assert not lock.verify(forecast).problems  # --frozen agrees it is pinned from where the manifest says
 
+    def test_it_records_the_pipeline_it_came_from_and_a_pin_leaves_one_from_before_as_it_is(self, host):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _entry(forecast)["pinned_from"] == "acme/rates"
+        locked = lock.read_lock(forecast / lock.LOCK_FILE)
+        del locked.dependencies[0]["pinned_from"]  # as a lockfile from before it
+        lock.write_lock(locked, forecast / lock.LOCK_FILE)
+        before = (forecast / lock.LOCK_FILE).read_bytes()
+        assert lock.pin(forecast).written is False  # kept at its commit: nothing to write
+        assert (forecast / lock.LOCK_FILE).read_bytes() == before
+
     def test_with_no_default_host_it_is_the_store_only(self, tmp_path):
         _upstream(tmp_path.resolve(), 4.0)
         forecast = _forecast(tmp_path.resolve() / "forecast", {"acme/rates": {}})
