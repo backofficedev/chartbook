@@ -390,6 +390,11 @@ hash. It maps a commit of a pipeline to the hashes of what that commit built, wi
 kept as objects. The commit is the input a person can name and check out. Nothing looks an
 input hash up, and `builds/` is still empty. {doc}`overview`, "4b, as built".)*
 
+*(2026-10-28: decided by the maintainer: the "before" hash is the git commit, and no input hash
+is to be built. Store v2 names each snapshot's folder by its time and commit, and keeps no
+`builds/`.
+{doc}`plan-0.3.0`, "The two hashes, kept".)*
+
 ### Links, not copies
 
 A **hardlink** is a second directory entry pointing at the same inode — the same bytes under two
