@@ -789,7 +789,7 @@ class TestWhatTheSecondReviewFound:
         listed = hashing.hash_path(folder / "_data" / "delivery")
         sums = "".join(f"{e.content_hash.split(':', 1)[1]}  {e.path}\n" for e in listed.files)
         (folder / "_data" / "sums").mkdir()
-        (folder / "_data" / "sums" / "SHA256SUMS").write_text(sums, encoding="utf-8")
+        (folder / "_data" / "sums" / "SHA256SUMS").write_bytes(sums.encode("utf-8"))  # its bytes as hashed, on Windows too
         assert hashing.hash_path(folder / "_data" / "sums" / "SHA256SUMS").content_hash == listed.content_hash
         if kind == "folder":
             store = FolderStore(work / "store")
