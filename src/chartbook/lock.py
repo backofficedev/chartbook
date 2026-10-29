@@ -714,11 +714,17 @@ def _pipeline_of_clone(directory: Path, entry: dict, project_dir: Path) -> Optio
                 return validate_pipeline_id(from_address)
         url = local_url(entry["git"], project_dir) if entry.get("git") else ""
         if url.startswith("file://"):
-            from urllib.parse import unquote, urlparse
+            from urllib.parse import urlparse
+            from urllib.request import url2pathname
 
-            url = unquote(urlparse(url).path)
+            # file:///C:/x is C:\x on Windows, where the path alone has no drive
+            url = url2pathname(urlparse(url).path)
         if url and "://" not in url and Path(url).is_dir():
-            return derive_pipeline_id(project, Path(url))
+            derived = derive_pipeline_id(project, Path(url))
+            # A bare repository's folder is named as its clone is, with .git
+            if derived.endswith(".git") and Path(url).name.endswith(".git") and len(derived) > 4:
+                derived = validate_pipeline_id(derived[:-4])
+            return derived
     except (OSError, ValueError):
         pass
     return None
@@ -1248,8 +1254,9 @@ def _sync_now(
                 key, directory, had_assets, may_move, store, cache, report, commit_moved,
                 within=directory,
             )
-            if directory is not None and fetched_now:
-                # The pipeline its copy holds, by its own ID, whatever the key
+            if directory is not None and (fetched_now or records != had_assets):
+                # The pipeline its copy holds, by its own ID, whatever the key:
+                # when it was fetched again, or something in it was pinned
                 of_clone = _pipeline_of_clone(Path(directory), entry, project_dir)
                 listed = {k: v for k, v in listed.items() if k != "pinned_from"}
                 if of_clone:
