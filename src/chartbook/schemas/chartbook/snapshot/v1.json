@@ -163,6 +163,23 @@
           "pipeline": {
             "type": "string"
           },
+          "location": {
+            "type": "object",
+            "description": "Where the asset is: a file (`kind`, `path` as declared), or a table or query in a source. A dataframe's file has the `format` and `read_options` its manifest gives, and only when it gives them, so that a pipeline reading the pin reads the bytes as their owner said to.",
+            "properties": {
+              "format": {
+                "enum": [
+                  "parquet",
+                  "csv",
+                  "jsonl",
+                  "ipc"
+                ]
+              },
+              "read_options": {
+                "type": "object"
+              }
+            }
+          },
           "keep": {
             "type": "boolean",
             "const": true,

@@ -14,13 +14,15 @@ import glob
 import os
 import re
 from contextlib import redirect_stdout
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
+from typing import Optional
 
 import polars as pl
 
+from chartbook import formats
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
 from chartbook.utils import is_glob_pattern
 
@@ -54,12 +56,17 @@ class DeclaredDataframe:
         name: Its display name (the ID when no ``name`` is set).
         path: Where its data lives, absolute. Contains glob characters for
             partitioned data.
+        format: Its ``format``, if the manifest gives one; else its path's
+            ending says it (:mod:`chartbook.formats`).
+        read_options: Its ``read_options``, if the manifest gives them.
     """
 
     pipeline_id: str
     dataframe_id: str
     name: str
     path: Path
+    format: Optional[str] = field(default=None, compare=False)
+    read_options: Optional[dict] = field(default=None, compare=False)
 
     @property
     def is_glob(self) -> bool:
@@ -96,51 +103,58 @@ def find_declared_dataframes(manifest):
                     dataframe_id=dataframe_id,
                     name=dataframe.get("name", dataframe_id),
                     path=Path(resolved_path),
+                    format=dataframe.get("format"),
+                    read_options=dataframe.get("read_options"),
                 )
             )
     return declared
 
 
 def get_dataset_report(
-    filepath, include_stats=True, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB
+    filepath,
+    include_stats=True,
+    size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB,
+    format=None,
+    read_options=None,
 ):
     """Return a dict with file metadata, shape, columns, sample values, numeric stats, and glimpse.
 
     For files larger than size_threshold_mb, uses memory-efficient loading by only
-    collecting sampled data and correcting the row count in glimpse output.
+    collecting sampled data and correcting the row count in glimpse output. The
+    file is read as ``data.load()`` reads it (:mod:`chartbook.formats`).
 
-    :param filepath: Path to the CSV or Parquet file, or a glob pattern
-        matching the parquet files of a partitioned dataset.
+    :param filepath: Path to the file, a glob pattern matching the files of a
+        partitioned dataset, or a folder of them.
     :type filepath: str or Path
     :param include_stats: If True, include numeric column statistics.
     :type include_stats: bool
     :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold_mb: float
+    :param format: The dataframe's ``format``, if its manifest gives one; else its path's ending says it.
+    :type format: str, optional
+    :param read_options: The dataframe's ``read_options``, if its manifest gives them.
+    :type read_options: dict, optional
     :returns: A dict containing file metadata, shape, columns, sample values, numeric stats, and glimpse.
     :rtype: dict
     """
     report = {}
     filepath = str(filepath)
     try:
-        # File info; a glob pattern is one dataset spread over many files
-        if is_glob_pattern(filepath):
-            part_files = glob.glob(filepath, recursive=True)
+        # File info; a glob or a folder is one dataset spread over many files
+        reading = formats.reading(filepath, format, read_options)
+        if is_glob_pattern(filepath) or os.path.isdir(filepath):
+            part_files = formats.files_of(filepath, reading)
             report["file_size_bytes"] = sum(os.path.getsize(f) for f in part_files)
         else:
             report["file_size_bytes"] = os.path.getsize(filepath)
         report["file_size_mb"] = report["file_size_bytes"] / (1024 * 1024)
-        report["file_type"] = Path(filepath).suffix.replace(".", "").upper()
+        report["file_type"] = reading.format.upper()
 
         # Determine if this is a large file
         is_large_file = report["file_size_mb"] > size_threshold_mb
 
-        # Load data lazily
-        if is_glob_pattern(filepath):
-            lf = pl.scan_parquet(filepath, hive_partitioning=True)
-        elif filepath.endswith(".csv"):
-            lf = pl.scan_csv(filepath)
-        else:
-            lf = pl.scan_parquet(filepath)
+        # Load data lazily, as data.load() does
+        lf = formats.scan(filepath, format, read_options)
 
         # Get schema without loading data
         schema = lf.collect_schema()
@@ -353,6 +367,8 @@ def create_txt_report(
             dataframe.path,
             include_stats=include_stats,
             size_threshold_mb=size_threshold_mb,
+            format=dataframe.format,
+            read_options=dataframe.read_options,
         )
 
         output_lines.append("")
@@ -366,8 +382,9 @@ def create_txt_report(
             continue
 
         # File metadata
+        kind = formats.NAMES.get(report["file_type"].lower(), report["file_type"])
         output_lines.append(
-            f"**Size:** {format_file_size(report['file_size_bytes'])} | **Type:** {report['file_type'].capitalize()} | **Shape:** {report['n_rows']:,} rows × {report['n_cols']} columns"
+            f"**Size:** {format_file_size(report['file_size_bytes'])} | **Type:** {kind[0].upper() + kind[1:]} | **Shape:** {report['n_rows']:,} rows × {report['n_cols']} columns"
         )
         output_lines.append("")
 

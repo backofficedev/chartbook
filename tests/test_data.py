@@ -271,26 +271,34 @@ def test_load_polars_glob_returns_lazyframe(catalog_project_glob):
     assert "category" in df.columns
 
 
-def test_glob_polars_eager_raises(catalog_project_glob):
-    """ValueError when using polars_eager with glob path."""
-    with pytest.raises(ValueError, match="Glob patterns"):
-        data.load(
-            pipeline="pipeline_glob",
-            dataframe="dataframe_0",
-            format="polars_eager",
-            catalog_path=catalog_project_glob,
-        )
+def test_glob_polars_eager_reads_it_as_polars_does(catalog_project_glob):
+    """A glob in polars_eager is the LazyFrame collected (#135; it raised "Glob patterns" before)."""
+    lazy = data.load(pipeline="pipeline_glob", dataframe="dataframe_0", catalog_path=catalog_project_glob).collect()
+    eager = data.load(
+        pipeline="pipeline_glob",
+        dataframe="dataframe_0",
+        format="polars_eager",
+        catalog_path=catalog_project_glob,
+    )
+    assert isinstance(eager, pl.DataFrame)
+    assert "category" in eager.columns
+    assert eager.sort("date", "category").equals(lazy.sort("date", "category"))
 
 
-def test_glob_pandas_raises(catalog_project_glob):
-    """ValueError when using pandas with glob path."""
-    with pytest.raises(ValueError, match="Glob patterns"):
-        data.load(
-            pipeline="pipeline_glob",
-            dataframe="dataframe_0",
-            format="pandas",
-            catalog_path=catalog_project_glob,
-        )
+def test_glob_pandas_reads_it_as_polars_does(catalog_project_glob):
+    """A glob in pandas is the LazyFrame collected and converted, hive keys and all."""
+    import pandas as pd
+
+    lazy = data.load(pipeline="pipeline_glob", dataframe="dataframe_0", catalog_path=catalog_project_glob).collect()
+    df = data.load(
+        pipeline="pipeline_glob",
+        dataframe="dataframe_0",
+        format="pandas",
+        catalog_path=catalog_project_glob,
+    )
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == lazy.columns
+    assert len(df) == lazy.height and sorted(df["category"]) == sorted(lazy["category"])
 
 
 def test_get_data_path_returns_path_for_glob(catalog_project_glob):

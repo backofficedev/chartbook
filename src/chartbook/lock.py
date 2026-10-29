@@ -67,7 +67,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
-from chartbook import hashing, snapshot
+from chartbook import formats, hashing, snapshot
 from chartbook.gitcache import GIT as _GIT
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
@@ -2417,6 +2417,12 @@ def _sync_dependency(
         return dict(had)
 
     records: dict[str, dict] = {}
+    # How the owner said to read each dataframe, which its record keeps
+    try:
+        entries = _read_manifest_file(Path(directory)).get("dataframes")
+    except (OSError, ValueError):
+        entries = None
+    entries = entries if isinstance(entries, dict) else {}
     for ref, declared_path, absolute in declared:
         qualified = ref.in_pipeline(key)
         records[str(qualified)] = _pin_asset(
@@ -2431,6 +2437,7 @@ def _sync_dependency(
             report,
             commit_moved,
             within,
+            reading=formats.declared(entries.get(ref.name)) if ref.kind == "dataframe" else None,
         )
 
     # A table or query in a source has no file in the checkout to take: a
@@ -2510,8 +2517,13 @@ def _pin_asset(
     report: PinReport,
     commit_moved: bool = False,
     within: Optional[Path] = None,
+    reading: Optional[dict] = None,
 ) -> dict:
-    """Decide what one asset's record is, storing its bytes if they are needed."""
+    """Decide what one asset's record is, storing its bytes if they are needed.
+
+    *reading* is a dataframe's ``format`` and ``read_options``, which a
+    record of its bytes keeps (:func:`chartbook.snapshot.asset_record`).
+    """
     asset_id = str(ref)
     old = (had or {}).get("content_hash")
 
@@ -2567,7 +2579,7 @@ def _pin_asset(
         report.events.append(
             PinEvent(status, key, asset_id, old=old, new=stored.content_hash)
         )
-        return _asset_record(ref, key, declared_path, stored, found.single)
+        return _asset_record(ref, key, declared_path, stored, found.single, reading=reading)
 
     # It has a pin, and `pin` does not move one
     try:

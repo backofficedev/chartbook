@@ -351,6 +351,25 @@ class AssetNotPinnedError(LookupError):
         super().__init__(message)
 
 
+class UnreadableTableError(ValueError):
+    """Raised when a dataframe's file cannot be read as the format it is taken to be.
+
+    The message names that format and what said it (the entry's ``format``,
+    or the path's ending), and how to say another (:mod:`chartbook.formats`).
+    The reader's own error is the cause.
+
+    Attributes:
+        path: The file, glob or folder.
+        format: The format it was read as: ``"parquet"``, ``"csv"``,
+            ``"jsonl"`` or ``"ipc"``.
+    """
+
+    def __init__(self, path, format: str, message: str):
+        self.path = path
+        self.format = format
+        super().__init__(message)
+
+
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """Handle validation error with user-friendly output.
 

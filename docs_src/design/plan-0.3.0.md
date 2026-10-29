@@ -478,8 +478,10 @@ store, and the Windows CI runs the tests under a long root.
 4. `chartbook store migrate`.
 5. Long paths on Windows (#136).
 6. `chartbook store export` and `store import`.
-7. #135, the rest.
-8. #134, the shared reader.
+7. #135, the rest. *Its second item, a glob in every `data.load` format, was built 2026-10-28
+   with step 8.*
+8. #134, the shared reader (`chartbook.formats`). *Built 2026-10-28.* DuckDB has no reader of
+   Arrow IPC of its own, so `data.sql()` hands it such a file as an Arrow dataset.
 9. #133, `[files]`.
 10. The template's CI.
 

@@ -132,6 +132,10 @@ class FileLocation(Location):
             CSVs) has *listed* and no *files*: ``data.path()`` gives the
             folder, and a read of it as parquet is refused
             (:func:`nothing_to_read`).
+        format: The ``format`` its entry gives, or None: then its path's
+            ending says it (:mod:`chartbook.formats`). For another
+            pipeline's file, its record's, as its owner gave it.
+        read_options: The ``read_options`` its entry gives, likewise.
     """
 
     kind: ClassVar[str] = "file"
@@ -139,6 +143,8 @@ class FileLocation(Location):
     path: Path
     files: tuple = dataclasses.field(default=(), compare=False)
     listed: tuple = dataclasses.field(default=(), compare=False)
+    format: Optional[str] = dataclasses.field(default=None, compare=False)
+    read_options: Mapping = dataclasses.field(default_factory=dict, compare=False)
 
 
 def nothing_to_read(location: "Location") -> Optional[str]:
@@ -156,8 +162,8 @@ def nothing_to_read(location: "Location") -> Optional[str]:
     shown = ", ".join(listed[:5]) + (", …" if len(listed) > 5 else "")
     return (
         f"The folder {Path(location.path).name!r} holds the {len(listed)} file(s) its record lists ({shown}), "
-        f"and none is a parquet table: data.load and data.sql read parquet. data.path() gives the folder, "
-        f"for a reader of what it holds."
+        f"and none is a parquet table: a folder is read as parquet unless its entry's format says otherwise. "
+        f"data.path() gives the folder, for a reader of what it holds."
     )
 
 
@@ -912,6 +918,10 @@ def _held(store, record: dict) -> Location:
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     held = store.get(record["content_hash"])
+    # How its owner said to read it, when they said: a format and its options
+    from chartbook.formats import declared
+
+    said = declared(record["location"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
@@ -933,7 +943,7 @@ def _held(store, record: dict) -> Location:
                 f"{record.get('id')!r}: its record's path, {declared_path!r}, is not plain after its "
                 f"wildcard. The record is not one a store wrote, and is not read."
             )
-        return FileLocation(held.joinpath(*parts))
+        return FileLocation(held.joinpath(*parts), **said)
     from chartbook.store import declared_name
 
     name = declared_name(declared_path) or Path(declared_path).name  # as put named it, on every system
@@ -967,13 +977,13 @@ def _held(store, record: dict) -> Location:
         # folder of CSVs, a model's files) is still the folder for
         # data.path(), and a parquet read of it is refused (nothing_to_read)
         # rather than handed the folder, which would take whatever it holds
-        return FileLocation(held, tuple(read), listed=tuple(sorted(files_read(record) or {})))
+        return FileLocation(held, tuple(read), listed=tuple(sorted(files_read(record) or {})), **said)
     from chartbook.store import on_disk
 
     own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
     if not own.is_file():
-        return FileLocation(held)  # a directory pinned before records listed its files: the folder
-    return FileLocation(own)
+        return FileLocation(held, **said)  # a directory pinned before records listed its files: the folder
+    return FileLocation(own, **said)
 
 
 #: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.
@@ -1261,7 +1271,10 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
         return _resolve_version(asset, manifest_dir, raw[table][name])
     # Joined lexically, not resolved: the declared path is the asset's real
     # location even when something has since linked another file into it.
-    return FileLocation(Path(os.path.normpath(manifest_dir / declared_path)))
+    from chartbook.formats import declared
+
+    reading = declared(entry) if table == "dataframes" else {}
+    return FileLocation(Path(os.path.normpath(manifest_dir / declared_path)), **reading)
 
 
 def _resolve_in_source(entry: dict, name: str, raw: dict, manifest_dir: Path) -> Location:
@@ -1310,7 +1323,9 @@ def _resolve_in_catalog(
             f"Dataframe {dataframe!r} in pipeline {pipeline_key!r} has no "
             f"'path' set in its chartbook.toml."
         )
-    return FileLocation(Path(resolved))
+    from chartbook.formats import declared
+
+    return FileLocation(Path(resolved), **declared(entry))
 
 
 def resolve(

@@ -241,7 +241,7 @@ Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually
 
 ## `[dataframes]` — Dataframe Definitions
 
-A dataframe is in one place: a parquet file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
+A dataframe is in one place: a file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the file — a single file, a folder of parts, or a glob pattern for hive-partitioned data — stored as parquet, CSV, JSON lines or Arrow IPC ({ref}`formats`):
 
 ```toml
 [dataframes.revenue_data]
@@ -271,7 +271,49 @@ Hive-partitioned data:
 path = "./_data/revenue_data/**/*.parquet"
 ```
 
-Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
+A glob, like a folder, is one dataframe, and `data.load` reads it in every `format=` it offers. As with charts, exactly one of `docs_path` / `docs` is required.
+
+(formats)=
+### The file's format: `format` and `read_options`
+
+A dataframe's file is parquet, CSV or TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The ending of its `path` says which:
+
+| `format` | Endings |
+|---|---|
+| `"parquet"` | `.parquet` |
+| `"csv"` | `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz` |
+| `"jsonl"` | `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz` |
+| `"ipc"` | `.arrow`, `.feather`, `.ipc` |
+
+A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`.
+
+`read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"     # delivered as it is, with an ending that says nothing
+format = "csv"
+read_options = { separator = ";", schema_overrides = { zip = "String" }, null_values = ["NA", ""] }
+docs = "The vendor's daily drop, kept as delivered."
+
+[dataframes.earnings_releases]
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"
+read_options = { infer_schema_length = 10000 }   # a field that first appears late is found
+docs = "One nested record per event, a file per quarter."
+```
+
+| Option | For | What it is |
+|---|---|---|
+| `separator` | CSV | One character; `,` by default, a tab for `.tsv` |
+| `has_header` | CSV | `true` (the default) or `false` |
+| `quote_char`, `comment_prefix` | CSV | One character each |
+| `skip_rows` | CSV | Lines to skip before the header |
+| `null_values` | CSV | A string, or a list of strings, read as null |
+| `decimal_comma` | CSV | `true` for `1,5` meaning one and a half |
+| `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time` |
+| `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from; 100 by default |
+
+A parquet or Arrow IPC file keeps its own schema and takes none. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each engine infers what it is not told in its own way: DuckDB finds dates in a CSV's text, where polars leaves it text; `schema_overrides` gives a column one type in both. Hive's `key=value` folders become columns for parquet and Arrow IPC; polars reads none from CSV or JSON lines, and DuckDB is told to read none either. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 

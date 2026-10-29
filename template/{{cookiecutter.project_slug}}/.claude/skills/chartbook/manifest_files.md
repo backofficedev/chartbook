@@ -580,4 +580,21 @@ date_col = "date"
 docs = "Hive-partitioned dataset with year/month partitions."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Glob paths only support `format="polars"` (LazyFrame) — using `"pandas"` or `"polars_eager"` with a glob path raises a `ValueError`.
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Every `format=` of `data.load` reads a glob: `"pandas"` and `"polars_eager"` collect the LazyFrame.
+
+## The File's Format
+
+A dataframe's file is parquet, CSV/TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The path's ending says which: `.parquet`; `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz`; `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz`; `.arrow`, `.feather`, `.ipc`. Anything else, a folder included, is parquet unless `format` says otherwise:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"
+format = "csv"                                   # "parquet" | "csv" | "jsonl" | "ipc"
+read_options = { separator = ";", schema_overrides = { zip = "String" } }
+docs = "The vendor's daily drop, kept as delivered."
+```
+
+- `read_options` are for CSV and JSON lines, by polars' names: `separator`, `has_header`, `quote_char`, `comment_prefix`, `skip_rows`, `null_values`, `decimal_comma` (CSV), and `schema_overrides`, `infer_schema_length` (both). `data.sql` gives DuckDB the same ones under its own names. A parquet or Arrow IPC file takes none.
+- An unknown `format`, an option not in that list, or one of the wrong type stops the manifest from loading.
+- `data.load` reads the schema when called: a file that is not its format raises `UnreadableTableError` naming the format.
+- A file that is not a table belongs under `[files]`, not `[dataframes]`.

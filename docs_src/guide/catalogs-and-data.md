@@ -126,12 +126,12 @@ lf = data.load(pipeline="yield_curve", dataframe="repo_public")   # polars LazyF
 df = data.load(pipeline="yield_curve", dataframe="repo_public", format="pandas")
 df = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars_eager")
 
-path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")  # the parquet path
+path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")  # the file's path
 text = data.get_docs(pipeline="yield_curve", dataframe="repo_public")       # the write-up, as a string
 where = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public") # the write-up's source file
 ```
 
-All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* dataframes straight from its `chartbook.toml`, with no catalog involved (and `assets.path("chart/repo_rates")` that of a chart, notebook or note) — see {doc}`documenting-a-pipeline`. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
+All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* dataframes straight from its `chartbook.toml`, with no catalog involved (and `assets.path("chart/repo_rates")` that of a chart, notebook or note) — see {doc}`documenting-a-pipeline`. A glob or a folder of parts is one dataframe in every `format=` `data.load` offers, Hive's `key=value` folders becoming columns of a parquet or Arrow IPC one. The file may be parquet, CSV, JSON lines or Arrow IPC, as its manifest says ({ref}`formats`); `format=` is what `data.load` returns, not what the file is.
 
 ### SQL
 
@@ -148,7 +148,7 @@ recent = data.sql("""
 """)                                      # a LazyFrame; .collect() runs it
 ```
 
-A file is read as a table (`read_parquet('…')`), a table in a source by its name, a query dataframe as a sub-select. The SQL runs in one engine: the source the tables and queries are in, or a fresh in-memory DuckDB when the query names only files. Another pipeline's file, `{fed_yield_curve:treasury_rates}`, is the pinned copy, as everywhere else. ChartBook does not parse or rewrite the SQL; what is between the braces is a reference, and everything else is yours, in DuckDB's dialect. A literal brace, as in DuckDB's `{'a': 1}` struct syntax or inside a string, is written twice: `{{'a': 1}}`.
+A file is read as a table by DuckDB's reader of its format (`read_parquet('…')`, `read_csv('…', …)` or `read_json('…', …)`, with the `read_options` its manifest gives), a table in a source by its name, a query dataframe as a sub-select. An Arrow IPC file, which DuckDB has no reader of its own for, is handed to it as an Arrow dataset, and has no text for `data.ref`. The SQL runs in one engine: the source the tables and queries are in, or a fresh in-memory DuckDB when the query names only files. Another pipeline's file, `{fed_yield_curve:treasury_rates}`, is the pinned copy, as everywhere else. ChartBook does not parse or rewrite the SQL; what is between the braces is a reference, and everything else is yours, in DuckDB's dialect. A literal brace, as in DuckDB's `{'a': 1}` struct syntax or inside a string, is written twice: `{{'a': 1}}`.
 
 For SQL you run with your own tooling, `data.ref("yield_slopes")` gives the name to paste in, and `data.connect("local")` is the raw, read-only connection to a source. {ref}`[sources] <sources>` says how a pipeline declares one.
 
