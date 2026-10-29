@@ -2084,9 +2084,21 @@ def _inputs(directory: Path) -> list:
 
 
 def _inputs_key(inputs: object) -> list:
-    """A snapshot's inputs in one order and form, to tell whether two say the same."""
+    """A snapshot's inputs in one order and form, to tell whether two say the same.
+
+    An entry's ``pinned_from``, the ID its pins are kept under, says where
+    they are and not what they are, so it is left out: a lockfile that
+    gained it says the same pins as before.
+    """
     listed = inputs if isinstance(inputs, list) else []
-    return sorted(json.dumps(entry, sort_keys=True, default=str) for entry in listed)
+    return sorted(
+        json.dumps(
+            {k: v for k, v in entry.items() if k != "pinned_from"} if isinstance(entry, dict) else entry,
+            sort_keys=True,
+            default=str,
+        )
+        for entry in listed
+    )
 
 
 def _scores(directory: Path, entry) -> Optional[dict]:

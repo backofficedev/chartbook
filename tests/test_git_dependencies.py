@@ -404,6 +404,72 @@ class TestWhereTheCacheIs:
         assert Path.home() / ".chartbook" not in default_store().root.parents
 
 
+class TestThePipelineAPinIsFrom:
+    """A pin records the pipeline it came from by that pipeline's own ID (``pinned_from``).
+
+    A checkout is one commit's files in a folder named after the commit, so
+    the ID is not the folder's: it is the one a clone at the top of the
+    repository would derive.
+    """
+
+    def _checkout(self, work, project: dict) -> Path:
+        directory = work / "checkout" / ("0" * 40)
+        _write_manifest(directory, {"project": project} if project else {})
+        return directory
+
+    def test_its_project_id(self, work):
+        checkout = self._checkout(work, {"id": "acme/curve"})
+        entry = {"git": "https://github.com/someone/else.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/curve"
+
+    def test_else_the_id_it_is_named_by(self, work):
+        checkout = self._checkout(work, {})
+        entry = {"git": "https://github.com/acme/rates.git", "_from_id": "acme/rates"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/rates"
+
+    def test_else_its_repository_address(self, work):
+        checkout = self._checkout(work, {})
+        entry = {"git": "git@github.com:Acme/CRSP-Treasury.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/crsp_treasury"
+
+    def test_a_repo_url_in_its_manifest_comes_before_where_it_was_fetched_from(self, work):
+        """As for any clone: a fork whose manifest names its upstream keeps the upstream's ID."""
+        checkout = self._checkout(work, {"repo_url": "https://github.com/ftsfr/rates"})
+        entry = {"git": "https://github.com/a-fork/rates.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "ftsfr/rates"
+
+    def test_a_repository_on_this_disk_is_named_as_its_folder_names_itself(self, work):
+        checkout = self._checkout(work, {})
+        (work / "ref_data").mkdir()
+        assert lock._pipeline_of_clone(checkout, {"git": "../ref_data"}, work / "downstream") == "ref_data"
+        assert lock._pipeline_of_clone(checkout, {"git": (work / "ref_data").as_uri()}, work) == "ref_data"
+
+    def test_a_bare_repository_is_named_as_its_clone_is(self, work):
+        checkout = self._checkout(work, {})
+        (work / "rates.git").mkdir()
+        assert lock._pipeline_of_clone(checkout, {"git": str(work / "rates.git")}, work) == "rates"
+
+    def test_a_pin_of_something_new_at_the_same_commit_records_it(self, downstream, upstream, cache):
+        """Found by a reviewer: a lockfile from 0.2.0 gained a pin, built since in the working copy, and not the field."""
+        lock.pin(downstream, git_cache=cache)
+        locked = lock.read_lock(downstream)
+        del locked.dependencies[0]["pinned_from"]
+        lock.write_lock(locked, downstream / LOCK_FILE)
+        entry = locked.dependencies[0]
+        copy = cache.work_copy(local_url("../upstream", downstream), entry["location"]["commit"])
+        (copy / "_data").mkdir(exist_ok=True)
+        (copy / "_data" / "ignored.parquet").write_bytes(b"built by a run")
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report)["ignored"] == "pinned"
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "upstream"
+
+    def test_nothing_to_name_it_by_is_none(self, work):
+        checkout = self._checkout(work, {})
+        assert lock._pipeline_of_clone(checkout, {"git": str(work / "not_here")}, work) is None
+        bad = self._checkout(work, {"id": "not/an/id"})
+        assert lock._pipeline_of_clone(bad, {"git": "https://github.com/acme/rates.git"}, work) is None
+
+
 class TestPinning:
     def test_a_git_dependency_is_fetched_and_pinned_from_its_checkout(
         self, downstream, upstream, cache
@@ -420,6 +486,8 @@ class TestPinning:
                 "id": "acme/upstream",
                 "via": "rev",
                 "location": {"kind": "git", "url": "../upstream", "commit": commit},
+                # The pipeline as its repository names it, in its [project] id, not by the key
+                "pinned_from": "upstream",
                 "pinned_hash": locked.dependencies[0]["pinned_hash"],
             }
         ]
