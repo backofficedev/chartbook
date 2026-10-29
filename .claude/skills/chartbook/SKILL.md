@@ -264,7 +264,7 @@ docs = "Hive-partitioned dataset."
 
 Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Every `format=` of `data.load` reads a glob (`"pandas"` and `"polars_eager"` collect the LazyFrame).
 
-A dataframe's file may be parquet, CSV/TSV, JSON lines (gzipped or not) or Arrow IPC. The path's ending says which (`.csv`, `.tsv`, `.csv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.arrow`, `.feather`, `.ipc`); anything else, a folder included, is parquet unless `format = "parquet" | "csv" | "jsonl" | "ipc"` says otherwise. `read_options` (polars' names: `separator`, `has_header`, `schema_overrides`, `infer_schema_length`, `null_values`, `skip_rows`, `quote_char`, `comment_prefix`, `decimal_comma`) go to the CSV or JSON lines reader, in `data.load` and, under DuckDB's names, in `data.sql`. A file that is not a table belongs under `[files]`, not `[dataframes]`.
+A dataframe's file may be parquet, CSV/TSV, JSON lines (gzipped or not) or Arrow IPC. The path's ending says which (`.csv`, `.tsv`, `.csv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.arrow`, `.feather`, `.ipc`); anything else, a folder included, is parquet unless `format = "parquet" | "csv" | "jsonl" | "ipc"` says otherwise. `read_options` (polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma`, `schema_overrides`, `infer_schema_length`) go to the CSV or JSON lines reader, in `data.load` and, under DuckDB's names and meaning the same, in `data.sql`; polars' `comment_prefix` and `skip_rows` are not taken. A file that is not a table belongs under `[files]`, not `[dataframes]`.
 
 ## Directory Structure
 

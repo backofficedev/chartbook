@@ -46,7 +46,6 @@ Load dataframes from registered pipelines in a catalog::
 
 import re
 import sys
-import uuid
 from pathlib import Path
 from typing import Optional, Union
 
@@ -684,9 +683,17 @@ def sql(
     for text, location in locations.items():
         if location.kind == "file" and formats.reading_of(location).format == "ipc":
             # DuckDB has no reader of Arrow IPC of its own: the files go in as
-            # a dataset, under a name no other call uses
-            name = f"chartbook_ipc_{uuid.uuid4().hex[:12]}"
-            arrow[name] = formats.arrow_dataset(location)
+            # a dataset, under a name of their own, the same each call, so a
+            # :memory: source keeps one view of them and not one a call
+            if not _takes_arrow(engine):
+                raise ValueError(
+                    f"The query names {text.strip()}, an Arrow IPC file, and runs in the source "
+                    f"{engine.source!r}, a {engine.name} engine, which ChartBook cannot hand one to. "
+                    f"Load it with data.load() and join the frames in Polars."
+                )
+            dataset = formats.arrow_dataset(location)
+            name = formats.arrow_name(dataset)
+            arrow[name] = dataset
             replacement = quote_identifier(name)
         elif location.kind == "file":
             replacement = backend_for(location).ref(location)
@@ -695,6 +702,21 @@ def sql(
         query = query.replace("{" + text + "}", replacement)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
     return engine.sql(query, arrow=arrow) if arrow else engine.sql(query)
+
+
+def _takes_arrow(engine) -> bool:
+    """Whether an engine's ``sql()`` takes Arrow data to register (``arrow=``), as DuckDB's does.
+
+    A backend from a plugin, written before there was such an argument, is
+    handed none.
+    """
+    import inspect
+
+    try:
+        parameters = inspect.signature(engine.sql).parameters
+    except (TypeError, ValueError):
+        return False
+    return "arrow" in parameters or any(p.kind is p.VAR_KEYWORD for p in parameters.values())
 
 
 def connect(

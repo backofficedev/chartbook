@@ -594,7 +594,8 @@ read_options = { separator = ";", schema_overrides = { zip = "String" } }
 docs = "The vendor's daily drop, kept as delivered."
 ```
 
-- `read_options` are for CSV and JSON lines, by polars' names: `separator`, `has_header`, `quote_char`, `comment_prefix`, `skip_rows`, `null_values`, `decimal_comma` (CSV), and `schema_overrides`, `infer_schema_length` (both). `data.sql` gives DuckDB the same ones under its own names. A parquet or Arrow IPC file takes none.
-- An unknown `format`, an option not in that list, or one of the wrong type stops the manifest from loading.
-- `data.load` reads the schema when called: a file that is not its format raises `UnreadableTableError` naming the format.
+- `read_options` are for CSV and JSON lines, by polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma` (CSV), and `schema_overrides`, `infer_schema_length` (both; 20480 rows by default in both engines). `data.sql` gives DuckDB the same ones under its own names, meaning the same; polars' `comment_prefix` and `skip_rows` are not taken. A parquet or Arrow IPC file takes none.
+- An unknown `format`, an option not in that list, or one of the wrong type stops the manifest from loading; an override of a column the file lacks is refused when it is read.
+- A folder's Hive keys are those below it. Each JSON lines file of a glob is inferred from its own lines, and the files joined by name. With `format` given, a folder whose files lack its endings is read as all of them.
+- `data.load` reads the schema when called: a file not built raises `FileNotFoundError`, and a file that is not its format raises `UnreadableTableError` naming the format and the reader's reason.
 - A file that is not a table belongs under `[files]`, not `[dataframes]`.

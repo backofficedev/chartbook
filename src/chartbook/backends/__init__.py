@@ -430,11 +430,16 @@ class Backend:
         """A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here."""
         raise NotImplementedError
 
-    def sql(self, query: str):
+    def sql(self, query: str, arrow: Optional[dict] = None):
         """Run SQL in this engine and return a Polars LazyFrame.
 
         The engine binds the query here, so a name it does not know is
-        refused at once; collecting the frame runs it.
+        refused at once; collecting the frame runs it. *arrow* is Arrow
+        data the query names, by the name it goes by, for an engine that
+        reads files (``reads_files``) and can scan Arrow data: an Arrow IPC
+        file, which DuckDB has no reader of its own for. A backend whose
+        ``sql()`` takes no such argument is handed none, and a query naming
+        such a file is refused before it reaches it.
         """
         raise NotImplementedError
 

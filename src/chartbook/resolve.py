@@ -918,10 +918,11 @@ def _held(store, record: dict) -> Location:
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     held = store.get(record["content_hash"])
-    # How its owner said to read it, when they said: a format and its options
-    from chartbook.formats import declared
+    # How its owner said to read it, or its declared path's ending: the
+    # store's folder of a `prices.csv` has no ending of its own
+    from chartbook.formats import kept
 
-    said = declared(record["location"])
+    said = kept(record["location"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name

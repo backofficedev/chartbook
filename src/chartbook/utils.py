@@ -235,7 +235,7 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
                 # machine's path belongs on no page
                 kind = formats.NAMES[reading.format]
                 return f"No {kind} file in {filepath.name}/: a folder is shown by its {kind} parts, and this one has none yet."
-        lf = formats.scan(filepath, format, read_options)
+        lf = formats.scan(filepath, format, read_options, public=True)
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
@@ -246,8 +246,13 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
         # Fix row count in glimpse to show actual total rows
         return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
-    except Exception as e:
-        return f"Error reading file: {e!s}"
+    # A panic in polars is a BaseException: a page, not a crash of the build
+    except (Exception, pl.exceptions.PanicException) as e:
+        # The file by its name: a machine's paths belong on no page
+        said = str(e)
+        for folder in {str(Path(filepath).parent), str(Path(filepath).parent.resolve())}:
+            said = said.replace(folder + os.sep, "").replace(folder, ".")
+        return f"Error reading file: {said}"
 
 
 def glimpse_text(sample: pl.DataFrame) -> str:

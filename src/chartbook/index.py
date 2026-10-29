@@ -229,7 +229,7 @@ def _date_range(resolved: str, date_col: str, entry: Optional[dict] = None) -> O
         first, last = (
             frame.select(column.min().alias("first"), column.max().alias("last")).collect().row(0)
         )
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     return _span_as_text(first, last)
 
@@ -408,7 +408,7 @@ def _describe_file(resolved_path: str, entry: dict) -> Optional[tuple[list[dict]
         frame = formats.scan(resolved_path, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
         rows = frame.select(pl.len()).collect().item()
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     columns = [
         {"name": name, "dtype": dtype_name(dtype)} for name, dtype in schema.items()

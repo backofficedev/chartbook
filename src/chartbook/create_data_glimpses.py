@@ -260,7 +260,8 @@ def get_dataset_report(
         # Fix row count in glimpse to show actual total rows
         report["glimpse"] = fix_glimpse_row_count(glimpse_text, report["n_rows"])
 
-    except Exception as e:
+    # A panic in polars is a BaseException: one dataframe's error, not the report's end
+    except (Exception, pl.exceptions.PanicException) as e:
         report["error"] = f"ERROR: Could not read file - {e!s}"
     return report
 

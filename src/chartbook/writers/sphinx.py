@@ -434,7 +434,7 @@ class SphinxWriter:
                     format=record.get("format"),
                     read_options=record.get("read_options"),
                 )
-            except Exception:  # noqa: BLE001 - as the generator does: a page, not a crash
+            except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - as the generator does: a page, not a crash
                 first, last = None, None
             freshness = [_freshness("Data updated", location.get("modified_at"))]
         template = environment.from_string(_DATAFRAME_PAGE)

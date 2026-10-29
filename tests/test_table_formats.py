@@ -9,6 +9,7 @@ to DuckDB under DuckDB's names.
 
 import gzip
 import json
+import os
 from pathlib import Path
 
 import duckdb
@@ -19,7 +20,8 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import data, formats, index, lock, snapshot
+from chartbook import backends, data, formats, index, lock, snapshot
+from chartbook.backends import BackendError
 from chartbook.cli import main
 from chartbook.errors import UnreadableTableError
 from chartbook.gitcache import GitCache
@@ -192,7 +194,7 @@ class TestLoad:
         assert unnested["tags"].to_list() == [["a"], ["b", "c"]]
 
     def test_read_options_reach_the_reader(self, tmp_path):
-        """A file as a vendor delivers it: semicolons, a comment line, a zip code with its zeros, NA for nothing."""
+        """A file as a vendor delivers it: a line before the header, semicolons, a zip code with its zeros, NA for nothing."""
         directory = _pipeline(
             tmp_path / "rates",
             {
@@ -200,14 +202,14 @@ class TestLoad:
                     "path": "./_data/vendor.csv",
                     "read_options": {
                         "separator": ";",
-                        "comment_prefix": "#",
+                        "skip_lines": 1,
                         "null_values": "NA",
                         "schema_overrides": {"zip": "String"},
                     },
                 }
             },
         )
-        (directory / "_data" / "vendor.csv").write_text("# delivered 2026-10-01\nzip;v\n00123;1.5\nNA;2.5\n", encoding="utf-8", newline="\n")
+        (directory / "_data" / "vendor.csv").write_text("delivered 2026-10-01\nzip;v\n00123;1.5\nNA;2.5\n", encoding="utf-8", newline="\n")
         frame = data.load("vendor", format="polars_eager", project_dir=directory)
         assert frame.schema == pl.Schema({"zip": pl.String, "v": pl.Float64})
         assert frame["zip"].to_list() == ["00123", None]
@@ -225,6 +227,63 @@ class TestLoad:
         (directory / "_data" / "late.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
         assert data.load("short", project_dir=directory).collect_schema().names() == ["a"]
         assert data.load("long", project_dir=directory).collect_schema().names() == ["a", "b"]
+
+    def test_both_engines_infer_from_the_same_rows(self, tmp_path):
+        """Found by a reviewer: polars inferred from 100 rows and DuckDB from 20480, so a field first
+        seen at row 150 was dropped by data.load, and a column that turned to text at row 200 failed
+        there and was text in data.sql. Both read formats.SAMPLE_ROWS by default."""
+        directory = _pipeline(tmp_path / "rates", {"events": {"path": "./_data/late.jsonl"}, "codes": {"path": "./_data/codes.csv"}})
+        lines = [f'{{"a": {i}}}' for i in range(150)] + ['{"a": 150, "b": "late"}']
+        (directory / "_data" / "late.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+        rows = [str(i) for i in range(200)] + ["A7"]
+        (directory / "_data" / "codes.csv").write_text("code\n" + "\n".join(rows) + "\n", encoding="utf-8", newline="\n")
+        assert data.load("events", project_dir=directory).collect()["b"].to_list()[-1] == "late"
+        assert data.sql("select * from {events}", project_dir=directory).collect_schema().names() == ["a", "b"]
+        loaded = data.load("codes", project_dir=directory).collect()
+        queried = data.sql("select * from {codes}", project_dir=directory).collect()
+        assert loaded.schema["code"] == queried.schema["code"] == pl.String
+        assert loaded["code"].to_list()[-1] == queried["code"].to_list()[-1] == "A7"
+
+    def test_a_glob_of_json_lines_keeps_a_field_a_later_file_brings(self, tmp_path):
+        """Found by a reviewer, the issue's own case: one EARNINGS_RELEASE_<quarter>.jsonl.gz per
+        quarter, and a field the later quarters have. Polars inferred a glob from its first file."""
+        directory = _pipeline(tmp_path / "rates", {"archive": {"path": "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"}})
+        _write(pl.DataFrame({"id": [1], "kind": ["release"]}), directory / "_data" / "archive" / "EARNINGS_RELEASE_2024Q1.jsonl.gz")
+        _write(pl.DataFrame({"id": [2], "kind": ["call"], "guidance": [{"low": 1.0}]}), directory / "_data" / "archive" / "EARNINGS_RELEASE_2024Q2.jsonl.gz")
+        loaded = data.load("archive", project_dir=directory).collect()
+        assert loaded.columns == ["id", "kind", "guidance"] and loaded["guidance"].to_list() == [None, {"low": 1.0}]
+        queried = data.sql("select * from {archive} order by id", project_dir=directory).collect()
+        assert queried.columns == ["id", "kind", "guidance"] and queried["guidance"].to_list() == [None, {"low": 1.0}]
+
+    @pytest.mark.parametrize("type_name", ["Int8", "Int16", "UInt8", "UInt16", "Int64", "Float32", "Time", "String"])
+    def test_json_lines_overrides_are_casts_as_duckdb_makes_them(self, tmp_path, type_name):
+        """Found by a reviewer: polars took JSON lines' overrides as the types to parse, which panicked
+        for Int8, Int16, UInt8, UInt16 and Time (a BaseException, out of a page's reach), and
+        disagreed with DuckDB's casts. Both read the file and then cast."""
+        value = "12:30:00" if type_name == "Time" else "7"
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/x.jsonl", "read_options": {"schema_overrides": {"v": type_name}}}})
+        (directory / "_data" / "x.jsonl").write_text(f'{{"v": "{value}"}}\n', encoding="utf-8", newline="\n")
+        loaded = data.load("x", project_dir=directory).collect()
+        queried = data.sql("select * from {x}", project_dir=directory).collect()
+        assert loaded.schema["v"] == getattr(pl, type_name) or (type_name == "Time" and loaded.schema["v"] == pl.Time)
+        assert str(loaded["v"][0]) == str(queried["v"][0])
+
+    def test_a_number_given_as_text_is_its_digits_in_both(self, tmp_path):
+        """Found by a reviewer: on polars 1.20 a numeric zip read as String was null; it is cast, as DuckDB casts it."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/x.jsonl", "read_options": {"schema_overrides": {"zip": "String"}}}})
+        (directory / "_data" / "x.jsonl").write_text('{"zip": 123}\n', encoding="utf-8", newline="\n")
+        assert data.load("x", project_dir=directory).collect()["zip"].to_list() == ["123"]
+        assert data.sql("select * from {x}", project_dir=directory).collect()["zip"].to_list() == ["123"]
+
+    @pytest.mark.parametrize("name", ["x.csv", "x.jsonl"])
+    def test_an_override_of_a_column_the_file_lacks_is_refused_by_both(self, tmp_path, name):
+        """Found by a reviewer: polars passed over it and DuckDB refused it."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": f"./_data/{name}", "read_options": {"schema_overrides": {"zip": "String"}}}})
+        _write(RATES, directory / "_data" / name)
+        with pytest.raises(UnreadableTableError, match="read_options.schema_overrides names 'zip', which it has no column of. Its columns are: d, r."):
+            data.load("x", project_dir=directory)
+        with pytest.raises(BackendError):
+            data.sql("select * from {x}", project_dir=directory).collect()
 
     def test_a_glob_of_csv_files_in_every_format(self, tmp_path):
         directory = _pipeline(tmp_path / "rates", {"years": {"path": "./_data/years/rates_*.csv"}})
@@ -246,7 +305,7 @@ class TestLoad:
         assert len(data.load("parts", format="pandas", project_dir=directory)) == 3
 
     def test_a_folder_of_parquet_is_read_by_its_parts_as_the_page_reads_it(self, tmp_path):
-        """One rule for a folder, where data.load handed polars the folder and the glimpse read its parts."""
+        """One rule for a folder that polars cannot be handed whole, where data.load failed and the glimpse read its parts."""
         directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./_data/parts"}})
         _write(RATES[:2], directory / "_data" / "parts" / "year=2024" / "000000_0")  # Hive's name, parquet inside
         _write(RATES[2:], directory / "_data" / "parts" / "year=2025" / "part.parquet")
@@ -254,9 +313,61 @@ class TestLoad:
         (directory / "_data" / "parts" / "README.txt").write_text("Not a table.\n", encoding="utf-8", newline="\n")
         frame = data.load("parts", project_dir=directory).collect()
         assert frame.columns == ["d", "r", "year"] and frame.height == 3
+        # DuckDB handed the folder took its .parquet files only: it is handed the parts
         assert data.sql("select count(*) n, max(year) y from {parts}", project_dir=directory).collect().row(0) == (3, 2025)
         # As pandas reads a folder: its Hive keys as categories
         assert isinstance(data.load("parts", format="pandas", project_dir=directory)["year"].dtype, pd.CategoricalDtype)
+
+    @pytest.mark.parametrize("declared", ["./env=prod/data", "./_data/prices/year=2024"])
+    @pytest.mark.parametrize("junk", [False, True])
+    def test_a_folder_has_no_keys_from_the_folders_above_it(self, tmp_path, declared, junk):
+        """Found by a reviewer: handed the folder's files and not the folder, polars took a
+        `key=value` above it for a column, so `…/env=prod/data` gained `env` and a folder declared
+        as `prices/year=2024` gained `year`, in data.load, the page, the index and the glimpses.
+        As before the change, a folder's keys start below it, in every reader; and so with a
+        `_SUCCESS` beside the parts, which polars cannot be handed whole."""
+        directory = _pipeline(tmp_path / "rates", {"parts": {"path": declared}})
+        folder = Path(os.path.normpath(directory / declared))
+        _write(RATES[:2], folder / "a.parquet")
+        _write(RATES[2:], folder / "b.parquet")
+        if junk:
+            (folder / "_SUCCESS").write_bytes(b"")
+        from chartbook.create_data_glimpses import get_dataset_report
+        from chartbook.utils import get_dataframe_glimpse
+
+        assert data.load("parts", project_dir=directory).collect_schema().names() == ["d", "r"]
+        assert data.load("parts", format="polars_eager", project_dir=directory).columns == ["d", "r"]
+        assert list(data.load("parts", format="pandas", project_dir=directory).columns) == ["d", "r"]
+        assert data.sql("select * from {parts}", project_dir=directory).collect_schema().names() == ["d", "r"]
+        built = index.build_index(load_manifest(directory))
+        record = next(r for r in built["records"] if r["id"] == "acme/rates:parts")
+        assert [c["name"] for c in record["columns"]] == ["d", "r"]
+        assert get_dataframe_glimpse(folder).startswith("Rows: 3\nColumns: 2\n")
+        assert [c["name"] for c in get_dataset_report(folder)["columns"]] == ["d", "r"]
+
+    def test_a_folder_polars_takes_whole_is_handed_to_it_whole(self, tmp_path):
+        """A folder of parquet with nothing else in it is read as it was before formats: the folder itself, keys below it."""
+        directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./env=prod/parts"}})
+        folder = directory / "env=prod" / "parts"
+        _write(RATES[:2], folder / "year=2024" / "a.parquet")
+        _write(RATES[2:], folder / "year=2025" / "a.parquet")
+        sources, at = formats._sources(folder, formats.reading(folder))
+        assert (sources, at) == (str(folder), folder)
+        expected = pl.scan_parquet(folder, hive_partitioning=True).collect()
+        assert data.load("parts", project_dir=directory).collect().equals(expected)
+        assert expected.columns == ["d", "r", "year"]
+        assert data.sql("select * from {parts} order by d", project_dir=directory).collect().columns == ["d", "r", "year"]
+
+    @pytest.mark.parametrize("format, ending", [("csv", ".dat"), ("csv", ".txt"), ("jsonl", ".json")])
+    def test_a_folder_its_entry_names_the_format_of_takes_files_of_any_ending(self, tmp_path, format, ending):
+        """Found by a reviewer: a folder of .dat, .txt or .json files was refused even with format given."""
+        directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./_data/parts", "format": format}})
+        for i, part in enumerate((RATES[:2], RATES[2:])):
+            written = _write(part, directory / "_data" / "parts" / f"part-{i}.{'csv' if format == 'csv' else 'jsonl'}")
+            written.rename(written.with_suffix(ending))
+        (directory / "_data" / "parts" / "_SUCCESS").write_bytes(b"")
+        assert data.load("parts", project_dir=directory).collect().sort("d").equals(RATES)
+        assert data.sql("select count(*) n from {parts}", project_dir=directory).collect()["n"][0] == 3
 
     def test_a_folder_of_arrow_ipc_files_has_its_hive_keys(self, tmp_path):
         directory = _pipeline(tmp_path / "rates", {"parts": {"path": "./_data/parts", "format": "ipc"}})
@@ -266,19 +377,48 @@ class TestLoad:
         assert frame.columns == ["d", "r", "year"] and sorted(frame["year"].to_list()) == [2024, 2024, 2025]
 
     def test_a_file_that_is_not_its_format_says_which_it_was_read_as(self, tmp_path):
-        """Done when: an error naming the file's format, not polars' `... must end with PAR1`."""
+        """Done when: an error naming the file's format, not polars' `... must end with PAR1`; whose words come after."""
         directory = _pipeline(tmp_path / "rates", {"rates": {"path": "./_data/rates.parquet"}})
         _write(RATES, directory / "_data" / "rates.csv").rename(directory / "_data" / "rates.parquet")
         for format in ("polars", "polars_eager", "pandas"):
             with pytest.raises(UnreadableTableError) as error:
                 data.load("rates", format=format, project_dir=directory)
             said = str(error.value)
-            assert said.startswith(f"Dataframe 'rates': {directory / '_data' / 'rates.parquet'} could not be read as parquet")
-            assert "the format its ending, .parquet, says" in said
+            assert said.startswith(
+                f"Dataframe 'rates': {directory / '_data' / 'rates.parquet'} could not be read as parquet, "
+                f"the format its ending, .parquet, says. The reader said: "
+            )
             assert 'format = "parquet", "csv", "jsonl" or "ipc"' in said
             assert "A file that is not a table is declared under [files], not [dataframes]." in said
-            assert "PAR1" not in said
             assert error.value.format == "parquet"
+
+    def test_the_readers_own_reason_is_kept(self, tmp_path):
+        """Found by a reviewer: an empty CSV, a bad preamble and the like all read "If it is a table stored another way"."""
+        directory = _pipeline(tmp_path / "rates", {"empty": {"path": "./_data/empty.csv"}})
+        (directory / "_data" / "empty.csv").write_text("", encoding="utf-8", newline="\n")
+        with pytest.raises(UnreadableTableError, match=r"could not be read as CSV, the format its ending, .csv, says. The reader said: .*empty"):
+            data.load("empty", project_dir=directory)
+
+    def test_a_page_names_no_path_of_the_machine(self, tmp_path):
+        """Found by a reviewer: the glimpse of a file that could not be read gave its absolute path to the page."""
+        from chartbook.utils import get_dataframe_glimpse
+
+        bad = tmp_path / "deep" / "bad.parquet"
+        bad.parent.mkdir()
+        bad.write_text("not parquet\n", encoding="utf-8", newline="\n")
+        glimpse = get_dataframe_glimpse(bad)
+        assert glimpse.startswith("Error reading file: bad.parquet could not be read as parquet")
+        assert str(tmp_path) not in glimpse and str(tmp_path.resolve()) not in glimpse
+
+    def test_a_panic_in_polars_is_a_line_on_the_page(self, tmp_path, monkeypatch):
+        """Found by a reviewer: a panic is a BaseException, which `except Exception` let through to end the build."""
+        from chartbook.utils import get_dataframe_glimpse
+
+        def panics(*args, **kwargs):
+            raise pl.exceptions.PanicException("unexpected dtype when deserializing ndjson")
+
+        monkeypatch.setattr(formats, "scan", panics)
+        assert get_dataframe_glimpse(tmp_path / "x.jsonl") == "Error reading file: unexpected dtype when deserializing ndjson"
 
     def test_a_file_that_begins_as_another_format_is_told_which(self, tmp_path):
         directory = _pipeline(tmp_path / "rates", {"rates": {"path": "./_data/rates.arrow"}, "other": {"path": "./_data/other.jsonl", "format": "ipc"}})
@@ -328,9 +468,10 @@ class TestSql:
                 "vendor": {
                     "path": "./_data/vendor.txt",
                     "format": "csv",
-                    "read_options": {"separator": ";", "schema_overrides": {"zip": "String"}, "null_values": ["NA", ""], "skip_rows": 1},
+                    "read_options": {"separator": ";", "schema_overrides": {"zip": "String"}, "null_values": ["NA", ""], "skip_lines": 1},
                 },
                 "typed": {"path": "./_data/typed.ndjson", "read_options": {"schema_overrides": {"id": "String"}, "infer_schema_length": 50}},
+                "dotted": {"path": "./_data/dotted.jsonl", "read_options": {"schema_overrides": {"price.usd": "Float64"}}},
                 "ipc": {"path": "./_data/ipc/year=*/p.arrow"},
                 "bounds": {"source": "local", "table": "bounds"},
             },
@@ -342,6 +483,7 @@ class TestSql:
         _write(EVENTS, directory / "_data" / "events.jsonl.gz")
         _write(EVENTS, directory / "_data" / "typed.ndjson")
         (directory / "_data" / "vendor.txt").write_text("delivered 2026-10-01\nzip;v\n00123;1.5\nNA;2.5\n", encoding="utf-8", newline="\n")
+        (directory / "_data" / "dotted.jsonl").write_text('{"price.usd": 1}\n{"price.usd": 2}\n', encoding="utf-8", newline="\n")
         _write(RATES[:2], directory / "_data" / "ipc" / "year=2024" / "p.arrow")
         _write(RATES[2:], directory / "_data" / "ipc" / "year=2025" / "p.arrow")
         con = duckdb.connect(str(directory / "_data" / "local.duckdb"))
@@ -352,27 +494,32 @@ class TestSql:
     def test_each_format_is_duckdbs_reader_of_it(self, pipeline):
         root = (pipeline / "_data").as_posix()
         assert data.ref("rates", project_dir=pipeline) == f"read_parquet('{root}/rates.parquet')"
+        # What DuckDB would otherwise guess is said as polars reads it
+        said = "quote = '\"', escape = '\"', nullstr = [''], allow_quoted_nulls = false, sample_size = 20480"
         assert data.ref("flat", project_dir=pipeline) == (
-            f"read_csv('{root}/flat.csv.gz', delim = ',', header = true, hive_partitioning = false)"
+            f"read_csv('{root}/flat.csv.gz', delim = ',', header = true, {said}, hive_partitioning = false)"
         )
         assert data.ref("tabs", project_dir=pipeline) == (
-            f"read_csv('{root}/tabs.tsv', delim = '\t', header = true, hive_partitioning = false)"
+            f"read_csv('{root}/tabs.tsv', delim = '\t', header = true, {said}, hive_partitioning = false)"
         )
         assert data.ref("vendor", project_dir=pipeline) == (
-            f"read_csv('{root}/vendor.txt', delim = ';', header = true, types = {{'zip': 'VARCHAR'}}, "
-            f"nullstr = ['NA', ''], skip = 1, hive_partitioning = false)"
+            f"read_csv('{root}/vendor.txt', delim = ';', header = true, quote = '\"', escape = '\"', "
+            f"nullstr = ['', 'NA'], allow_quoted_nulls = false, sample_size = 20480, types = {{'zip': 'VARCHAR'}}, "
+            f"skip = 1, hive_partitioning = false)"
         )
         assert data.ref("events", project_dir=pipeline) == (
-            f"read_json('{root}/events.jsonl.gz', format = 'newline_delimited', hive_partitioning = false)"
+            f"read_json('{root}/events.jsonl.gz', format = 'newline_delimited', sample_size = 20480, hive_partitioning = false)"
         )
         assert data.ref("typed", project_dir=pipeline) == (
             f"(select * replace (cast(\"id\" as VARCHAR) as \"id\") from read_json('{root}/typed.ndjson', "
-            f"format = 'newline_delimited', hive_partitioning = false, sample_size = 50))"
+            f"format = 'newline_delimited', sample_size = 50, hive_partitioning = false))"
         )
+        # A dotted name is one column, quoted whole (found by a reviewer: "price"."usd")
+        assert data.ref("dotted", project_dir=pipeline).startswith('(select * replace (cast("price.usd" as DOUBLE) as "price.usd")')
         with pytest.raises(ValueError, match="is an Arrow IPC file, which DuckDB reads with no function of its own"):
             data.ref("ipc", project_dir=pipeline)
 
-    @pytest.mark.parametrize("name", ["rates", "flat", "tabs", "events", "vendor", "typed", "ipc"])
+    @pytest.mark.parametrize("name", ["rates", "flat", "tabs", "events", "vendor", "typed", "dotted", "ipc"])
     def test_sql_reads_what_load_reads(self, pipeline, name):
         loaded = data.load(name, project_dir=pipeline).collect()
         queried = data.sql(f"select * from {{{name}}}", project_dir=pipeline).collect()
@@ -382,6 +529,91 @@ class TestSql:
             assert queried["zip"].to_list() == loaded["zip"].to_list() == ["00123", None]
         if name == "typed":
             assert queried.schema["id"] == loaded.schema["id"] == pl.String
+        if name == "dotted":
+            assert queried["price.usd"].to_list() == loaded["price.usd"].to_list() == [1.0, 2.0]
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "select o.s, p.r from {one} o join {rates} p on o.d = p.d where p.r > 4.15 order by 1",
+            "select a.s, b.s as t from {one} a join {one} b using (d) order by 1",
+            "select s from {one} where d in (select d from {rates} where r > 4.15) order by 1",
+        ],
+    )
+    def test_an_arrow_ipc_file_polars_wrote_joins_in_duckdb(self, pipeline, query):
+        """Found by a reviewer: polars writes text as string_view, and the filter DuckDB pushes into
+        the dataset in a join had no kernel for it (`array_filter` on string_view)."""
+        _write(RATES.with_columns(s=pl.Series(["a", "b", "c"])), pipeline / "_data" / "one.arrow")
+        _pipeline(pipeline, {"rates": {"path": "./_data/rates.parquet"}, "one": {"path": "./_data/one.arrow"}})
+        got = data.sql(query, project_dir=pipeline).collect()
+        assert got.height in (2, 3) and got["s"].dtype == pl.String
+
+    def test_arrow_ipc_in_a_memory_source_is_one_view_however_often_it_is_read(self, pipeline):
+        """Found by a reviewer: each data.sql() left a chartbook_ipc_<uuid> view in a :memory: source, for the process."""
+        _pipeline(
+            pipeline,
+            {"ipc": {"path": "./_data/ipc/year=*/p.arrow"}, "kept": {"source": "mem", "table": "kept"}},
+            sources={"mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}},
+        )
+        data.connect("mem", project_dir=pipeline).sql("create or replace table kept as select '2024-01-01' as d")
+        for _ in range(3):
+            got = data.sql("select k.d, i.year from {kept} k join {ipc} i using (d)", project_dir=pipeline).collect()
+            assert got.rows() == [("2024-01-01", 2024)]
+        views = data.connect("mem", project_dir=pipeline).sql(
+            "select count(*) from duckdb_views() where view_name like 'chartbook_ipc_%'"
+        ).fetchone()[0]
+        assert views == 1
+
+    def test_an_engine_that_takes_no_arrow_is_not_handed_any(self):
+        """A plugin's backend written before sql() took arrow= is refused an Arrow IPC file, with a message, not a TypeError."""
+        from chartbook.data import _takes_arrow
+
+        class Old:
+            def sql(self, query):
+                return query
+
+        class New:
+            def sql(self, query, arrow=None):
+                return query
+
+        assert not _takes_arrow(Old()) and _takes_arrow(New())
+        assert _takes_arrow(backends.DuckDBBackend.scratch())
+
+    def test_csv_options_mean_the_same_to_duckdb(self, tmp_path):
+        """Found by a reviewer: null_values took DuckDB's '' away, a file with no header had other names
+        in DuckDB (and overrides of them failed), DuckDB guessed ' for a quote and \\ for an escape,
+        and a quoted "" was NULL in DuckDB and '' in polars."""
+        directory = _pipeline(
+            tmp_path / "rates",
+            {
+                "nulls": {"path": "./_data/nulls.csv", "read_options": {"null_values": ["NA"]}},
+                "bare": {"path": "./_data/bare.csv", "read_options": {"has_header": False}},
+                "typed": {"path": "./_data/typed.csv", "read_options": {"has_header": False}},
+                "quotes": {"path": "./_data/quotes.csv"},
+            },
+        )
+        (directory / "_data" / "nulls.csv").write_text("a,b\n1,NA\n2,\n", encoding="utf-8", newline="\n")
+        (directory / "_data" / "bare.csv").write_text("1,x\n2,y\n", encoding="utf-8", newline="\n")
+        (directory / "_data" / "quotes.csv").write_text(
+            "name,said\nO'Brien,\"\"\nit's,\"a \"\"quote\"\"\"\nback\\slash,x\n", encoding="utf-8", newline="\n"
+        )
+        (directory / "_data" / "typed.csv").write_text("00123,1\n", encoding="utf-8", newline="\n")
+        named = data.load("bare", project_dir=directory).collect_schema().names()
+        manifest = {
+            "nulls": {"path": "./_data/nulls.csv", "read_options": {"null_values": ["NA"]}},
+            "bare": {"path": "./_data/bare.csv", "read_options": {"has_header": False}},
+            "typed": {"path": "./_data/typed.csv", "read_options": {"has_header": False, "schema_overrides": {named[0]: "String"}}},
+            "quotes": {"path": "./_data/quotes.csv"},
+        }
+        _pipeline(directory, manifest)
+        for name in manifest:
+            loaded = data.load(name, project_dir=directory).collect()
+            queried = data.sql(f"select * from {{{name}}}", project_dir=directory).collect()
+            assert queried.columns == loaded.columns, name
+            assert queried.cast(pl.String).rows() == loaded.cast(pl.String).rows(), name
+        assert data.load("nulls", project_dir=directory).collect()["b"].to_list() == [None, None]
+        assert data.load("typed", project_dir=directory).collect()[named[0]].to_list() == ["00123"]
+        assert data.load("quotes", project_dir=directory).collect()["said"].to_list() == ["", 'a "quote"', "x"]
 
     def test_files_of_every_format_join_a_table_in_a_source(self, pipeline):
         # DuckDB finds the dates in a CSV's text, where polars leaves it text
@@ -523,6 +755,24 @@ class TestAnotherPipelineReadsThem:
         events = data.load("rates:events").collect()
         assert sorted(events["id"].to_list()) == [1, 2]
         assert data.load("rates:flat", format="pandas")["r"].tolist() == [4.1, 4.2, 4.3]
+
+    def test_a_pinned_folder_its_name_gives_the_format_of_is_read_so(self, two_pipelines, monkeypatch):
+        """Found by a reviewer: a Spark folder declared as `prices.csv`, with no format key, was read by
+        its owner as CSV, and by a pipeline that pinned it as parquet: the store's folder has no ending,
+        and the record keeps no format. The declared path's ending, which the record keeps, says it."""
+        rates, forecast = two_pipelines
+        _pipeline(rates, {"prices": {"path": "./_data/prices.csv"}})
+        _write(RATES[:2], rates / "_data" / "prices.csv" / "part-00000.csv")
+        _write(RATES[2:], rates / "_data" / "prices.csv" / "part-00001.csv")
+        (rates / "_data" / "prices.csv" / "_SUCCESS").write_bytes(b"")
+        _commit(rates.parent)
+        assert data.load("prices", project_dir=rates).collect().height == 3
+        taken = snapshot.make(rates).snapshot
+        assert taken.assets["prices"]["location"] == {"kind": "file", "path": "./_data/prices.csv"}
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        assert data.load("rates:prices").collect().sort("d").equals(RATES)
+        assert data.sql("select count(*) n from {rates:prices}").collect()["n"][0] == 3
 
     def test_a_git_dependency_keeps_it_too(self, tmp_path):
         work = tmp_path.resolve()

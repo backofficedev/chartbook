@@ -285,35 +285,35 @@ A dataframe's file is parquet, CSV or TSV, JSON lines (NDJSON, gzipped or not) o
 | `"jsonl"` | `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz` |
 | `"ipc"` | `.arrow`, `.feather`, `.ipc` |
 
-A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`.
+A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`; when its entry gives `format` and none of its files has that format's ending, as every file not named as another format's (a folder of `.dat` files read as CSV). A folder's Hive `key=value` folders become columns for parquet and Arrow IPC, those below it and none above it; polars reads none from CSV or JSON lines, and DuckDB is told to read none either.
 
-`read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own:
+`read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own, each so that it means the same there:
 
 ```toml
 [dataframes.vendor_prices]
 path = "./_data/vendor/prices.txt"     # delivered as it is, with an ending that says nothing
 format = "csv"
-read_options = { separator = ";", schema_overrides = { zip = "String" }, null_values = ["NA", ""] }
-docs = "The vendor's daily drop, kept as delivered."
+read_options = { separator = ";", skip_lines = 1, schema_overrides = { zip = "String" }, null_values = ["NA"] }
+docs = "The vendor's daily drop, kept as delivered, with a line about the delivery above its header."
 
 [dataframes.earnings_releases]
-path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"
-read_options = { infer_schema_length = 10000 }   # a field that first appears late is found
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a field a later quarter brings is kept
+read_options = { schema_overrides = { event_id = "String" } }
 docs = "One nested record per event, a file per quarter."
 ```
 
 | Option | For | What it is |
 |---|---|---|
 | `separator` | CSV | One character; `,` by default, a tab for `.tsv` |
-| `has_header` | CSV | `true` (the default) or `false` |
-| `quote_char`, `comment_prefix` | CSV | One character each |
-| `skip_rows` | CSV | Lines to skip before the header |
-| `null_values` | CSV | A string, or a list of strings, read as null |
+| `has_header` | CSV | `true` (the default) or `false`; with none, the columns are named as polars names them, in DuckDB too |
+| `quote_char` | CSV | One character, `"` by default; written twice inside a quoted field, it stands for itself |
+| `skip_lines` | CSV | Lines to skip before the header, as lines: a quote in them is not read as one |
+| `null_values` | CSV | A string, or a list of strings, read as null besides an empty field; a quoted empty field (`""`) is empty text |
 | `decimal_comma` | CSV | `true` for `1,5` meaning one and a half |
-| `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time` |
-| `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from; 100 by default |
+| `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time`. A CSV file's columns are read as these types, a JSON lines file's are cast to them after the read, and a column the file does not have is refused |
+| `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from, in both engines; 20480 by default, DuckDB's own |
 
-A parquet or Arrow IPC file keeps its own schema and takes none. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each engine infers what it is not told in its own way: DuckDB finds dates in a CSV's text, where polars leaves it text; `schema_overrides` gives a column one type in both. Hive's `key=value` folders become columns for parquet and Arrow IPC; polars reads none from CSV or JSON lines, and DuckDB is told to read none either. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
+A parquet or Arrow IPC file keeps its own schema and takes none. Polars' `comment_prefix` and `skip_rows` are not taken: DuckDB reads a comment, and skips rows, otherwise than polars does. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each JSON lines file of a glob or a folder has its types inferred from its own lines, and the files are joined by their columns' names, so a field the later ones bring is kept. What is left to inference is each engine's own: DuckDB finds dates in text, where polars leaves it text, so give a column its type with `schema_overrides` where the two must agree. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 
