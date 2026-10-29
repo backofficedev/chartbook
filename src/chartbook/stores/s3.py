@@ -1,30 +1,33 @@
 """A store in an S3 bucket: ``[store] url = "s3://bucket/prefix"``.
 
-Needs boto3, which ``pip install chartbook[s3]`` installs. The bucket is
-laid out exactly as a folder store is (:mod:`chartbook.store`), under the
-prefix: ``store.json``; ``pipelines/<pipeline>/<snapshot>/`` with the
-pipeline's files at their own paths and ``_chartbook/snapshot.json``, the
-record, written last; ``pipelines/+unowned/<hash>/`` for an object put
-with no pipeline; ``origins/``, ``roots/`` and ``tmp/``. So ``aws s3
-sync`` of a folder store into a bucket is this store, and back. A bucket
-of ChartBook 0.2's layout is refused, as a folder of it is, until
-``chartbook store migrate`` has moved it.
+Needs boto3 1.35 or newer, which ``pip install chartbook[s3]`` installs.
+The bucket is laid out exactly as a folder store is (:mod:`chartbook.store`),
+under the prefix: ``store.json``; ``pipelines/<pipeline>/<snapshot>/``
+with the pipeline's files at their own paths and
+``_chartbook/snapshot.json``, the record, written last;
+``pipelines/+unowned/<hash>/`` for an object put with no pipeline;
+``origins/``, ``roots/`` and ``tmp/``. So ``aws s3 sync`` of a folder
+store into a bucket is this store, and back. A bucket of ChartBook 0.2's
+layout is refused, as a folder of it is, until ``chartbook store
+migrate`` has moved it.
 
 Readers open files, so what they read is a copy on this machine, in a
 cache folder for the bucket. The records are downloaded into it at their
-own names. Each file a reader asks for is downloaded once, into the
-cache's ``files/``, named by its hash and checked against it as it
-arrives: a file there is one whose bytes were checked, whichever record
-names it now. :meth:`S3Store.get` hands over a view in the cache that
-lays an asset's files out under their own names
+own names, each with the ETag the bucket gave it. Each file a reader asks
+for is downloaded once, into the cache's ``files/``, named by its hash and
+checked against it as it arrives: a file there is one whose bytes were
+checked, whichever record names it now. :meth:`S3Store.get` hands over a
+view in the cache that lays an asset's files out under their own names
 (:func:`chartbook.store.gather`). Offline, what was downloaded and checked
 before is served from the cache. Nothing else in ChartBook changes for a
 store that is remote; ``data.path()`` gives the path in the cache.
 
 A question of the store is one listing of ``pipelines/``, or of one
-pipeline's folder when the pipeline is known. One listing serves the few
-questions a pin or a read asks at once, for a moment, and the many that
-``store gc`` asks within :meth:`S3Store.reading`.
+pipeline's folder when the pipeline is known, and the records are read
+from it once. One listing serves the few questions a pin or a read asks
+at once, for a moment, and the many that ``store gc`` asks within
+:meth:`S3Store.reading`; what this store writes meanwhile is written into
+it, not listed again.
 
 Credentials are the AWS SDK's own: the environment, ``~/.aws``, an
 instance role. The URL never carries them. It may say where the service
@@ -35,17 +38,20 @@ is, for a bucket that is not at AWS::
 A store that is read-only for this machine (``s3:ListBucket`` and
 ``s3:GetObject``) serves ``chartbook pin``, ``chartbook run --frozen`` and
 ``data.load()``; what would write raises :class:`~chartbook.store.ReadOnlyStoreError`
-and says what was refused. Writing needs ``s3:PutObject``, and ``store gc``
-``s3:DeleteObject``.
+and says what was refused. Writing needs ``s3:PutObject`` (and
+``s3:DeleteObject`` to tidy after itself, which it does without if it
+must), and ``store gc`` ``s3:DeleteObject``.
 
 **Two machines, one bucket.** A bucket has no folder to make whole or
 not at all, so a snapshot claims its folder by writing
 ``_chartbook/CLAIMED.txt`` there only if nothing is there yet (a write
 with ``If-None-Match``); one that finds the folder claimed takes the next
-second's name. Its record is written the same way. As in a folder store,
-a snapshot being made keeps a note under ``tmp/`` of its folder and of the
-files of earlier snapshots it uses, written again as it goes on, and
-``store gc`` keeps what a note names.
+second's name. Its record is written the same way. A write the SDK tried
+again, its first answer lost, may meet itself there: what is there is read,
+and the same bytes are taken for its own. As in a folder store, a snapshot
+being made keeps a note under ``tmp/`` of its folder and of the files of
+earlier snapshots it uses, written again as it goes on, and ``store gc``
+keeps what a note names.
 
 **Half a snapshot.** Files are uploaded one by one, and the record last,
 so a snapshot interrupted while uploading leaves files and no record:
@@ -70,6 +76,8 @@ import stat
 import time
 import unicodedata
 import uuid
+import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qsl, urlsplit
@@ -81,6 +89,7 @@ from chartbook.store import (
     FROZEN_LINKS,
     LINKS,
     MARKER_FILE,
+    OBJECTS_DIR,
     ORIGINS_DIR,
     OWN_DIR,
     PENDING_FOLDER_SECONDS,
@@ -90,6 +99,7 @@ from chartbook.store import (
     RECORD_FILE,
     ROOTS_DIR,
     SCHEMA,
+    SNAPSHOTS_DIR,
     TMP_DIR,
     UNOWNED_DIR,
     V1_SCHEMA,
@@ -108,8 +118,9 @@ from chartbook.store import (
     StoreUnreachableError,
     TidyError,
     _FULL_COMMIT,
-    _check_length,
     _HEX,
+    _check_length,
+    _folded,
     _found_whole,
     _hash_once,
     _link,
@@ -163,11 +174,8 @@ _TAKEN = ("PreconditionFailed", "412", "ConditionalRequestConflict", "409")
 _ERROR_CODE = re.compile(r"\((\w+)\) when calling")
 #: A record's name in a snapshot's folder.
 _RECORD = f"{OWN_DIR}/{RECORD_FILE}"
-_DOUBT = (
-    "a record there cannot be read, or names files this machine does not follow (a sync that has not finished, "
-    "or a record of another system's names): nothing in its pipeline's folder is removed until it can be; "
-    "`chartbook store verify` says more"
-)
+#: Beside the cache's copy of a record, the ETag the bucket gave the key it was read from.
+_ETAG_SUFFIX = ".etag"
 
 
 def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
@@ -251,27 +259,6 @@ def _inside(folder: Path, relative: str) -> Path:
     return target
 
 
-def _same(name: str) -> str:
-    """A name in the store as it is compared for what a record names: in Unicode's one form, and either letter case.
-
-    A folder store synced into the bucket from a disk that does not tell
-    letter case apart, or from macOS to Linux, may bring a name a record
-    names written another way; for what is never to be removed, such a
-    name is the record's file.
-    """
-    return unicodedata.normalize("NFC", name).casefold()
-
-
-def _held_in(records: list[KeptRecord], content_hash: str, pipeline: Optional[str] = None) -> list[KeptAsset]:
-    """Every record's hold of an asset, newest first; *pipeline*'s first, as the folder store orders them."""
-    held = [
-        asset for record in records if record.readable for asset in record.assets
-        if asset.content_hash == content_hash
-    ]
-    held.sort(key=lambda asset: (asset.record.pipeline == pipeline, asset.record.made_at), reverse=True)
-    return held
-
-
 def _named_first(held: list[KeptAsset], name: Optional[str]) -> list[KeptAsset]:
     """The holds of an asset, those whose one file is read under *name* first."""
     if not name:
@@ -320,45 +307,89 @@ def _every_file(folder: Path) -> dict[str, int]:
 
 
 def _modified(entry: dict) -> float:
-    """When a key was last written, as the listing says; 0 for one this process wrote and has not listed."""
+    """When a key was last written, as the listing says; 0 for one that does not say."""
     when = entry.get("LastModified")
     return when.timestamp() if when is not None else 0.0
 
 
-#: The MD5 of each record the cache has, by its file's path, time, size and number: worked out once a process.
-_md5_of: dict = {}
+def _md5_tag(body: bytes) -> str:
+    """The ETag a key written whole in one request, unencrypted by the service, has: the MD5 of its bytes, quoted."""
+    return '"' + hashlib.md5(body, usedforsecurity=False).hexdigest() + '"'
 
 
 def _as_listed(local: Path, entry: dict) -> bool:
     """Whether the cache's copy of a record is the key a listing describes.
 
-    A key written whole in one request has the MD5 of its bytes for its
-    ETag, which the copy is compared with; else (a key written in parts, or
-    encrypted by the service) its size and the time the bucket gives it,
-    which the copy was given when it was downloaded. The size alone is not
-    enough: a snapshot's folder cleared and named again may have a record of
-    the same size.
+    By the ETag the key had when the copy was read, kept beside it: a key
+    written again has another, whatever the service makes its ETags of (an
+    MD5 of the bytes, or not, for one it encrypts). A copy this machine
+    wrote itself, with no ETag beside it yet, is the key if the key's ETag
+    is its MD5. The size alone is not enough: a snapshot's folder cleared
+    and named again may have a record of the same size.
     """
     try:
-        seen = local.stat()
+        if local.stat().st_size != entry["Size"]:
+            return False
     except OSError:
         return False
-    if seen.st_size != entry["Size"]:
+    etag = str(entry.get("ETag") or "")
+    try:
+        return etag != "" and local.with_name(local.name + _ETAG_SUFFIX).read_text(encoding="utf-8") == etag
+    except OSError:
+        pass
+    try:
+        return etag == _md5_tag(local.read_bytes())
+    except OSError:
         return False
-    etag = str(entry.get("ETag", "")).strip('"')
-    if not re.fullmatch(r"[0-9a-f]{32}", etag):
-        return abs(seen.st_mtime - _modified(entry)) < 0.01
-    stamp = (str(local), seen.st_mtime_ns, seen.st_size, seen.st_ino)
-    if stamp not in _md5_of:
-        try:
-            _md5_of[stamp] = hashlib.md5(local.read_bytes(), usedforsecurity=False).hexdigest()
-        except OSError:
-            return False
-    return _md5_of[stamp] == etag
 
 
 class _NotItsBytes(StoreError):
     """A file downloaded that is not what its record says: the next copy may be."""
+
+
+class _Seen:
+    """One listing of the bucket's ``pipelines/``, or of one pipeline's folder in it, and what is read from it once.
+
+    :param folder: The pipeline's folder listed; None for all of ``pipelines/``.
+    :param listing: Every key under it, by its name in the store.
+    :param at: When it was listed, by :func:`time.monotonic`.
+    """
+
+    def __init__(self, folder: Optional[str], listing: dict[str, dict], at: float):
+        self.folder = folder
+        self.listing = listing
+        self.at = at
+        self.records: Optional[list[KeptRecord]] = None
+        self.index: Optional[dict[str, list[KeptAsset]]] = None
+        self._nfc: Optional[dict[str, dict]] = None
+
+    def covers(self, name: str) -> bool:
+        return name.startswith(f"{PIPELINES_DIR}/{self.folder}/" if self.folder else f"{PIPELINES_DIR}/")
+
+    def entry(self, name: str) -> Optional[dict]:
+        """A key by its name, or by the name in Unicode's other form: a sync from macOS may write it so."""
+        found = self.listing.get(name)
+        if found is None:
+            if self._nfc is None:
+                self._nfc = {unicodedata.normalize("NFC", key): value for key, value in self.listing.items()}
+            found = self._nfc.get(unicodedata.normalize("NFC", name))
+        return found
+
+    def wrote(self, name: str, entry: dict) -> None:
+        """A key this store has just written, written into what was listed."""
+        self.listing[name] = entry
+        self._nfc = None
+        if name.endswith("/" + _RECORD):
+            self.records = self.index = None  # read again, with the record
+
+    def gone(self, name: str, local: Path) -> None:
+        """A key this store has just removed, taken out of what was listed."""
+        if self.listing.pop(name, None) is None:
+            return
+        self._nfc = None
+        if name.endswith("/" + _RECORD) and self.records is not None:
+            self.records = [record for record in self.records if record.path != local]
+            self.index = None
 
 
 class S3Store(Store):
@@ -394,14 +425,20 @@ class S3Store(Store):
             if self.options.get("endpoint"):
                 # Two services may each have a bucket of this name: each its own cache
                 folder += "~" + hashlib.sha256(self.options["endpoint"].encode("utf-8")).hexdigest()[:8]
-            cache = get_cache_path().joinpath("s3", folder, *self.prefix.split("/"))
+            parts = self.prefix.split("/")
+            if self.prefix != self.prefix.lower():
+                # A disk of macOS or Windows takes Data and data for one folder: two prefixes, two caches
+                parts[-1] += "~" + hashlib.sha256(self.prefix.encode("utf-8")).hexdigest()[:8]
+            cache = get_cache_path().joinpath("s3", folder, *parts)
         self._root = Path(os.path.abspath(Path(cache).expanduser()))
         self._layout_checked = False
         # The snapshots' folders this process has claimed, by pipeline folder and name
         self._claimed: set[tuple[str, str]] = set()
-        # Listings of pipelines/ (None) and of one pipeline's folder, each with when it was made
-        self._memo: dict[Optional[str], tuple[float, dict]] = {}
+        # What was listed of pipelines/ (None) and of one pipeline's folder
+        self._memo: dict[Optional[str], _Seen] = {}
         self._reading = 0
+        # Within a reading block: the notes of origins there are, and each read
+        self._origins: Optional[dict[str, Optional[list[str]]]] = None
 
     def _make_client(self, url: str):
         try:
@@ -476,27 +513,50 @@ class S3Store(Store):
                 raise StoreError(f"The store {self} is in a bucket that does not exist.") from None
             # What the SDK says may echo the endpoint it was given
             raise StoreError(f"The store {self} could not {what}: {without_credentials(str(error))}") from None
+        except botocore.exceptions.ParamValidationError as error:
+            # Not the network's doing: a boto3 older than what ChartBook asks of it
+            raise StoreError(
+                f"The store {self} could not {what}: the boto3 installed does not take what ChartBook asks "
+                f"({error}). The S3 store needs boto3 1.35 or newer: pip install 'boto3>=1.35'"
+            ) from None
         except botocore.exceptions.BotoCoreError as error:
             raise StoreUnreachableError(
                 f"The store {self} cannot be reached to {what}: {without_credentials(str(error))}"
             ) from None
 
-    def _wrote(self, key: str) -> None:
-        """What was listed of ``pipelines/`` is old once this store has written there."""
-        if self._name(key).startswith(PIPELINES_DIR + "/"):
-            self._forget()
+    # What was listed, written into as this store writes
+
+    def _wrote(self, key: str, size: int, etag: Optional[str] = None) -> None:
+        """A key this store has just written: what it listed of ``pipelines/`` has it now."""
+        name = self._name(key)
+        if not name.startswith(PIPELINES_DIR + "/"):
+            return
+        entry = {"Key": key, "Size": size, "LastModified": datetime.now(timezone.utc), "ETag": etag}
+        for seen in self._memo.values():
+            if seen.covers(name):
+                seen.wrote(name, entry)
+
+    def _gone(self, keys: Iterable[str]) -> None:
+        """Keys this store has just removed: what it listed of ``pipelines/`` has them no more."""
+        for key in keys:
+            name = self._name(key)
+            if name.startswith(PIPELINES_DIR + "/") and _plain_parts(name) is not None:
+                for seen in self._memo.values():
+                    seen.gone(name, self._root.joinpath(*name.split("/")))
 
     def _forget(self) -> None:
         self._memo = {}
 
     @contextlib.contextmanager
     def reading(self):
-        """Go by one listing of the bucket until the block ends, but for what this store writes meanwhile.
+        """Go by one listing of the bucket until the block ends, and what this store writes meanwhile.
 
-        For what asks the store many times over at once, ``store gc``'s plan.
+        For what asks the store many times over at once, ``store gc``'s plan:
+        the records are read from it once, and so are the notes of origins.
         """
         if not self._reading:
             self._forget()  # what was listed before the block may be old by now
+            self._origins = None
         self._reading += 1
         try:
             yield self
@@ -504,6 +564,7 @@ class S3Store(Store):
             self._reading -= 1
             if not self._reading:
                 self._forget()
+                self._origins = None
 
     def _list(self, prefix: str, delimiter: Optional[str] = None) -> Iterator[dict]:
         """Every key under *prefix*, as the SDK describes it; with a delimiter, the common prefixes instead."""
@@ -519,13 +580,13 @@ class S3Store(Store):
                 else:
                     yield from page.get("Contents", ())
 
-    def _listing(self, folder: Optional[str] = None, fresh: bool = False) -> dict[str, dict]:
-        """Every key under ``pipelines/``, or under one pipeline's *folder* in it, by its name in the store.
+    def _seen(self, folder: Optional[str] = None, fresh: bool = False) -> _Seen:
+        """What is listed under ``pipelines/``, or under one pipeline's *folder* in it, with the records read from it.
 
         One listing answers for :data:`LISTING_SECONDS`, and through a
         :meth:`reading` block: a pin or a read asks ``has``, then
-        ``incomplete``, then ``get``, of one moment. A write of this store's
-        under ``pipelines/`` ends it.
+        ``incomplete``, then ``get``, of one moment. What this store writes
+        or removes meanwhile is written into it.
 
         :param fresh: List again, whatever was listed: for what is removed,
             or kept on the strength of what a record names.
@@ -533,26 +594,55 @@ class S3Store(Store):
         if not fresh:
             now = time.monotonic()
             for whose in (folder, None) if folder else (None,):
-                memo = self._memo.get(whose)
-                if memo is None or not (self._reading or now - memo[0] < LISTING_SECONDS):
+                seen = self._memo.get(whose)
+                if seen is None or not (self._reading or now - seen.at < LISTING_SECONDS):
                     continue
                 if whose == folder:
-                    return dict(memo[1])
+                    return seen
                 base = f"{PIPELINES_DIR}/{folder}/"
-                return {name: entry for name, entry in memo[1].items() if name.startswith(base)}
+                part = _Seen(folder, {name: entry for name, entry in seen.listing.items() if name.startswith(base)}, seen.at)
+                self._memo[folder] = part
+                return part
         prefix = f"{PIPELINES_DIR}/{folder}" if folder else PIPELINES_DIR
         listing = {self._name(entry["Key"]): entry for entry in self._list(self._key(prefix) + "/")}
-        self._memo[folder] = (time.monotonic(), listing)
-        return dict(listing)
+        seen = self._memo[folder] = _Seen(folder, listing, time.monotonic())
+        if folder is None:
+            # Each pipeline's own listing is the whole one's part now
+            self._memo = {None: seen}
+        return seen
+
+    def _records_of(self, seen: _Seen) -> list[KeptRecord]:
+        """The records a listing has, read once for it."""
+        if seen.records is None:
+            seen.records = self._records(seen.listing, under=seen.folder)
+        return seen.records
+
+    def _held(self, seen: _Seen, content_hash: str, pipeline: Optional[str] = None) -> list[KeptAsset]:
+        """Every record's hold of an asset in what was listed, newest first; *pipeline*'s first, as the folder store orders them."""
+        if seen.index is None:
+            index: dict[str, list[KeptAsset]] = {}
+            for record in self._records_of(seen):
+                if record.readable:
+                    for asset in record.assets:
+                        index.setdefault(asset.content_hash, []).append(asset)
+            seen.index = index
+        held = list(seen.index.get(content_hash, ()))
+        held.sort(key=lambda asset: (asset.record.pipeline == pipeline, asset.record.made_at), reverse=True)
+        return held
 
     def _read(self, key: str) -> Optional[bytes]:
         """The bytes at a key, or None if there is nothing there."""
+        found = self._read_tagged(key)
+        return found[0] if found is not None else None
+
+    def _read_tagged(self, key: str) -> Optional[tuple[bytes, str]]:
+        """The bytes at a key and its ETag, in one request; None if there is nothing there."""
         with self._asking(f"read {key}"):
             try:
                 response = self._client.get_object(Bucket=self.bucket, Key=key)
             except self._client.exceptions.NoSuchKey:
                 return None
-            return response["Body"].read()
+            return response["Body"].read(), str(response.get("ETag") or "")
 
     def _exists(self, key: str) -> bool:
         import botocore.exceptions
@@ -569,14 +659,16 @@ class S3Store(Store):
     def _write(self, key: str, body: bytes) -> None:
         with self._asking(f"write {key}"):
             self._client.put_object(Bucket=self.bucket, Key=key, Body=body)
-        self._wrote(key)
+        self._wrote(key, len(body), _md5_tag(body))
 
     def _put_new(self, key: str, body: bytes) -> bool:
-        """Write a key only if nothing is there yet, as one request; False if something was.
+        """Write a key only if nothing is there yet, as one request; False if something else was.
 
-        A service that does not take such a write is asked first whether
-        the key is there, which two machines at the same moment may both
-        pass.
+        A write the SDK tries again, its first answer lost (a timeout, an
+        error after the write), meets the first: what is there is read, and
+        the same bytes are this write's own. A service that does not take
+        such a write is asked first whether the key is there, which two
+        machines at the same moment may both pass.
         """
         import botocore.exceptions
 
@@ -584,20 +676,25 @@ class S3Store(Store):
             try:
                 self._client.put_object(Bucket=self.bucket, Key=key, Body=body, IfNoneMatch="*")
             except botocore.exceptions.ClientError as error:
-                if _error_code(error) in _TAKEN:
-                    return False
-                if _error_code(error) != "NotImplemented":
+                code = _error_code(error)
+                if code in _TAKEN:
+                    if self._read(key) != body:
+                        return False
+                elif code == "NotImplemented":
+                    there = self._read(key)
+                    if there is not None and there != body:
+                        return False
+                    if there is None:
+                        self._client.put_object(Bucket=self.bucket, Key=key, Body=body)
+                else:
                     raise
-                if self._exists(key):
-                    return False
-                self._client.put_object(Bucket=self.bucket, Key=key, Body=body)
-        self._wrote(key)
+        self._wrote(key, len(body), _md5_tag(body))
         return True
 
     def _upload(self, file: Path, key: str) -> None:
         with self._asking(f"upload {key}"):
             self._client.upload_file(str(file), self.bucket, key)
-        self._wrote(key)
+        self._wrote(key, os.stat(file).st_size)
 
     def _touch(self, key: str, size: int) -> None:
         """Write a key again, so that it counts as written now: its metadata, or for a key too big for that, the whole of it, on the service."""
@@ -611,6 +708,7 @@ class S3Store(Store):
                 )
             else:
                 self._client.copy({"Bucket": self.bucket, "Key": key}, self.bucket, key)
+        self._wrote(key, size)
 
     def _download(self, key: str, target: Path, content_hash: Optional[str] = None) -> Optional[str]:
         """Download a key to a file, whole or not at all, read-only once there.
@@ -659,8 +757,7 @@ class S3Store(Store):
             # A refusal of some keys comes in the answer, not as an error
             for error in (response or {}).get("Errors") or ():
                 failed[str(error.get("Key", ""))] = (str(error.get("Code", "")), str(error.get("Message", "")))
-        if any(self._name(key).startswith(PIPELINES_DIR + "/") for key in keys):
-            self._forget()
+        self._gone(key for key in keys if key not in failed)
         return failed
 
     def _delete_keys(self, keys: list[str]) -> None:
@@ -679,9 +776,18 @@ class S3Store(Store):
             return
         marker = self._read(self._key(MARKER_FILE))
         if marker is None:
-            if create:
-                self._write(self._key(MARKER_FILE), (json.dumps({"schema": SCHEMA}) + "\n").encode())
-                self._layout_checked = True
+            if not create:
+                return  # nothing here yet; nothing to misread
+            for old in (OBJECTS_DIR, SNAPSHOTS_DIR):
+                if next(self._list(self._key(old) + "/"), None) is not None:
+                    raise StoreError(
+                        f"The store {self} has no store.json, and holds the folders of a store of ChartBook 0.2 "
+                        f"(objects/, snapshots/): its store.json has not arrived (a copy into the bucket that has not "
+                        f"finished), or was removed. Nothing is written to it. Wait for the copy; if store.json is gone, "
+                        f"run `chartbook store migrate` once every machine that uses it has ChartBook 0.3."
+                    )
+            self._write(self._key(MARKER_FILE), (json.dumps({"schema": SCHEMA}) + "\n").encode())
+            self._layout_checked = True
             return
         try:
             schema = json.loads(marker.decode("utf-8")).get("schema")
@@ -733,19 +839,28 @@ class S3Store(Store):
             asset, files=tuple(dataclasses.replace(file, location=self._checked(file.content_hash)) for file in asset.files)
         )
 
-    def _keep_locally(self, local: Path, body: bytes, modified: Optional[float] = None) -> None:
-        """Write the cache's copy of a record, whole or not at all, with the time the bucket gives the key."""
+    def _keep_locally(self, local: Path, body: bytes, etag: str) -> None:
+        """Write the cache's copy of a record, whole or not at all, and beside it the ETag of the key it is of."""
         temporary = local.with_name(f".{local.name}.{uuid.uuid4().hex[:12]}.part")
         _check_length(temporary)  # on Windows, a cache folder deep enough is said as such
         local.parent.mkdir(parents=True, exist_ok=True)
         try:
             temporary.write_bytes(body)
-            if modified is not None:
-                os.utime(temporary, (modified, modified))
             self._settle(temporary, local)
         finally:
             if temporary.exists():
                 _remove_file(temporary)
+        try:
+            local.with_name(local.name + _ETAG_SUFFIX).write_text(etag, encoding="utf-8", newline="\n")
+        except OSError:
+            pass  # read again next time, then
+
+    @staticmethod
+    def _drop_locally(local: Path) -> None:
+        """Remove the cache's copy of a record, and the ETag beside it."""
+        _remove_file(local)
+        _remove_file(local.with_name(local.name + _ETAG_SUFFIX))
+        _read_records.pop(str(local), None)
 
     def _unowned_prefix(self, content_hash: str) -> str:
         """The name in the store of the folder of an object no pipeline owns, ``pipelines/+unowned/<hex>/``."""
@@ -774,7 +889,7 @@ class S3Store(Store):
     def records(self) -> list[KeptRecord]:
         """Every snapshot's record in the bucket, made by an owner or by a pin, as the folder store reads its own."""
         self._check_layout()
-        return self._records(self._listing())
+        return list(self._records_of(self._seen()))
 
     def _records(self, listing: dict[str, dict], under: Optional[str] = None) -> list[KeptRecord]:
         """The records a listing of ``pipelines/`` has, downloaded into the cache where they are not yet.
@@ -782,9 +897,8 @@ class S3Store(Store):
         A record in another pipeline's folder, or another commit's, is one
         that cannot be read, as in a folder store. One the cache has and the
         bucket has not is removed from the cache: whoever removed it is not
-        to be second-guessed. The cache's copy has the time the bucket gives
-        the key, so that a record written again (its folder cleared, and
-        named again) is downloaded again.
+        to be second-guessed. The cache's copy is read again when the key's
+        ETag is not the one it was read at (:func:`_as_listed`).
 
         :param under: The one pipeline's folder the listing is of.
         """
@@ -797,19 +911,19 @@ class S3Store(Store):
             ):
                 continue
             entry = listing[name]
-            local = _inside(self._root, name)
+            local = self._root.joinpath(*parts)
             if not _as_listed(local, entry):
-                body = self._read(entry["Key"])
-                if body is None:
+                read = self._read_tagged(entry["Key"])
+                if read is None:
                     continue  # gone since it was listed
-                self._keep_locally(local, body, _modified(entry) or None)
+                # The ETag it was listed with: one written meanwhile is read again next time
+                self._keep_locally(local, read[0], str(entry.get("ETag") or read[1]))
             wanted.add(local)
             found.append(self._as_found(local, parts[1], parts[2]))
         cached = self._root / PIPELINES_DIR
         for stale in (cached / under).glob(f"*/{_RECORD}") if under else cached.glob(f"*/*/{_RECORD}"):
             if stale not in wanted:
-                _remove_file(stale)
-                _read_records.pop(str(stale), None)
+                self._drop_locally(stale)
         return found
 
     @staticmethod
@@ -828,8 +942,8 @@ class S3Store(Store):
             if is_snapshot_folder(local.parent.parent.name)
         ]
 
-    def _pipeline_listing(self, pipeline: Optional[str]) -> Optional[tuple[str, dict]]:
-        """A pipeline's folder in the store and the listing of it, for a question that names the pipeline; None for one that does not."""
+    def _pipeline_seen(self, pipeline: Optional[str]) -> Optional[_Seen]:
+        """What is listed of a pipeline's folder, for a question that names the pipeline; None for one that does not."""
         if pipeline is None:
             return None
         from chartbook.identity import validate_pipeline_id
@@ -838,8 +952,7 @@ class S3Store(Store):
             validate_pipeline_id(pipeline)
         except ValueError:
             return None
-        folder = pipeline_folder(pipeline)
-        return folder, self._listing(folder)
+        return self._seen(pipeline_folder(pipeline))
 
     def snapshot_commits(self) -> set[str]:
         return {record.commit for record in self.records() if record.readable and record.made_by == "snapshot"}
@@ -871,14 +984,15 @@ class S3Store(Store):
         self, pipeline: str, commit: str, made_at: str, base: Optional[Union[str, Path]] = None, made_by: str = "snapshot"
     ) -> "PendingSnapshot":
         self._check_layout(create=True)
-        self._forget()
         return _S3Pending(self, pipeline, commit, made_at, base, made_by)
 
     def remove_snapshot(self, path: Path) -> bool:
         """Clear one snapshot: its record goes, and ``_chartbook/CLEARED.txt`` says so.
 
         Its files go with :meth:`tidy`, as in a folder store, but those a
-        later snapshot uses; the folder goes once nothing in it is used.
+        later snapshot uses; the folder goes once nothing in it is used. So
+        does the note of origins of the last snapshot of a pipeline at a
+        commit: :meth:`tidy` lists the bucket once for all a gc clears.
 
         :raises ValueError: If *path* is not a record in this store's cache.
         :raises ReadOnlyStoreError: If the bucket refused to remove the
@@ -897,19 +1011,13 @@ class S3Store(Store):
             raise ValueError(f"{path} is not a snapshot record of the store {self}.")
         self._check_layout()
         name = "/".join(parts)
-        key, local = self._key(name), _inside(self._root, name)
-        if not self._exists(key):
-            _remove_file(local)
-            _read_records.pop(str(local), None)
+        key, local = self._key(name), self._root.joinpath(*parts)
+        # What was just listed says it is there; else it is asked
+        if name not in self._seen(parts[1]).listing and not self._exists(key):
+            self._drop_locally(local)
             return False
-        if not local.is_file():
-            body = self._read(key)
-            if body is not None:
-                self._keep_locally(local, body)
-        kept = read_kept_record(local)
         self._delete_keys([key])
-        _remove_file(local)
-        _read_records.pop(str(local), None)
+        self._drop_locally(local)
         self._write(
             self._key(PIPELINES_DIR, parts[1], parts[2], OWN_DIR, CLEARED_FILE),
             (
@@ -918,46 +1026,40 @@ class S3Store(Store):
                 f"whose _chartbook/snapshot.json says so; the folder goes once none is.\n"
             ).encode("utf-8"),
         )
-        if kept.readable and kept.made_by == "snapshot":
-            from chartbook.snapshot import record_name
-
-            if not self.snapshot_files(kept.commit, record_name(kept.subdirectory)):
-                # The last of this pipeline at this commit: its note of origins goes too
-                self._try_delete([self._origins_key(kept.commit, record_name(kept.subdirectory))])
         return True
 
     def _notes(self) -> tuple[set[str], set[str]]:
-        """What the notes of snapshots being made keep, while each is younger than :data:`PENDING_SECONDS`: their own folders, and the files of earlier ones they use, by their names in the store."""
+        """What the notes of snapshots being made keep, while each is younger than :data:`PENDING_FOLDER_SECONDS`: their own folders, and the files of earlier ones they use, by their names in the store, folded (:func:`chartbook.store._folded`)."""
         folders: set[str] = set()
         files: set[str] = set()
         now = time.time()
         for entry in self._list(self._key(TMP_DIR) + "/"):
-            if not entry["Key"].endswith(PENDING_SUFFIX) or now - _modified(entry) > PENDING_SECONDS:
+            if not entry["Key"].endswith(PENDING_SUFFIX) or now - _modified(entry) > PENDING_FOLDER_SECONDS:
                 continue
             body = self._read(entry["Key"]) or b""
             for line in body.decode("utf-8", "replace").splitlines():
                 if line.startswith(FOLDER_MARK):
                     folders.add(line[len(FOLDER_MARK):])
                 elif line:
-                    files.add(_same(line))
+                    files.add(_folded(line))
         return folders, files
 
     def _unused_in(
         self, folder: str, listing: dict[str, dict], records: list[KeptRecord], noted: tuple[set, set], keep: set, now: float
-    ) -> tuple[list[tuple[str, dict]], list[tuple[str, str]]]:
-        """What no snapshot of one pipeline uses in its folder, by the rules of :meth:`chartbook.store.FolderStore.sweep`; and why nothing is, if nothing is.
+    ) -> list[tuple[str, dict]]:
+        """What no snapshot of one pipeline uses in its folder, by the rules of :meth:`chartbook.store.FolderStore.sweep`.
 
         A key is used when a record of the pipeline names it, followed by
         this machine or not, or a snapshot being made has noted it, or it
-        is one of *keep*; names are compared as :func:`_same` writes them.
-        What is not used is taken from a snapshot's folder that has no
-        record once nothing in it has changed for
-        :data:`PENDING_FOLDER_SECONDS` and no snapshot being made has noted
-        it (at once if ``store gc`` cleared it), and from one that has a
-        record once the key is :data:`PENDING_SECONDS` old: a sync
-        service's copy. Nothing is taken from a pipeline's folder while one
-        of its records cannot be read, or names files this machine does not
-        follow.
+        is one of *keep*; names are compared folded, as a disk that tells
+        neither letter case nor Unicode's forms apart compares them. What is
+        not used is taken from a snapshot's folder that has no record once
+        nothing in it has changed for :data:`PENDING_FOLDER_SECONDS` and no
+        snapshot being made has noted it (at once if ``store gc`` cleared
+        it), and from one that has a record once the key is
+        :data:`PENDING_SECONDS` old: a sync service's copy. Nothing is taken
+        from a pipeline's folder while one of its records cannot be read, or
+        names files this machine does not follow: that is warned of.
         """
         folders, files = noted
         base = f"{PIPELINES_DIR}/{folder}/"
@@ -965,11 +1067,17 @@ class S3Store(Store):
         doubt = next((record for record in here if not record.readable or not record.whole), None)
         used = set(files) | keep
         try:
-            used |= {_same(self._where(path)) for record in here for path in record.mentioned}
+            used |= {_folded(self._where(path)) for record in here for path in record.mentioned}
         except ValueError:
             doubt = doubt or here[0]  # a name this machine cannot make a path of
         if doubt is not None:
-            return [], [(self._where(doubt.path), _DOUBT)]
+            warnings.warn(
+                f"Nothing in {self}/{base} is removed: its record {self}/{self._where(doubt.path)} cannot be read, or "
+                f"names files this machine does not follow (a sync that has not finished, or names another system "
+                f"takes and this one does not). `chartbook store verify` says more.",
+                stacklevel=3,
+            )
+            return []
         snapshots: dict[str, dict[str, dict]] = {}
         for name, entry in listing.items():
             if name.startswith(base):
@@ -985,12 +1093,12 @@ class S3Store(Store):
                 if base + snapshot in folders or now - newest < PENDING_FOLDER_SECONDS:
                     continue  # a snapshot being made, most likely
             for name, entry in sorted(held.items()):
-                if name in (record, cleared) or _same(name) in used:
+                if name in (record, cleared) or _folded(name) in used:
                     continue
                 if recorded and now - _modified(entry) < PENDING_SECONDS:
                     continue  # beside a snapshot's files: a copy of a sync's, an hour on
                 found.append((name, entry))
-        return found, []
+        return found
 
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from every pipeline's folder; what was removed, or with *dry_run* would be, each with its size.
@@ -998,7 +1106,9 @@ class S3Store(Store):
         The notes of snapshots being made are read first, then the records
         as they are now, and the notes once more just before anything goes:
         a snapshot written between the first two is in the records, and one
-        begun meanwhile is in the last.
+        begun meanwhile is in the last. A note of origins no snapshot of its
+        commit is left to use goes too, an hour after it was written; and
+        first, what a writer that died left under ``tmp/``.
 
         :param keep: Names in the store not to remove: what ``store gc``
             spares for being new.
@@ -1006,29 +1116,31 @@ class S3Store(Store):
             be, naming each with what the service said and what to do.
         """
         self._check_layout()
+        if not dry_run:
+            self._tidy_tmp()
         noted = self._notes()
-        listing = self._listing(fresh=True)
-        records = self._records(listing)
-        keep = {_same(name) for name in keep}
+        seen = self._seen(fresh=True)
+        listing, records = dict(seen.listing), self._records_of(seen)
+        keep = {_folded(name) for name in keep}
         now = time.time()
-        found, failed, doubted = [], [], set()
+        found: list = []
+        doubted = set()
         for folder in sorted({name.split("/")[1] for name in listing if name.count("/") >= 2} - {UNOWNED_DIR}):
-            unused, doubt = self._unused_in(folder, listing, records, noted, keep, now)
-            found += unused
-            failed += doubt
-            if doubt:
+            here = [record for record in records if record.folder.parent.name == folder]
+            if any(not record.readable or not record.whole for record in here):
                 doubted.add(folder)
+            found += self._unused_in(folder, listing, records, noted, keep, now)
         folders, files = self._notes()
         found = [
             (name, entry) for name, entry in found
-            if "/".join(name.split("/")[:3]) not in folders and _same(name) not in files
+            if "/".join(name.split("/")[:3]) not in folders and _folded(name) not in files
         ]
         if dry_run:
             return [(name, entry["Size"]) for name, entry in found]
         refused = self._try_delete([entry["Key"] for _, entry in found]) if found else {}
         removed = [(name, entry["Size"]) for name, entry in found if entry["Key"] not in refused]
         remedy = "whoever owns the bucket removes it, or gives you s3:DeleteObject on it, and you run `chartbook store gc` again"
-        failed += [
+        failed = [
             (name, f"{' '.join(refused[entry['Key']]).strip()}; {remedy}") for name, entry in found if entry["Key"] in refused
         ]
         # A cleared folder's CLEARED.txt goes with the last of what is in it
@@ -1043,11 +1155,52 @@ class S3Store(Store):
         ]
         if cleared:
             self._try_delete(cleared)
+        self._tidy_origins(records, now)
+        for name, _ in removed:
+            if _plain_parts(name) is not None:
+                _remove_file(self._root.joinpath(*name.split("/")))
         if failed:
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""
             raise TidyError(f"Cannot remove {self}/{name}{more}, which no snapshot uses: {why}.", removed, failed)
         return removed
+
+    def _tidy_tmp(self) -> None:
+        """Remove the notes a writer that died left under ``tmp/``, two days on: one still at work writes its note again as it goes."""
+        prefix = self._key(TMP_DIR) + "/"
+        now = time.time()
+        old = [entry["Key"] for entry in self._list(prefix) if now - _modified(entry) >= 2 * PENDING_FOLDER_SECONDS]
+        if old:
+            try:
+                self._try_delete(old)
+            except StoreError:
+                pass  # left for the next gc
+
+    def _tidy_origins(self, records: list[KeptRecord], now: float) -> None:
+        """Remove each note of origins that no snapshot an owner made at its commit is left to use, an hour after it was written.
+
+        Kept while a record at its commit cannot be read; and for an hour,
+        as a snapshot made just now writes its note after the records were
+        listed.
+        """
+        from chartbook.snapshot import record_name
+
+        used = {
+            f"{record.commit}/{record_name(record.subdirectory)}.txt" for record in records
+            if record.readable and record.made_by == "snapshot"
+        }
+        doubt = {record.folder.name.rpartition("_")[2] for record in records if not record.readable}
+        prefix = self._key(ORIGINS_DIR) + "/"
+        gone = [
+            entry["Key"] for entry in self._list(prefix)
+            if entry["Key"][len(prefix):] not in used and entry["Key"][len(prefix):][:12] not in doubt
+            and now - _modified(entry) >= PENDING_SECONDS
+        ]
+        if gone:
+            self._try_delete(gone)
+            if self._origins is not None:
+                for key in gone:
+                    self._origins.pop(key, None)
 
     def _origins_key(self, commit: str, name: str) -> str:
         if not _FULL_COMMIT.match(commit):
@@ -1062,12 +1215,30 @@ class S3Store(Store):
         if top not in known:
             known.append(top)
             self._write(key, ("\n".join(known) + "\n").encode("utf-8"))
+        if self._origins is not None:
+            self._origins[key] = [line for line in known if line]
 
     def origins(self, commit: str, name: str) -> list[str]:
-        body = self._read(self._origins_key(commit, name))
-        if body is None:
-            return []
-        return [line for line in body.decode("utf-8").splitlines() if line]
+        """The repository folders a pipeline's snapshots at a commit were made from, as noted.
+
+        Within a :meth:`reading` block, the notes there are are listed once,
+        and each is read once.
+        """
+        key = self._origins_key(commit, name)
+        self._check_layout()
+        if self._reading:
+            if self._origins is None:
+                prefix = self._key(ORIGINS_DIR) + "/"
+                self._origins = {entry["Key"]: None for entry in self._list(prefix)}
+            if key not in self._origins:
+                return []
+            if self._origins[key] is not None:
+                return list(self._origins[key])
+        body = self._read(key)
+        found = [line for line in body.decode("utf-8").splitlines() if line] if body is not None else []
+        if self._reading and self._origins is not None:
+            self._origins[key] = found
+        return found
 
     # -- assets, by their hash ----------------------------------------------
 
@@ -1079,20 +1250,20 @@ class S3Store(Store):
         _split_hash(content_hash)
         try:
             self._check_layout()
-            own = self._pipeline_listing(pipeline)
-            if own is not None:
-                folder, listing = own
-                held = _held_in(self._records(listing, under=folder), content_hash, pipeline)
-                if any(self._where(file.location) in listing for asset in held for file in asset.files):
-                    return True
-            listing = self._listing()
+            own = self._pipeline_seen(pipeline)
+            if own is not None and self._some_file_there(own, content_hash, pipeline):
+                return True
+            seen = self._seen()
         except StoreUnreachableError:
             if self._from_the_cache(content_hash, pipeline, lay_out=False) is not None:
                 return True
             raise
-        held = _held_in(self._records(listing), content_hash, pipeline)
-        return any(self._where(file.location) in listing for asset in held for file in asset.files) or bool(
-            self._unowned_keys(content_hash, listing)
+        return self._some_file_there(seen, content_hash, pipeline) or bool(self._unowned_keys(content_hash, seen.listing))
+
+    def _some_file_there(self, seen: _Seen, content_hash: str, pipeline: Optional[str]) -> bool:
+        return any(
+            seen.entry(self._where(file.location)) is not None
+            for asset in self._held(seen, content_hash, pipeline) for file in asset.files
         )
 
     def get(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> Path:
@@ -1124,29 +1295,28 @@ class S3Store(Store):
         """The rest of :meth:`get`, online: its pipeline's folder first, then every one."""
         missing = wrong = None
         tried: set = set()
-        own = self._pipeline_listing(pipeline)
-        for folder, listing in ([own] if own is not None else []) + [(None, None)]:
-            if listing is None:
-                listing = self._listing()
-            for asset in _named_first(_held_in(self._records(listing, under=folder), content_hash, pipeline), name):
+        own = self._pipeline_seen(pipeline)
+        for seen in ([own] if own is not None else []) + [None]:
+            seen = seen if seen is not None else self._seen()
+            for asset in _named_first(self._held(seen, content_hash, pipeline), name):
                 # The pipeline's own holds come again in every pipeline's: each copy is tried once
                 copy = tuple(str(file.location) for file in asset.files)
                 if copy in tried:
                     continue
                 tried.add(copy)
-                short = self._not_uploaded_file(asset, listing)
+                short = self._not_uploaded_file(asset, seen)
                 if short is not None:
                     missing = missing or short[0]
                     continue  # the one `incomplete` judges whole is the one read
                 try:
-                    return self._for_a_reader(self._bring(asset, listing), name)
+                    return self._for_a_reader(self._bring(asset, seen), name)
                 except _NotItsBytes as error:
                     wrong = wrong or str(error)
         if wrong is not None:
             raise StoreError(
                 f"{wrong}. Nothing of it is kept on this machine; `chartbook store verify` lists every such file."
             )
-        remote = self._unowned_keys(content_hash, listing)
+        remote = self._unowned_keys(content_hash, seen.listing)
         if missing is not None and not remote:
             raise StoreError(
                 f"The store {self} {missing} of {content_hash}, though a snapshot's record names it: it is not "
@@ -1157,7 +1327,7 @@ class S3Store(Store):
             raise ObjectNotFoundError(f"The store {self} has no object {content_hash}.")
         return self._fetch_unowned(content_hash, remote)
 
-    def _bring(self, asset: KeptAsset, listing: dict[str, dict]) -> KeptAsset:
+    def _bring(self, asset: KeptAsset, seen: _Seen) -> KeptAsset:
         """An asset with each of its files in the cache's checked files, downloaded and checked where one is not.
 
         :raises _NotItsBytes: If a file downloaded is not what its record says.
@@ -1165,7 +1335,8 @@ class S3Store(Store):
         for file in asset.files:
             if _is_there(self._checked(file.content_hash), file.size_bytes):
                 continue
-            actual = self._download(listing[self._where(file.location)]["Key"], self._checked(file.content_hash), file.content_hash)
+            entry = seen.entry(self._where(file.location))
+            actual = self._download(entry["Key"], self._checked(file.content_hash), file.content_hash)
             if actual is not None:
                 raise _NotItsBytes(
                     f"The file {file.path} of {asset.content_hash} in {self} is not what its snapshot's record says "
@@ -1185,7 +1356,12 @@ class S3Store(Store):
         :param lay_out: Whether to lay it out for a reader. Without, nothing
             is made, and the path returned only says that it is there.
         """
-        for asset in _named_first(_held_in(self._cached_records(), content_hash, pipeline), name):
+        held = [
+            asset for record in self._cached_records() if record.readable for asset in record.assets
+            if asset.content_hash == content_hash
+        ]
+        held.sort(key=lambda asset: (asset.record.pipeline == pipeline, asset.record.made_at), reverse=True)
+        for asset in _named_first(held, name):
             if all(_is_there(self._checked(file.content_hash), file.size_bytes) for file in asset.files):
                 return self._for_a_reader(self._as_checked(asset), name) if lay_out else asset.record.path
         local = self._unowned_cache(content_hash)
@@ -1273,7 +1449,8 @@ class S3Store(Store):
             else:
                 content = hashing.hash_directory(staging)
             prefix = self._unowned_prefix(content.content_hash)
-            remote = self._unowned_keys(content.content_hash, self._listing(prefix.rstrip("/")[len(PIPELINES_DIR) + 1:], fresh=True))
+            folder = prefix.rstrip("/")[len(PIPELINES_DIR) + 1:]
+            remote = self._unowned_keys(content.content_hash, self._seen(folder, fresh=True).listing)
             missing = [relative for relative in files if relative not in remote]
             for relative in missing:
                 self._upload(staging / relative, self._key(prefix + relative))
@@ -1305,12 +1482,14 @@ class S3Store(Store):
         """
         _split_hash(content_hash)
         self._check_layout()
-        listing = self._listing(fresh=True)
-        held = _held_in(self._records(listing), content_hash)
-        names = sorted({self._where(file.location) for asset in held for file in asset.files})
-        keys = [listing[name]["Key"] for name in names if name in listing]
+        seen = self._seen(fresh=True)
+        held = self._held(seen, content_hash)
+        keys = sorted({
+            entry["Key"] for asset in held for file in asset.files
+            for entry in [seen.entry(self._where(file.location))] if entry is not None
+        })
         # Every key under an object no pipeline owns, its files and any that are not (a folder marker too)
-        keys += [entry["Key"] for entry in self._unowned_keys(content_hash, listing, plain=False).values()]
+        keys += [entry["Key"] for entry in self._unowned_keys(content_hash, seen.listing, plain=False).values()]
         if keys:
             self._delete_keys(keys)
         for asset in held:
@@ -1340,9 +1519,9 @@ class S3Store(Store):
     def hashes(self) -> Iterator[str]:
         """The hash of every asset in the bucket, in order: what its records hold, and the objects no pipeline owns."""
         self._check_layout()
-        listing = self._listing()
-        found = {asset.content_hash for record in self._records(listing) if record.readable for asset in record.assets}
-        for name in listing:
+        seen = self._seen()
+        found = {asset.content_hash for record in self._records_of(seen) if record.readable for asset in record.assets}
+        for name in seen.listing:
             parts = name.split("/", 3)
             if len(parts) == 4 and parts[1] == UNOWNED_DIR and _HEX.match(parts[2]):
                 found.add(hashing.format_hash(parts[2]))
@@ -1353,8 +1532,9 @@ class S3Store(Store):
 
     def files_of(self, content_hash: str) -> list[tuple[str, int]]:
         """Where the bucket keeps an asset's files, every copy any record names, each as its name in the store and its size."""
+        self._check_layout()
         found: dict = {}
-        for asset in _held_in(self.records(), content_hash):
+        for asset in self._held(self._seen(), content_hash):
             for file in asset.files:
                 found.setdefault(self._where(file.location), file.size_bytes)
         return sorted(found.items())
@@ -1362,12 +1542,12 @@ class S3Store(Store):
     def size_of(self, content_hash: str) -> int:
         """The total size in bytes of an asset's files, as its newest record gives them, or of every key of its object."""
         self._check_layout()
-        listing = self._listing()
-        held = _held_in(self._records(listing), content_hash)
+        seen = self._seen()
+        held = self._held(seen, content_hash)
         if held:
             return sum(file.size_bytes for file in held[0].files)
         # Every key under the object, as gc removes every one
-        return sum(entry["Size"] for entry in self._unowned_keys(content_hash, listing, plain=False).values())
+        return sum(entry["Size"] for entry in self._unowned_keys(content_hash, seen.listing, plain=False).values())
 
     def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
         """Seconds since an asset was put in the bucket: its newest record was written, or a key of its object.
@@ -1376,10 +1556,10 @@ class S3Store(Store):
             removed since it was listed, by another ``gc``.
         """
         self._check_layout()
-        listing = self._listing()
-        held = _held_in(self._records(listing), content_hash)
-        entries = [listing[self._where(asset.record.path)] for asset in held if self._where(asset.record.path) in listing]
-        entries += list(self._unowned_keys(content_hash, listing, plain=False).values())
+        seen = self._seen()
+        held = self._held(seen, content_hash)
+        entries = [entry for asset in held for entry in [seen.listing.get(self._where(asset.record.path))] if entry is not None]
+        entries += list(self._unowned_keys(content_hash, seen.listing, plain=False).values())
         if not entries:
             raise ObjectNotFoundError(f"The store {self} has no object {content_hash}.")
         newest = max(_modified(entry) or time.time() for entry in entries)
@@ -1393,8 +1573,9 @@ class S3Store(Store):
         names = list(names)
         if not single or len(names) != 1:
             return False
-        prefix = self._unowned_prefix(content_hash).rstrip("/")
-        remote = self._unowned_keys(content_hash, self._listing(prefix[len(PIPELINES_DIR) + 1:]))
+        self._check_layout()
+        folder = self._unowned_prefix(content_hash).rstrip("/")[len(PIPELINES_DIR) + 1:]
+        remote = self._unowned_keys(content_hash, self._seen(folder).listing)
         return bool(remote) and names[0] not in remote
 
     def incomplete(
@@ -1414,16 +1595,16 @@ class S3Store(Store):
             return None
         try:
             self._check_layout()
-            listing = self._listing()
+            seen = self._seen()
         except StoreUnreachableError:
             if self._from_the_cache(content_hash, lay_out=False) is not None:
                 return None
             raise
-        held = _held_in(self._records(listing), content_hash)
+        held = self._held(seen, content_hash)
         if held:
             wrong = None
             for asset in held:
-                wrong = self._not_uploaded_file(asset, listing)
+                wrong = self._not_uploaded_file(asset, seen)
                 if wrong is None:
                     _found_whole.add((self.url, content_hash))
                     return None
@@ -1438,15 +1619,15 @@ class S3Store(Store):
             )
         if not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
             return None
-        seen = (self.url, content_hash, size_bytes, tuple(sorted((files or {}).items())), every)
-        if seen in _found_whole:
+        sought = (self.url, content_hash, size_bytes, tuple(sorted((files or {}).items())), every)
+        if sought in _found_whole:
             return None
-        remote = {relative: entry["Size"] for relative, entry in self._unowned_keys(content_hash, listing).items()}
+        remote = {relative: entry["Size"] for relative, entry in self._unowned_keys(content_hash, seen.listing).items()}
         if not remote:
             return None  # not there at all, which `has` says
         wrong = self._not_uploaded(content_hash, remote, size_bytes, files, every)
         if wrong is None:
-            _found_whole.add(seen)
+            _found_whole.add(sought)
             return None
         what, waiting = wrong
         if not waiting:
@@ -1458,14 +1639,14 @@ class S3Store(Store):
             f"`chartbook store verify` says more)"
         )
 
-    def _not_uploaded_file(self, asset: KeptAsset, listing: dict[str, dict]) -> Optional[tuple[str, bool]]:
+    def _not_uploaded_file(self, asset: KeptAsset, seen: _Seen) -> Optional[tuple[str, bool]]:
         """What of an asset's files is not in the bucket as its record has it, and whether an upload on its way would explain it; None when all are.
 
         A key is written whole or not at all, so one of another size than
         the record gives holds other bytes, which no upload mends.
         """
         for file in asset.files:
-            entry = listing.get(self._where(file.location))
+            entry = seen.entry(self._where(file.location))
             if entry is None:
                 return f"does not have {file.path} yet", True
             if entry["Size"] != file.size_bytes:
@@ -1568,24 +1749,23 @@ class S3Store(Store):
         """
         self._check_layout()
         with self.reading():
-            listing = self._listing()
-            records = self._records(listing)
+            seen = self._seen()
             if content_hashes is None:
                 content_hashes = list(self.hashes())
             problems = []
             for content_hash in content_hashes:
-                held = _held_in(records, content_hash)
+                held = self._held(seen, content_hash)
                 if held:
                     message = None
                     for asset in held:
-                        message = self._check_anew(asset, listing)
+                        message = self._check_anew(asset, seen)
                         if message is None:
                             break
                     if message is not None:
                         problems.append(StoreProblem(content_hash, held[0].record.folder, message))
                     continue
                 where = self._unowned_cache(content_hash)
-                remote = self._unowned_keys(content_hash, listing)
+                remote = self._unowned_keys(content_hash, seen.listing)
                 if not remote:
                     problems.append(StoreProblem(content_hash, where, "not in the store"))
                     continue
@@ -1601,14 +1781,14 @@ class S3Store(Store):
                     problems.append(StoreProblem(content_hash, where, message))
             return problems
 
-    def _check_anew(self, asset: KeptAsset, listing: dict[str, dict]) -> Optional[str]:
+    def _check_anew(self, asset: KeptAsset, seen: _Seen) -> Optional[str]:
         """What is wrong with an asset as one record holds it, its files downloaded afresh (:func:`chartbook.store.what_is_wrong_with`)."""
         scratch = self._root / TMP_DIR / uuid.uuid4().hex[:12]
         try:
             files = []
             for number, file in enumerate(asset.files):
                 there = scratch / str(number)
-                entry = listing.get(self._where(file.location))
+                entry = seen.entry(self._where(file.location))
                 if entry is not None:
                     self._download(entry["Key"], there)
                 files.append(dataclasses.replace(file, location=there))
@@ -1646,6 +1826,7 @@ class S3Store(Store):
             return None
 
     def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional[Root]:
+        self._check_layout()
         return self._read_note(self._root_key(lockfile, this_machine(create=False) if machine is None else machine))
 
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
@@ -1682,14 +1863,14 @@ class _S3Pending(PendingSnapshot):
     folder at its path, and the record last. A file uploaded is kept in the
     cache's checked files too, so this machine does not download it again.
 
-    The folder is claimed before anything goes into it (``_chartbook/CLAIMED.txt``,
-    written only if nothing is there), and noted under ``tmp/`` before it
-    is claimed. Before a put uses files earlier snapshots keep, it notes
-    them, and only then lists the pipeline's folder: a file is taken where
-    it is only while a record still names it, as ``store gc`` clears a
-    record before the files no record names. What it took is looked for
-    again before and after the record is written, and put back if a gc
-    took it meanwhile.
+    The folder is claimed before anything goes into it, record or file
+    (``_chartbook/CLAIMED.txt``, written only if nothing is there), and
+    noted under ``tmp/`` before it is claimed. Before a put takes files
+    earlier snapshots keep, it notes them. Before the record is written,
+    each file taken is confirmed to be one a record of the pipeline still
+    names (``store gc`` clears a record before the files no record names),
+    and is uploaded into this snapshot's own folder if it is not; what was
+    taken and has gone meanwhile is put back, before the record and after.
     """
 
     def __init__(self, store: S3Store, pipeline: str, commit: str, made_at: str, base, made_by: str):
@@ -1715,13 +1896,21 @@ class _S3Pending(PendingSnapshot):
         self._here: dict[str, str] = {}
         self._uploaded: list[str] = []
         self._claim_key: Optional[str] = None
+        #: What its claim says, with a mark of its own: a claim met again is known for this one's
+        self._claim_text = (
+            f"Claimed on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC for a snapshot being made "
+            f"({uuid.uuid4().hex[:12]}).\nIts record, _chartbook/snapshot.json, comes last. A folder whose record "
+            f"never comes is\nremoved by `chartbook store gc` a day after anything in it last changed.\n"
+        ).encode("utf-8")
         self._note: Optional[str] = None
         self._lines: list[str] = []
         self._noted_at = 0.0
         #: Hashes already known, by the source file's path, which are then not read again
         self.known: dict[str, str] = {}
-        #: Each file of an earlier snapshot taken where it is: its name, the file it came from, its hash
+        #: Each file of an earlier snapshot used where it is: its name, the file it came from, its hash
         self._reused: list[tuple[str, str, str]] = []
+        #: Each of those as the record about to be written has it, with the file it came from
+        self._took: list[tuple[dict, str]] = []
 
     def _taken(self) -> set[str]:
         """The snapshots' folders the pipeline has in the bucket, and those this process has claimed."""
@@ -1740,14 +1929,17 @@ class _S3Pending(PendingSnapshot):
                 # Noted first, so that `store gc` never meets the folder without its note
                 self._note_line(f"{FOLDER_MARK}{PIPELINES_DIR}/{self.folder}/{name}")
                 key = self.store._key(PIPELINES_DIR, self.folder, name, OWN_DIR, CLAIMED_FILE)
-                said = (
-                    f"Claimed on {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())} UTC for a snapshot being made.\n"
-                    f"Its record, _chartbook/snapshot.json, comes last. A folder whose record never comes is\n"
-                    f"removed by `chartbook store gc` a day after anything in it last changed.\n"
-                )
-                if self.store._put_new(key, said.encode("utf-8")):
+                if not self.store._put_new(key, self._claim_text):
+                    continue  # another snapshot's claim
+                # A folder listed a moment ago may have filled since, its claim gone with its record written
+                there = [entry["Key"] for entry in self.store._list(self.store._key(PIPELINES_DIR, self.folder, name) + "/")]
+                if there == [key]:
                     self.name, self._claim_key = name, key
                     break
+                try:
+                    self.store._try_delete([key])
+                except StoreError:
+                    pass  # beside a snapshot's files, `store gc` takes it an hour on
             else:
                 raise StoreError(f"No folder is free for a snapshot of {self.pipeline} in the store {self.store}.")
             self.store._claimed.add((self.folder, self.name))
@@ -1757,8 +1949,7 @@ class _S3Pending(PendingSnapshot):
         """Every file the pipeline's snapshots keep, by its hash."""
         if self._kept is None:
             self._kept = {}
-            listing = self.store._listing(self.folder)
-            for record in self.store._records(listing, under=self.folder):
+            for record in self.store._records_of(self.store._seen(self.folder)):
                 if record.readable:
                     for asset in record.assets:
                         for file in asset.files:
@@ -1766,11 +1957,14 @@ class _S3Pending(PendingSnapshot):
         return self._kept
 
     def _note_line(self, *lines: str) -> None:
-        """Add to this snapshot's note under ``tmp/``, written whole each time."""
+        """Add to this snapshot's note under ``tmp/``, written whole when it gains a line, or to say it is alive."""
         if self._note is None:
             self._note = f"{uuid.uuid4().hex[:12]}{PENDING_SUFFIX}"
-        self._lines += [line for line in lines if line not in self._lines]
-        self.store._write(self.store._key(TMP_DIR, self._note), ("\n".join(self._lines) + "\n").encode("utf-8"))
+        new = [line for line in lines if line not in self._lines]
+        if lines and not new:
+            return
+        self.store._write(self.store._key(TMP_DIR, self._note), ("\n".join(self._lines + new) + "\n").encode("utf-8"))
+        self._lines += new
         self._noted_at = time.monotonic()
 
     def _alive(self) -> None:
@@ -1783,7 +1977,7 @@ class _S3Pending(PendingSnapshot):
             try:
                 self.store._try_delete([self.store._key(TMP_DIR, self._note)])
             except StoreError:
-                pass  # it is old in an hour, and kept nothing since
+                pass  # it is old in a day, and kept nothing since
             self._note = None
             self._lines = []
 
@@ -1792,7 +1986,9 @@ class _S3Pending(PendingSnapshot):
 
         :param expect: The hash the file must have to go there (a file a
             record names, put back): bytes that are not it are not
-            uploaded, and the hash returned says so.
+            uploaded, and the hash returned says so. Another snapshot
+            putting the same file back at the same moment writes the same
+            bytes.
         """
         temporary = self.store.cache / TMP_DIR / f"{uuid.uuid4().hex[:12]}.part"
         temporary.parent.mkdir(parents=True, exist_ok=True)
@@ -1808,38 +2004,40 @@ class _S3Pending(PendingSnapshot):
                 _remove_file(temporary)
         return content_hash, kind, size
 
-    def _keep(
-        self, source: str, path: str, content_hash: str, size: int, links: tuple, used: set, listing: dict, named: set
-    ) -> dict:
+    def _keep(self, source: str, path: str, content_hash: str, size: int, links: tuple, used: set, seen: _Seen) -> dict:
         """Keep one file at *path* in the pipeline, once: where an earlier snapshot keeps it, or new in this one's folder."""
         self._alive()
         if content_hash in self._here:
             kept_as = self._here[content_hash]
-            entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self.name}
+            entry = {"path": path, "content_hash": content_hash, "size_bytes": size, "kept_in": self._claim()}
             if kept_as != path:
                 entry["kept_as"] = kept_as
             return entry
         holes = []
         for file in self._kept_files().get(content_hash, []):
+            if file.size_bytes != size:
+                continue
             name = self.store._where(file.location)
-            if file.size_bytes != size or _same(name) not in named:
-                continue  # its record has gone since: not taken
-            there = listing.get(name)
+            there = seen.entry(name)
             if there is None:
                 holes.append(name)
             elif there["Size"] == size:
                 self._reused.append((name, source, content_hash))
-                return self._entry(path, content_hash, size, name)
+                entry = self._entry(path, content_hash, size, name)
+                self._took.append((entry, source))
+                return entry
         for name in holes:
             # A file a record names that is missing (removed by hand, or by
             # `store delete`): put back where the record says, so that it is whole again
-            if "/".join(name.split("/")[:3] + [_RECORD]) not in listing:
+            if seen.entry("/".join(name.split("/")[:3] + [_RECORD])) is None:
                 continue
             written, kind, _ = self._write_file(source, name, links, expect=content_hash)
             if written == content_hash:
                 used.add(kind)
-                listing[name] = {"Key": self.store._key(name), "Size": size}
-                return self._entry(path, content_hash, size, name)
+                self._reused.append((name, source, content_hash))
+                entry = self._entry(path, content_hash, size, name)
+                self._took.append((entry, source))
+                return entry
             content_hash = written  # the bytes changed since they were hashed: new, in this snapshot's folder
         target = f"{PIPELINES_DIR}/{self.folder}/{self._claim()}/{path}"
         written, kind, size = self._write_file(source, target, links)
@@ -1908,25 +2106,18 @@ class _S3Pending(PendingSnapshot):
             (self.known.get(source) or hashing.format_hash(hashing._file_hex(Path(source))), os.stat(source).st_size)
             for _, source, _ in files
         ]
-        # What earlier snapshots keep is noted first, and looked for only then, in a listing taken after
+        # What earlier snapshots keep is noted before it is taken; what is taken is confirmed before the record
         kept = self._kept_files()
         wanted = [
             self.store._where(file.location) for content_hash, size in hashed if content_hash not in self._here
             for file in kept.get(content_hash, []) if file.size_bytes == size
         ]
-        listing: dict = {}
-        named: set = set()
         if wanted:
             self._note_line(*wanted)
-            listing = self.store._listing(self.folder, fresh=True)
-            records = self.store._records(listing, under=self.folder)
-            try:
-                named = {_same(self.store._where(path)) for record in records if record.readable for path in record.mentioned}
-            except ValueError:
-                named = set()  # a name this machine cannot make a path of: nothing taken, everything uploaded
+        seen = self.store._seen(self.folder)
         used: set = set()
         entries = [
-            self._keep(source, path, content_hash, size, links, used, listing, named)
+            self._keep(source, path, content_hash, size, links, used, seen)
             for (_, source, path), (content_hash, size) in zip(files, hashed)
         ]
         if single:
@@ -1952,13 +2143,46 @@ class _S3Pending(PendingSnapshot):
             stored=stored,
         )
 
-    def _refill(self) -> None:
+    def _confirm(self, seen: _Seen) -> None:
+        """See that each file of an earlier snapshot this one has taken is still named by a record of the pipeline, now that its use is noted.
+
+        Done once, before the record is written, from a listing of the
+        pipeline's folder taken after the notes. The entries are the ones in
+        the record about to be written, so a file uploaded here instead is
+        named there too. ``store gc`` clears a snapshot's record before it
+        removes the files no record names, and keeps what a note names: one
+        cleared before the note was read may lose its files.
+        """
+        taken = [(entry, source) for entry, source in self._took if entry.get("kept_in") != self.name]
+        if not taken:
+            return
+        named = {
+            _folded(self.store._where(path)) for record in self.store._records_of(seen) if record.readable
+            for path in record.mentioned
+        }
+        for entry, source in taken:
+            name = f"{PIPELINES_DIR}/{self.folder}/{entry['kept_in']}/{entry.get('kept_as', entry['path'])}"
+            if _folded(name) in named:
+                continue
+            target = f"{PIPELINES_DIR}/{self.folder}/{self._claim()}/{entry['path']}"
+            if self.store._key(target) not in self._uploaded:
+                written, _, _ = self._write_file(source, target, ("reflink", "copy"), expect=entry["content_hash"])
+                if written != entry["content_hash"]:
+                    raise StoreError(f"{source} changed while a snapshot of {self.pipeline} was made: make it again.")
+                self._uploaded.append(self.store._key(target))
+            self.placed = True
+            self._here.setdefault(entry["content_hash"], entry["path"])
+            self._reused = [reuse for reuse in self._reused if reuse[0] != name]
+            entry["kept_in"] = self.name
+            entry.pop("kept_as", None)
+
+    def _refill(self, seen: Optional[_Seen] = None) -> None:
         """Put back a file of an earlier snapshot this one uses, if it went while this one was made (a ``store gc`` elsewhere)."""
         if not self._reused:
             return
-        listing = self.store._listing(self.folder, fresh=True)
+        seen = seen if seen is not None else self.store._seen(self.folder, fresh=True)
         for name, source, content_hash in self._reused:
-            if name in listing:
+            if seen.entry(name) is not None:
                 continue
             if not os.path.isfile(source):
                 raise StoreError(
@@ -1981,32 +2205,28 @@ class _S3Pending(PendingSnapshot):
                     written["made_by"] = self.made_by
             written.setdefault("made_by", self.made_by)
             document = written
+        # Claimed, as any folder is before anything goes into it, a record alone too
+        self._claim()
+        self._alive()
+        seen = self.store._seen(self.folder, fresh=True)
+        self._confirm(seen)
+        self._refill(seen)
         body = (json.dumps(document, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-        self._refill()
-        if self.name is None:
-            # Nothing of its own in its folder: the record claims the folder itself
-            taken = self._taken()
-            for later in range(86400):
-                name = snapshot_folder_name(self.made_at, self.commit, later)
-                if name not in taken and self.store._put_new(self.store._key(PIPELINES_DIR, self.folder, name, _RECORD), body):
-                    self.name = name
-                    break
-            else:
-                raise StoreError(f"No folder is free for a snapshot of {self.pipeline} in the store {self.store}.")
-            self.store._claimed.add((self.folder, self.name))
-        elif not self.store._put_new(self.store._key(PIPELINES_DIR, self.folder, self.name, _RECORD), body):
+        key = self.store._key(PIPELINES_DIR, self.folder, self.name, _RECORD)
+        if not self.store._put_new(key, body):
             raise StoreError(
                 f"{self.store}/{PIPELINES_DIR}/{self.folder}/{self.name}/ has a record already, though this snapshot "
                 f"claimed the folder: something else wrote one there. Make the snapshot again."
             )
         self._written = True
         self._refill()  # a `store gc` between the check and the record
-        if self._claim_key is not None:
+        try:
             self.store._try_delete([self._claim_key])  # the record says now what the claim said
+        except StoreError:
+            pass  # a writer that may not delete: `store gc` takes the claim with the folder's other leftovers
         self._drop_note()
-        key = self.store._key(PIPELINES_DIR, self.folder, self.name, _RECORD)
         local = self.store._local(key)
-        self.store._keep_locally(local, body)
+        self.store._keep_locally(local, body, _md5_tag(body))
         return local
 
     def discard(self) -> None:

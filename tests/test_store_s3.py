@@ -190,6 +190,13 @@ class TestTheUrl:
         assert caches[0] == work / "c" / "s3" / "chartbook-test" / "p"
         assert len(set(caches)) == 3 and all(cache.parent.name.startswith("chartbook-test~") for cache in caches[1:])
 
+    def test_two_prefixes_in_two_letter_cases_have_a_cache_each(self, work, client, monkeypatch):
+        """A disk of macOS or Windows takes Data and data for one folder."""
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "c"))
+        upper, lower = S3Store("s3://chartbook-test/Data", client=client).cache, S3Store("s3://chartbook-test/data", client=client).cache
+        assert lower == work / "c" / "s3" / "chartbook-test" / "data" and upper.name.startswith("Data~")
+        assert upper.name.casefold() != lower.name.casefold()
+
 
 class TestTheBucketIsAFolderStore:
     """The keys are the folder store's paths, so a synced folder is the same store."""
@@ -230,10 +237,24 @@ class TestTheBucketIsAFolderStore:
     def test_a_bucket_of_the_layout_before_is_refused_until_it_is_moved(self, work, client):
         client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v1"}')
         store = S3Store(URL, cache=work / "cache", client=client)
-        for asking in (lambda: store.has("sha256:" + "0" * 64), store.all_snapshot_files, lambda: store.begin("acme/rates", COMMIT, FIRST)):
+        for asking in (
+            lambda: store.has("sha256:" + "0" * 64), store.all_snapshot_files, lambda: store.begin("acme/rates", COMMIT, FIRST),
+            lambda: store.origins(COMMIT, "_top"), lambda: store.lacks("sha256:" + "0" * 64, ["x"]),
+            lambda: store.root_of(work / "chartbook.lock"), lambda: store.files_of("sha256:" + "0" * 64),
+        ):
             with pytest.raises(StoreError, match=r"layout of ChartBook 0\.2 .*run `chartbook store migrate`"):
                 asking()
         assert _keys(client) == ["stores/one/store.json"]  # nothing written beside it
+
+    def test_a_bucket_of_the_layout_before_without_its_marker_is_not_written_to(self, work, client, a_file):
+        """Its store.json not copied yet, or lost: a write would make it a new store over the old one's folders."""
+        client.put_object(Bucket=BUCKET, Key=f"stores/one/objects/sha256/ab/{'c' * 62}/x.parquet", Body=b"x")
+        store = S3Store(URL, cache=work / "cache", client=client)
+        assert store.all_snapshot_files() == []  # a read finds nothing to misread
+        for writing in (lambda: store.put(a_file), lambda: store.begin("acme/rates", COMMIT, FIRST), lambda: store.add_root(work / "chartbook.lock", [])):
+            with pytest.raises(StoreError, match=r"no store.json, and holds the folders of a store of ChartBook 0\.2"):
+                writing()
+        assert _keys(client, "stores/one/") == [f"stores/one/objects/sha256/ab/{'c' * 62}/x.parquet"]
 
     def test_a_store_with_another_layout_is_refused(self, work, client):
         client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v9"}')
@@ -609,6 +630,95 @@ class TestTwoMachinesAtOnce:
         assert client.get_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/snapshot.json")["Body"].read() == b'{"by": "another"}'
 
 
+    @staticmethod
+    def _answer_lost(client, monkeypatch, ending: str, times: int = 1):
+        """Each conditional write of a key ending so lands, and its answer is lost: the SDK's retry is refused, as AWS documents."""
+        import botocore.exceptions
+
+        real, met = client.put_object, []
+
+        def put_object(**kwargs):
+            answer = real(**kwargs)
+            if kwargs["Key"].endswith(ending) and kwargs.get("IfNoneMatch") == "*" and len(met) < times:
+                met.append(kwargs["Key"])
+                raise botocore.exceptions.ClientError({"Error": {"Code": "PreconditionFailed", "Message": "At least one"}}, "PutObject")
+            return answer
+
+        monkeypatch.setattr(client, "put_object", put_object)
+        return met
+
+    @pytest.mark.parametrize("ending", ["/_chartbook/snapshot.json", "/_chartbook/CLAIMED.txt"])
+    def test_a_write_tried_again_meets_itself(self, store, client, work, monkeypatch, ending):
+        """Found by a review: the retry of a record that had landed was taken for another's, and its files were discarded."""
+        folder = _pipeline(work, {"_data/a.txt": b"a", "_data/b.txt": b"b"})
+        met = self._answer_lost(client, monkeypatch, ending)
+        pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
+        put = {"a": pending.put(folder / "_data" / "a.txt"), "b": pending.put(folder / "_data" / "b.txt")}
+        written = pending.write(_record(pending, put))
+        assert met and Path(written).parent.parent.name == FOLDER
+        reader = S3Store(URL, cache=work / "reader", client=client)
+        (record,) = reader.all_snapshot_files()
+        assert record.parent.parent.name == FOLDER and reader.verify() == []
+        assert (reader.get(put["b"].content_hash) / "b.txt").read_bytes() == b"b"
+
+    def test_a_record_alone_tried_again_is_written_once(self, store, client, work, monkeypatch):
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        _snapshot(store, folder, {"a": "_data/a.txt"})
+        self._answer_lost(client, monkeypatch, "/_chartbook/snapshot.json")
+        pending = store.begin("acme/rates", LATER, SECOND, base=folder)
+        put = {"a": pending.put(folder / "_data" / "a.txt")}
+        assert not pending.placed
+        pending.write(_record(pending, put))
+        _behind_its_back(store)
+        assert len(store.all_snapshot_files()) == 2
+
+    def test_a_record_alone_claims_its_folder_first(self, work, client, monkeypatch):
+        """Found by a review: a snapshot with no files of its own wrote its record into a folder another had claimed."""
+        one = _pipeline(work, {"_data/a.txt": b"a"}, name="one")
+        two = _pipeline(work, {"_data/new.txt": b"new"}, name="two")
+        _snapshot(S3Store(URL, cache=work / "x", client=client), one, {"a": "_data/a.txt"}, commit=LATER, made_at=SECOND)
+        w1, w2 = S3Store(URL, cache=work / "w1", client=client), S3Store(URL, cache=work / "w2", client=client)
+        p1, p2 = w1.begin("acme/rates", COMMIT, FIRST, base=two), w2.begin("acme/rates", COMMIT, FIRST, base=one)
+        put2 = {"a": p2.put(one / "_data" / "a.txt")}  # taken where the other keeps it: nothing of its own
+        before = p2._taken()
+        monkeypatch.setattr(p2, "_taken", lambda: before)  # listed just before the first claimed
+        put1 = {"new": p1.put(two / "_data" / "new.txt")}
+        p2.write(_record(p2, put2))
+        p1.write(_record(p1, put1))
+        assert (p1.name, p2.name) == (FOLDER, "2026-10-16T010204Z_bbbbbbbbbbbb")
+        _behind_its_back(w1)
+        assert w1.verify() == [] and len(w1.all_snapshot_files()) == 3
+
+    def test_a_writer_that_may_not_delete_writes_all_the_same(self, store, client, work, monkeypatch):
+        """Found by a review: the claim's removal refused whole, after the record was written, failed the snapshot."""
+        import botocore.exceptions
+
+        def refused(**kwargs):
+            raise botocore.exceptions.ClientError({"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "DeleteObjects")
+
+        real = client.delete_objects
+        monkeypatch.setattr(client, "delete_objects", refused)
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        written, put = _snapshot(store, folder, {"a": "_data/a.txt"})
+        assert Path(written).is_file() and f"{HERE}/_chartbook/CLAIMED.txt" in _keys(client)  # left for gc, beside the record
+        monkeypatch.setattr(client, "delete_objects", real)
+        _later(monkeypatch, PENDING_FOLDER_SECONDS + 1)  # its note, which it could not remove either, a day old
+        assert [name for name, _ in store.tidy() if name.endswith("CLAIMED.txt")] == [f"{NAME}/_chartbook/CLAIMED.txt"]
+
+    def test_a_boto3_too_old_for_a_write_only_if_new_says_so(self, store, client, work, monkeypatch):
+        import botocore.exceptions
+
+        def old(**kwargs):
+            if "IfNoneMatch" in kwargs:
+                raise botocore.exceptions.ParamValidationError(report='Unknown parameter in input: "IfNoneMatch"')
+            return None
+
+        monkeypatch.setattr(client, "put_object", old)
+        with pytest.raises(StoreError, match=r"needs boto3 1\.35 or newer") as raised:
+            store._put_new(store._key("tmp", "x"), b"x")
+        assert not isinstance(raised.value, StoreUnreachableError)
+
+
 class TestASnapshotBeingMade:
     """What `store gc` keeps of a snapshot being made, and what the snapshot does about a gc meanwhile."""
 
@@ -630,9 +740,11 @@ class TestASnapshotBeingMade:
         folder = _pipeline(work, {"_data/a.txt": b"a"})
         pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
         pending.put(folder / "_data" / "a.txt")
-        monkeypatch.setattr(s3, "PENDING_FOLDER_SECONDS", 0)  # as if a day had gone by with nothing written there
+        notes, real = store._notes(), store._notes
+        _later(monkeypatch, PENDING_FOLDER_SECONDS + 1)  # a day on, nothing written in its folder
+        monkeypatch.setattr(store, "_notes", lambda: notes)  # and its note written again a moment ago, as a slow one does
         assert store.tidy() == []  # its note keeps it
-        pending._drop_note()  # the machine making it gave up
+        monkeypatch.setattr(store, "_notes", real)  # the machine making it gave up: its note is as old
         assert sorted(name for name, _ in store.tidy()) == [f"{NAME}/_chartbook/CLAIMED.txt", f"{NAME}/_data/a.txt"]
 
     def test_a_slow_one_writes_its_note_again(self, store, client, work, monkeypatch):
@@ -671,8 +783,9 @@ class TestASnapshotBeingMade:
         pending._kept_files()  # what it saw before
         assert store.remove_snapshot(record) is True  # a gc: the record goes first, its files after
         put = pending.put(folder / "_data" / "parts")
-        assert put.stored["files"][0]["kept_in"] == pending.name != FOLDER  # uploaded into its own folder
         pending.write(_record(pending, {"parts": put}))
+        # Confirmed before the record: uploaded into its own folder, and its record says so
+        assert put.stored["files"][0]["kept_in"] == pending.name != FOLDER and pending.placed
         assert sorted(name for name, _ in store.tidy()) == [f"{NAME}/_data/parts/a.txt"]
         assert (store.get(put.content_hash) / "a.txt").read_bytes() == b"a" and store.verify() == []
 
@@ -681,12 +794,11 @@ class TestASnapshotBeingMade:
         record, _ = _snapshot(store, folder, {"parts": "_data/parts"})
         pending = store.begin("acme/rates", LATER, SECOND, base=folder)
         put = pending.put(folder / "_data" / "parts")
-        # A gc that did not see the note: the record, then the file
-        store.remove_snapshot(record)
+        # Lost meanwhile (by hand, or a gc that did not see the note), its record still there
         client.delete_object(Bucket=BUCKET, Key=f"{HERE}/_data/parts/a.txt")
         _behind_its_back(store)
         pending.write(_record(pending, {"parts": put}))
-        assert f"{HERE}/_data/parts/a.txt" in _keys(client)
+        assert f"{HERE}/_data/parts/a.txt" in _keys(client) and put.stored["files"][0]["kept_in"] == FOLDER
         _behind_its_back(store)
         assert (store.get(put.content_hash) / "a.txt").read_bytes() == b"a" and store.verify() == []
 
@@ -740,8 +852,8 @@ class TestWhatGcRemoves:
         found = {Path(path).parent.parent.name: snapshot.read for path in store.all_snapshot_files()}
         assert set(found) == {"2026-10-16T010203Z_bbbbbbbbbbbb", "2026-10-18T010203Z_cccccccccccc"}
         assert not store.has(put["rates"].content_hash)  # neither is read as a record of it
-        with pytest.raises(TidyError, match="a record there cannot be read"):
-            store.tidy()
+        with pytest.warns(UserWarning, match="cannot be read, or names files this machine does not follow"):
+            assert store.tidy() == []
         assert f"{HERE}/_data/rates.parquet" in _keys(client) and "stores/one/pipelines/acme+other/2026-10-16T010203Z_bbbbbbbbbbbb/_data/stray.parquet" in _keys(client)
 
     def test_a_record_of_names_this_machine_does_not_follow_stops_gc_there(self, store, client, work):
@@ -753,8 +865,8 @@ class TestWhatGcRemoves:
         client.put_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/snapshot.json", Body=json.dumps(document).encode())
         store.remove_snapshot(cleared)
         _behind_its_back(store)
-        with pytest.raises(TidyError, match="names files this machine does not follow"):
-            store.tidy()
+        with pytest.warns(UserWarning, match=r"Nothing in .*acme\+rates/ is removed: its record .*names files this machine does not follow"):
+            assert store.tidy() == []
         assert "stores/one/pipelines/acme+rates/2026-10-17T010203Z_cccccccccccc/_data/x.parquet" in _keys(client)
 
     def test_a_name_in_another_form_is_the_file_its_record_names(self, store, client, work):
@@ -767,6 +879,30 @@ class TestWhatGcRemoves:
         client.delete_object(Bucket=BUCKET, Key=key)
         _behind_its_back(store)
         assert store.tidy() == [] and other in _keys(client)
+
+    def test_a_reader_finds_a_name_in_another_form_too(self, store, client, work):
+        folder = _pipeline(work, {"_data/caf\u00e9.txt": b"cafe"})
+        _, put = _snapshot(store, folder, {"cafe": "_data/caf\u00e9.txt"})
+        key = f"{HERE}/_data/caf\u00e9.txt"
+        client.copy_object(Bucket=BUCKET, Key=unicodedata.normalize("NFD", key), CopySource={"Bucket": BUCKET, "Key": key})
+        client.delete_object(Bucket=BUCKET, Key=key)
+        reader = S3Store(URL, cache=work / "reader", client=client)
+        content_hash = put["cafe"].content_hash
+        assert reader.has(content_hash) and reader.incomplete(content_hash, 4) is None
+        assert (reader.get(content_hash, name="caf\u00e9.txt") / "caf\u00e9.txt").read_bytes() == b"cafe"
+
+    def test_what_a_writer_that_died_left_in_tmp_goes_two_days_on(self, store, client, work, monkeypatch):
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
+        pending.put(folder / "_data" / "a.txt")  # and the machine making it died
+        (note,) = _keys(client, "stores/one/tmp/")
+        _later(monkeypatch, PENDING_FOLDER_SECONDS + 1)
+        store.tidy(dry_run=True)
+        store.tidy()
+        assert _keys(client, "stores/one/tmp/") == [note]  # a day on: its folder goes, and its note may yet be read
+        _later(monkeypatch, 2 * PENDING_FOLDER_SECONDS + 1)
+        store.tidy()
+        assert _keys(client, "stores/one/tmp/") == [] and _keys(client, "stores/one/pipelines/") == []
 
     def test_gc_removes_by_its_hash_only_an_object_no_pipeline_owns(self, store, client, work, a_file):
         folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
@@ -812,8 +948,104 @@ class TestWhatAQuestionCosts:
             assert store.has(content_hash) and store.files_of(content_hash) and store.size_of(content_hash) == 1
             assert list(store.hashes()) == [content_hash] and store.age_of(content_hash) >= 0
             assert listed == ["stores/one/pipelines/"]
-            stored = store.put(a_file)  # a write of its own: listed again after
-            assert store.has(stored.content_hash) and listed.count("stores/one/pipelines/") == 2
+            stored = store.put(a_file)  # a write of its own: written into what was listed, not listed again
+            assert store.has(stored.content_hash) and store.has(content_hash)
+            assert listed == ["stores/one/pipelines/", f"stores/one/pipelines/+unowned/{stored.content_hash[7:]}/"]
+
+    @staticmethod
+    def _counted(client):
+        import collections
+
+        calls = collections.Counter()
+        client.meta.events.register("before-call.s3.*", lambda model, **kwargs: calls.update([model.name]))
+        return calls
+
+    @staticmethod
+    def _fill(client, snapshots: int, pipelines: int = 3, origins: bool = False) -> None:
+        """Snapshots of 10 files each, written straight into the bucket, months old."""
+        import hashlib
+
+        for i in range(snapshots):
+            commit = f"{i:012x}" + "0" * 28
+            made_at = f"2025-{i % 12 + 1:02d}-{i % 28 + 1:02d}T{i // 28 % 24:02d}:00:00.000000Z"
+            name, root = f"{made_at[:10]}T{made_at[11:13]}0000Z_{commit[:12]}", f"acme/p{i % pipelines}"
+            folder = f"stores/one/pipelines/{root.replace('/', '+')}/{name}"
+            records = []
+            for j in range(10):
+                content_hash = "sha256:" + hashlib.sha256(f"{i}-{j}".encode()).hexdigest()
+                records.append({
+                    "id": f"{root}:t{j}", "ref": {"kind": "dataframe", "name": f"t{j}"}, "location": {"kind": "file", "path": f"./_data/t{j}.parquet"},
+                    "content_hash": content_hash, "size_bytes": 1,
+                    "stored": {"at": "_data", "single": True, "files": [{"path": f"_data/t{j}.parquet", "content_hash": content_hash, "size_bytes": 1, "kept_in": name}]},
+                })
+                client.put_object(Bucket=BUCKET, Key=f"{folder}/_data/t{j}.parquet", Body=b"x")
+            document = {"schema": "chartbook/snapshot/v2", "root": root, "code": {"commit": commit}, "made_at": made_at, "records": records}
+            client.put_object(Bucket=BUCKET, Key=f"{folder}/_chartbook/snapshot.json", Body=json.dumps(document).encode())
+            if origins:
+                client.put_object(Bucket=BUCKET, Key=f"stores/one/origins/{commit}/_top.txt", Body=b"/somewhere\n")
+
+    def test_the_records_are_read_once_for_a_listing(self, store, client, monkeypatch):
+        client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v2"}')
+        self._fill(client, 20)
+        reads = []
+        original = store._records
+        monkeypatch.setattr(store, "_records", lambda listing, under=None: (reads.append(under), original(listing, under))[1])
+        with store.reading():
+            for content_hash in list(store.hashes())[:30]:
+                store.has(content_hash), store.files_of(content_hash), store.size_of(content_hash), store.age_of(content_hash)
+            store.all_snapshot_files(), store.snapshot_commits()
+        assert reads == [None]
+
+    def test_gc_of_many_snapshots_lists_the_bucket_a_few_times(self, store, client):
+        """Found by a review: three requests a snapshot to plan, and four listings of the bucket for each one cleared."""
+        client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v2"}')
+        self._fill(client, 60, origins=True)
+        store.records()
+        calls = self._counted(client)
+        plan = lock.plan_gc(store=store, recent_seconds=0, keep_days=0)
+        # The bucket listed a few times, and each note of origins read once
+        assert len(plan.snapshots_delete) > 50 and calls["ListObjectsV2"] < 10 and calls["GetObject"] <= 60
+        calls.clear()
+        lock.run_gc(plan, store=store)
+        # The plan made again, and no listing, nor a question, for each snapshot cleared
+        assert calls["ListObjectsV2"] < 20 and calls["HeadObject"] == 0 and calls["GetObject"] <= 60
+        assert _keys(client, "stores/one/pipelines/acme+p0/")  # the newest of each pipeline is kept
+
+    def test_the_last_snapshot_at_a_commit_takes_its_origins_with_gc(self, store, client, work, monkeypatch):
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        record, _ = _snapshot(store, folder, {"a": "_data/a.txt"})
+        _snapshot(store, folder, {"a": "_data/a.txt"}, commit=LATER, made_at=SECOND)
+        store.note_origin(COMMIT, "_top", "/somewhere")
+        store.note_origin(LATER, "_top", "/somewhere")
+        assert store.remove_snapshot(record) is True
+        assert store.origins(COMMIT, "_top") == ["/somewhere"]  # until gc tidies, which lists the bucket once for all
+        store.tidy()
+        assert store.origins(COMMIT, "_top") == ["/somewhere"]  # an hour, for a snapshot whose note came after the listing
+        _later(monkeypatch, PENDING_SECONDS + 1)
+        store.tidy()
+        assert store.origins(COMMIT, "_top") == [] and store.origins(LATER, "_top") == ["/somewhere"]
+
+    def test_records_whose_etags_are_not_their_md5_are_not_read_again(self, work, client):
+        """Found by a review: under SSE-KMS a key's ETag is not its MD5, and every question read every record again."""
+        import hashlib
+
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        owner = S3Store(URL, cache=work / "owner", client=client)
+        for i in range(3):
+            _snapshot(owner, folder, {"a": "_data/a.txt"}, commit=f"{i + 1:x}" * 40, made_at=f"2026-10-1{i}T01:02:03.000000Z")
+
+        def kms(parsed, **kwargs):
+            for entry in parsed.get("Contents", ()):
+                entry["ETag"] = '"' + hashlib.md5(entry["Key"].encode() + b"kms").hexdigest() + '"'
+
+        client.meta.events.register("after-call.s3.ListObjectsV2", kms)
+        reader = S3Store(URL, cache=work / "reader", client=client)
+        content_hash = reader.records()[0].assets[0].content_hash
+        calls = self._counted(client)
+        for _ in range(3):
+            _behind_its_back(reader)
+            assert reader.has(content_hash) and reader.files_of(content_hash)
+        assert calls["GetObject"] == 0 and calls["ListObjectsV2"] == 3
 
     def test_a_key_too_big_to_copy_at_once_is_copied_in_parts(self, store, client, a_file, monkeypatch):
         stored = store.put(a_file)
@@ -869,7 +1101,7 @@ class TestReadOnly:
         pending = reader.begin("acme/rates", LATER, SECOND, base=folder)
         with pytest.raises(ReadOnlyStoreError, match=r"refused to write .*/tmp/\w+\.pending: AccessDenied. If this store is read-only for you"):
             pending.put(folder / "_data" / "new.parquet")
-        with pytest.raises(ReadOnlyStoreError, match=r"refused to write .*/_chartbook/snapshot.json"):
+        with pytest.raises(ReadOnlyStoreError, match=r"refused to write .*/tmp/\w+\.pending"):
             pending.write({"root": "acme/rates", "code": {"commit": LATER}, "made_at": SECOND, "records": []})
         with pytest.raises(ReadOnlyStoreError, match="refused to upload"):
             reader.put(folder / "_data" / "new.parquet")
