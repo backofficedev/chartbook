@@ -147,6 +147,9 @@ ORIGINS_DIR = "origins"
 #: snapshot being made notes the files of earlier ones it uses.
 TMP_DIR = "tmp"
 
+#: The journal of ``chartbook store migrate``, under :data:`TMP_DIR`: while it is there, the move has not finished.
+MIGRATE_JOURNAL = "migrate.jsonl"
+
 #: Where the store remembers which lockfiles name its objects, so that
 #: removing what nothing needs never removes another project's pins.
 ROOTS_DIR = "roots"
@@ -2451,6 +2454,7 @@ class FolderStore(Store):
         :raises TidyError: Once the rest is removed, if some of it could not
             be, naming each with what the system said and what to do.
         """
+        self._check_migrated()
         removed, failed = [], []
         keep = list(keep)
         if not dry_run:
@@ -2475,6 +2479,16 @@ class FolderStore(Store):
             )
         return removed
 
+    def _check_migrated(self) -> None:
+        """Refuse to remove anything from a store a migrate has not finished moving: what it moved may have no record yet."""
+        if (self.root / TMP_DIR / MIGRATE_JOURNAL).exists() or holds_v1(self.root):
+            raise StoreError(
+                f"The store at {self} has not finished moving to the layout of ChartBook 0.3: it holds the folders "
+                f"of a store of 0.2 (objects/, snapshots/), or the journal of a migrate cut short ({TMP_DIR}/"
+                f"{MIGRATE_JOURNAL}). Nothing is removed from it until it has. Run `chartbook store migrate`; if "
+                f"another machine moved it, wait for the sync to bring the rest."
+            )
+
     def _tidy_tmp(self) -> None:
         """Remove what a writer that died left under ``tmp/``: its notes, a file half written, a staging folder; two days on."""
         tmp = self.root / TMP_DIR
@@ -2484,7 +2498,7 @@ class FolderStore(Store):
         except OSError:
             return
         for entry in entries:
-            if entry.name == "migrate.jsonl":
+            if entry.name == MIGRATE_JOURNAL:
                 continue  # a migrate's journal, which only a migrate removes
             try:
                 # By the later of its times: a clone keeps its source's, and a writer at work touches its note
@@ -2728,14 +2742,11 @@ def _identity(path) -> Optional[tuple]:
 
 
 def holds_v1(root: Path) -> bool:
-    """Whether a folder holds what a store of ChartBook 0.2 held: an object, or a record other than the one a migrate leaves for 0.2 to refuse."""
+    """Whether a folder holds the folders of a store of ChartBook 0.2: objects/, or a commit's records under snapshots/ other than the one a migrate leaves for 0.2 to refuse."""
+    if (root / OBJECTS_DIR).is_dir():
+        return True
     try:
-        if any(not entry.name.startswith(".") for entry in os.scandir(root / OBJECTS_DIR)):
-            return True
-    except OSError:
-        pass
-    try:
-        return any(entry.name != "0" * 40 and not entry.name.startswith(".") for entry in os.scandir(root / "snapshots"))
+        return any(_FULL_COMMIT.match(entry.name) and entry.name != "0" * 40 for entry in os.scandir(root / "snapshots"))
     except OSError:
         return False
 

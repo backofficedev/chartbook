@@ -1962,7 +1962,8 @@ class _S3Pending(PendingSnapshot):
                         break
                     continue  # another's claim, which is not this one's to remove
                 try:
-                    self.store._try_delete([key])
+                    if self.store._read(key) == self._claim_text:
+                        self.store._try_delete([key])
                 except StoreError:
                     pass  # beside a snapshot's files, `store gc` takes it an hour on
             else:

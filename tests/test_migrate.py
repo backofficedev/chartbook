@@ -5,9 +5,13 @@ an object, a folder named by its hash under objects/, and each record under
 its commit, snapshots/<commit>/<name>/<time>.json.
 """
 
+import dis
 import json
 import os
 import shutil
+import sys
+import time
+import types
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,6 +19,7 @@ import pytest
 from click.testing import CliRunner
 
 from chartbook import hashing, migrate, snapshot
+from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.refs import AssetRef
 from chartbook.store import FolderStore, StoreError
@@ -357,3 +362,151 @@ class TestWhatTheThirdReviewFound:
         FolderStore(root).put(tmp_path / "new.txt")
         assert json.loads((root / "store.json").read_text(encoding="utf-8")) == {"schema": "chartbook/store/v2"}
         assert not migrate.plan(root).needed
+
+
+def _cut_short_at_a_move(root: Path, monkeypatch) -> list:
+    """Run a migrate that stops just after its third move; the files it moved."""
+    moves = []
+    rename = os.rename
+
+    def then_stop(source, target):
+        rename(source, target)
+        moves.append(target)
+        if len(moves) == 3:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(migrate.os, "rename", then_stop)
+    with pytest.raises(KeyboardInterrupt):
+        migrate.run(root)
+    monkeypatch.setattr(migrate.os, "rename", rename)
+    return moves
+
+
+def _days_on(monkeypatch, days: float) -> None:
+    """The store's clock, *days* on from now."""
+    later = time.time() + days * 86400
+    clock = types.SimpleNamespace(**{name: getattr(time, name) for name in dir(time) if not name.startswith("_")})
+    clock.time = lambda: later
+    monkeypatch.setattr(store_module, "time", clock)
+
+
+def _all_there(root: Path, hashes: dict) -> None:
+    store = FolderStore(root)
+    assert store.verify() == [] and len(snapshot.readable_snapshots(store)[0]) == 3
+    for name, content_hash in hashes.items():
+        assert store.has(content_hash), name
+    assert not (root / "objects").exists() and not (root / "tmp" / "migrate.jsonl").exists()
+
+
+class TestWhatTheFourthReviewFound:
+    @pytest.mark.parametrize("marker", ["v2", None])
+    def test_gc_between_a_migrate_cut_short_and_its_rerun_removes_nothing(self, old_store, monkeypatch, marker):
+        """Found by a review: what the migrate had moved had no record yet, and gc took it a day on."""
+        root, hashes = old_store
+        if marker:
+            (root / "store.json").write_text(json.dumps({"schema": f"chartbook/store/{marker}"}) + "\n", encoding="utf-8")
+        else:
+            (root / "store.json").unlink()
+        moves = _cut_short_at_a_move(root, monkeypatch)
+        _days_on(monkeypatch, 2)
+        with pytest.raises(StoreError, match="has not finished moving.*chartbook store migrate"):
+            FolderStore(root).tidy()
+        with pytest.raises(StoreError, match="has not finished moving"):
+            FolderStore(root).tidy(dry_run=True)
+        assert all(Path(target).is_file() for target in moves)
+        monkeypatch.setattr(store_module, "time", time)
+        migrate.run(root)
+        _all_there(root, hashes)
+
+    def test_store_gc_says_so_and_removes_nothing(self, old_store, monkeypatch):
+        root, hashes = old_store
+        (root / "store.json").write_text(json.dumps({"schema": "chartbook/store/v2"}) + "\n", encoding="utf-8")
+        moves = _cut_short_at_a_move(root, monkeypatch)
+        _days_on(monkeypatch, 2)
+        said = CliRunner().invoke(main, ["store", "gc", "--yes"], env={"CHARTBOOK_STORE": str(root)})
+        assert said.exit_code != 0 and "has not finished moving" in said.output
+        assert all(Path(target).is_file() for target in moves)
+
+    def test_a_0_2_record_come_after_a_switch_is_moved_not_removed(self, old_store, tmp_path, monkeypatch):
+        """Found by a review: a journal left behind said "switched", and the record a 0.2 machine wrote since went with the old folders."""
+        root, hashes = old_store
+        unlink = Path.unlink
+
+        def busy(self, *args, **kwargs):
+            if self.name == "migrate.jsonl":
+                raise PermissionError("busy")
+            return unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "unlink", busy)
+        migrate.run(root)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        assert (root / "tmp" / "migrate.jsonl").exists()
+        with pytest.raises(StoreError, match="has not finished moving"):
+            FolderStore(root).tidy()  # nor is a journal left behind taken by gc
+        work = tmp_path / "late"
+        work.mkdir()
+        (work / "late.parquet").write_bytes(b"late")
+        late = _object(root, work / "late.parquet", True)
+        _write_record(root, "d" * 40, "2026-10-20T10:00:00.000000Z", {
+            "root": "acme/late",
+            "records": [_record("acme/late", "dataframe", "late", "./late.parquet", late, True)],
+        })
+        assert not migrate.plan(root).unfinished
+        migrate.run(root)
+        store = FolderStore(root)
+        assert store.has(late.content_hash) and store.verify() == []
+        assert not (root / "tmp" / "migrate.jsonl").exists()
+
+    def test_a_journal_a_sync_brought_before_the_moves_moves_and_removes_nothing(self, old_store, tmp_path, monkeypatch):
+        """Found by a review: another machine had the journal that says "switched", and not yet what was moved."""
+        root, hashes = old_store
+        there = tmp_path / "there"
+        shutil.copytree(root, there, symlinks=True)  # another machine's copy, before the moves arrive
+        unlink = Path.unlink
+        monkeypatch.setattr(Path, "unlink", lambda self, *a, **k: None if self.name == "migrate.jsonl" else unlink(self, *a, **k))
+        migrate.run(root)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        # What the sync brought first: store.json and the journal
+        shutil.copy(root / "store.json", there / "store.json")
+        (there / "tmp").mkdir(exist_ok=True)
+        shutil.copy(root / "tmp" / "migrate.jsonl", there / "tmp" / "migrate.jsonl")
+        before = sorted(p.relative_to(there).as_posix() for p in there.rglob("*") if p.is_file())
+        with pytest.raises(migrate.MigrateError, match="(?s)not there.*Wait for the sync"):
+            migrate.run(there)
+        assert sorted(p.relative_to(there).as_posix() for p in there.rglob("*") if p.is_file()) == before
+
+    @pytest.mark.parametrize("over_v2", [False, True])
+    def test_cut_short_at_any_line_of_the_switch_it_is_finished_next_time(self, old_store, tmp_path, over_v2):
+        root, hashes = old_store
+        if over_v2:
+            (root / "store.json").write_text(json.dumps({"schema": "chartbook/store/v2"}) + "\n", encoding="utf-8")
+        pristine = tmp_path / "pristine"
+        shutil.copytree(root, pristine, symlinks=True)
+        code = migrate._switch.__code__
+        lines = sorted({line for _, line in dis.findlinestarts(code) if line and line > code.co_firstlineno})
+        stopped = 0
+        for line in lines:
+            shutil.rmtree(root)
+            shutil.copytree(pristine, root, symlinks=True)
+
+            def tracer(frame, event, arg, line=line):
+                if frame.f_code is not code:
+                    return None
+
+                def at(frame, event, arg):
+                    if event == "line" and frame.f_lineno == line:
+                        raise KeyboardInterrupt
+                    return at
+
+                return at
+
+            sys.settrace(tracer)
+            try:
+                migrate.run(root)
+            except KeyboardInterrupt:
+                stopped += 1
+            finally:
+                sys.settrace(None)
+            migrate.run(root)
+            _all_there(root, hashes)
+        assert stopped >= 10
