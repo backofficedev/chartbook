@@ -301,26 +301,87 @@ class PathFiles:
     single: bool
 
 
+def is_pattern(path: Union[str, Path]) -> bool:
+    """Whether a path, made absolute, is a glob: it has glob characters and is not there as written.
+
+    A pipeline in ``Research [2026]/`` gives every one of its paths a ``[``;
+    a file or folder that is there under its own name is that file or folder.
+    """
+    text = str(path)
+    return is_glob_pattern(text) and not os.path.exists(text)
+
+
+def glob_named(declared: str, absolute: Union[str, Path]) -> Optional[str]:
+    """The first part of a declared path that is a file or folder with a glob character in its name; None if none is.
+
+    The files of such a path are found as they are named (:func:`is_pattern`),
+    but whoever reads it later decides from the declared path whether it is
+    a glob, and takes ``_data/[raw]`` for a pattern. So such a path is refused
+    (:func:`glob_named_said`) rather than read two ways. The folders above
+    the pipeline's own (``Research [2026]/``) are not part of it.
+
+    :param declared: The path as the manifest writes it.
+    :param absolute: That path joined to the pipeline's folder.
+    :returns: The declared path up to that part, as declared.
+    """
+    # The declared parts, but for a leading climb, are the last parts of the absolute path
+    tail = [part for part in Path(os.path.normpath(declared)).parts if part != os.pardir]
+    parts = Path(absolute).parts
+    above = len(parts) - len(tail)
+    for i, part in enumerate(tail if above >= 0 else ()):
+        if _GLOB_CHARACTERS & set(part) and os.path.lexists(os.path.join(*parts[: above + i + 1])):
+            return Path(*tail[: i + 1]).as_posix()
+    return None
+
+
+def glob_named_said(declared: str, part: str) -> str:
+    """What is said of a path :func:`glob_named` refuses, after "its path"."""
+    return (
+        f"{declared!r} names {part!r}, a file or folder whose name has a glob character "
+        f"([, ? or *), which a reader would take for a pattern; rename it"
+    )
+
+
+def split_glob(pattern: Union[str, Path]) -> tuple[Path, str]:
+    """A glob's root, and the pattern to match with that root taken as written.
+
+    The root is the glob's leading folders that are there under their own
+    names, ``[`` and all. That is :func:`glob_root` wherever those names have
+    no glob characters in them.
+    """
+    parts = Path(pattern).parts
+    fixed = 0
+    while fixed < len(parts) - 1 and os.path.isdir(os.path.join(*parts[: fixed + 1])):
+        fixed += 1
+    if not fixed:
+        return Path("."), str(pattern)
+    root = Path(*parts[:fixed])
+    return root, os.path.join(glob.escape(str(root)), *parts[fixed:])
+
+
 def find_files(path: Union[str, Path]) -> Optional[PathFiles]:
     """Find the files a declared ``path`` names: a file, a glob or a directory.
 
     This is the one place that decides which files make up an asset, so
-    that what is hashed and what is stored are the same files.
+    that what is hashed and what is stored are the same files. A path that
+    is there as written is a file or a directory, whatever characters are
+    in it (:func:`is_pattern`).
 
     :param path: An absolute path, which may contain glob characters.
     :returns: The files, or None if nothing is there yet: the file does not
         exist, or the glob matches no file.
     """
     text = str(path)
-    if is_glob_pattern(text):
+    if is_pattern(text):
+        root, pattern = split_glob(text)
         matches = tuple(
             Path(match)
-            for match in glob.glob(text, recursive=True)
+            for match in glob.glob(pattern, recursive=True)
             if os.path.isfile(match) and not is_ignored(match)
         )
         if not matches:
             return None
-        return PathFiles(glob_root(text), matches, single=False)
+        return PathFiles(root, matches, single=False)
     if os.path.isdir(text):
         return PathFiles(Path(text), tuple(directory_files(text)), single=False)
     if os.path.isfile(text):
@@ -352,7 +413,7 @@ def escapes(path: Union[str, Path], root: Union[str, Path]) -> Optional[Path]:
         return Path(real)
 
     text = str(path)
-    if not is_glob_pattern(text):
+    if not is_pattern(text):
         # The path itself, before anything is listed under it
         found = outside(text)
         if found is not None:
