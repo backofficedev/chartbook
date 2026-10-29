@@ -547,7 +547,10 @@ class TestLoad:
             _write(pl.DataFrame({"i": [i]}), folder / f"k={value}" / "a.parquet")
         (folder / "_SUCCESS").write_bytes(b"")
         loaded = data.load("x", project_dir=directory).collect().sort("i")
-        assert loaded.schema["k"] == pl.Int128 and loaded["k"].to_list() == [1, 99999999999999999999]
+        if loaded.schema["k"] == pl.String:  # as polars 1 types it, in every layout
+            assert loaded["k"].to_list() == ["1", "99999999999999999999"]
+        else:
+            assert loaded.schema["k"] == pl.Int128 and loaded["k"].to_list() == [1, 99999999999999999999]
         pandas = data.load("x", format="pandas", project_dir=directory)
         assert sorted(pandas["k"].astype(str)) == ["1", "99999999999999999999"]
 
@@ -599,7 +602,8 @@ class TestLoad:
         """Found by a fourth review: in `env=prod/x/` beside a _SUCCESS, `k=1/` holding `i` and `k=2/`
         holding `i, k` failed data.load ("extra column in file outside of expected schema: k"). As in
         polars' own Hive read, each file's key is its folder's, whether the file has a column of its name
-        or not; and a column that only some files have, and is no key, is still refused."""
+        or not; and a column that is no key, and that a later file has and the first has not, is still
+        refused. One the first has and a later file has not is nulls there."""
         directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/env=prod/x"}, "z": {"path": "./_data/env=prod/z"}})
         frames = [pl.DataFrame({"i": [1]}), pl.DataFrame({"i": [2], "k": [6]})]
         if first_has_it:
@@ -611,8 +615,11 @@ class TestLoad:
             (directory / "_data" / "env=prod" / name / "_SUCCESS").write_bytes(b"")
         assert sorted(data.load("x", project_dir=directory).collect().rows()) == [(1, 1), (2, 2)]
         assert sorted(data.sql("select i, k from {x}", project_dir=directory).collect().rows()) == [(1, 1), (2, 2)]
-        with pytest.raises(pl.exceptions.PolarsError, match="z"):
-            data.load("z", project_dir=directory).collect()
+        if first_has_it:
+            assert sorted(data.load("z", project_dir=directory).collect().select("i", "z", "k").rows()) == [(1, 5, 1), (2, None, 2)]
+        else:
+            with pytest.raises(pl.exceptions.PolarsError, match="z"):
+                data.load("z", project_dir=directory).collect()
 
     def test_a_folders_keys_are_read_with_a_scratch_file_a_value(self, tmp_path, monkeypatch):
         """Found by a fourth review: under a key above, polars was asked a folder's keys with a scratch

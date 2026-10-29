@@ -594,7 +594,8 @@ def _scratch():
     try:
         where = tempfile.gettempdir()
         # The current folder is Python's last resort, after the ones it is told of and the system's
-        told = [os.path.realpath(folder) for folder in tempfile._candidate_tempdir_list()[:-1]]
+        candidates = getattr(tempfile, "_candidate_tempdir_list", None)
+        told = [os.path.realpath(folder) for folder in (candidates()[:-1] if candidates is not None else ())]
         if os.path.realpath(where) == os.path.realpath(os.getcwd()) and os.path.realpath(where) not in told:
             raise FileNotFoundError(where)
         return tempfile.TemporaryDirectory(dir=where, prefix="chartbook-keys-")
@@ -665,12 +666,16 @@ def _by_file(scan, files: list[str], folder: Path):
     if not keys:
         return _scan_files(scan, files, hive_partitioning=False)
     given = {}
-    if "schema" in inspect.signature(scan).parameters:
+    takes = inspect.signature(scan).parameters
+    if "schema" in takes:
         # A file's own column of a key's name is the key's, so one file may
         # have it and another not, as in polars' own Hive read: each is in
         # the schema, and is never read
         first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
         given["schema"] = {**first, **{key: kind for key, (kind, _) in keys.items() if key not in first}}
+        if "missing_columns" in takes:
+            # Which polars 1 looks for in every file, read or not: a column a file has not is nulls
+            given["missing_columns"] = "insert"
     frame = _scan_files(scan, files, hive_partitioning=False, include_file_paths=_FILE, **given)
     put = []
     for key, (kind, values) in keys.items():
