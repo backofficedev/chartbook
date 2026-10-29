@@ -8,24 +8,32 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    # The newest Python every pin in pyproject.toml has wheels for
     - name: Set up Python
+      id: python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.12'
     - name: Cache Python environment
       id: cache-python-env
       uses: actions/cache@v3
       with:
         path: .venv
-        key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt', '**/.python-version') }}
+        key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock', '**/.python-version') }}
         restore-keys: |
-          ${{ runner.os }}-venv-
+          ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-
+    # A project made for uv has a pyproject.toml; the others have a requirements.txt
     - name: Install Python environment
       if: steps.cache-python-env.outputs.cache-hit != 'true'
       run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+        else
+          pip install uv
+          uv sync
+        fi
     - name: Test with pytest
       run: |
         source .venv/bin/activate

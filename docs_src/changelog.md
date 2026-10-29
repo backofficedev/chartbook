@@ -19,6 +19,8 @@ The GitHub Actions workflow the project template makes now runs `chartbook check
     chartbook check --skip-outputs
 ```
 
+The workflow also installs a project made for uv now. Such a project has a `pyproject.toml` and no `requirements.txt`, and the workflow's `pip install -r requirements.txt` stopped there, so nothing ran; it now runs `uv sync`, as the project's README says to, and `pip install -r requirements.txt` where there is one (pip, conda and pixi). It runs on Python 3.12, not 3.10: a project made for uv asks for the Python chosen when it was made, 3.12 unless another was typed, and 3.12 is the newest that every version its `pyproject.toml` pins has wheels for. The cache of the environment follows `pyproject.toml`, `uv.lock` and the Python version as well.
+
 ### Added — a lockfile says which pipeline each dependency's pins came from
 
 Each dependency in `chartbook.lock` now has `pinned_from`: the pipeline its pins came from, by that pipeline's own ID rather than the key it is depended on under. For a `path` dependency, or one named by its ID, it is the pipeline of the snapshot pinned. For a `git` dependency it is the pipeline its clone holds: its `[project] id`, else the ID its repository's address gives (`repo_url` in its manifest, else the address it was fetched from), as for any clone at the top of its repository. The store keeps a snapshot by its pipeline's ID, and the layout planned for 0.3.0 keeps each pipeline's snapshots in a folder of its own ({doc}`design/plan-0.3.0`), so this is how a reader of the lockfile will know where to look without searching the store.

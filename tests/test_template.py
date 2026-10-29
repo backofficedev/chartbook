@@ -855,21 +855,58 @@ class TestTheWorkflow:
 
     WORKFLOW = Path(".github") / "workflows" / "python_tests.yml"
 
+    def _steps(self, project):
+        import yaml
+
+        return yaml.safe_load((project / self.WORKFLOW).read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+
     def test_it_is_copied_as_it_is(self, template_dir, temp_dir):
         """GitHub's `${{ … }}` is not cookiecutter's to render."""
         project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
         rendered = (project / self.WORKFLOW).read_text(encoding="utf-8")
         assert rendered == (PROJECT_TEMPLATE / self.WORKFLOW).read_text(encoding="utf-8")
-        assert "key: ${{ runner.os }}-venv-${{ hashFiles(" in rendered
+        assert "key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles(" in rendered
+
+    @pytest.mark.skipif(os.name == "nt" or shutil.which("bash") is None, reason="the workflow's steps are run by bash, on Linux")
+    @pytest.mark.parametrize(
+        "manager, installs",
+        [("pip", "pip install -r requirements.txt"), ("uv", "uv sync"), ("conda", "pip install -r requirements.txt"), ("pixi", "pip install -r requirements.txt")],
+    )
+    def test_it_installs_a_project_made_for_any_environment_manager(self, template_dir, temp_dir, manager, installs):
+        """Found by a reviewer: a project made for uv has no requirements.txt, and the install stopped there."""
+        import tomli
+        from packaging.specifiers import SpecifierSet
+
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True, "environment_manager": manager}))
+        steps = {step.get("name"): step for step in self._steps(project)}
+        # Each command the step runs writes down what it was asked, and does nothing
+        fake, ran = temp_dir / "bin", temp_dir / "ran.txt"
+        fake.mkdir()
+        for command in ("python", "pip", "uv"):
+            (fake / command).write_text(
+                f'#!/bin/sh\necho "{command} $*" >> "{ran}"\nmkdir -p .venv/bin && touch .venv/bin/activate\n', encoding="utf-8"
+            )
+            (fake / command).chmod(0o755)
+        subprocess.run(
+            ["bash", "-e", "-c", steps["Install Python environment"]["run"]],
+            cwd=project, check=True, env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}"},
+        )
+        assert ran.read_text(encoding="utf-8").splitlines()[-1] == installs
+        # The cache is of what it installs from, and of the Python it is for
+        key = steps["Cache Python environment"]["with"]["key"]
+        assert all(name in key for name in ("requirements.txt", "pyproject.toml", "uv.lock", "steps.python.outputs.python-version"))
+        if manager == "uv":
+            # Its Python is one the project takes
+            requires = tomli.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["project"]["requires-python"]
+            assert SpecifierSet(requires).contains(steps["Set up Python"]["with"]["python-version"])
 
     def test_it_checks_the_manifest_in_the_environment_it_installs(self, template_dir, temp_dir):
-        import yaml
         from click.testing import CliRunner
 
         from chartbook.cli import main
 
         project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
-        steps = yaml.safe_load((project / self.WORKFLOW).read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+        steps = self._steps(project)
         names = [step.get("name") for step in steps]
         (check,) = [step for step in steps if "chartbook" in step.get("run", "")]
         assert names.index(check["name"]) > names.index("Install Python environment")
