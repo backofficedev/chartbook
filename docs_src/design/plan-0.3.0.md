@@ -480,7 +480,7 @@ store, and the Windows CI runs the tests under a long root.
 5. Long paths on Windows (#136). *Built 2026-10-29: measures 3 to 5 (short names, the message, the
    check before writing, and `store info`'s warning); not measure 1 or 2, the `\\?\` form, which
    needs a Windows machine to try readers against.*
-6. `chartbook store export` and `store import`.
+6. `chartbook store export` and `store import`. *Built 2026-10-29, for a folder store.*
 7. #135, the rest.
 8. #134, the shared reader.
 9. #133, `[files]`.

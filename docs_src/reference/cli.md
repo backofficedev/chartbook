@@ -25,6 +25,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
+| `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |
+| `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
 | `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
@@ -1124,6 +1126,42 @@ What it is careful about:
 
 A note only ever adds to what is kept. A lockfile on this machine is read as it is now, and what its note recorded at its last pin (the objects, and the snapshots) is kept as well: check out an older commit and run `gc` without pinning, and the pins of the commit you left are kept, by the note, until the next `chartbook pin`, `chartbook update`, `--frozen` or read writes it again (a read, or `--frozen`, on the older commit writes it too, with that commit's pins). A note from before notes named their machine, in your own store, is read as it was then: its lockfile alone.
 
+
+
+### store export
+
+```console
+chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[@MADE_AT] ...]
+```
+
+Write one pipeline's snapshots into a folder, to send to a collaborator. The folder is laid out as
+a store is, `FOLDER/pipelines/<pipeline>/`: a folder for each snapshot, the pipeline's files at
+their own paths, each file once, and each snapshot's record. Every snapshot the pipeline's owner
+made is written; with `--latest`, the newest alone, which is then one complete snapshot, every
+file it needs in its own folder and readable without ChartBook; with `--snapshot`, each one named,
+by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
+a snapshot's record names goes: its data, its documents and its index, never anything that runs.
+
+### store import
+
+```console
+chartbook store import FOLDER
+```
+
+Copy the snapshots a folder holds into this machine's store: what `chartbook store export` wrote,
+a store, or one pipeline's folder copied by hand out of one. They go in oldest first, each file
+hashed as it is copied and checked against its record: a snapshot with a file that is not what its
+record says is refused, said, and the rest go in. A file the store holds already is not copied
+again, a snapshot it has already is left as it is, and nothing is written over. A pipeline then
+pins them by the pipeline's ID, as `"acme/rates" = {}` in `[dependencies]`, with `chartbook pin`
+and `chartbook update`.
+
+```console
+$ chartbook store import ~/Downloads/for-bob
+acme/rates at 4f2a91c, made 2026-10-01T10:00:00.000000Z
+acme/rates at 9b1e22d, made 2026-10-02T10:00:00.000000Z
+Imported 2 snapshot(s), 2.1 GB copied.
+```
 
 ### store migrate
 

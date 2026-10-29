@@ -62,6 +62,8 @@ uv run doit      # everything: docs, examples, package, test matrix
 | `store info` | Say which store this machine uses, what set it (`CHARTBOOK_STORE`, the user's settings, the organization's, or the default), and the cache folder |
 | `store verify` | Hash every object in the store again; exit nonzero if one has changed |
 | `store gc` | Remove old snapshots and what nothing names; lists and asks first |
+| `store export ID --to DIR` | Write one pipeline's snapshots into `DIR/pipelines/<pipeline>/`, laid out as a store, to send someone; `--latest` the newest alone, every file it needs in its own folder; `--snapshot COMMIT[@MADE_AT]` |
+| `store import DIR` | Copy the snapshots a folder holds (an export, a store, or a pipeline's folder copied by hand) into this store, oldest first; every file hashed and checked against its record; a file the store holds is not copied again, nothing is written over |
 | `store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3, once, after every machine that uses it has 0.3; `--dry-run` says what it would move |
 | `index diff BEFORE AFTER` | What changed between two builds, from their `index.json` (files or site folders), compared as published: added, removed, and each changed record in a reviewer's words (data changed with hashes and row counts, pins moved, new versions, labels moved, out of date, declared differently); `--json`, `--exit-code` |
 | `config` | Configure the default catalog path for data loading |

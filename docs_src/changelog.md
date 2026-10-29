@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `chartbook store export` and `store import`: one pipeline's snapshots, sent and taken in
+
+`chartbook store export ID --to FOLDER` writes a pipeline's snapshots into a folder laid out as a store, `FOLDER/pipelines/<pipeline>/`, to send to a collaborator: every snapshot its owner made, the newest alone with `--latest` (one complete snapshot, every file it needs in its own folder), or those `--snapshot` names. `chartbook store import FOLDER` copies the snapshots of such a folder, of a store, or of a pipeline's folder copied by hand, into this machine's store, every file checked against its record as it is copied; a file the store holds is not copied again and nothing is written over. The collaborator's pipelines then pin it by its ID ({doc}`design/plan-0.3.0`, "Sharing one pipeline").
+
 ### Fixed — on Windows, a path too long for it is said as such (#136)
 
 Windows refuses a path of 260 characters or more unless long paths are turned on, which they are not by default, and said only "No such file or directory" for a file ChartBook was making. On such a machine the store now checks each path before it writes, and a snapshot or a pin that would make one too long writes nothing and says the path's length, the limit, and the two ways out: turn long paths on (`LongPathsEnabled`, which needs an administrator), or use a store in a shorter folder. A file another machine wrote under a path this one cannot take is said the same way when it is read. `chartbook store info` warns when the store's folder leaves its paths too little room. With long paths turned on, nothing is checked: Python takes them. The store's own paths are not given the `\\?\` form, which would lift the limit without the setting: a reader such as polars or DuckDB is not sure to take it.

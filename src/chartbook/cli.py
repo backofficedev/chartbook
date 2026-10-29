@@ -3652,6 +3652,103 @@ def store_migrate(dry_run, yes):
     click.echo(f"Moved. The store at {the_store} has the layout of ChartBook 0.3; `chartbook store verify` checks it.")
 
 
+def _folder_store_or_exit():
+    """This machine's store, if it is a folder; else the command stops, saying so."""
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        the_store = default_store()
+    except (StoreError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not isinstance(the_store, FolderStore):
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"The store at {the_store} is not a folder: this works on a folder store.", err=True)
+        raise SystemExit(1)
+    return the_store
+
+
+def _say_copied(done, verb: str) -> None:
+    click.echo(f"{verb} {len(done.copied)} snapshot(s), {_format_bytes(done.size_bytes)} copied.")
+    if done.there:
+        click.echo(f"{len(done.there)} snapshot(s) were there already, and were left as they are.")
+    for what, why in done.refused:
+        click.echo(click.style("Refused: ", fg="red", bold=True) + f"{what}: {why}", err=True)
+    if done.refused:
+        raise SystemExit(1)
+
+
+@store.command("export")
+@click.argument("pipeline")
+@click.option("--to", "to", required=True, type=click.Path(file_okay=False), help="The folder to write the export into")
+@click.option("--latest", is_flag=True, help="Only the newest snapshot, every file it needs in its own folder")
+@click.option("--snapshot", "snapshots", multiple=True, metavar="COMMIT[@MADE_AT]", help="Only this snapshot (more than one may be given)")
+def store_export(pipeline, to, latest, snapshots):
+    """Write one pipeline's snapshots into a folder, to send to someone.
+
+    The folder is laid out as a store is: TO/pipelines/PIPELINE/, a folder
+    for each snapshot, each file once, with its record. Send that folder;
+    whoever receives it runs `chartbook store import` on it, or copies it
+    into their store's pipelines/ by hand.
+
+    Every snapshot its owner made is written, or with --latest the newest
+    alone (one complete snapshot, readable without ChartBook), or each
+    --snapshot named. Only what a snapshot's record names is written: its
+    data, its documents and its index, never anything that runs.
+
+    \b
+    Examples:
+        chartbook store export ftsfr/fed_yield_curve --to ~/Desktop/for-alice
+        chartbook store export ftsfr/fed_yield_curve --latest --to ~/Desktop/for-alice
+        chartbook store export ftsfr/fed_yield_curve --snapshot 4f2a91c --to ./out
+    """
+    from chartbook import sharing
+    from chartbook.store import StoreError
+
+    the_store = _folder_store_or_exit()
+    if latest and snapshots:
+        click.echo(click.style("Error: ", fg="red", bold=True) + "Give --latest or --snapshot, not both.", err=True)
+        raise SystemExit(1)
+    try:
+        done = sharing.export(the_store, pipeline, to, "latest" if latest else list(snapshots) or None, echo=click.echo)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    _say_copied(done, "Exported")
+    click.echo(f"Send {Path(to).expanduser().resolve() / 'pipelines'}; `chartbook store import` there takes it in.")
+
+
+@store.command("import")
+@click.argument("folder", type=click.Path(exists=True, file_okay=False))
+def store_import(folder):
+    """Copy the snapshots a folder holds into this machine's store.
+
+    FOLDER is what `chartbook store export` wrote, a store, or one
+    pipeline's folder from a store (its snapshots' folders, each with
+    _chartbook/snapshot.json). Every file is hashed as it is copied and
+    checked against its record: a snapshot with a file that is not what its
+    record says is refused, and said. A file the store holds already is
+    not copied again, a snapshot it has already is left as it is, and
+    nothing in the store is written over. A pipeline in this store then
+    pins the snapshots by the pipeline's ID, with `chartbook pin` and
+    `chartbook update`.
+
+    \b
+    Examples:
+        chartbook store import ~/Downloads/for-alice
+        chartbook store import ~/Downloads/ftsfr+fed_yield_curve
+    """
+    from chartbook import sharing
+    from chartbook.store import StoreError
+
+    the_store = _folder_store_or_exit()
+    try:
+        done = sharing.import_snapshots(the_store, folder, echo=click.echo)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    _say_copied(done, "Imported")
+
+
 @store.command("verify")
 def store_verify():
     """Hash every object in the store again; exit nonzero if one has changed.
