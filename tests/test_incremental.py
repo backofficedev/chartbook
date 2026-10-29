@@ -869,7 +869,11 @@ class TestCommands:
             if polls["n"] == 4:
                 raise KeyboardInterrupt
 
-        monkeypatch.setattr(incremental.time, "sleep", fake_sleep)
+        # The watch loop's waits alone are the polls: patching time.sleep for
+        # the process counted a build's own waits too (a retry, a lock), and
+        # the edit or the stop then came at the wrong moment, now and then
+        real_watch = incremental.watch
+        monkeypatch.setattr(incremental, "watch", lambda *args, **kwargs: real_watch(*args, **{**kwargs, "sleep": fake_sleep}))
         result = CliRunner().invoke(main, ["docs", "generate", "--watch", "--watch-interval", "0.2", "-f"])
 
         assert result.exit_code == 0, result.output
