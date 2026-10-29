@@ -140,7 +140,7 @@ class TestMigrate:
         assert (first / "_data" / "t_2025.txt").read_bytes() == b"2025"
         assert (first / "README.md").is_file() and (first / "chartbook.toml").is_file()
         # The second only what is new
-        assert sorted(str(p.relative_to(second)) for p in second.rglob("*") if p.is_file()) == [
+        assert sorted(p.relative_to(second).as_posix() for p in second.rglob("*") if p.is_file()) == [
             "_chartbook/snapshot.json", "_data/parts/c.txt", "_data/rates.parquet",
         ]
         # Every asset is read as it was, by its hash

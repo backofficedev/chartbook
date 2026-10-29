@@ -875,12 +875,12 @@ class S3Store(Store):
                 try:
                     os.rename(staging, local)
                 finally:
-                    _remove_tree(aside)
+                    _remove_tree(aside, own=True)
             else:
                 os.rename(staging, local)
         finally:
             if staging.exists():
-                _remove_tree(staging)
+                _remove_tree(staging, own=True)
         return local
 
     def put(self, path: Union[str, Path], links: Iterable[str] = LINKS) -> StoredObject:
@@ -929,7 +929,7 @@ class S3Store(Store):
             FolderStore._move_into_place(staging, local, single=found.single)
         finally:
             if staging.exists():
-                _remove_tree(staging)
+                _remove_tree(staging, own=True)
         created = not remote
         return StoredObject(
             content_hash=content.content_hash,
@@ -961,7 +961,7 @@ class S3Store(Store):
             _remove_file(location)
         for folder in (self._unowned_cache(content_hash), self.views / content_hash.split(":", 1)[1]):
             if folder.exists() and not folder.is_symlink():
-                _remove_tree(folder)
+                _remove_tree(folder, own=True)
         _found_whole.discard((self.url, content_hash))
         return bool(keys)
 
@@ -1218,7 +1218,7 @@ class S3Store(Store):
                 message = what_is_wrong(content_hash, scratch)
             finally:
                 if scratch.exists():
-                    _remove_tree(scratch)
+                    _remove_tree(scratch, own=True)
             if message is not None:
                 problems.append(StoreProblem(content_hash, where, message))
         return problems
@@ -1237,7 +1237,7 @@ class S3Store(Store):
             return what_is_wrong_with(dataclasses.replace(asset, files=tuple(files)))
         finally:
             if scratch.exists():
-                _remove_tree(scratch)
+                _remove_tree(scratch, own=True)
 
     # -- roots ------------------------------------------------------------
 
@@ -1563,7 +1563,7 @@ class _S3Pending(PendingSnapshot):
             local = self.store.cache / PIPELINES_DIR / self.folder / self.name
             if local.exists():
                 try:
-                    _remove_tree(local)
+                    _remove_tree(local, own=True)
                 except OSError:
                     pass
             self.name = None

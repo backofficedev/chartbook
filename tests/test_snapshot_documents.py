@@ -373,7 +373,7 @@ class TestWhatTheReviewFound:
         for file in held.rglob("*"):
             file.chmod(0o755 if file.is_dir() else 0o644)
         remove_tree(held)
-        held.symlink_to(mine)
+        held.symlink_to(mine, target_is_directory=True)
         with pytest.raises(StoreError, match="is a link, or leads out of the store"):
             store.get(taken.documents["content_hash"])
         with pytest.raises(StoreError):

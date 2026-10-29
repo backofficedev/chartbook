@@ -420,20 +420,23 @@ def link_target(path) -> str:
     return target
 
 
-def _make_removable(path: str) -> None:
+def _make_removable(path: str, own: bool = False) -> None:
     """Give back the permissions that removing *path* needs, to the store only.
 
     Removal can fail on a read-only file (Windows) or in a read-only
     directory. The directory holding *path* is the store's, and so is a
-    file that is a clone or a copy. A symlink or a hard link leads to a
-    file that is not the store's, and its permissions are never touched.
+    file that is a clone or a copy. A symlink, or a hard link in an object
+    put by one, leads to a file that is not the store's, and its
+    permissions are never touched: unless the caller says the files are
+    ChartBook's *own* (a snapshot's, the cache's, a view's), whose second
+    names are ChartBook's too.
     """
     os.chmod(os.path.dirname(path), stat.S_IRWXU)
     if os.path.islink(path):
         return
     if os.path.isdir(path):
         os.chmod(path, stat.S_IRWXU)
-    elif os.lstat(path).st_nlink == 1:
+    elif own or os.lstat(path).st_nlink == 1:
         os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
 
 
@@ -461,7 +464,7 @@ def _remove_file(path: Path) -> None:
     os.remove(path)
 
 
-def _remove_tree(directory: Path) -> None:
+def _remove_tree(directory: Path, own: bool = False) -> None:
     """Remove a directory and what is in it, read-only files included.
 
     :raises OSError: What the system said of the first file or folder that
@@ -472,7 +475,7 @@ def _remove_tree(directory: Path) -> None:
 
     def retry_writable(function, path, error):
         try:
-            _make_removable(path)
+            _make_removable(path, own)
         except OSError:
             # Not this user's to make removable: what the removal itself
             # said is the plainer error (``onerror`` hands the exc_info tuple)
@@ -2191,8 +2194,9 @@ def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     A file that is a link is no sync's doing, and is not judged here:
     :meth:`FolderStore.get` refuses it, and :meth:`FolderStore.verify` says so.
     """
+    pipelines = Path(os.path.realpath(asset.record.folder.parent.parent))
     for file in asset.files:
-        if os.path.islink(file.location):
+        if os.path.islink(file.location) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
             continue
         try:
             size = os.stat(file.location).st_size
@@ -2295,7 +2299,7 @@ def gather(asset: KeptAsset, views: Path) -> Path:
             try:
                 os.rename(temporary, view)
             finally:
-                _remove_tree(aside) if not os.path.islink(aside) else os.remove(aside)
+                _remove_tree(aside, own=True) if not os.path.islink(aside) else os.remove(aside)
         else:
             try:
                 os.rename(temporary, view)
@@ -2304,7 +2308,7 @@ def gather(asset: KeptAsset, views: Path) -> Path:
                     raise  # another process made it at the same moment, or this one could not
     finally:
         if os.path.lexists(temporary):
-            _remove_tree(temporary)
+            _remove_tree(temporary, own=True)
     return view
 
 
@@ -2554,7 +2558,7 @@ class _FolderPending(PendingSnapshot):
             return
         if self.name is not None:
             try:
-                _remove_tree(self.pipeline_path / self.name)
+                _remove_tree(self.pipeline_path / self.name, own=True)
             except OSError:
                 pass  # `store gc` clears a folder that has no record
             self.name = None
