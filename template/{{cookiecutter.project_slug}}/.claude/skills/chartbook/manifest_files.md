@@ -488,10 +488,48 @@ path = "_output/my_notebook.ipynb"
 | `tags` | List of topic tags |
 | `date_col` | Date column name |
 | `path` | Path to Parquet file or glob pattern (e.g., `_data/**/*.parquet` for hive-partitioned data) |
-| `keep` | `true` for an output that cost money or compute to make: every version stays in the store, `chartbook restore` puts it back on disk, and `chartbook run` stops before remaking it. Also on notebooks, notes and models (a trained model's weights) |
+| `keep` | `true` for an output that cost money or compute to make: every version stays in the store, `chartbook restore` puts it back on disk, and `chartbook run` stops before remaking it. Also on notebooks, notes, models (a trained model's weights) and files assets |
 | `excel_path` | Path to Excel file |
 | `docs_path` | Path to documentation file (mutually exclusive with `docs`) |
 | `docs` | Inline markdown documentation (mutually exclusive with `docs_path`) |
+
+## Files Assets: `[files]`
+
+Files that are not tables, whatever is inside: an archive of gzipped JSON
+lines kept in its source's format, a corpus of text or HTML, PDFs, images,
+`.npy` arrays, a SQLite or DuckDB file, a vendor's zip kept byte for byte.
+ChartBook moves, versions and documents the bytes and never reads them, but
+for a short preview on the page. Do not declare such files under
+`[dataframes]`: a dataframe is a table `data.load` reads.
+
+```toml
+[files.earnings_releases]
+name = "Earnings Releases"
+description = "The API's earnings releases, one file a quarter, as it sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a file, a folder, or a glob
+sources = ["Vendor API"]
+providers = ["Vendor"]
+license = "Licensed to the department"
+restrictions = "Research use only"
+tags = ["Earnings"]
+docs_path = "./docs_src/files/earnings_releases.md"
+keep = true
+```
+
+| Field | Description |
+|-------|-------------|
+| `path` | Required. A file, a folder (every file under it) or a glob |
+| `docs_path` / `docs` | Its write-up: what is in the files and how to read them (one or the other) |
+| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | As for a dataframe |
+| `keep` | `true` keeps every version in the store, as for a dataframe |
+
+Its address is `file/<name>` (another pipeline's: `<dep>:file/<name>`).
+`assets.path("file/x")` is the path as declared; `assets.files("file/x")` the
+files, sorted; `assets.index("file/x")` a LazyFrame of them (`path`,
+`size_bytes`, `sha256`, and a column per `key=value` folder). Both work for a
+dataframe of many parts too. `chartbook path file/x --files` prints the
+files. `chartbook check` fails when the path matches no file (not with
+`--skip-outputs`).
 
 ## Site Directory (Custom Pages)
 
@@ -580,7 +618,7 @@ date_col = "date"
 docs = "Hive-partitioned dataset with year/month partitions."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Every `format=` of `data.load` reads a glob: `"pandas"` and `"polars_eager"` collect the LazyFrame.
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Every `format=` of `data.load` reads a glob: `"pandas"` and `"polars_eager"` collect the LazyFrame. The dataframe's page lists its parts, each with its size and rows, and the partition keys and their values; `assets.files("partitioned_data")` gives the files, to read one at a time.
 
 ## The File's Format
 

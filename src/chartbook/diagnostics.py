@@ -55,6 +55,17 @@ MODEL_FIELDS: list[str] = [
     "path",
 ]
 
+#: A files asset is described as a dataframe is: where it came from, and a write-up.
+FILES_FIELDS: list[str] = [
+    "name",
+    "description",
+    "sources",
+    "providers",
+    "tags",
+    "docs",
+    "path",
+]
+
 # Mutually exclusive doc fields (exactly one required) for charts and dataframes
 DOCS_FIELDS: tuple[str, str] = ("docs_path", "docs")
 
@@ -66,6 +77,7 @@ DEFAULT_REQUIRED_FIELDS: dict[str, list[str]] = {
     "charts": CHART_FIELDS,
     "notebooks": NOTEBOOK_FIELDS,
     "models": MODEL_FIELDS,
+    "files": FILES_FIELDS,
 }
 
 # Optional chart fields (not required for diagnostics)
@@ -163,6 +175,7 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
     - ./charts/{pipeline_id}.{chart_id}.html
     - ./dataframes/{pipeline_id}/{dataframe_id}.html
     - ./models/{pipeline_id}/{model_id}.html
+    - ./files/{pipeline_id}/{files_id}.html
     - ../index.html (for pipelines, from cb/ up to root)
     """
     pipeline_slug = pipeline_id.replace("/", "--")
@@ -172,6 +185,8 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
         return f"./dataframes/{pipeline_slug}/{identifier}.html"
     elif object_type == "model":
         return f"./models/{pipeline_slug}/{identifier}.html"
+    elif object_type == "file":
+        return f"./files/{pipeline_slug}/{identifier}.html"
     elif object_type == "pipeline":
         return "../index.html"
     else:
@@ -280,6 +295,20 @@ def build_diagnostics(
                     pipeline_id=pipeline_id,
                     missing_fields=", ".join(model_missing),
                     page_link=_build_page_link("model", model_id, pipeline_id),
+                )
+            )
+
+        for files_id, files_meta in sorted((pipeline_manifest.get("files") or {}).items()):
+            files_missing = _collect_missing_fields(files_meta, required.get("files", []))
+            diagnostics.append(
+                DiagnosticRow(
+                    object_type="file",
+                    object_name=files_meta.get("name", files_id),
+                    metadata_complete=len(files_missing) == 0,
+                    identifier=files_id,
+                    pipeline_id=pipeline_id,
+                    missing_fields=", ".join(files_missing),
+                    page_link=_build_page_link("file", files_id, pipeline_id),
                 )
             )
 

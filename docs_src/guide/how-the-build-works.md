@@ -192,7 +192,7 @@ the project's own and is never read as a template.
 |---|---|
 | `freshness.md` | The "Data updated …" line under an asset page's title, "Code updated …" on the front page |
 | `chart_entry_top.md`, `chart_entry_bottom.md` | A chart page's head (front matter, title, iframe) and foot (specs, manifests) |
-| `dataframe_manifest.md`, `pipeline_manifest.md`, `model_manifest.md` | The manifest tables |
+| `dataframe_manifest.md`, `pipeline_manifest.md`, `model_manifest.md`, `file_manifest.md` | The manifest tables |
 | `provenance.md` | The provenance panel: what an asset was made from, what uses it, pins and versions |
 | `pipeline_dependencies.md` | The "Dependencies" section of a pipeline's page: each pipeline it reads from, as declared, and the snapshot or commit it is pinned to |
 | `index.md` | The front page's layout and tables of contents |

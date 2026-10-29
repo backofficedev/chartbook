@@ -78,7 +78,7 @@ PROJECT_DEFAULTS = {
 WRITERS = ("sphinx", "mkdocs")
 
 #: Entity sections that mark a manifest as pipeline-shaped.
-ENTITY_SECTIONS = ("charts", "dataframes", "notebooks", "notes", "models")
+ENTITY_SECTIONS = ("charts", "dataframes", "notebooks", "notes", "models", "files")
 
 #: v1 sections whose presence identifies an unmigrated manifest.
 V1_MARKER_SECTIONS = ("config", "site", "pipeline")
@@ -1170,6 +1170,46 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
     return models
 
 
+def validate_files(manifest: dict, base_dir: Path) -> dict:
+    """Validate a pipeline's ``[files.<id>]`` tables.
+
+    A files asset is a file, a folder or a glob of files that the pipeline
+    keeps whatever is inside: ``path`` says where. The rest is what a
+    dataframe has to say about where it came from and who may use it
+    (``description``, ``docs_path`` or ``docs``, ``sources``,
+    ``providers``, ``license``, ``restrictions``, ``tags``, ``keep``), and
+    fields of the pipeline's own. See :mod:`chartbook.files`.
+
+    Each entry gains ``_resolved_path``, the path joined to the pipeline's
+    folder, and ``_is_glob``.
+
+    :param manifest: The pipeline's manifest, with its fields checked
+        (:func:`_check_entity_fields`).
+    :param base_dir: The pipeline's root directory.
+    :returns: The files tables by key; empty if the pipeline declares none.
+    :raises ValueError: If an entry has no ``path``, or has both ``docs``
+        and ``docs_path``.
+    """
+    entries = manifest.get("files")
+    if entries is None:
+        return {}
+    for key, entry in entries.items():
+        where = f"{Path(base_dir) / 'chartbook.toml'}: [files.{key}]"
+        declared_path = entry.get("path")
+        if not isinstance(declared_path, str) or not declared_path.strip():
+            raise ValueError(
+                f"{where} has no 'path'. Say where its files are: a file, a folder, or a glob, "
+                f'such as path = "./_data/{key}/*.jsonl.gz".'
+            )
+        if entry.get("docs") and entry.get("docs_path"):
+            raise ValueError(f"{where} has both docs_path and docs. Only one is allowed.")
+        entry["_resolved_path"] = Path(os.path.normpath(Path(base_dir) / declared_path))
+        entry["_is_glob"] = is_glob_pattern(declared_path)
+        if "tags" in entry:
+            entry["tags"] = normalize_tags(entry["tags"])
+    return entries
+
+
 def _warn_unknown_project_keys(project_raw: dict, source: str) -> None:
     """Warn about unrecognized keys in the [project] table.
 
@@ -1348,6 +1388,7 @@ _ENTITY_KINDS = (
     ("notebooks", "notebook"),
     ("notes", "note"),
     ("models", "model"),
+    ("files", "files asset"),
 )
 
 #: The fields of an entity table's entry that are lists of strings.
@@ -1357,6 +1398,7 @@ _ENTITY_LIST_KEYS = {
     "notebooks": ("tags",),
     "notes": ("tags",),
     "models": ("tags",),
+    "files": ("tags", "sources", "providers", "provider_links"),
 }
 
 #: A right value of each list field, for the message that refuses a wrong one.
@@ -1373,6 +1415,7 @@ _PATH_EXAMPLES = {
     "charts": "./_output/{key}.html",
     "notebooks": "./_output/{key}.ipynb",
     "notes": "./docs_src/{key}.md",
+    "files": "./_data/{key}/",
 }
 
 #: And where the other ``*_path`` fields point.
@@ -1480,7 +1523,9 @@ def _load_pipeline_manifest(raw_manifest):
     # A key becomes part of an address, so the index can name the asset.
     # Models are checked in validate_models; the other kinds here, so that
     # the manifest and the index describe the same set of assets
-    for table, kind in (("dataframes", "dataframe"), ("charts", "chart"), ("notebooks", "notebook"), ("notes", "note")):
+    for table, kind in (
+        ("dataframes", "dataframe"), ("charts", "chart"), ("notebooks", "notebook"), ("notes", "note"), ("files", "files asset")
+    ):
         for key in manifest.get(table) or {}:
             if not ID_COMPONENT_PATTERN.match(str(key)):
                 raise ValueError(
@@ -1601,6 +1646,7 @@ def _load_pipeline_manifest(raw_manifest):
             raise type(error)(f"{source}: {error}") from None
 
     validate_models(manifest, base_dir)
+    validate_files(manifest, base_dir)
 
     return manifest
 

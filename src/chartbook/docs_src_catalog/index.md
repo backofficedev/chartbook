@@ -35,6 +35,14 @@ Browse the trained models that pipelines produce: what each was trained on, and 
 :::
 
 {% endif %}
+{% if files_file_list %}
+:::{grid-item-card} 🗂️ [Files](cb/files.md)
+:link: cb/files
+:link-type: doc
+Browse the files that pipelines keep as they are, whatever is inside: archives, text, PDFs, images, arrays.
+:::
+
+{% endif %}
 :::{grid-item-card}  🔌 [Pipelines](cb/pipelines.md)
 :link: cb/pipelines
 :link-type: doc
@@ -70,6 +78,7 @@ View metadata quality reports and download CSV files that flag metadata gaps acr
 cb/charts.md
 cb/dataframes.md
 {% if model_file_list %}cb/models.md
+{% endif %}{% if files_file_list %}cb/files.md
 {% endif %}cb/pipelines.md
 {% if has_versions %}cb/versions.md
 {% endif %}cb/diagnostics.md

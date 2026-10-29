@@ -42,6 +42,12 @@ Last updated: {{ today }}
 {% for page in models %}- [{{ page.title }}]({{ page.link }})
 {% endfor %}
 {% endif %}
+{% if files %}
+## Files 🗂️
+
+{% for page in files %}- [{{ page.title }}]({{ page.link }})
+{% endfor %}
+{% endif %}
 
 {{ readme_text }}
 

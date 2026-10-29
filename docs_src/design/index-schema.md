@@ -7,7 +7,7 @@ serves.
 
 Status: **the first implementation is built** (`chartbook.index`, `chartbook.hashing`): every
 build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`,
-`Note` and `Model` records, and each pipeline's declared `dependencies`. `Build` records and
+`Note`, `Model` and `File` records, and each pipeline's declared `dependencies`. `Build` records and
 pinned hashes are not written yet; they come with the parts of the {doc}`asset graph
 <asset-graph>` that produce them.
 {ref}`index-implementing` says exactly what is and is not there.
@@ -124,6 +124,7 @@ ftsfr/fed_yield_curve:chart/curve_today        Chart
 ftsfr/fed_yield_curve:notebook/analysis        Notebook
 ftsfr/fed_yield_curve:note/methodology         Note
 ftsfr/fed_yield_curve:model/rate_forecaster    Model
+ftsfr/fed_yield_curve:file/releases            File
 ```
 
 An ID never carries `@rev`. Which version a record describes is said by its `content_hash`.
@@ -144,8 +145,9 @@ set. This is exactly `chartbook.refs.AssetRef.to_dict()`, and `str()` of the sam
 `id`. Build both from one `AssetRef`; never assemble an ID by joining strings.
 
 **Record kinds and asset kinds.** A record's `kind` is capitalized (`Chart`). The kind in a
-reference is lowercase (`chart`). For the five asset kinds one is the other, capitalized:
-`dataframe`/`Dataframe`, `chart`/`Chart`, `notebook`/`Notebook`, `note`/`Note`, `model`/`Model`.
+reference is lowercase (`chart`). For the six asset kinds one is the other, capitalized:
+`dataframe`/`Dataframe`, `chart`/`Chart`, `notebook`/`Notebook`, `note`/`Note`, `model`/`Model`,
+`file`/`File`.
 `Catalog`, `Pipeline`, `Series` and `Build` are records that are not assets.
 
 **Hashes** are `"<algorithm>:<hex>"`, e.g. `"sha256:7f3a9c…"`. Never a bare hex string, so the
@@ -501,6 +503,17 @@ as the manifest states it when nothing knows the pipeline. So in a
 catalog's index an input is the `id` of another record in the same file whenever it can be. A model's `location` has
 `"kind": "file"` whether its `path` is a file or a directory; `files` is what tells the two
 apart.
+
+### File
+
+*(Added 2026-10-29, #133.)* A files asset that a pipeline declares in `[files]`: a file, a folder
+or a glob of files, whatever is inside. The skeleton of the other asset records, and the fields
+its entry declares (`sources`, `license`, `restrictions`...), plus what is said of its files:
+`file_count`, `extensions` (how many there are of each type, by the end of their names: `.jsonl.gz`),
+and `files`, the first 1000 by path, each with `path`, `size_bytes`, `content_hash` and, in
+`key=value` folders, `partitions`. A path that names one file lists that file. Its ID is
+`ftsfr/fed_yield_curve:file/releases`. A `Dataframe` of many parts (a folder or a glob) has
+`file_count` and `files` too, each part with its `row_count` from its parquet footer.
 
 ### Build
 

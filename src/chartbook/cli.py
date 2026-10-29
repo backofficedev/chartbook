@@ -1310,14 +1310,14 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     pipelines = [
         get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
     ]
-    # Models and dependencies are counted only where there are some, so that
-    # the line for a project without them reads as it always has
+    # Models, files and dependencies are counted only where there are some,
+    # so that the line for a project without them reads as it always has
     sections = ["dataframes", "charts", "notebooks"]
-    for optional in ("models", "dependencies"):
+    for optional in ("models", "files", "dependencies"):
         if any(p.get(optional) for p in pipelines):
             sections.append(optional)
     counts = ", ".join(
-        f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
+        f"{sum(len(p.get(section) or {}) for p in pipelines)} {'files assets' if section == 'files' else section}"
         for section in sections
     )
     shown = display_path(manifest_path, relative_to=Path.cwd())
@@ -1366,7 +1366,7 @@ def _say_trust_level(manifest, project_dir):
 @click.argument("ref")
 @click.option(
     "--kind",
-    type=click.Choice(["dataframe", "chart", "notebook", "note", "model"]),
+    type=click.Choice(["dataframe", "chart", "notebook", "note", "model", "file"]),
     help="The kind of asset REF names, when REF does not say "
     "(default: dataframe). The same as writing KIND/REF.",
 )
@@ -1376,7 +1376,15 @@ def _say_trust_level(manifest, project_dir):
     help="Where to look for the pipeline: its chartbook.toml is found by "
     "walking up from here (default: the current directory)",
 )
-def path_command(ref, kind, project_dir):
+@click.option(
+    "--files",
+    "list_files",
+    is_flag=True,
+    default=False,
+    help="Print the asset's files, one per line, sorted: the file, a "
+    "folder's files or a glob's matches",
+)
+def path_command(ref, kind, project_dir, list_files):
     """Print the path of an asset: this pipeline's, or a pinned copy of another's.
 
     REF names an asset declared in the enclosing chartbook.toml. A dataframe
@@ -1388,6 +1396,7 @@ def path_command(ref, kind, project_dir):
         notebook/analysis       [notebooks.analysis]
         note/methodology        [notes.methodology]
         model/rate_forecaster   [models.rate_forecaster]
+        file/filings            [files.filings]
 
     The path is printed absolute, whether or not the file exists yet, so a
     build tool can use it for inputs and outputs alike. This is
@@ -1409,24 +1418,30 @@ def path_command(ref, kind, project_dir):
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
     it is until `chartbook update`.
 
+    With --files, the asset's files are printed instead, one per line: the
+    file, a folder's files, or a glob's matches, as
+    `chartbook.assets.files()` gives them.
+
     Examples:
         chartbook path repo_public
         chartbook path chart/repo_rates
         chartbook path repo_rates --kind chart --project-dir ../yield_curve
         chartbook path fed_yield_curve:treasury_rates
+        chartbook path file/filings --files
     """
+    from chartbook.assets import files as resolve_files
     from chartbook.assets import path as resolve_path
     from chartbook.store import StoreError
 
+    resolver = resolve_files if list_files else resolve_path
     try:
-        asset_path = resolve_path(
-            ref, kind=kind, project_dir=project_dir or Path.cwd()
-        )
+        found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
     except (LookupError, FileNotFoundError, ValueError, TypeError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    # Nothing but the path on stdout: this output gets captured
-    click.echo(str(asset_path))
+    # Nothing but the paths on stdout: this output gets captured
+    for asset_path in found if list_files else [found]:
+        click.echo(str(asset_path))
 
 
 @main.command()

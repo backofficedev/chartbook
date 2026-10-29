@@ -13,6 +13,7 @@ A **pipeline** manifest has one metadata table plus entity sections:
 [notebooks]        # Jupyter notebook references
 [notes]            # Additional documentation notes
 [models]           # Trained models
+[files]            # Files that are not tables: archives, text, PDFs, images
 [dependencies]     # Other pipelines this one reads from
 ```
 
@@ -199,6 +200,7 @@ project    = ["description", "maintainer", "repo_url"]
 dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 models     = ["name", "trained_on", "docs"]
+files      = ["description", "license", "docs"]
 ```
 
 Without a `[policy]` section, chartbook's default recommended-field lists apply, warn-only. A kind you leave out of `[policy.required]` keeps its default list. Each list is a list of field names, in brackets; `project = "description"` is refused, not read as one name (nor as its letters), and the error shows the form to write. In a list, `docs` means "a write-up", and is satisfied by either `docs` or `docs_path`. In the `project` list, `build` means the build script: `[scripts] build`, or `[project] build`, the old place, which is still read. A missing one is named `[scripts] build`.
@@ -237,7 +239,7 @@ docs_path = "./docs_src/charts/revenue_trend.md"
 
 Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually a multi-line string) is required per chart.
 
-`keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note or model: {doc}`../guide/keeping-costly-outputs`.
+`keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note, model or files asset: {doc}`../guide/keeping-costly-outputs`.
 
 ## `[dataframes]` — Dataframe Definitions
 
@@ -586,6 +588,53 @@ Not yet:
 - **Versions that travel.** A version is in the store of the machine that made its snapshot, or in a store a team shares (see {doc}`cli`, "A store a team shares"). A label pinned across pipelines needs the version's bytes in the store; one whose version is not there is pinned without them, and `--frozen` reports it.
 - **Versions of anything but a model.** A dataframe has snapshots, and no version names.
 - One file inside a directory model (`model/x#weights.pt`).
+
+(files)=
+## `[files]` — Files That Are Not Tables
+
+A files asset is a file, a folder of files or a glob of them that the pipeline keeps whatever is inside: gzipped JSON lines, text or HTML, PDFs, images, NumPy arrays, a SQLite or DuckDB file, a vendor's zip kept byte for byte. ChartBook moves, versions and documents the bytes, as for a model, and never treats them as a table. Reading them is one line of your own code.
+
+```toml
+[files.earnings_releases]
+name = "Earnings Releases"
+description = "The data API's earnings releases since 2014, one file a quarter, as the API sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"
+sources = ["Vendor API"]
+providers = ["Vendor"]
+license = "Licensed to the department"
+restrictions = "Research use only"
+tags = ["Earnings", "Raw"]
+docs_path = "./docs_src/files/earnings_releases.md"
+keep = true
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `path` | yes | A file, a folder (every file under it), or a glob (`*`, `?`, `[...]`, `**` for any depth) |
+| `docs_path` or `docs` | no | Its write-up: what is in the files, and how to read them. Recommended by the default policy |
+| `keep` | no | `true` keeps every version of it in the store, as for a dataframe ({doc}`../guide/keeping-costly-outputs`): an archive that cost an API budget to build, or embeddings that cost GPU hours |
+| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | no | As for a dataframe. You may add fields of your own, but for `files`, `file_count` and `extensions`, which the index uses for what it says of the files, and leaves out of the record with a warning |
+
+The key (`earnings_releases`) is its address, `file/earnings_releases`, and another pipeline's is `pipeline:file/earnings_releases`. A file's own name may be anything; a folder's or glob's files are those its hash is made of, so `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*` files are never among them.
+
+**Reading them.**
+
+```python
+from chartbook import assets
+import polars as pl
+
+assets.path("file/earnings_releases")      # the path as declared (a glob stays a glob)
+assets.files("file/earnings_releases")     # the files, sorted: [Path(".../EARNINGS_RELEASE_2014Q1.jsonl.gz"), ...]
+index = assets.index("file/earnings_releases")   # a LazyFrame: path, size_bytes, sha256, and a column per key=value folder
+
+recent = index.filter(pl.col("path").str.contains("2025")).collect()
+```
+
+`assets.files` returns the file itself, a folder's files, or a glob's matches, sorted by their path inside the asset; it works for a dataframe of many parts and a model that is a folder too, so a large dataset can be read a file at a time. `assets.index` has one row per file, in the same order: `path` (the file), `size_bytes`, `sha256` (the file's hash, in hex), and, for files in `key=value` folders (`year=2024/q=1/x.htm`), a column for each key, as text. Pick files with polars before opening any. Of another pipeline's files, every size and hash comes from the record the store keeps, and nothing is read; of your own, the files are hashed, and a file is read again only when it has changed. On the command line, `chartbook path file/earnings_releases --files` prints the files, one per line.
+
+**What you get.** A page for it with its write-up, how many files it has and how large they are, how many of each type, a list of the first 50 with their sizes, the keys of any `key=value` folders, and a preview: the first lines of a text or JSON-lines file, gzip included (at most 4 KB is decompressed and shown, a line of JSON pretty-printed), or a thumbnail of an image (PNG, JPEG, GIF or WebP, up to 2 MB). A `File` record in `index.json` with its content hash, its file count, its count by type and its first 1000 files. `chartbook snapshot`, `pin`, `update`, `restore`, `lineage` and `store gc` treat it as any other asset. `chartbook check` reports a path that matches no file (a folder with nothing in it included), unless `--skip-outputs` is given, a write-up that is not there, and a license that has expired or soon will.
+
+Nothing reads the files beyond the preview: there is no `files.load()`, and no format of yours is ever parsed. A `#part` of a files asset (`file/x#one.pdf`) is not an address; use `assets.files` and pick the one you want.
 
 (dependencies)=
 ## `[dependencies]` — Other Pipelines This One Reads From
