@@ -234,8 +234,17 @@ def hash_files(
                 content_hash=format_hash(cache.file_hex(file)),
             )
         )
+    return hash_listing(entries)
+
+
+def hash_listing(entries: Iterable[FileEntry]) -> ContentHash:
+    """The hash of an asset of several files, from each file's path, size and hash, reading none of them.
+
+    The same as :func:`hash_files` gives for those files: the SHA-256 of
+    their ``sha256sum`` listing.
+    """
     # Code point order, which is byte order in UTF-8: what `LC_ALL=C sort` gives
-    entries.sort(key=lambda entry: entry.path)
+    entries = sorted(entries, key=lambda entry: entry.path)
     listing = "".join(
         f"{entry.content_hash.split(':', 1)[1]}  {entry.path}\n" for entry in entries
     )

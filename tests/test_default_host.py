@@ -10,10 +10,11 @@ import os
 import pytest
 import tomli_w
 
+from chartbook.store import default_store
 from chartbook import config, data, lock, snapshot
 from chartbook.errors import AssetNotPinnedError
 from tests.test_dependencies_by_id import _commit, _forecast, _git
-from tests.fixtures import remove_tree
+from tests.fixtures import clear_keeping_its_bytes, remove_tree
 
 
 @pytest.fixture
@@ -162,7 +163,7 @@ class TestNoSnapshotSoItsRepository:
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         assert _entry(forecast)["via"] == "store"
-        taken.path.unlink()  # gc, or another machine's store
+        clear_keeping_its_bytes(default_store(), taken)  # the record is gone; the bytes stay
         report = lock.pin(forecast)
         assert _entry(forecast)["via"] == "store" and not report.problems
         git_cache = Path(config.get_git_cache_path())
@@ -255,7 +256,7 @@ class TestWhatTheReviewFound:
         forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
         lock.pin(forecast)
         assert _entry(forecast)["via"] == "store"
-        taken.path.unlink()  # its snapshot record is gone from the store
+        clear_keeping_its_bytes(default_store(), taken)  # the record is gone; the bytes stay
         report = run.run(forecast, echo=lambda *a, **k: None)
         assert report.failed is None, report.reason
         assert [step.id for step in report.ran] == ["acme/forecast"]

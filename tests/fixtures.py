@@ -568,3 +568,34 @@ def name_no_snapshot(project_dir: Path, dependency: str) -> None:
     (entry,) = [entry for entry in locked.dependencies if entry["id"] == dependency]
     del entry["location"]["commit"], entry["snapshot"]
     lock.write_lock(locked, path)
+
+
+def clear_keeping_its_bytes(store, taken) -> None:
+    """Remove a snapshot's record and keep its assets' bytes, as objects no pipeline owns.
+
+    What a store holds of a snapshot whose record is gone while a lockfile
+    still pins its bytes: a store migrated from ChartBook 0.2, whose ``gc``
+    cleared a record and kept what a lockfile named. A store of 0.3 never
+    clears a snapshot whose bytes a lockfile pins.
+    """
+    import os
+
+    from chartbook.snapshot import materialized_name
+    from chartbook.store import declared_name
+    from chartbook.utils import is_glob_pattern
+
+    for record in taken.assets.values():
+        content_hash = record.get("content_hash")
+        if not content_hash:
+            continue
+        location = record.get("location") or {}
+        if location.get("kind") in ("table", "query"):
+            name = materialized_name(record)
+        elif isinstance(record.get("files"), list) or is_glob_pattern(location.get("path", "")):
+            name = None
+        else:
+            name = declared_name(location.get("path", ""))
+        held = Path(store.get(content_hash, taken.pipeline, name=name))
+        store.put(held / name if name else held, links=("copy",))
+    os.chmod(taken.path, 0o600)
+    taken.path.unlink()

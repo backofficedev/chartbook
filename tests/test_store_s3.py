@@ -1,14 +1,16 @@
 """The S3 store: a bucket laid out as a folder store, read through a cache on this machine.
 
 `tests/test_store_contract.py` has what every store must do; this file
-has what is particular to a remote one: the URL, the cache, the check of
-what was downloaded, a store that is read-only, and two machines on one
-store.
+has what is particular to a remote one: the URL, the keys, the cache and
+the check of what was downloaded, half a snapshot in the bucket, a store
+that is read-only or cannot be reached, and two machines on one store.
 """
 
 import json
 import os
 import sys
+import time
+import types
 from pathlib import Path
 
 import polars as pl
@@ -20,17 +22,29 @@ from chartbook import config, data, lock, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
-from chartbook.store import FolderStore, ObjectNotFoundError, ReadOnlyStoreError, StoreError, StoreUnreachableError, default_store
+from chartbook.store import (
+    PENDING_SECONDS,
+    FolderStore,
+    ObjectNotFoundError,
+    ReadOnlyStoreError,
+    StoreError,
+    StoreUnreachableError,
+)
 from tests.mocked_s3 import BUCKET, URL, mocked_s3
 from tests.test_model_versions import _commit, _git
 
 pytest.importorskip("boto3")
 pytest.importorskip("moto")
 
+from chartbook.stores import s3  # noqa: E402
 from chartbook.stores.s3 import S3Store, _parse_url  # noqa: E402
-from tests.fixtures import remove_tree
+from tests.fixtures import remove_tree  # noqa: E402
 
 COMMIT = "b" * 40
+LATER = "c" * 40
+FIRST = "2026-10-16T01:02:03.000000Z"
+SECOND = "2026-10-17T01:02:03.000000Z"
+HERE = "stores/one/pipelines/acme+rates/2026-10-16T010203Z_bbbbbbbbbbbb"
 
 
 @pytest.fixture
@@ -53,13 +67,39 @@ def store(work, client):
 def a_file(work):
     path = work / "_data" / "rates.parquet"
     path.parent.mkdir(parents=True)
-    path.write_bytes(b"rates-1")
+    path.write_bytes(b"unowned")
     return path
 
 
 def _keys(client, prefix=""):
     found = client.list_objects_v2(Bucket=BUCKET, Prefix=prefix)
     return sorted(entry["Key"] for entry in found.get("Contents", ()))
+
+
+def _pipeline(work: Path, files: dict) -> Path:
+    """A pipeline's folder holding these files, by their paths in it."""
+    folder = work / "rates"
+    for name, body in files.items():
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_bytes(body)
+    return folder
+
+
+def _snapshot(store, folder: Path, assets: dict, commit: str = COMMIT, made_at: str = FIRST, made_by: str = "snapshot"):
+    """A snapshot of ``acme/rates``: each asset by its name and its path in the pipeline's folder. Its record, and what was put."""
+    pending = store.begin("acme/rates", commit, made_at, base=folder, made_by=made_by)
+    put = {name: pending.put(folder / path) for name, path in assets.items()}
+    record = pending.write({
+        "schema": "chartbook/snapshot/v2",
+        "root": "acme/rates",
+        "code": {"commit": commit},
+        "made_at": made_at,
+        "records": [
+            {"id": f"acme/rates:{name}", "content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "stored": stored.stored}
+            for name, stored in sorted(put.items())
+        ],
+    })
+    return record, put
 
 
 class TestTheUrl:
@@ -122,36 +162,45 @@ class TestTheUrl:
 class TestTheBucketIsAFolderStore:
     """The keys are the folder store's paths, so a synced folder is the same store."""
 
-    def test_the_layout(self, store, client, a_file):
-        stored = store.put(a_file)
-        digest = stored.content_hash.split(":")[1]
+    def test_the_layout(self, store, client, work, a_file):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1", "_data/parts/a.txt": b"a"})
+        _snapshot(store, folder, {"rates": "_data/rates.parquet", "parts": "_data/parts"})
+        unowned = store.put(a_file)
+        store.add_root(Path("/somewhere/chartbook.lock"), [unowned.content_hash])
+        store.note_origin(COMMIT, "_top", "/somewhere")
         assert _keys(client) == [
-            f"stores/one/objects/sha256/{digest[:2]}/{digest[2:]}/rates.parquet",
+            f"stores/one/origins/{COMMIT}/_top.txt",
+            f"stores/one/pipelines/+unowned/{unowned.content_hash[7:]}/rates.parquet",
+            f"{HERE}/_chartbook/snapshot.json",
+            f"{HERE}/_data/parts/a.txt",
+            f"{HERE}/_data/rates.parquet",
+            f"stores/one/roots/{store_module.root_name('/somewhere/chartbook.lock', store_module.this_machine())}",
             "stores/one/store.json",
         ]
         assert json.loads(client.get_object(Bucket=BUCKET, Key="stores/one/store.json")["Body"].read()) == {"schema": store_module.SCHEMA}
-        store.add_root(Path("/somewhere/chartbook.lock"), [stored.content_hash])
-        store.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
-        store.note_origin(COMMIT, "_top", "/somewhere")
-        assert [k for k in _keys(client) if "/objects/" not in k] == [
-            f"stores/one/roots/{FolderStore(store.cache)._root_file('/somewhere/chartbook.lock').name}",
-            f"stores/one/snapshots/{COMMIT}/_top/20261016T000000Z.json",
-            f"stores/one/snapshots/{COMMIT}/_top/origins",
-            "stores/one/store.json",
-        ]
 
-    def test_a_folder_store_synced_into_the_bucket_is_read(self, work, client, a_file):
-        folder = FolderStore(work / "folder")
-        stored = folder.put(a_file)
-        folder.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"root": "acme/rates"})
-        for file in sorted(p for p in folder.root.rglob("*") if p.is_file()):
-            client.put_object(Bucket=BUCKET, Key="synced/" + file.relative_to(folder.root).as_posix(), Body=file.read_bytes())
-        store = S3Store(f"s3://{BUCKET}/synced", cache=work / "cache", client=client)
-        assert store.has(stored.content_hash)
-        assert (store.get(stored.content_hash) / "rates.parquet").read_bytes() == b"rates-1"
-        assert list(store.hashes()) == [stored.content_hash]
-        assert json.loads(store.snapshot_files(COMMIT, "_top")[0].read_text(encoding="utf-8"))["root"] == "acme/rates"
-        assert store.snapshot_commits() == {COMMIT}
+    def test_a_folder_store_synced_into_the_bucket_is_read(self, work, client):
+        local = FolderStore(work / "folder")
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1", "_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
+        record, put = _snapshot(local, folder, {"rates": "_data/rates.parquet", "parts": "_data/parts"})
+        for file in sorted(p for p in local.root.rglob("*") if p.is_file()):
+            client.put_object(Bucket=BUCKET, Key="synced/" + file.relative_to(local.root).as_posix(), Body=file.read_bytes())
+        bucket = S3Store(f"s3://{BUCKET}/synced", cache=work / "cache", client=client)
+        assert bucket.snapshot_commits() == {COMMIT}
+        (seen,) = bucket.all_snapshot_files()
+        assert json.loads(seen.read_text(encoding="utf-8")) == json.loads(Path(record).read_text(encoding="utf-8"))
+        assert sorted(bucket.hashes()) == sorted(local.hashes())
+        assert (bucket.get(put["rates"].content_hash) / "rates.parquet").read_bytes() == b"rates-1"
+        assert sorted(p.name for p in bucket.get(put["parts"].content_hash).iterdir()) == ["a.txt", "b.txt"]
+        assert bucket.verify() == []
+
+    def test_a_bucket_of_the_layout_before_is_refused_until_it_is_moved(self, work, client):
+        client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v1"}')
+        store = S3Store(URL, cache=work / "cache", client=client)
+        for asking in (lambda: store.has("sha256:" + "0" * 64), store.all_snapshot_files, lambda: store.begin("acme/rates", COMMIT, FIRST)):
+            with pytest.raises(StoreError, match=r"layout of ChartBook 0\.2 .*run `chartbook store migrate`"):
+                asking()
+        assert _keys(client) == ["stores/one/store.json"]  # nothing written beside it
 
     def test_a_store_with_another_layout_is_refused(self, work, client):
         client.put_object(Bucket=BUCKET, Key="stores/one/store.json", Body=b'{"schema": "chartbook/store/v9"}')
@@ -161,159 +210,161 @@ class TestTheBucketIsAFolderStore:
 
 
 class TestTheCache:
-    def test_a_second_machine_downloads_once(self, work, client, a_file, monkeypatch):
-        first = S3Store(URL, cache=work / "machine-a", client=client)
-        stored = first.put(a_file)
+    def test_a_file_is_downloaded_once_and_checked(self, work, client, monkeypatch):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        owner = S3Store(URL, cache=work / "machine-a", client=client)
+        _, put = _snapshot(owner, folder, {"rates": "_data/rates.parquet"})
         second = S3Store(URL, cache=work / "machine-b", client=client)
         downloads = []
         original = second._download
-        monkeypatch.setattr(second, "_download", lambda key, target: (downloads.append(key), original(key, target)))
-        held = second.get(stored.content_hash)
-        assert held == second.cache / "objects" / "sha256" / stored.content_hash[7:9] / stored.content_hash[9:]
-        assert (held / "rates.parquet").read_bytes() == b"rates-1"
-        assert not os.access(held / "rates.parquet", os.W_OK)
-        assert second.get(stored.content_hash) == held
-        assert len(downloads) == 1
+        monkeypatch.setattr(second, "_download", lambda key, target, content_hash=None: (downloads.append((key, content_hash)), original(key, target, content_hash))[1])
+        held = second.get(put["rates"].content_hash)
+        # The file's own folder, as the bucket has it, in the cache
+        assert held == second.cache / "pipelines" / "acme+rates" / "2026-10-16T010203Z_bbbbbbbbbbbb" / "_data"
+        assert (held / "rates.parquet").read_bytes() == b"rates-1" and not os.access(held / "rates.parquet", os.W_OK)
+        assert second.get(put["rates"].content_hash) == held
+        files = [(key, content_hash) for key, content_hash in downloads if not key.endswith("snapshot.json")]
+        assert files == [(f"{HERE}/_data/rates.parquet", put["rates"].content_hash)]  # once, against its hash
 
-    def test_a_name_added_later_is_fetched(self, work, client, a_file):
+    def test_the_machine_that_made_it_downloads_nothing(self, store, work, monkeypatch):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
+        _, put = _snapshot(store, folder, {"parts": "_data/parts"})
+        monkeypatch.setattr(store, "_download", lambda *a, **k: pytest.fail("downloaded what it put"))
+        gathered = store.get(put["parts"].content_hash)
+        assert gathered == store.views / put["parts"].content_hash[7:]
+        assert {p.name: p.read_bytes() for p in gathered.iterdir()} == {"a.txt": b"a", "b.txt": b"b"}
+
+    def test_a_file_that_is_not_what_its_record_says_is_not_kept(self, work, client):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        owner = S3Store(URL, cache=work / "machine-a", client=client)
+        _, put = _snapshot(owner, folder, {"rates": "_data/rates.parquet"})
+        client.put_object(Bucket=BUCKET, Key=f"{HERE}/_data/rates.parquet", Body=b"rates-2")  # the same size, other bytes
+        fresh = S3Store(URL, cache=work / "machine-b", client=client)
+        with pytest.raises(StoreError, match=r"_data/rates.parquet of sha256:.* is not what its snapshot's record says"):
+            fresh.get(put["rates"].content_hash)
+        assert not (fresh.cache / "pipelines" / "acme+rates" / "2026-10-16T010203Z_bbbbbbbbbbbb" / "_data").exists()
+        (problem,) = fresh.verify()
+        assert problem.content_hash == put["rates"].content_hash and "no longer what its record says" in problem.message
+        # The machine that put it has its own copy, checked as it went; verify downloads again, and so finds it
+        assert (owner.get(put["rates"].content_hash) / "rates.parquet").read_bytes() == b"rates-1"
+        (problem,) = owner.verify()
+        assert problem.content_hash == put["rates"].content_hash
+        assert (owner.get(put["rates"].content_hash) / "rates.parquet").read_bytes() == b"rates-1"
+        assert not any((owner.cache / "tmp").iterdir())
+
+    def test_an_object_no_pipeline_owns_must_hash_to_its_name(self, store, client, a_file):
+        stored = store.put(a_file)
+        (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
+        client.put_object(Bucket=BUCKET, Key=key, Body=b"rates-2")
+        fresh = S3Store(URL, cache=store.cache.parent / "fresh", client=client)
+        with pytest.raises(StoreError, match="is not what its name says: its content is no longer what its name says"):
+            fresh.get(stored.content_hash)
+        assert not (fresh.cache / "pipelines" / "+unowned").exists() or not any((fresh.cache / "pipelines" / "+unowned").iterdir())
+        assert [problem.content_hash for problem in fresh.verify()] == [stored.content_hash]
+
+    def test_a_name_added_later_is_fetched_and_a_stray_file_goes(self, work, client, a_file):
         first = S3Store(URL, cache=work / "machine-a", client=client)
         second = S3Store(URL, cache=work / "machine-b", client=client)
         stored = first.put(a_file)
-        assert sorted(p.name for p in second.get(stored.content_hash).iterdir()) == ["rates.parquet"]
+        held = second.get(stored.content_hash)
+        assert sorted(p.name for p in held.iterdir()) == ["rates.parquet"]
         other = work / "other.parquet"
-        other.write_bytes(b"rates-1")
+        other.write_bytes(b"unowned")
         assert first.put(other).created is False
         assert sorted(p.name for p in second.get(stored.content_hash).iterdir()) == ["other.parquet", "rates.parquet"]
+        os.chmod(held, 0o755)
+        (held / "stray.parquet").write_bytes(b"not in the bucket")
+        assert sorted(p.name for p in second.get(stored.content_hash).iterdir()) == ["other.parquet", "rates.parquet"]
+        assert second.get(stored.content_hash) == held
 
-    def test_what_was_downloaded_must_hash_to_its_name(self, store, client, a_file):
-        stored = store.put(a_file)
-        fresh = S3Store(URL, cache=store.cache.parent / "fresh", client=client)
-        (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
-        client.put_object(Bucket=BUCKET, Key=key, Body=b"rates-2")
-        with pytest.raises(StoreError, match="is not what its name says: its content is no longer what its name says"):
-            fresh.get(stored.content_hash)
-        assert not fresh._cache.has(stored.content_hash)
-        (problem,) = fresh.verify()
-        assert problem.content_hash == stored.content_hash and "no longer what its name says" in problem.message
-        # The machine that put it has a good copy and never re-reads a file of the right size
-        assert (store.get(stored.content_hash) / "rates.parquet").read_bytes() == b"rates-1"
-        (problem,) = store.verify()  # verify downloads again, into a scratch folder, and so finds it
-        assert problem.content_hash == stored.content_hash
-        assert problem.path == store.cache / "objects" / "sha256" / stored.content_hash[7:9] / stored.content_hash[9:]
-        assert (store.get(stored.content_hash) / "rates.parquet").read_bytes() == b"rates-1"  # the good copy stays
-        assert not any((store.cache / "tmp").iterdir())
+    def test_the_same_bytes_under_two_names_are_read_by_each(self, work, client):
+        """Kept once, under the first one's path; a reader of the other is handed a folder with its own name."""
+        folder = _pipeline(work, {"_data/committed.parquet": b"hello", "_data/twin.parquet": b"hello"})
+        owner = S3Store(URL, cache=work / "machine-a", client=client)
+        _, put = _snapshot(owner, folder, {"committed": "_data/committed.parquet", "twin": "_data/twin.parquet"})
+        assert put["committed"].content_hash == put["twin"].content_hash
+        assert [k for k in _keys(client) if k.endswith(".parquet")] == [f"{HERE}/_data/committed.parquet"]
+        reader = S3Store(URL, cache=work / "machine-b", client=client)
+        content_hash = put["twin"].content_hash
+        assert (reader.get(content_hash, name="committed.parquet") / "committed.parquet").read_bytes() == b"hello"
+        assert (reader.get(content_hash, name="twin.parquet") / "twin.parquet").read_bytes() == b"hello"
 
     def test_a_record_removed_elsewhere_goes_from_the_cache(self, work, client):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
         first = S3Store(URL, cache=work / "machine-a", client=client)
         second = S3Store(URL, cache=work / "machine-b", client=client)
-        written = first.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
+        written, _ = _snapshot(first, folder, {"rates": "_data/rates.parquet"})
         (seen,) = second.snapshot_files(COMMIT, "_top")
         assert seen.is_file()
         assert first.remove_snapshot(written) is True
         assert second.snapshot_files(COMMIT, "_top") == [] and not seen.exists()
         assert second.all_snapshot_files() == []
 
-    def test_a_copy_under_another_name(self, store, client, a_file):
-        """A folder store synced into a bucket may bring a sync service's copies: `<stamp> (1).json`.
+    def test_a_copy_under_another_name(self, store, client, work, a_file):
+        """A folder store synced into a bucket may bring a sync service's copies: `snapshot (1).json`.
 
         A copy of a record is passed over; a copy of a note is read, as a note
         only ever adds to what is kept, and one that cannot be read is an error."""
-        stored = store.put(a_file)
-        store.add_root(Path("/somewhere/chartbook.lock"), [stored.content_hash])
-        written = store.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
-        store.note_origin(COMMIT, "_top", "/somewhere")
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        written, put = _snapshot(store, folder, {"rates": "_data/rates.parquet"})
+        store.add_root(Path("/somewhere/chartbook.lock"), [put["rates"].content_hash])
         (note,) = [k for k in _keys(client) if "/roots/" in k]
         body = client.get_object(Bucket=BUCKET, Key=note)["Body"].read()
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (1).json"), Body=body)
-        record = f"stores/one/snapshots/{COMMIT}/_top/20261016T000000Z"
-        client.put_object(Bucket=BUCKET, Key=f"{record} (1).json", Body=b'{"a": 1}')
+        client.put_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/snapshot (1).json", Body=Path(written).read_bytes())
         assert sorted((str(root.lockfile), root.copy) for root in store.roots()) == [
             (os.path.abspath("/somewhere/chartbook.lock"), False), (os.path.abspath("/somewhere/chartbook.lock"), True)  # with a drive on Windows
         ]
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"), Body=b'{"lock')
         with pytest.raises(StoreError, match="if it is a copy nobody needs"):
             store.roots()  # half a copy: what it keeps cannot be said
-        client.delete_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"))
         assert store.snapshot_files(COMMIT, "_top") == [written] and store.all_snapshot_files() == [written]
-        assert store.remove_snapshot(written) is True
-        assert f"stores/one/snapshots/{COMMIT}/_top/origins" not in _keys(client)
 
     def test_a_path_outside_the_cache_is_not_a_record(self, store, work):
         with pytest.raises(ValueError, match="is not a snapshot record of the store"):
             store.remove_snapshot(work / "elsewhere.json")
 
-    def test_age_and_size_come_from_the_bucket(self, store, a_file):
+    def test_remove_snapshot_takes_only_a_record(self, store, work):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        _, put = _snapshot(store, folder, {"rates": "_data/rates.parquet"})
+        held = store.get(put["rates"].content_hash)
+        with pytest.raises(ValueError, match="is not a snapshot record of the store"):
+            store.remove_snapshot(held / "rates.parquet")
+        assert store.has(put["rates"].content_hash)
+
+    def test_age_and_size_come_from_the_bucket(self, store, work, a_file):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a" * 10, "_data/parts/b.txt": b"b" * 20})
+        _, put = _snapshot(store, folder, {"parts": "_data/parts"})
         stored = store.put(a_file)
-        assert store.size_of(stored.content_hash) == 7
-        assert 0 <= store.age_of(stored.content_hash) < 60
+        assert store.size_of(put["parts"].content_hash) == 30 and store.size_of(stored.content_hash) == 7
+        assert 0 <= store.age_of(put["parts"].content_hash) < 60 and 0 <= store.age_of(stored.content_hash) < 60
         with pytest.raises(ObjectNotFoundError):
             store.age_of("sha256:" + "0" * 64)
 
-    def test_delete_takes_the_cached_copy_too(self, store, a_file):
+    def test_delete_takes_the_cached_copy_too(self, store, client, work, a_file):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        _, put = _snapshot(store, folder, {"rates": "_data/rates.parquet"})
+        held = store.get(put["rates"].content_hash) / "rates.parquet"
         stored = store.put(a_file)
-        assert store._cache.has(stored.content_hash)
-        assert store.delete(stored.content_hash) is True
-        assert not store._cache.has(stored.content_hash) and not store.has(stored.content_hash)
+        cached = store.get(stored.content_hash)
+        assert store.delete(put["rates"].content_hash) is True and store.delete(stored.content_hash) is True
+        assert not held.exists() and not cached.exists()
+        assert [k for k in _keys(client) if k.endswith(".parquet")] == []
+        # Its record names it still, without holding it, as a store that lost it would
+        assert not store.has(put["rates"].content_hash) and not store.has(stored.content_hash)
 
-    def test_offline_an_object_read_before_is_served(self, work, client, a_file, monkeypatch):
-        import botocore.exceptions
-
-        store = S3Store(URL, cache=work / "cache", client=client)
-        stored = store.put(a_file)
-        other = S3Store(URL, cache=work / "other", client=client)
-        unread = other.put(work / "x.parquet") if (work / "x.parquet").write_bytes(b"x") else None
-        held = store.get(stored.content_hash)
-
-        def offline(*args, **kwargs):
-            raise botocore.exceptions.EndpointConnectionError(endpoint_url="https://s3.amazonaws.com")
-
-        monkeypatch.setattr(client, "get_paginator", offline)
-        assert store.get(stored.content_hash) == held  # read and checked before: served from the cache
-        with pytest.raises(StoreUnreachableError, match="cannot be reached to list"):
-            store.get(unread.content_hash)  # never read here: nothing to serve
-        with pytest.raises(StoreUnreachableError):
-            store.has(stored.content_hash)
-
-    def test_a_file_that_is_not_the_objects_is_removed_from_the_cache(self, store, a_file):
-        stored = store.put(a_file)
-        held = store.get(stored.content_hash)
-        (held / "stray.parquet").write_bytes(b"not in the bucket")
-        assert sorted(p.name for p in store.get(stored.content_hash).iterdir()) == ["rates.parquet"]
-        assert store.get(stored.content_hash) == held
-
-    def test_downloads_land_outside_the_object_folder(self, work, client, a_file, monkeypatch):
+    def test_downloads_land_outside_the_folders_a_reader_opens(self, work, client, a_file, monkeypatch):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
         first = S3Store(URL, cache=work / "a", client=client)
+        _, put = _snapshot(first, folder, {"rates": "_data/rates.parquet"})
         stored = first.put(a_file)
         second = S3Store(URL, cache=work / "b", client=client)
         seen = []
         original = second._client.download_file
         monkeypatch.setattr(second._client, "download_file", lambda bucket, key, filename: (seen.append(Path(filename)), original(bucket, key, filename)))
+        second.get(put["rates"].content_hash)
         second.get(stored.content_hash)
         assert seen and all(p.parent == second.cache / "tmp" for p in seen)
-
-    def test_a_half_uploaded_object_is_named_for_what_it_is(self, work, client):
-        folder = work / "_models" / "m"
-        folder.mkdir(parents=True)
-        (folder / "a.bin").write_bytes(b"a" * 10)
-        (folder / "b.bin").write_bytes(b"b" * 10)
-        owner = S3Store(URL, cache=work / "owner", client=client)
-        stored = owner.put(folder)
-        (key,) = [k for k in _keys(client) if k.endswith("/b.bin")]
-        client.delete_object(Bucket=BUCKET, Key=key)
-        fresh = S3Store(URL, cache=work / "fresh", client=client)
-        assert fresh.has(stored.content_hash)  # a listing cannot tell a partial object
-        with pytest.raises(StoreError, match="interrupted while uploading it; making the snapshot again completes it"):
-            fresh.get(stored.content_hash)
-        again = owner.put(folder)  # uploads what is missing, and only that
-        assert again.created is False and again.content_hash == stored.content_hash
-        assert sorted(p.name for p in fresh.get(stored.content_hash).iterdir()) == ["a.bin", "b.bin"]
-
-    def test_putting_an_object_the_bucket_has_counts_as_storing_it_now(self, store, a_file, monkeypatch):
-        stored = store.put(a_file)
-        touched = []
-        monkeypatch.setattr(store, "_touch", lambda key: touched.append(key))
-        again = store.put(a_file)
-        assert again.created is False and touched == [k for k in _keys(store._client) if k.endswith("rates.parquet")]
 
     def test_links_are_read_for_their_errors(self, store, a_file):
         with pytest.raises(ValueError, match="Unknown link kind"):
@@ -321,12 +372,138 @@ class TestTheCache:
         with pytest.raises(ValueError, match="Unknown link kind"):
             store.put(a_file, links=("teleport",))
 
-    def test_remove_snapshot_takes_only_a_record(self, store, a_file):
-        stored = store.put(a_file)
-        held = store.get(stored.content_hash)
-        with pytest.raises(ValueError, match="is not a snapshot record of the store"):
-            store.remove_snapshot(held / "rates.parquet")
-        assert store.has(stored.content_hash)
+
+def _offline(client, monkeypatch):
+    """The bucket out of reach from now on: no listing, no read."""
+    import botocore.exceptions
+
+    def offline(*args, **kwargs):
+        raise botocore.exceptions.EndpointConnectionError(endpoint_url="https://s3.amazonaws.com")
+
+    for name in ("get_paginator", "get_object", "head_object"):
+        monkeypatch.setattr(client, name, offline)
+
+
+class TestOffline:
+    def test_what_was_read_before_is_served_from_the_cache(self, work, client, a_file, monkeypatch):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1", "_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
+        owner = S3Store(URL, cache=work / "owner", client=client)
+        _, put = _snapshot(owner, folder, {"rates": "_data/rates.parquet", "parts": "_data/parts"})
+        stored, unread = owner.put(a_file), owner.put(folder / "_data" / "parts" / "a.txt")
+        store = S3Store(URL, cache=work / "cache", client=client)
+        held = {name: store.get(put[name].content_hash) for name in ("rates", "parts")}
+        kept = store.get(stored.content_hash)
+        store_module._found_whole.clear()
+        store = S3Store(URL, cache=work / "cache", client=client)  # a new process, as it were
+        _offline(client, monkeypatch)
+        assert {name: store.get(put[name].content_hash) for name in ("rates", "parts")} == held
+        assert store.get(stored.content_hash) == kept
+        assert store.incomplete(put["parts"].content_hash, 2) is None
+        with pytest.raises(StoreUnreachableError, match="cannot be reached"):
+            store.get(unread.content_hash)  # never read here: nothing to serve
+        with pytest.raises(StoreUnreachableError):
+            store.incomplete(unread.content_hash, 1, {"a.txt": 1})
+        with pytest.raises(StoreUnreachableError):
+            store.has(put["rates"].content_hash)
+
+
+class TestHalfASnapshot:
+    """Files are uploaded one by one and the record last; either half can be there without the other."""
+
+    def test_files_without_a_record_are_no_snapshot(self, store, client, work, monkeypatch):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1", "_data/one.txt": b"one"})
+        pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
+        put = pending.put(folder / "_data" / "rates.parquet")
+        pending.put(folder / "_data" / "one.txt")
+        # Interrupted here: the files are in the bucket, and no record
+        assert f"{HERE}/_data/rates.parquet" in _keys(client)
+        assert not store.has(put.content_hash) and store.all_snapshot_files() == [] and list(store.hashes()) == []
+        with pytest.raises(ObjectNotFoundError):
+            store.get(put.content_hash)
+        assert store.tidy() == []  # one being made, as far as anyone can tell, for an hour
+        later = time.time() + PENDING_SECONDS + 1
+        monkeypatch.setattr(s3, "time", types.SimpleNamespace(time=lambda: later, gmtime=time.gmtime, strftime=time.strftime))
+        assert sorted(name for name, _ in store.tidy()) == [
+            f"{HERE[len('stores/one/'):]}/_data/one.txt", f"{HERE[len('stores/one/'):]}/_data/rates.parquet",
+        ]
+        assert _keys(client, "stores/one/pipelines/") == []
+
+    def test_a_record_without_all_its_files_is_said_to_be_on_its_way(self, store, client, work):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a" * 10, "_data/parts/b.txt": b"b" * 20})
+        _, put = _snapshot(store, folder, {"parts": "_data/parts"})
+        parts = put["parts"].content_hash
+        assert store.incomplete(parts, 30) is None
+        store_module._found_whole.clear()
+        client.delete_object(Bucket=BUCKET, Key=f"{HERE}/_data/parts/b.txt")
+        fresh = S3Store(URL, cache=work / "fresh", client=client)
+        assert fresh.has(parts)  # one of its files is there
+        said = fresh.incomplete(parts, 30)
+        assert "does not have _data/parts/b.txt yet: it is not fully uploaded yet" in said
+        with pytest.raises(StoreError, match=r"does not have _data/parts/b.txt of sha256:\w+ yet.*not fully uploaded yet"):
+            fresh.get(parts)
+        client.delete_object(Bucket=BUCKET, Key=f"{HERE}/_data/parts/a.txt")
+        assert not fresh.has(parts)  # none of its files is there: as a store that lost it
+        # Making the snapshot again puts back what is missing, where its record says
+        again = store.begin("acme/rates", COMMIT, SECOND, base=folder)
+        assert again.put(folder / "_data" / "parts").content_hash == parts and not again.placed
+        again.discard()
+        store_module._found_whole.clear()
+        assert fresh.incomplete(parts, 30) is None
+        assert {p.name: p.read_bytes() for p in fresh.get(parts).iterdir()} == {"a.txt": b"a" * 10, "b.txt": b"b" * 20}
+
+    def test_a_key_written_over_is_not_on_its_way(self, store, client, work):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        _, put = _snapshot(store, folder, {"rates": "_data/rates.parquet"})
+        client.put_object(Bucket=BUCKET, Key=f"{HERE}/_data/rates.parquet", Body=b"rates")
+        store_module._found_whole.clear()
+        said = store.incomplete(put["rates"].content_hash, 7)
+        assert "has 5 bytes of _data/rates.parquet where its record says 7" in said
+        assert "not fully uploaded" not in said and "store verify" in said
+
+    def test_a_snapshot_not_written_takes_what_it_uploaded(self, store, client, work):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a"})
+        _snapshot(store, folder, {"parts": "_data/parts"})
+        (folder / "_data" / "parts" / "b.txt").write_bytes(b"b")
+        pending = store.begin("acme/rates", LATER, SECOND, base=folder)
+        pending.put(folder / "_data" / "parts")
+        assert any(k.startswith("stores/one/tmp/") and k.endswith(".pending") for k in _keys(client))  # a.txt, noted for gc
+        pending.discard()
+        assert _keys(client, "stores/one/tmp/") == []
+        assert [k for k in _keys(client) if "2026-10-17" in k] == []
+        assert f"{HERE}/_data/parts/a.txt" in _keys(client)
+
+
+class TestClearing:
+    def test_a_cleared_snapshot_keeps_what_a_later_one_uses(self, store, client, work):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a", "_data/one.txt": b"only the first"})
+        record, _ = _snapshot(store, folder, {"parts": "_data/parts", "one": "_data/one.txt"})
+        later, put = _snapshot(store, folder, {"parts": "_data/parts"}, commit=LATER, made_at=SECOND)
+        assert store.remove_snapshot(record) is True and store.remove_snapshot(record) is False
+        assert [k for k in _keys(client) if k.startswith(HERE)] == [f"{HERE}/_chartbook/CLEARED.txt", f"{HERE}/_data/parts/a.txt"]
+        assert "used by later snapshots" in client.get_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/CLEARED.txt")["Body"].read().decode()
+        assert store.remove_snapshot(later) is True
+        # The first's folder is no other's to sweep: `store gc` clears it after, as it clears every folder
+        assert [k for k in _keys(client) if k.startswith(HERE)] == [f"{HERE}/_chartbook/CLEARED.txt", f"{HERE}/_data/parts/a.txt"]
+        assert store.tidy() == [(f"{HERE[len('stores/one/'):]}/_data/parts/a.txt", 1)]
+        assert _keys(client, "stores/one/pipelines/") == []
+
+    def test_what_a_snapshot_being_made_uses_is_kept(self, store, client, work):
+        folder = _pipeline(work, {"_data/parts/a.txt": b"a"})
+        record, _ = _snapshot(store, folder, {"parts": "_data/parts"})
+        pending = store.begin("acme/rates", LATER, SECOND, base=folder)
+        put = pending.put(folder / "_data" / "parts")  # uses a.txt, which the first keeps
+        assert store.remove_snapshot(record) is True  # a gc meanwhile
+        assert f"{HERE}/_data/parts/a.txt" in _keys(client)
+        pending.write({"schema": "chartbook/snapshot/v2", "root": "acme/rates", "code": {"commit": LATER}, "made_at": SECOND,
+                       "records": [{"id": "acme/rates:parts", "content_hash": put.content_hash, "size_bytes": 1, "stored": put.stored}]})
+        assert (store.get(put.content_hash) / "a.txt").read_bytes() == b"a" and store.verify() == []
+
+    def test_the_last_at_a_commit_takes_its_origins(self, store, client, work):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
+        record, _ = _snapshot(store, folder, {"rates": "_data/rates.parquet"})
+        store.note_origin(COMMIT, "_top", "/somewhere")
+        assert store.remove_snapshot(record) is True
+        assert store.origins(COMMIT, "_top") == [] and _keys(client, "stores/one/origins/") == []
 
 
 def _refusing(client):
@@ -352,21 +529,33 @@ def _refusing(client):
 
 
 class TestReadOnly:
-    def test_reads_work_and_writes_say_so(self, work, client, a_file):
+    def test_reads_work_and_writes_say_what_was_refused(self, work, client, a_file):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
         owner = S3Store(URL, cache=work / "owner", client=client)
+        record, put = _snapshot(owner, folder, {"rates": "_data/rates.parquet"})
         stored = owner.put(a_file)
         reader = S3Store(URL, cache=work / "reader", client=_refusing(client))
-        assert reader.has(stored.content_hash)
-        assert (reader.get(stored.content_hash) / "rates.parquet").read_bytes() == b"rates-1"
-        assert list(reader.hashes()) == [stored.content_hash]
-        (work / "other.parquet").write_bytes(b"new")
-        with pytest.raises(ReadOnlyStoreError, match="refused to upload .*: AccessDenied. If this store is read-only for you"):
-            reader.put(work / "other.parquet")
+        assert reader.has(put["rates"].content_hash) and reader.incomplete(put["rates"].content_hash, 7) is None
+        assert (reader.get(put["rates"].content_hash) / "rates.parquet").read_bytes() == b"rates-1"
+        assert (reader.get(stored.content_hash) / "rates.parquet").read_bytes() == b"unowned"
+        assert sorted(reader.hashes()) == sorted([put["rates"].content_hash, stored.content_hash]) and reader.verify() == []
+        (folder / "_data" / "new.parquet").write_bytes(b"new")
+        pending = reader.begin("acme/rates", LATER, SECOND, base=folder)
+        with pytest.raises(ReadOnlyStoreError, match=r"refused to upload .*/_data/new.parquet: AccessDenied. If this store is read-only for you"):
+            pending.put(folder / "_data" / "new.parquet")
+        with pytest.raises(ReadOnlyStoreError, match=r"refused to write .*/_chartbook/snapshot.json"):
+            pending.write({"root": "acme/rates", "code": {"commit": LATER}, "made_at": SECOND, "records": []})
+        with pytest.raises(ReadOnlyStoreError, match="refused to upload"):
+            reader.put(folder / "_data" / "new.parquet")
         with pytest.raises(ReadOnlyStoreError, match="refused to write .*roots"):
             reader.add_root(work / "chartbook.lock", [stored.content_hash])
+        (seen,) = reader.all_snapshot_files()
+        with pytest.raises(ReadOnlyStoreError, match="refused to delete .*snapshot.json"):
+            reader.remove_snapshot(seen)
         assert lock.is_read_only(ReadOnlyStoreError("x"))
+        assert f"{HERE}/_chartbook/snapshot.json" in _keys(client)
 
-    def test_the_refusal_reaches_the_command_as_one_line(self, work, client, a_file):
+    def test_the_refusal_reaches_the_command_as_one_line(self, work, client):
         from chartbook.cli import _explain_os_error
 
         reader = S3Store(URL, cache=work / "reader", client=_refusing(client))
@@ -410,13 +599,15 @@ class TestTwoPipelinesOnAnS3Store:
         monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "machine-a"))
         made = snapshot.make(rates)
         assert made.snapshot.assets["treasury"]["content_hash"].startswith("sha256:")
-        assert any(k.endswith("/treasury.parquet") for k in _keys(client))
+        folder = Path(made.snapshot.path).parent.parent
+        assert folder.parent == work / "machine-a" / "s3" / BUCKET / "stores" / "one" / "pipelines" / "acme+rates"
+        assert f"stores/one/pipelines/acme+rates/{folder.name}/_data/treasury.parquet" in _keys(client)
 
         report = lock.pin(forecast)
         assert {e.status for e in report.events if e.asset} == {"pinned"}
         monkeypatch.chdir(forecast)
         assert data.load("rates:treasury").collect().shape == (1, 2)
-        assert data.path("rates:treasury") == work / "machine-a" / "s3" / BUCKET / "stores" / "one" / "objects" / "sha256" / made.snapshot.assets["treasury"]["content_hash"][7:9] / made.snapshot.assets["treasury"]["content_hash"][9:] / "treasury.parquet"
+        assert data.path("rates:treasury") == folder / "_data" / "treasury.parquet"
         assert lock.verify(forecast).problems == [] and lock.verify(forecast).pins == 1
 
         # Another machine, with nothing downloaded yet, and the store read-only for it
@@ -443,7 +634,7 @@ class TestKeysThatLeaveTheCache:
     def _outside(self, work: Path) -> list:
         return [p for p in work.rglob("*") if p.name.startswith(("OUTSIDE", "ABS", "evil"))]
 
-    def test_an_objects_keys(self, work, client, a_file):
+    def test_an_unowned_objects_keys(self, work, client, a_file):
         first = S3Store(URL, cache=work / "machine-a", client=client)
         stored = first.put(a_file)
         (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
@@ -460,17 +651,26 @@ class TestKeysThatLeaveTheCache:
         assert first.delete(stored.content_hash) is True
         assert _keys(client, prefix) == []
 
-    def test_a_snapshot_records_keys(self, work, client):
+    def test_planted_records(self, work, client):
+        folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
         first = S3Store(URL, cache=work / "machine-a", client=client)
-        written = first.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
-        (key,) = [k for k in _keys(client) if "/snapshots/" in k or k.startswith("snapshots/")]
-        root = key[: key.index("snapshots/") + len("snapshots/")]
-        for planted in ("../../evil.json", "../x/evil2.json", f"{COMMIT}/_top/../../../evil3.json", "a//b/evil4.json"):
-            client.put_object(Bucket=BUCKET, Key=root + planted, Body=b"{}")
+        written, put = _snapshot(first, folder, {"rates": "_data/rates.parquet"})
+        record = json.loads(Path(written).read_text(encoding="utf-8"))
+        root = "stores/one/pipelines/"
+        for planted in ("../../evil/2026-10-16T010203Z_bbbbbbbbbbbb/_chartbook/snapshot.json", "acme+rates/../x/_chartbook/snapshot.json",
+                        "acme+rates//2026-10-16T010203Z_bbbbbbbbbbbb/_chartbook/snapshot.json"):
+            client.put_object(Bucket=BUCKET, Key=root + planted, Body=json.dumps(record).encode())
+        # A record whose files lead out of its pipeline's folder is not followed
+        leading = dict(record, records=[dict(record["records"][0], content_hash="sha256:" + "e" * 64, stored={
+            "at": "_data", "single": True,
+            "files": [{"path": "_data/x.parquet", "content_hash": "sha256:" + "e" * 64, "size_bytes": 7, "kept_in": "../../../evil"}],
+        })])
+        client.put_object(Bucket=BUCKET, Key=f"{root}acme+rates/2026-10-18T010203Z_bbbbbbbbbbbb/_chartbook/snapshot.json", Body=json.dumps(leading).encode())
         second = S3Store(URL, cache=work / "machine-b", client=client)
-        seen = second.all_snapshot_files()
-        assert [p.name for p in seen] == [written.name]
-        assert self._outside(work) == [p for p in self._outside(work) if p.is_relative_to(work / "machine-b" / "snapshots")] == []
+        assert [p.parent.parent.name for p in second.all_snapshot_files()] == ["2026-10-16T010203Z_bbbbbbbbbbbb", "2026-10-18T010203Z_bbbbbbbbbbbb"]
+        assert not second.has("sha256:" + "e" * 64)
+        assert (second.get(put["rates"].content_hash) / "rates.parquet").read_bytes() == b"rates-1"
+        assert self._outside(work) == []
 
     def test_a_key_is_never_made_a_path_out_of_the_cache(self, store):
         with pytest.raises(StoreError, match="not a plain path"):
@@ -480,27 +680,24 @@ class TestKeysThatLeaveTheCache:
 class TestWhatTheFourthReviewFound:
     @pytest.mark.skipif(os.name == "nt", reason="Windows has no file named with a colon or a backslash")
     def test_a_file_named_with_a_colon_or_a_backslash_is_read_back(self, work, client):
-        folder = work / "_data" / "daily"
-        folder.mkdir(parents=True)
-        (folder / "2024-01-01T00:00:00.csv").write_bytes(b"a")
-        (folder / "a\\b.csv").write_bytes(b"b")
+        folder = _pipeline(work, {"_data/daily/2024-01-01T00:00:00.csv": b"a", "_data/daily/a\\b.csv": b"b"})
         first = S3Store(URL, cache=work / "machine-a", client=client)
-        stored = first.put(folder)
+        _, put = _snapshot(first, folder, {"daily": "_data/daily"})
         second = S3Store(URL, cache=work / "machine-b", client=client)
-        held = second.get(stored.content_hash)
+        held = second.get(put["daily"].content_hash)
         assert sorted(p.name for p in held.iterdir()) == ["2024-01-01T00:00:00.csv", "a\\b.csv"]
         assert second.verify() == []
-        assert first.put(folder).created is False
+        assert first.put(folder / "_data" / "daily").content_hash == put["daily"].content_hash
 
     def test_an_object_of_keys_that_are_no_files_is_removed_by_gc(self, work, client, a_file):
         store = S3Store(URL, cache=work / "machine-a", client=client)
         stored = store.put(a_file)
         (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
         prefix = key[: -len("rates.parquet")]
-        other = prefix.replace(stored.content_hash[9:], "f" * 62)
+        other = prefix.replace(stored.content_hash[7:], "f" * 64)
         client.put_object(Bucket=BUCKET, Key=other + "../x", Body=b"planted")
         client.put_object(Bucket=BUCKET, Key=prefix, Body=b"")  # a folder marker, as the S3 console makes
-        planted = "sha256:" + other.rstrip("/").split("/")[-2] + other.rstrip("/").split("/")[-1]
+        planted = "sha256:" + "f" * 64
         assert planted in set(store.hashes()) and not store.has(planted)
         assert store.size_of(planted) == len(b"planted") and store.age_of(planted) >= 0
         plan = lock.plan_gc(store=store, recent_seconds=0)
@@ -549,8 +746,6 @@ class TestAnotherMachineWithoutTheUpstreamFolder:
     with the pipeline it depends on neither there nor built (docs: "A store in a synced folder")."""
 
     def _machine_two(self, rates, forecast, monkeypatch):
-        import shutil
-
         remove_tree(rates)
         monkeypatch.chdir(forecast)
         checked = lock.verify(forecast)
@@ -581,13 +776,10 @@ def _pinned_commit(forecast: Path) -> str:
     return entry["location"]["commit"]
 
 
-class TestAnObjectHalfUploaded:
-    """A snapshot interrupted while uploading an object of several files leaves some of its keys
-    missing, and one being made now has them arriving. Found by a reviewer: `pin`, `update` and
-    `pin --frozen` took such an object as whole, and only a read failed, as a `StoreError` from
-    `get()`. The listing tells, against the record's files and sizes, as a synced folder's files
-    tell: the four now say the object is not fully uploaded yet, as they say of a half-synced folder.
-    """
+class TestASnapshotHalfUploaded:
+    """A record whose files are not all in the bucket: `pin`, `update`, `pin --frozen` and a read
+    all say it is not fully uploaded yet, as they say of a half-synced folder, and making the
+    snapshot again puts back what is missing."""
 
     @pytest.fixture
     def half(self, work, client, monkeypatch):
@@ -618,53 +810,51 @@ class TestAnObjectHalfUploaded:
         first = build(2)
         assert lock.pin(forecast).problems == []
         second = build(3)
-        return forecast, first, second, parts
+        return rates, forecast, first, second
 
     def _lose(self, client, taken) -> str:
-        """Take one key of a snapshot's object away, as an interrupted upload leaves it."""
-        digest = taken.assets["parts"]["content_hash"].split(":")[1]
-        (key,) = [k for k in _keys(client) if f"/{digest[:2]}/{digest[2:]}/" in k and k.endswith("/part-1.parquet")]
+        """Take the second snapshot's own part-1 away, as a copy into the bucket that has not finished leaves it."""
+        folder = Path(taken.path).parent.parent.name
+        (key,) = [k for k in _keys(client) if f"/{folder}/" in k and k.endswith("/part-1.parquet")]
         client.delete_object(Bucket=BUCKET, Key=key)
         store_module._found_whole.clear()  # this process may have found it whole before
         return key
 
     def test_update_does_not_move_to_it_and_says_what_to_do(self, half, client):
-        forecast, first, second, parts = half
+        rates, forecast, first, second = half
         self._lose(client, second)
         report = lock.update(forecast)
         (problem,) = report.problems
         assert problem.status == "unsynced" and problem.asset == "rates:parts"
-        assert "does not have part-1.parquet yet: it is not fully uploaded yet" in problem.detail
-        assert "making the snapshot again completes it" in problem.detail
+        assert "does not have _data/parts/part-1.parquet yet: it is not fully uploaded yet" in problem.detail
+        assert "making the snapshot again puts it back" in problem.detail
         assert _pinned_commit(forecast) == first.commit  # nothing moved
-        default_store().put(parts)  # the owner makes the snapshot again: what is missing is uploaded
+        assert snapshot.make(rates).made is False  # the same snapshot, its file put back
         store_module._found_whole.clear()
         assert lock.update(forecast).problems == []
         assert _pinned_commit(forecast) == second.commit
 
     def test_pin_frozen_and_a_read_say_it_too(self, half, client, monkeypatch):
-        forecast, first, second, parts = half
+        rates, forecast, first, second = half
         assert lock.update(forecast).problems == []
-        self._lose(client, second)  # the same pin, seen while its object is being uploaded again
+        self._lose(client, second)
         (problem,) = lock.verify(forecast).problems
-        assert "does not have part-1.parquet yet: it is not fully uploaded yet" in problem.message
+        assert "does not have _data/parts/part-1.parquet yet: it is not fully uploaded yet" in problem.message
         assert {e.status for e in lock.pin(forecast).problems} == {"unsynced"}
         frozen = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(forecast)])
         assert frozen.exit_code == 1 and "not fully uploaded yet" in frozen.output
         updated = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
         assert updated.exit_code == 1 and "not fully synced: rates:parts" in updated.output
         monkeypatch.chdir(forecast)
-        # A read through the lockfile asks `get` before it asks whether the object is whole
-        # (`resolve._held`), so the S3 store's own refusal is what it meets; both say the same
-        with pytest.raises((AssetNotPinnedError, StoreError), match="not fully uploaded yet|interrupted while uploading"):
+        with pytest.raises((AssetNotPinnedError, StoreError), match="not fully uploaded yet"):
             data.load("rates:parts").collect()
-        default_store().put(parts)
+        snapshot.make(rates)
         store_module._found_whole.clear()
         assert lock.verify(forecast).problems == []
         assert data.load("rates:parts").collect().height == 2
 
     def test_a_first_read_says_it_and_pins_nothing(self, half, client, monkeypatch):
-        forecast, first, second, parts = half
+        rates, forecast, first, second = half
         self._lose(client, second)
         (forecast / lock.LOCK_FILE).unlink()  # a fresh clone of it, before any pin
         monkeypatch.chdir(forecast)
@@ -675,13 +865,13 @@ class TestAnObjectHalfUploaded:
 
 
 class TestWhatTheListingTells:
-    """`incomplete`, by the keys under an object and their sizes, as the folder store judges a synced folder's files."""
+    """`incomplete` of an object no pipeline owns, by the keys under it and their sizes, as the folder store judges its folder."""
 
     def test_a_key_not_there_yet(self, store, client, a_file, work):
         stored = store.put(a_file)
         assert store.incomplete(stored.content_hash, 7, {"rates.parquet": 7}) is None
         other = work / "other.parquet"
-        other.write_bytes(b"rates-1")
+        other.write_bytes(b"unowned")
         assert store.put(other).created is False  # the same bytes under another name
         (key,) = [k for k in _keys(client) if k.endswith("/rates.parquet")]
         client.delete_object(Bucket=BUCKET, Key=key)
@@ -721,21 +911,6 @@ class TestWhatTheListingTells:
         assert store.incomplete(stored.content_hash, None, {"rates.parquet": 7}) is None  # a record with no size
         assert store.incomplete("sha256:" + "0" * 64, 7, {"x": 7}) is None  # not there at all, which `has` says
 
-    def test_offline_what_was_checked_before_is_whole(self, store, client, a_file, monkeypatch):
-        import botocore.exceptions
-
-        stored = store.put(a_file)
-        store.get(stored.content_hash)
-        store_module._found_whole.clear()
-
-        def offline(*args, **kwargs):
-            raise botocore.exceptions.EndpointConnectionError(endpoint_url="https://s3.amazonaws.com")
-
-        monkeypatch.setattr(client, "get_paginator", offline)
-        assert store.incomplete(stored.content_hash, 7, {"rates.parquet": 7}) is None
-        with pytest.raises(StoreUnreachableError):
-            store.incomplete("sha256:" + "1" * 64, 7, {"x": 7})
-
     def test_an_object_gone_while_planning_is_passed_over(self, store, a_file, monkeypatch):
         """Two gc at once: an object listed, then removed before its age is asked."""
         stored = store.put(a_file)
@@ -746,8 +921,11 @@ class TestWhatTheListingTells:
 
 
 class TestWhatAnObjectLacks:
-    def test_a_key_the_object_lacks(self, store, client, a_file):
+    def test_a_key_the_object_lacks(self, store, work, a_file):
         stored = store.put(a_file)
         assert not store.lacks(stored.content_hash, ["rates.parquet"])
-        assert store.lacks(stored.content_hash, ["rates.parquet", "twin.parquet"])
+        assert store.lacks(stored.content_hash, ["twin.parquet"])
         assert not store.lacks("sha256:" + "0" * 64, ["rates.parquet"])  # no object: nothing to add a name to
+        folder = _pipeline(work, {"_data/x.parquet": b"x"})
+        _, put = _snapshot(store, folder, {"x": "_data/x.parquet"})
+        assert not store.lacks(put["x"].content_hash, ["twin.parquet"])  # a record names each of its files

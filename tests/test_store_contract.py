@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from chartbook import hashing
 from chartbook import store as store_module
 from chartbook.store import FolderStore, Store
 from tests.mocked_s3 import URL, mocked_s3
@@ -97,7 +98,10 @@ class TestSnapshotRecords:
     def test_write_find_remove(self, store):
         assert store.snapshot_commits() == set()
         assert store.snapshot_files(COMMIT, "_top") == []
-        document = {"schema": "chartbook/snapshot/v1", "root": "acme/rates", "made_at": "2026-10-16T01:02:03Z", "records": []}
+        document = {
+            "schema": "chartbook/snapshot/v2", "root": "acme/rates", "code": {"commit": COMMIT},
+            "made_at": "2026-10-16T01:02:03Z", "records": [],
+        }
         written = store.write_snapshot(COMMIT, "_top", "20261016T010203Z", document)
         assert json.loads(Path(written).read_text(encoding="utf-8"))["root"] == "acme/rates"
         again = store.write_snapshot(COMMIT, "_top", "20261016T010203Z", document)
@@ -120,6 +124,101 @@ class TestSnapshotRecords:
     def test_a_commit_must_be_full(self, store):
         with pytest.raises(ValueError, match="not a full commit hash"):
             store.snapshot_files("abc123", "_top")
+
+
+class TestSnapshotFolders:
+    """A snapshot is a folder in its pipeline's folder: its files at their places, each kept once, its record last."""
+
+    @staticmethod
+    def _pipeline(tmp_path, files: dict) -> Path:
+        folder = tmp_path.resolve() / "rates"
+        for name, data in files.items():
+            (folder / name).parent.mkdir(parents=True, exist_ok=True)
+            (folder / name).write_bytes(data)
+        return folder
+
+    @staticmethod
+    def _record(pending, commit: str, **stored) -> dict:
+        return {
+            "schema": "chartbook/snapshot/v2",
+            "root": "acme/rates",
+            "code": {"commit": commit},
+            "made_at": pending.made_at,
+            "records": [
+                {"id": f"acme/rates:{name}", "content_hash": put.content_hash, "size_bytes": put.size_bytes, "stored": put.stored}
+                for name, put in sorted(stored.items())
+            ],
+        }
+
+    def test_its_files_are_in_their_places(self, store, tmp_path):
+        folder = self._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1", "_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        one = pending.put(folder / "_data" / "rates.parquet")
+        many = pending.put(folder / "_data" / "parts")
+        assert one.content_hash == hashing.hash_path(folder / "_data" / "rates.parquet").content_hash
+        assert many.content_hash == hashing.hash_path(folder / "_data" / "parts").content_hash
+        assert not store.has(one.content_hash)  # a snapshot once its record is written, not before
+        record = pending.write(self._record(pending, COMMIT, rates=one, parts=many))
+        assert store.all_snapshot_files() == [Path(record)] and store.snapshot_commits() == {COMMIT}
+        here = "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa"
+        assert store.files_of(one.content_hash) == [(f"{here}/_data/rates.parquet", 7)]
+        assert store.has(one.content_hash) and store.has(many.content_hash)
+        assert (Path(store.get(one.content_hash)) / "rates.parquet").read_bytes() == b"rates-1"
+        assert sorted(p.name for p in Path(store.get(many.content_hash)).iterdir()) == ["a.txt", "b.txt"]
+        assert store.incomplete(one.content_hash, 7) is None and store.incomplete(many.content_hash, 2) is None
+        assert store.verify() == []
+
+    def test_each_file_is_kept_once(self, store, tmp_path):
+        folder = self._pipeline(tmp_path, {"_data/parts/a.txt": b"a", "_data/parts/b.txt": b"b"})
+        first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = first.put(folder / "_data" / "parts")
+        first.write(self._record(first, COMMIT, parts=put))
+        (folder / "_data" / "parts" / "c.txt").write_bytes(b"c")
+        later = "b" * 40
+        second = store.begin("acme/rates", later, "2026-10-17T01:02:03.000000Z", base=folder)
+        again = second.put(folder / "_data" / "parts")
+        assert [entry.get("kept_in") for entry in again.stored["files"]] == [
+            "2026-10-16T010203Z_aaaaaaaaaaaa", "2026-10-16T010203Z_aaaaaaaaaaaa", "2026-10-17T010203Z_bbbbbbbbbbbb",
+        ]
+        second.write(self._record(second, later, parts=again))
+        assert {name for name, _ in store.files_of(again.content_hash)} == {
+            "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa/_data/parts/a.txt",
+            "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa/_data/parts/b.txt",
+            "pipelines/acme+rates/2026-10-17T010203Z_bbbbbbbbbbbb/_data/parts/c.txt",
+        }
+        # Gathered for a reader, from the two folders that keep them
+        gathered = Path(store.get(again.content_hash))
+        assert {p.name: p.read_bytes() for p in gathered.iterdir()} == {"a.txt": b"a", "b.txt": b"b", "c.txt": b"c"}
+        assert store.verify() == []
+
+    def test_one_not_written_leaves_nothing(self, store, tmp_path):
+        folder = self._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = pending.put(folder / "_data" / "rates.parquet")
+        pending.discard()
+        assert not store.has(put.content_hash) and store.all_snapshot_files() == [] and list(store.hashes()) == []
+
+    def test_clearing_one_keeps_what_a_later_one_uses(self, store, tmp_path):
+        folder = self._pipeline(tmp_path, {"_data/parts/a.txt": b"a", "_data/one.txt": b"only the first"})
+        first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        parts, one = first.put(folder / "_data" / "parts"), first.put(folder / "_data" / "one.txt")
+        record = first.write(self._record(first, COMMIT, parts=parts, one=one))
+        second = store.begin("acme/rates", "b" * 40, "2026-10-17T01:02:03.000000Z", base=folder)
+        again = second.put(folder / "_data" / "parts")
+        second.write(self._record(second, "b" * 40, parts=again))
+        assert store.remove_snapshot(record) is True
+        assert not store.has(one.content_hash)
+        assert store.has(parts.content_hash) and (Path(store.get(parts.content_hash)) / "a.txt").read_bytes() == b"a"
+        assert store.verify() == []
+
+    def test_one_a_pin_made_is_not_an_owners(self, store, tmp_path):
+        folder = self._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder, made_by="pin")
+        put = pending.put(folder / "_data" / "rates.parquet")
+        record = pending.write(self._record(pending, COMMIT, rates=put))
+        assert json.loads(Path(record).read_text(encoding="utf-8"))["made_by"] == "pin"
+        assert store.all_snapshot_files() == [] and store.snapshot_commits() == set()
+        assert store.pinned_snapshot_files() == [Path(record)] and store.has(put.content_hash)
 
 
 class TestWhereItIs:

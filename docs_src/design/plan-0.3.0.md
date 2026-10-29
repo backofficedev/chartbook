@@ -2,8 +2,8 @@
 
 ```{note}
 A plan, written 2026-10-28, two days after 0.2.0 was released. It says what 0.3.0 is for, the new
-layout of the store at its centre, and the order of the work. Status: **proposed; nothing in it is
-built.** What the maintainer decided on 2026-10-28 is marked *decided*; the rest is *proposed*, and
+layout of the store at its centre, and the order of the work. Status: **being built**; what is
+built is marked in "The order of work", and "As built" says where it differs. What the maintainer decided on 2026-10-28 is marked *decided*; the rest is *proposed*, and
 much of it comes from a review of an earlier draft against the code, which is cited where it
 matters. The layout inside a pipeline's folder was revised the same day, on the maintainer's
 proposal.
@@ -473,15 +473,51 @@ store, and the Windows CI runs the tests under a long root.
    gathered, `incomplete`, for the folder store and the S3 store; and `Store`'s methods take the
    pipeline. *(Moved here from step 1 on 2026-10-28: in a v1 store an argument naming the pipeline
    would be passed everywhere and read nowhere, and nothing could test it. Step 2 is where it is
-   used.)*
-3. `store gc` on snapshot folders.
-4. `chartbook store migrate`.
+   used.)* *Built 2026-10-28.*
+3. `store gc` on snapshot folders. *Built 2026-10-28, with step 2.*
+4. `chartbook store migrate`. *Built 2026-10-28, with step 2: a store is never left in a layout
+   nothing can move.*
 5. Long paths on Windows (#136).
 6. `chartbook store export` and `store import`.
 7. #135, the rest.
 8. #134, the shared reader.
 9. #133, `[files]`.
 10. The template's CI.
+
+## As built (2026-10-28)
+
+Steps 2 to 4 were built together. Where what was built differs from the plan above, or settles
+what it left open:
+
+- **A folder's name is fixed by the ID alone.** An ID in lower case, that Windows takes as a name,
+  is its own folder's name (`/` as `+`). One with a capital letter, or a name Windows keeps
+  (`con`, a trailing `.`), always gets `~` and eight hex digits of its hash, not only when another
+  ID has the folder: no record need be read to name it, and two machines name it alike.
+- **`_chartbook` is refused only where it would be used.** A snapshot is refused when a declared
+  file or a document is under `_chartbook/`, not when the pipeline merely has such a folder.
+- **An object no pipeline owns** is what `Store.put` keeps when there is no snapshot to put it in,
+  as well as what migration finds no record for: `pipelines/+unowned/<hex>/`, its files under
+  their names, as a 0.2 object was. `store gc` clears one once nothing names it.
+- **A snapshot a pin makes** from a clone is in the dependency's pipeline's folder and says
+  `"made_by": "pin"`. It is written only when it holds something the store did not, and `gc`
+  keeps it, whole, while a lockfile pins what it alone holds.
+- **What is trusted of a record.** Its dictionary is followed only where the files' hashes make
+  the asset's hash (one file's, or the listing's), so a record cannot point a hash at other bytes.
+  A record whose pipeline or commit is not its folder's is one that cannot be read.
+- **`has`** is true once any file of an asset is there, as a 0.2 object was once its folder was;
+  an asset with some of its files is not whole (`incomplete`), a sync to wait for, and one with
+  none is not in the store, whose message says a sync may explain it.
+- **`get(hash, pipeline, name)`**: a one-file asset is asked for by the name it is read by, since
+  the same bytes may be two assets', kept once.
+- **The notes of origins** are `origins/<commit>/<name>.txt`, keyed as they were in 0.2.
+- **gc** clears a snapshot's record first; `Store.tidy` then removes, file by file, what no
+  snapshot uses (a snapshot never written, an hour on; a sync service's copy beside a snapshot's
+  files, an hour on), and says what it could not remove. A snapshot whose pinned bytes no kept
+  snapshot holds is kept.
+- **Migration** sends every object no 0.2 record names to `+unowned/`, rather than to the
+  pipeline a lockfile names; a `git` dependency's pin moves into its pipeline's folder at its
+  next update. It trusts the hashes 0.2 records give and reads only a glob's files and the
+  documents. A bucket is migrated as a folder, synced down and back.
 
 ## Breaking changes, for the changelog
 

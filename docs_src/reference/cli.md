@@ -25,6 +25,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
+| `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -353,11 +354,16 @@ A name the manifest does not declare exits `1` and says which table to add (or, 
 
 ```console
 $ chartbook path fed_yield_curve:treasury_rates
-/Users/x/.chartbook/store/objects/sha256/4b/1f…/treasury_rates.parquet
+/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-26T182205Z_9b1e22d7a0c4/_data/treasury_rates.parquet
 
 $ chartbook path fed_yield_curve:chart/curve_today
-/Users/x/.chartbook/store/objects/sha256/cc/71…/curve_today.html
+/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html
 ```
+
+The path is into the store, where the snapshot that first had the file keeps it, under its own
+name. An asset whose files are kept in more than one snapshot's folder (a folder of files, some of
+them new in a later snapshot) is gathered into this machine's cache instead, as links where the
+disk allows, and the path is the cache's.
 
 This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, not to that pipeline's working directory (before a pin, by the rules in {doc}`../guide/depending-on-pipelines`). So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
 
@@ -1117,6 +1123,40 @@ What it is careful about:
 - **What it cannot remove is said, and the rest goes.** In a store users share, an object or a record another user put there sits in a folder of theirs that you may not write. `gc` removes everything else in the plan, prints what it removed, lists each thing it could not remove with its path and what to do (its owner removes it, with `chartbook store gc` there or by hand, or gives you write permission on it and on the folder holding it), and exits `1`. What a record that stayed names stays with it, and an object that stayed is in the next run's list.
 
 A note only ever adds to what is kept. A lockfile on this machine is read as it is now, and what its note recorded at its last pin (the objects, and the snapshots) is kept as well: check out an older commit and run `gc` without pinning, and the pins of the commit you left are kept, by the note, until the next `chartbook pin`, `chartbook update`, `--frozen` or read writes it again (a read, or `--frozen`, on the older commit writes it too, with that commit's pins). A note from before notes named their machine, in your own store, is read as it was then: its lockfile alone.
+
+
+### store migrate
+
+```console
+chartbook store migrate [--dry-run] [--yes]
+```
+
+Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
+each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
+commit, and each file once, under its own name ({doc}`../design/plan-0.3.0`). A store of 0.2 is
+refused until it is moved, with a message that says to run this.
+
+- **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
+  is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
+  for the sync.
+- **Files are moved, not copied,** so a store in a synced folder uploads nothing again. Bytes two
+  pipelines' snapshots share are copied for the second. The files of a glob, whose records give no
+  hash for each file, are read once to hash them; in a folder that streams its files, as Google
+  Drive's does, that downloads them. `--dry-run` says how much.
+- **Cut short, it goes on.** What is moved is noted before it is moved, and running it again goes
+  on where it stopped.
+- **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
+  where it is kept while a lockfile names it.
+- **A bucket** is moved as a folder: sync it to one (`aws s3 sync`), point `CHARTBOOK_STORE` at the
+  folder, run this, and sync it back.
+
+```console
+$ chartbook store migrate --dry-run
+The store at /Volumes/GoogleDrive/My Drive/chartbook_store has the layout of ChartBook 0.2.
+Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s), 2.3 GB.
+2.0 GB of globs and documents is read once, to hash each file.
+Nothing was moved (--dry-run).
+```
 
 ## chartbook config
 

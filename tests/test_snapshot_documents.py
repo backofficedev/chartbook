@@ -332,40 +332,44 @@ class TestWhatTheReviewFound:
         (laid.folder / VERSION_FILE).write_text(json.dumps({"pipeline": "x", "pad": "y" * 100000}), encoding="utf-8", newline="\n")
         assert read_version_file(laid.folder) == {}  # too large to be one
 
-    def test_a_link_planted_in_an_object_is_not_followed(self, pipeline, tmp_path):
-        """A store a team shares may hold whatever someone put there: a link in a directory
-        asset's object, in a one-file asset's object, and in the documents' object."""
+    def test_a_link_planted_in_the_store_is_not_followed(self, pipeline, tmp_path):
+        """A store a team shares may hold whatever someone put there: a link beside a directory
+        asset's files, and a link in place of a one-file asset's file and of a document."""
+        from chartbook.store import StoreError
+
         taken = snapshot.make(pipeline).snapshot
         store = default_store()
+        folder = taken.path.parent.parent  # the snapshot's folder in the store
         secret = tmp_path / "secret.txt"
         secret.write_text("LOCAL SECRET", encoding="utf-8", newline="\n")
-        model = Path(store.get(taken.assets["model/ar1"]["content_hash"]))
-        (model / "weights" / "planted").symlink_to(secret)
-        treasury = Path(store.get(taken.assets["treasury"]["content_hash"]))
-        (treasury / "treasury.parquet").chmod(0o644)
-        (treasury / "treasury.parquet").unlink()
-        (treasury / "treasury.parquet").symlink_to(secret)
-        documents = Path(store.get(taken.documents["content_hash"]))
-        (documents / "README.md").chmod(0o644)
-        (documents / "README.md").unlink()
-        (documents / "README.md").symlink_to(secret)
+        (folder / "_models" / "ar1" / "weights" / "planted").symlink_to(secret)
+        (folder / "_data" / "treasury.parquet").chmod(0o644)
+        (folder / "_data" / "treasury.parquet").unlink()
+        (folder / "_data" / "treasury.parquet").symlink_to(secret)
         laid = snapshot.materialize(taken, tmp_path / "laid")
+        # The directory is laid out from its record's files: the planted one is not among them
+        assert (laid.folder / "_models" / "ar1" / "weights" / "best.pt").is_file()
         assert not (laid.folder / "_models" / "ar1" / "weights" / "planted").exists()
-        assert not (laid.folder / "README.md").exists() and ("README.md", snapshot.A_LINK) in laid.left_out
-        assert ("acme/rates:treasury", "its object holds no file") in laid.left_out
-        assert "LOCAL SECRET" not in "".join(p.read_text(errors="replace", encoding="utf-8") for p in laid.folder.rglob("*") if p.is_file())
+        (why,) = [why for what, why in laid.left_out if what == "acme/rates:treasury"]
+        assert "is a link, or leads out of the store" in why
+        assert not any("LOCAL SECRET" in p.read_text(errors="replace", encoding="utf-8") for p in laid.folder.rglob("*") if p.is_file())
+        # A document that is a link: nothing of the version's documents is read
+        (folder / "README.md").chmod(0o644)
+        (folder / "README.md").unlink()
+        (folder / "README.md").symlink_to(secret)
+        with pytest.raises(StoreError, match="is a link, or leads out of the store"):
+            snapshot.materialize(taken, tmp_path / "again")
+        assert not any("LOCAL SECRET" in p.read_text(errors="replace", encoding="utf-8") for p in (tmp_path / "again").rglob("*") if p.is_file())
 
-    def test_an_object_folder_that_is_a_link_is_refused(self, pipeline, tmp_path):
+    def test_a_folder_in_the_store_that_is_a_link_is_refused(self, pipeline, tmp_path):
         from chartbook.store import StoreError
 
         taken = snapshot.make(pipeline).snapshot
         store = default_store()
         mine = tmp_path / "mine"
-        (mine / "docs_src" / "site").mkdir(parents=True)
-        (mine / "docs_src" / "site" / "private.md").write_text("MY PRIVATE NOTES", encoding="utf-8", newline="\n")
-        held = Path(store.get(taken.documents["content_hash"]))
-        import shutil
-
+        mine.mkdir()
+        (mine / "guide.md").write_text("MY PRIVATE NOTES", encoding="utf-8", newline="\n")
+        held = taken.path.parent.parent / "docs_src" / "site"  # the documents' folder, and no asset's
         for file in held.rglob("*"):
             file.chmod(0o755 if file.is_dir() else 0o644)
         remove_tree(held)
@@ -375,6 +379,7 @@ class TestWhatTheReviewFound:
         with pytest.raises(StoreError):
             snapshot.materialize(taken, tmp_path / "laid")
         assert not any("MY PRIVATE NOTES" in p.read_text(errors="replace", encoding="utf-8") for p in (tmp_path / "laid").rglob("*") if p.is_file())
+
 
     @pytest.mark.skipif(os.name == "nt", reason="Windows allows no file name that ends in a space or holds a backslash")
     def test_a_tracked_name_that_differs_from_its_plain_form_is_not_taken(self, pipeline):

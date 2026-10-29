@@ -3546,6 +3546,88 @@ def store_info():
     click.echo("  where what is read from a remote store is kept on this machine")
 
 
+@store.command("migrate")
+@click.option("--dry-run", is_flag=True, help="Say what would be moved, and move nothing")
+@click.option("--yes", "-y", is_flag=True, help="Do not ask")
+def store_migrate(dry_run, yes):
+    """Move a store made by ChartBook 0.2 to the layout of 0.3.
+
+    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
+    for each snapshot in it named by when it was made and its commit, and
+    each file once, under its own name. A store of 0.2 is refused until it
+    is moved, once, on one machine.
+
+    Upgrade every machine that uses the store to ChartBook 0.3 first: a
+    machine still on 0.2 cannot read the store once it is moved, and says
+    so. Then run this on one of them; in a store a sync service keeps, the
+    others wait for the sync.
+
+    Files are moved by renaming, so a store in a synced folder uploads
+    nothing again; bytes two pipelines' snapshots share are copied for the
+    second. The files of a glob, whose records give no hash for each file,
+    are read once to hash them: in a folder that streams its files (Google
+    Drive's), that downloads them. A migrate cut short is run again and
+    goes on where it stopped. A store in a bucket is moved by syncing it to
+    a folder (`aws s3 sync`), moving that, and syncing it back.
+
+    \b
+    Examples:
+        chartbook store migrate --dry-run
+        chartbook store migrate
+    """
+    from chartbook import migrate
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        the_store = default_store()
+    except (StoreError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not isinstance(the_store, FolderStore):
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"The store at {the_store} is not a folder. Sync it to one (`aws s3 sync`), set CHARTBOOK_STORE to "
+            f"that folder, run this, and sync it back.",
+            err=True,
+        )
+        raise SystemExit(1)
+    try:
+        plan = migrate.plan(the_store.root)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not plan.needed:
+        click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
+        return
+    left = len(plan.records) - plan.done
+    click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
+    click.echo(
+        f"Would move {left} snapshot(s) of {len(plan.records)} into their pipelines' folders, from "
+        f"{plan.objects} object(s), {_format_bytes(plan.size_bytes)}"
+        + (f"; {plan.done} were moved by a migrate cut short" if plan.done else "")
+        + "."
+    )
+    if plan.unowned:
+        click.echo(f"{len(plan.unowned)} object(s) no snapshot names go to pipelines/+unowned/, until no lockfile names them.")
+    if plan.shared:
+        click.echo(f"{plan.shared} object(s) two pipelines' snapshots share are copied for the second.")
+    if plan.to_read:
+        click.echo(f"{_format_bytes(plan.to_read)} of globs and documents is read once, to hash each file.")
+    if dry_run:
+        click.echo("Nothing was moved (--dry-run).")
+        return
+    if not yes and not click.confirm("Move it now? Every machine that uses this store must have ChartBook 0.3 first", default=False):
+        click.echo("Nothing was moved.")
+        return
+    try:
+        migrate.run(the_store.root, echo=click.echo)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        click.echo("What was moved stays moved: run this again to go on.", err=True)
+        raise SystemExit(1)
+    click.echo(f"Moved. The store at {the_store} has the layout of ChartBook 0.3; `chartbook store verify` checks it.")
+
+
 @store.command("verify")
 def store_verify():
     """Hash every object in the store again; exit nonzero if one has changed.

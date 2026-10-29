@@ -124,9 +124,9 @@ def frozen_kind(request, work):
 
 
 class TestLayout:
-    def test_an_object_is_a_directory_named_by_its_hash(self, store, work):
+    def test_an_object_no_pipeline_owns_is_a_directory_named_by_its_hash(self, store, work):
         assert store.object_path(HELLO) == (
-            work / "store" / "objects" / "sha256" / "2c" / HELLO[len("sha256:2c") :]
+            work / "store" / "pipelines" / "+unowned" / HELLO[len("sha256:") :]
         )
 
     @pytest.mark.parametrize(
@@ -489,15 +489,16 @@ class TestGetHasDelete:
         store.put(rates)
         other = store.put(partitioned)
         store.delete(HELLO)
-        assert not store.object_path(HELLO).parent.exists()
+        assert not store.object_path(HELLO).exists()
         assert other.path.is_dir()
 
     def test_hashes_are_in_order_and_skip_what_is_not_an_object(self, store, rates, partitioned):
         first = store.put(rates).content_hash
         second = store.put(partitioned).content_hash
-        (store.root / "objects" / "sha256" / "README").write_text("not an object", encoding="utf-8", newline="\n")
-        (store.root / "objects" / "sha256" / "zz").mkdir()
-        (store.root / "objects" / "sha256" / "zz" / "nope").mkdir()
+        unowned = store.root / "pipelines" / "+unowned"
+        (unowned / "README").write_text("not an object", encoding="utf-8", newline="\n")
+        (unowned / "zz").mkdir()
+        (store.root / "pipelines" / "acme+rates").mkdir()  # a pipeline's folder with no snapshot yet
         assert list(store.hashes()) == sorted([first, second])
 
 

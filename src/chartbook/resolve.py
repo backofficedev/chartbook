@@ -911,11 +911,20 @@ def _held(store, record: dict) -> Location:
     unsynced = not_whole(store, record)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
-    held = store.get(record["content_hash"])
+    from chartbook.snapshot import materialized_name
+    from chartbook.store import declared_name as _declared_name
+    from chartbook.utils import is_glob_pattern as _is_glob
+
+    # The name a file is read by: the same bytes may be two assets', kept once
+    if record["location"].get("kind") in ("table", "query"):
+        one = materialized_name(record)
+    elif isinstance(record.get("files"), list) or _is_glob(record["location"].get("path", "")):
+        one = None
+    else:
+        one = _declared_name(record["location"].get("path", "")) or None
+    held = store.get(record["content_hash"], name=one)
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
-        from chartbook.snapshot import materialized_name
-
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):

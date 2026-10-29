@@ -31,6 +31,7 @@ chartbook
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.stores
 ../apidocs/chartbook/chartbook.stores.s3
+../apidocs/chartbook/chartbook.migrate
 ../apidocs/chartbook/chartbook.snapshot
 ../apidocs/chartbook/chartbook.versions
 ../apidocs/chartbook/chartbook.lock

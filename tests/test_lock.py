@@ -75,25 +75,27 @@ def _statuses(report, dependency=None) -> dict:
 
 
 def _age(store: Store, monkeypatch, seconds: float = 2 * lock.RECENT_SECONDS) -> None:
-    """Make every object in a store look as if it was stored a while ago.
+    """Make everything in a store look as if it was stored a while ago.
 
-    A store goes by when an object came to this machine as well as by its
-    time (:meth:`chartbook.store.FolderStore.age_of`), and when it came
-    cannot be set back: so for these objects, as long as nothing touches
-    them again (storing one again does), their time alone is their age.
+    A store goes by when a snapshot's record (or an object no pipeline
+    owns) came to this machine as well as by its time
+    (:meth:`chartbook.store.FolderStore.age_of`), and when it came cannot be
+    set back: so for these, as long as nothing touches them again (a new
+    record of the same bytes does), their time alone is their age.
     """
     then = time.time() - seconds
     aged = {}
-    for content_hash in store.hashes():
-        held = store.object_path(content_hash)
-        os.utime(held, (then, then))
-        aged[str(held)] = held.stat().st_mtime_ns
+    held = [record.path for record in store.records()] + [store.unowned_path(h) for h in store.unowned_hashes()]
+    for path in held:
+        os.utime(path, (then, then))
+        aged[str(path)] = path.stat().st_mtime_ns
     told = FolderStore.age_of
 
     def age_of(self, content_hash, now=None):
-        held = self.object_path(content_hash)
-        if aged.get(str(held)) == held.stat().st_mtime_ns:
-            return (time.time() if now is None else now) - held.stat().st_mtime
+        paths = [asset.record.path for asset in self._held(content_hash)] + [self.unowned_path(content_hash)]
+        there = [path for path in paths if path.exists()]
+        if there and all(aged.get(str(path)) == path.stat().st_mtime_ns for path in there):
+            return (time.time() if now is None else now) - max(path.stat().st_mtime for path in there)
         return told(self, content_hash, now)
 
     monkeypatch.setattr(FolderStore, "age_of", age_of)
@@ -996,7 +998,10 @@ class TestGc:
         lock.write_lock(locked, downstream / LOCK_FILE)
         assert by_year not in {h for h, _ in lock.plan_gc(moved).delete}
         moved.add_root(downstream / LOCK_FILE, locked.hashes())  # the next pin's note
-        assert by_year in {h for h, _ in lock.plan_gc(moved).delete}
+        # Named by neither now; but where the pin keeps it is kept whole, as
+        # any snapshot is, for the lockfile's other pins
+        plan = lock.plan_gc(moved)
+        assert by_year not in {h for h, _ in plan.delete} and len(plan.pinned_kept) == 1
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
         (downstream / LOCK_FILE).write_text("not json", encoding="utf-8", newline="\n")
