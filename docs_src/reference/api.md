@@ -14,6 +14,7 @@ chartbook
 ../apidocs/chartbook/chartbook.backends.databricks
 ../apidocs/chartbook/chartbook.assets
 ../apidocs/chartbook/chartbook.models
+../apidocs/chartbook/chartbook.files
 ../apidocs/chartbook/chartbook.env
 ../apidocs/chartbook/chartbook.plotting
 ../apidocs/chartbook/chartbook.cli

@@ -77,7 +77,7 @@ from chartbook.refs import DEFAULT_KIND, KIND_TABLES, AssetRef, parse_asset_ref
 MANIFEST_NAME = "chartbook.toml"
 
 #: The kinds of asset a manifest can declare, and so the kinds that resolve.
-RESOLVABLE_KINDS = ("dataframe", "chart", "notebook", "note", "model")
+RESOLVABLE_KINDS = ("dataframe", "chart", "notebook", "note", "model", "file")
 
 #: The manifest tables those kinds are declared in. Each table is its own
 #: namespace: ``[dataframes.gdp]`` and ``[charts.gdp]`` are two assets,
@@ -91,6 +91,7 @@ _EXAMPLE_PATHS = {
     "notebooks": "./_output/{name}.ipynb",
     "notes": "./docs_src/{name}.md",
     "models": "./_models/{name}.joblib",
+    "files": "./_data/{name}/",
 }
 
 
@@ -132,6 +133,10 @@ class FileLocation(Location):
             CSVs) has *listed* and no *files*: ``data.path()`` gives the
             folder, and a read of it as parquet is refused
             (:func:`nothing_to_read`).
+        content_hash: The asset's hash when the store holds what is read
+            (a pin, a version, a snapshot), so that its files' hashes can be
+            taken from the store's record rather than read. None for what is
+            read where it is: a local asset, another pipeline's working folder.
     """
 
     kind: ClassVar[str] = "file"
@@ -139,6 +144,7 @@ class FileLocation(Location):
     path: Path
     files: tuple = dataclasses.field(default=(), compare=False)
     listed: tuple = dataclasses.field(default=(), compare=False)
+    content_hash: Optional[str] = dataclasses.field(default=None, compare=False)
 
 
 def nothing_to_read(location: "Location") -> Optional[str]:
@@ -629,6 +635,12 @@ def parse_declared_ref(
                 f"{str(without)!r} to get the model's path, and join "
                 f"{asset.part!r} to it."
             )
+        if asset.kind == "file":
+            raise UnsupportedReferenceError(
+                f"Reference {str(asset)!r} names one file of a files asset. Use "
+                f"chartbook.assets.files({str(without)!r}) for its files, or "
+                f"assets.path({str(without)!r}) and join {asset.part!r} to it."
+            )
         raise UnsupportedReferenceError(
             f"Reference {str(asset)!r} addresses a part of a {asset.kind} with "
             f"'#'. A {asset.kind} has no parts; use {str(without)!r}."
@@ -929,9 +941,10 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
     else:
         one = _declared_name(record["location"].get("path", "")) or None
     held = store.get(record["content_hash"], pipeline, name=one)
+    content_hash = record["content_hash"]
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
-        return FileLocation(held / materialized_name(record))
+        return FileLocation(held / materialized_name(record), content_hash=content_hash)
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
         # The files are laid out from the glob's fixed prefix. What follows
@@ -948,7 +961,7 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
                 f"{record.get('id')!r}: its record's path, {declared_path!r}, is not plain after its "
                 f"wildcard. The record is not one a store wrote, and is not read."
             )
-        return FileLocation(held.joinpath(*parts))
+        return FileLocation(held.joinpath(*parts), content_hash=content_hash)
     from chartbook.store import declared_name
 
     name = declared_name(declared_path) or Path(declared_path).name  # as put named it, on every system
@@ -982,13 +995,16 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
         # folder of CSVs, a model's files) is still the folder for
         # data.path(), and a parquet read of it is refused (nothing_to_read)
         # rather than handed the folder, which would take whatever it holds
-        return FileLocation(held, tuple(read), listed=tuple(sorted(files_read(record) or {})))
+        return FileLocation(
+            held, tuple(read), listed=tuple(sorted(files_read(record) or {})), content_hash=content_hash
+        )
     from chartbook.store import on_disk
 
     own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
     if not own.is_file():
-        return FileLocation(held)  # a directory pinned before records listed its files: the folder
-    return FileLocation(own)
+        # A directory pinned before records listed its files: the folder
+        return FileLocation(held, content_hash=content_hash)
+    return FileLocation(own, content_hash=content_hash)
 
 
 #: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.

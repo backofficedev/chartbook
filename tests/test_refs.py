@@ -246,6 +246,7 @@ class TestAssetRef:
             "notebooks",
             "notes",
             "models",
+            "files",
         ]
         assert set(KIND_TABLES) == set(KINDS)
 

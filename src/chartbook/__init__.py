@@ -10,6 +10,10 @@ For the path of anything a pipeline declares:
     assets.path("chart/yield_curve")
     models.path("rate_forecaster")
 
+For the files of an asset, and a table of them:
+    assets.files("file/filings")
+    assets.index("file/filings")
+
 For plotting:
     from chartbook import plotting
     plotting.line(df, chart_id="my_chart", x="date", y="value")
@@ -21,7 +25,7 @@ For CLI (install via pipx):
 
 import importlib
 
-from . import assets, data, env, models
+from . import assets, data, env, files, models
 from .__about__ import __version__
 
 # Lazy import for plotting to avoid requiring plotting dependencies
@@ -43,6 +47,7 @@ __all__ = [
     "assets",
     "data",
     "models",
+    "files",
     "env",
     "plotting",
 ]

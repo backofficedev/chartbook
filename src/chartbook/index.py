@@ -9,7 +9,7 @@ need nothing else.
 
 The format is specified in ``docs_src/design/index-schema.md``. This module
 writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
-``Notebook``, ``Note`` and ``Model`` records, and each pipeline's declared
+``Notebook``, ``Note``, ``Model`` and ``File`` records, and each pipeline's declared
 ``dependencies``, with what ``chartbook.lock`` pins of them. ``Build``
 records come with the part of the asset graph that produces them.
 
@@ -66,7 +66,11 @@ SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
 
 #: The kinds of asset this module writes records for, in the order a
 #: pipeline's assets are listed.
-ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
+ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model", "file")
+
+#: The most files a record of a files asset, or of a dataframe of many
+#: parts, lists; ``file_count`` says how many there are in all.
+FILES_LISTED = 1000
 
 # Manifest keys that the index states in another form, or not at all
 #: Manifest keys that become a record's structure (its location, its
@@ -250,8 +254,18 @@ def _file_facts(
     :param list_files: If True and the path is a directory, also list the
         files in it, each with its own size and hash.
     """
+    return _located_facts(base_dir, declared_path, cache, list_files)[0]
+
+
+def _located_facts(
+    base_dir: Path,
+    declared_path: Any,
+    cache: Optional[hashing.HashCache],
+    list_files: bool = False,
+) -> tuple[dict, Optional[hashing.ContentHash]]:
+    """:func:`_file_facts`, and the hash it worked out, with each file's when there are several; None when not built."""
     if not isinstance(declared_path, str) or not declared_path.strip():
-        return {}
+        return {}, None
     resolved = os.path.normpath(base_dir / declared_path)
     facts: dict = {
         "location": {
@@ -280,7 +294,50 @@ def _file_facts(
                 }
                 for file in content.files
             ]
-    return facts
+    return facts, content
+
+
+def _listed_files(content: hashing.ContentHash, resolved: str, rows: bool = False) -> dict:
+    """What a record says of the files an asset is made of: how many, and the first :data:`FILES_LISTED`.
+
+    Each file with its path inside the asset, its size and its hash, and
+    the keys of the ``key=value`` folders it is in (``partitions``). With
+    *rows*, a parquet file's rows too, from its footer: no data is read.
+    A single file is listed under its own name.
+    """
+    from chartbook.files import listing_root, partitions
+
+    if content.files:
+        entries = list(content.files)
+    else:
+        entries = [hashing.FileEntry(Path(resolved).name, content.size_bytes, content.content_hash)]
+    root = listing_root(resolved)
+    listed = []
+    for entry in entries[:FILES_LISTED]:
+        item: dict = {"path": entry.path, "size_bytes": entry.size_bytes, "content_hash": entry.content_hash}
+        if rows:
+            count = _parquet_rows(root.joinpath(*entry.path.split("/")))
+            if count is not None:
+                item["row_count"] = count
+        keys = partitions(entry.path)
+        if keys:
+            item["partitions"] = keys
+        listed.append(item)
+    return {"file_count": len(entries), "files": listed}
+
+
+def _parquet_rows(file: Path) -> Optional[int]:
+    """A parquet file's rows, from its footer alone; None for a file that is not parquet, or cannot be read."""
+    from chartbook.resolve import _is_parquet
+
+    if not (file.name.lower().endswith((".parquet", ".pq")) or _is_parquet(file)):
+        return None
+    try:
+        import pyarrow.parquet as pq
+
+        return int(pq.read_metadata(file).num_rows)
+    except Exception:  # noqa: BLE001 - pyarrow raises many types for "not readable"
+        return None
 
 
 def _source_facts(entry: dict) -> dict:
@@ -666,12 +723,22 @@ def _asset_records(
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
     record = _head(kind, ref, pipeline_id, entry)
-    facts = _file_facts(
+    facts, content = _located_facts(
         base_dir, entry.get("path"), cache, list_files=(kind == "model")
     )
     record.update(facts)
     series: list[dict] = []
     skip: tuple = ()
+    resolved = (facts.get("location") or {}).get("resolved_path")
+    if kind == "file" and content is not None:
+        # What the page lists and counts: the files, and how many of each type
+        from chartbook.files import count_by_extension
+
+        record.update(_listed_files(content, resolved))
+        record["extensions"] = count_by_extension([entry.path for entry in content.files] or [Path(resolved).name])
+    elif kind == "dataframe" and content is not None and content.files:
+        # A dataframe of many parts: each, with its rows, for its page
+        record.update(_listed_files(content, resolved, rows=True))
 
     if kind == "dataframe":
         skip = ("series",)  # they become Series records below
@@ -794,7 +861,7 @@ def pipeline_records(
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
-    Assets come in the order dataframes, charts, notebooks, notes, models,
+    Assets come in the order dataframes, charts, notebooks, notes, models, files,
     each by name, and each dataframe is followed by its series.
 
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).

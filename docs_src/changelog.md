@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `[files]`: files that are not tables, kept, pinned and documented (#133)
+
+A pipeline can declare any file, folder or glob of files as an asset under `[files.<name>]`, whatever is inside: an archive of gzipped JSON lines kept in its source's format, a corpus of text or HTML, PDFs, images, NumPy arrays, a SQLite file, a vendor's zip. It takes `path` and the fields a dataframe has to say where it came from and who may use it (`description`, `docs_path` or `docs`, `sources`, `providers`, `license`, `restrictions`, `tags`, `keep`, and fields of your own). Its address is `file/<name>`, and another pipeline's is `pipeline:file/<name>`. `chartbook snapshot`, `pin`, `update`, `restore`, `lineage` and `store gc` treat it as any other asset. ChartBook never reads the files but for a short preview; reading them is your own code ({ref}`[files] <files>`).
+
+- **`assets.files(ref)`** gives an asset's files, sorted: the file, a folder's files, or a glob's matches, the files its hash is made of. It works for a dataframe of many parts and a model that is a folder too, so a consumer no longer expands a glob itself (#135). `chartbook path REF --files` prints them.
+- **`assets.index(ref)`** is a polars LazyFrame with one row per file, `path`, `size_bytes` and `sha256`, and a column for the key of each `key=value` folder, to pick files with before opening any. Of another pipeline's asset, the sizes and hashes come from the store's record, and nothing is read; of this pipeline's, the files are hashed, each read again only when it has changed.
+- **Its page** says how many files it has, how large they are and how many of each type, lists the first 50 with their sizes, and previews one: the first lines of a text or JSON-lines file, gzip included, with a line of JSON pretty-printed (at most 4 KB is decompressed), or a thumbnail of an image. A pipeline's front page and a catalog list files assets, and the site's `llms.txt` has a section for them.
+- **`index.json`** has a `File` record, with a JSON Schema: its content hash, `file_count`, a count by type (`extensions`) and its first 1000 files.
+- **`chartbook check`** reports a path that matches no file, a folder with nothing in it included (not with `--skip-outputs`, as for a dataframe), a write-up that is not there, and a license that has expired. A `[policy.required]` list may name `files`; by default `name`, `description`, `sources`, `providers`, `tags`, a write-up and `path` are recommended.
+
+**A dataframe of many parts shows its parts** (#135). Its page lists each file with its size and its rows, read from the parquet footer alone, and, for data in `key=value` folders, each partition key and its values. Its record in `index.json` has the same, under `file_count` and `files`.
+
 ### Added — `chartbook store export` and `store import`: one pipeline's snapshots, sent and taken in
 
 `chartbook store export ID --to FOLDER` writes a pipeline's snapshots into a folder laid out as a store, `FOLDER/pipelines/<pipeline>/`, to send to a collaborator: every snapshot its owner made, the newest alone with `--latest` (one complete snapshot, every file it needs in its own folder), or those `--snapshot` names. `chartbook store import FOLDER` copies the snapshots of such a folder, of a store, or of a pipeline's folder copied by hand, into this machine's store, every file checked against its record as it is copied; a file the store holds is not copied again and nothing is written over. The collaborator's pipelines then pin it by its ID ({doc}`design/plan-0.3.0`, "Sharing one pipeline").

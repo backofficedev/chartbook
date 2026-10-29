@@ -10,3 +10,9 @@
 .cb-freshness time {
   border-bottom: 1px dotted var(--md-default-fg-color--lighter);
 }
+
+/* A files asset's preview image: a thumbnail, whatever its size */
+.cb-thumbnail {
+    max-width: 320px;
+    max-height: 320px;
+}

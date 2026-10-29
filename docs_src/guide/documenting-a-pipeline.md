@@ -146,6 +146,32 @@ model = joblib.load(models.path("rate_forecaster@champion"))
 
 Promoting a newer version is changing that one line. See {ref}`Versions and labels <model-versions>`.
 
+## Files that are not tables
+
+Some of what a pipeline keeps is not a table: an archive of gzipped JSON lines kept in its source's format, a corpus of filings as HTML, PDFs, images, NumPy arrays, a vendor's zip kept byte for byte. Declare it under `[files]`, with the same fields a dataframe has to say where it came from and who may use it:
+
+```toml
+[files.earnings_releases]
+description = "The data API's earnings releases, one file a quarter, as the API sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"
+sources = ["Vendor API"]
+license = "Licensed to the department"
+docs_path = "./docs_src/files/earnings_releases.md"
+```
+
+It gets a page with its write-up, how many files it has and of which types, the first of them with their sizes, and a short preview of one: the first lines of a text or JSON-lines file, or a thumbnail of an image. ChartBook never reads it otherwise. Your code reads the files, which `assets.files` gives, sorted:
+
+```python
+import gzip, json
+from chartbook import assets
+
+for path in assets.files("file/earnings_releases"):
+    with gzip.open(path, "rt") as f:
+        releases = [json.loads(line) for line in f]
+```
+
+`assets.index("file/earnings_releases")` is a table of the files, with their sizes and hashes, to pick from with polars before opening any. Another pipeline reads them the same way, as pinned: `assets.files("filings:file/earnings_releases")`. See {ref}`[files] <files>`.
+
 ## Depending on another pipeline
 
 A pipeline that uses another pipeline's data declares it in `[dependencies]`, pins a **snapshot**
@@ -201,6 +227,7 @@ A dataframe is named by its key in `[dataframes]`, and nothing more. Any other a
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
 | `model/rate_forecaster` | `[models.rate_forecaster]` |
+| `file/earnings_releases` | `[files.earnings_releases]` |
 
 Data is what gets passed around most, so it gets the short spelling. Each kind has its own names: a dataframe and a chart may both be called `gdp`, and they are `gdp` and `chart/gdp`.
 
@@ -211,7 +238,7 @@ assets.path("rates_over_time", kind="chart")    # the same as "chart/rates_over_
 assets.path("chart/rates_over_time", kind="note")   # error: that names a chart
 ```
 
-`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant. `models.path(name)` is the same for models.
+`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant. `models.path(name)` is the same for models, and `files.path(name)` for files assets. A path may be a folder or a glob; `assets.files(ref)` gives the files themselves, sorted, for any kind.
 
 The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
 
@@ -278,6 +305,6 @@ Once the pipeline builds cleanly, register it in a catalog: {doc}`catalogs-and-d
 
 ## The provenance panel
 
-Every dataframe, chart and model page carries a **Provenance** section, before its manifest sections, written from the build's `index.json` and nothing else: what the asset is and where it is; its content hash, size, rows and columns; which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot of which commit, and whether that has moved since a model was trained; and what is made from it. It is the answer to "which data, exactly, is behind this page", for a reader and for an auditor, and it changes only when the index does.
+Every dataframe, chart, model and files page carries a **Provenance** section, before its manifest sections, written from the build's `index.json` and nothing else: what the asset is and where it is; its content hash, size, rows and columns; which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot of which commit, and whether that has moved since a model was trained; and what is made from it. It is the answer to "which data, exactly, is behind this page", for a reader and for an auditor, and it changes only when the index does.
 
 The pipeline's own page answers the same question for the whole pipeline. Under **Dependencies** it lists each pipeline in its `[dependencies]`, as declared, and what `chartbook.lock` pins it to: the snapshot's commit and when it was made, or, for one pinned from its repository (a `git` dependency), that repository's commit; a dependency with no pin yet says so. In a catalog that shows the other pipeline, each entry links its page, in the snapshot pinned when the catalog has that version.

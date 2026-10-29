@@ -1,6 +1,6 @@
 """The Sphinx writer: pages for Sphinx, from the index and the files it names.
 
-The slices so far are the dataframe, chart, model and pipeline pages. Each
+The slices so far are the dataframe, chart, model, files and pipeline pages. Each
 renders today's templates with a context built from the record, its
 pipeline's record, the records of its inputs or assets and the files the
 records name, and writes the same page the generator writes, which a
@@ -41,6 +41,18 @@ _DATAFRAME_PAGE = (
 ```
 {{dataframe_glimpse}}
 ```
+{% if parts %}
+## Parts
+
+{{ parts.summary }}
+
+| File | Size | Rows |{% for key in parts.partition_keys %} {{key}} |{% endfor %}
+|------|------|------|{% for key in parts.partition_keys %}------|{% endfor %}
+{% for part in parts.rows %}| {{part.path | literal}} | {{part.size}} | {{part.rows}} |{% for value in part.partition_values %} {{value | literal}} |{% endfor %}
+{% endfor %}{% if parts.more %}
+And {{parts.more}} more: `assets.files("{{dataframe_id}}")` gives every file.
+{% endif %}
+{% endif %}
 
 {% include "provenance.md" %}
 
@@ -136,6 +148,73 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 {% include "pipeline_manifest.md" %}
 
 """
+
+
+#: The sections of a files asset's page: title and freshness, the write-up,
+#: then its files, a preview, how to read it, the panel and the manifests.
+_FILES_PAGE_HEAD = """# Files: `{{pipeline_id}}:file/{{files_id}}` - {{files_name}}
+
+{% include "freshness.md" %}
+
+"""
+
+_FILES_PAGE_TAIL = """
+
+## Files
+
+{% if listing %}
+{{ listing.summary }}
+
+| File | Size |
+|------|------|
+{% for file in listing.rows %}| {{file.path | literal}} | {{file.size}} |
+{% endfor %}{% if listing.more %}
+And {{listing.more}} more: `assets.index("file/{{files_id}}")` lists every one.
+{% endif %}
+{% else %}
+{{ not_built }}
+{% endif %}
+{% if preview %}
+## Preview
+
+{% if preview.kind == "image" %}{{ preview.path }}:
+
+<img src="{{preview.src}}" alt="{{preview.alt}}" class="cb-thumbnail">
+
+{% else %}The first lines of {{ preview.path }}:
+
+{{preview.fence}}text
+{{preview.text}}
+{{preview.fence}}
+{% endif %}
+{% endif %}
+## Reading Them
+
+ChartBook keeps these files as they are and does not read them. In this pipeline:
+
+```python
+from chartbook import assets
+
+paths = assets.files("file/{{files_id}}")      # every file, sorted
+table = assets.index("file/{{files_id}}")      # path, size_bytes, sha256{% if listing and listing.partition_keys %} and the folders' keys{% endif %}: a LazyFrame
+```
+
+In a pipeline that depends on this one, name it `<dependency>:file/{{files_id}}`.
+
+{% include "provenance.md" %}
+
+## Files Manifest
+
+{% include "file_manifest.md" %}
+
+## Pipeline Manifest
+
+{% include "pipeline_manifest.md" %}
+
+"""
+
+#: The most files a page lists; the index lists more (``chartbook.index.FILES_LISTED``), and `assets.index` all.
+FILES_SHOWN = 50
 
 
 def _is_from_the_store(record: dict) -> bool:
@@ -362,6 +441,7 @@ class SphinxWriter:
             "Dataframe": self.dataframe_page_path,
             "Chart": self.chart_page_path,
             "Model": self.model_page_path,
+            "File": self.files_page_path,
             "Pipeline": self.pipeline_page_path,
         }[record["kind"]](record)
 
@@ -382,6 +462,10 @@ class SphinxWriter:
     def model_page_path(self, record: dict) -> str:
         """Where a model's page is, under the pages folder."""
         return f"cb/models/{_slug(record['pipeline'])}/{_local_name(record)}.md"
+
+    def files_page_path(self, record: dict) -> str:
+        """Where a files asset's page is, under the pages folder."""
+        return f"cb/files/{_slug(record['pipeline'])}/{_local_name(record)}.md"
 
     def link_to_dataframe(self, record: dict, from_kind: str = "Dataframe") -> str:
         """The link to a dataframe's page from a page of the given kind, relative to that page.
@@ -448,6 +532,7 @@ class SphinxWriter:
             most_recent_data_max="" if last is None else last,
             dot_or_dotdot="../..",
             dataframe_glimpse=glimpse,
+            parts=_parts(record),
             # Only a file the build copies for download is linked
             enable_data_download=self.enable_data_download and downloadable(record),
             freshness=[fact for fact in freshness if fact],
@@ -565,6 +650,68 @@ class SphinxWriter:
             freshness=[fact for fact in [_freshness("Model updated", location.get("modified_at"))] if fact],
         )
 
+    def files_page(self, record_id: str) -> str:
+        """The Markdown page of one files asset, from its record and the write-up.
+
+        Its files are as the record lists them: how many, how large, of
+        which types, and the first :data:`FILES_SHOWN`. The one file read is
+        the one previewed, the first the record lists that a preview can
+        show, and only its first few KB (:func:`chartbook.files.preview_of`).
+        """
+        from chartbook.sitefiles import not_built_text, thumbnail_path
+
+        record = self.records[record_id]
+        pipeline = self.records[record["pipeline"]]
+        base_dir = Path(pipeline["location"]["value"])
+        environment = self._environment(base_dir)
+        location = record.get("location") or {}
+        name = _local_name(record)
+        preview = self.files_preview(record)
+        if preview is not None:
+            src = "../" * self.files_page_path(record).count("/") + thumbnail_path(record, preview)
+            preview = dict(preview, path=_code(preview["path"]))
+            if preview["kind"] == "image":
+                preview["src"] = src
+                preview["alt"] = _as_text(Path(preview["file"]).name)
+            else:
+                longest = max((len(run) for run in re.findall(r"`+", preview["text"])), default=0)
+                preview["fence"] = "`" * max(3, longest + 1)
+        template = environment.from_string(_FILES_PAGE_HEAD + "{{ write_up }}" + _FILES_PAGE_TAIL)
+        files_manifest = self._files_manifest(record)
+        return template.render(
+            files_manifest=files_manifest,
+            write_up=self._write_up(record, base_dir, environment),
+            provenance=self._panel(record_id, self.page_path(record)),
+            files_id=name,
+            files_name=record.get("name", name),
+            link_to_files_docs=f"../../files/{_slug(record['pipeline'])}/{name}.md",
+            pipeline_id=record["pipeline"],
+            pipeline_manifest=self._pipeline_manifest(pipeline),
+            pipeline_page_link=self.pipeline_page_link(record),
+            dot_or_dotdot="../..",
+            listing=_listing(record),
+            not_built=not_built_text(path=_code(location.get("path", "")), command="`chartbook build`"),
+            preview=preview,
+            freshness=[fact for fact in [_freshness("Files updated", location.get("modified_at"))] if fact],
+        )
+
+    def files_preview(self, record: dict) -> Optional[dict]:
+        """What a files asset's page previews, from the files its record lists (:func:`chartbook.files.preview_of`)."""
+        from chartbook.files import listing_root, preview_of
+
+        resolved = (record.get("location") or {}).get("resolved_path")
+        if not resolved or not record.get("content_hash"):
+            return None
+        return preview_of(record.get("files") or [], listing_root(resolved))
+
+    def _files_manifest(self, record: dict) -> dict:
+        """The files asset as the templates read it: its declared fields and its path."""
+        skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes",
+                "file_count", "extensions", "files", "docs"}
+        shown = {key: value for key, value in record.items() if key not in skip}
+        shown["path"] = (record.get("location") or {}).get("path", "")
+        return shown
+
     def pipeline_page(self, pipeline_id: str) -> str:
         """The Markdown page of one pipeline, from its record, its assets' records and the files they name.
 
@@ -607,6 +754,7 @@ class SphinxWriter:
             pipeline_manifest=self._pipeline_manifest(pipeline),
             dataframe_file_list=[self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe"],
             model_file_list=[self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model"],
+            files_file_list=[self.files_page_path(r) for r in self.records.values() if r["kind"] == "File"],
             readme_text="".join(readme[2:]),
             pipeline_page_link="./index.md",
             dot_or_dotdot="cb",
@@ -632,14 +780,16 @@ class SphinxWriter:
     ASSISTANT_FILE = ASSISTANT_FILE
 
     #: The kinds the assistant file lists, under these headings, in this order
-    ASSISTANT_SECTIONS = (("Pipeline", "Pipelines"), ("Dataframe", "Dataframes"), ("Chart", "Charts"), ("Model", "Models"))
+    ASSISTANT_SECTIONS = (
+        ("Pipeline", "Pipelines"), ("Dataframe", "Dataframes"), ("Chart", "Charts"), ("Model", "Models"), ("File", "Files")
+    )
 
     #: How many versions of a pipeline the assistant file lists, newest first;
     #: the versions page lists them all
     ASSISTANT_VERSIONS = 10
 
     def assistant_file(self) -> str:
-        """The site as an assistant reads it: one line per pipeline, dataframe, chart and model, with where its page is.
+        """The site as an assistant reads it: one line per pipeline, dataframe, chart, model and files asset, with where its page is.
 
         In the llms.txt form: the site's name as the title, what it is as the
         summary, then a list per kind, each line ``- [name](page): `ID`.
@@ -690,9 +840,10 @@ class SphinxWriter:
             "quotation marks, what its owner wrote of it. Every record, with its fields, inputs and content "
             "hashes, is in [index.json](index.json).",
             "",
-            "An ID is `pipeline:name` for a dataframe, `pipeline:chart/name` for a chart and "
-            "`pipeline:model/name` for a model. Inside that pipeline, an asset is named without the pipeline "
-            "(`chartbook path name`, `chartbook path model/name`, `data.load(\"name\")`); in another pipeline "
+            "An ID is `pipeline:name` for a dataframe, `pipeline:chart/name` for a chart, "
+            "`pipeline:model/name` for a model and `pipeline:file/name` for files. Inside that pipeline, an asset is "
+            "named without the pipeline (`chartbook path name`, `chartbook path model/name`, `data.load(\"name\")`, "
+            "`assets.files(\"file/name\")`); in another pipeline "
             "that declares it in `[dependencies]` and has pinned it, by the dependency's key, a colon and the "
             "name. Through a catalog that lists it: "
             "`data.load(pipeline=\"pipeline\", dataframe=\"name\", catalog_path=\"...\")`.",
@@ -744,7 +895,9 @@ class SphinxWriter:
     #: The pages a catalog renders from its records, by path under the pages
     #: folder. `charts.md` and `contributing.md` are static files of the
     #: theme that the build copies; they are not rendered.
-    CATALOG_PAGES = ("index.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md", "cb/versions.md")
+    CATALOG_PAGES = (
+        "index.md", "cb/dataframes.md", "cb/models.md", "cb/files.md", "cb/pipelines.md", "cb/diagnostics.md", "cb/versions.md"
+    )
 
     def own_page_paths(self) -> list:
         """The site's own pages this writer renders besides the records': a catalog's pages; none for a pipeline site."""
@@ -756,12 +909,15 @@ class SphinxWriter:
 
     def catalog_page_paths(self) -> list:
         """The catalog pages this index has: `cb/models.md` only when some pipeline declares a model,
-        `cb/versions.md` only when some pipeline has a snapshot in the store."""
+        `cb/files.md` only when some pipeline declares files, `cb/versions.md` only when some pipeline
+        has a snapshot in the store."""
         has_models = any(r["kind"] == "Model" for r in self.records.values())
+        has_files = any(r["kind"] == "File" for r in self.records.values())
         has_versions = self._has_versions()
         return [
             p for p in self.CATALOG_PAGES
-            if (has_models or p != "cb/models.md") and (has_versions or p != "cb/versions.md")
+            if (has_models or p != "cb/models.md") and (has_files or p != "cb/files.md")
+            and (has_versions or p != "cb/versions.md")
         ]
 
     def _has_versions(self) -> bool:
@@ -799,7 +955,9 @@ class SphinxWriter:
                 f'The newest snapshot: <a href="../../{target}/index.html">`{newest["commit"][:7]}`, made {made}</a>. '
                 f"[Every version](../versions.md)."
             )
-            assets = self.from_the_store_assets(("dataframe", "chart", "model"), self.pipeline_page_path(pipeline), pipeline["id"])
+            assets = self.from_the_store_assets(
+                ("dataframe", "chart", "model", "file"), self.pipeline_page_path(pipeline), pipeline["id"]
+            )
             if assets:
                 lines += ["", "What its newest snapshot holds, each linked to its page there:", ""]
                 lines += [
@@ -825,7 +983,7 @@ class SphinxWriter:
         are; then one entry with ``more``, how many are not, linked to the
         snapshot's site.
 
-        :param kinds: The kinds to list, as a reference names them: ``dataframe``, ``chart``, ``model``.
+        :param kinds: The kinds to list, as a reference names them: ``dataframe``, ``chart``, ``model``, ``file``.
         :param pipeline_id: Only this pipeline's; every one's by default.
         :returns: Each as ``{"kind", "id", "title", "pipeline", "link"}``, by pipeline, then kind, then name.
         """
@@ -909,11 +1067,13 @@ class SphinxWriter:
         environment = self._environment(base_dir)
         dataframes = sorted(self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe")
         models = sorted(self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model")
+        files = sorted(self.files_page_path(r) for r in self.records.values() if r["kind"] == "File")
         if page_path == "index.md":
             return environment.get_template("index.md").render(
                 manifest={"project": {"name": catalog.get("name", "")}},
                 dataframe_file_list=dataframes,
                 model_file_list=models,
+                files_file_list=files,
                 readme_text="",
                 dot_or_dotdot="cb",
                 has_versions=self._has_versions(),
@@ -929,6 +1089,8 @@ class SphinxWriter:
             return environment.get_template("models.md").render(
                 model_file_list=[p.removeprefix("cb/") for p in models]
             )
+        if page_path == "cb/files.md":
+            return environment.get_template("files.md").render(files_file_list=[p.removeprefix("cb/") for p in files])
         if page_path == "cb/pipelines.md":
             pipelines = {
                 r["id"]: self._pipeline_manifest(r) for r in self.records.values() if r["kind"] == "Pipeline"
@@ -982,7 +1144,7 @@ class SphinxWriter:
 
         required = self._required_fields(catalog)
         rows = []
-        kinds = {"Dataframe": "dataframes", "Chart": "charts", "Model": "models", "Notebook": "notebooks"}
+        kinds = {"Dataframe": "dataframes", "Chart": "charts", "Model": "models", "File": "files", "Notebook": "notebooks"}
         for pipeline_id in catalog.get("pipelines", []):
             pipeline = self.records.get(pipeline_id)
             if pipeline is None:
@@ -1016,6 +1178,7 @@ class SphinxWriter:
                         "Dataframe": f"./dataframes/{slug}/{name}.html",
                         "Chart": f"./charts/{slug}.{name}.html",
                         "Model": f"./models/{slug}/{name}.html",
+                        "File": f"./files/{slug}/{name}.html",
                         "Notebook": "",
                     }[kind]
                     rows.append(self._row(kind.lower(), record.get("name", name), name, pipeline_id, missing, link))
@@ -1034,7 +1197,8 @@ class SphinxWriter:
         """
         skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes", "row_count",
                 "columns", "definition_hash", "date_range", "docs", "inputs", "files", "pinned_inputs",
-                "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "versions"}
+                "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "versions",
+                "file_count", "extensions"}
         spec = {key: value for key, value in record.items() if key not in skip}
         location = record.get("location") or {}
         if location.get("kind") == "file":
@@ -1126,6 +1290,7 @@ class SphinxWriter:
             "dataframe": f"cb/dataframes/{_slug(owner)}/{asset}",
             "chart": f"cb/charts/{_slug(owner)}.{asset}",
             "model": f"cb/models/{_slug(owner)}/{asset}",
+            "file": f"cb/files/{_slug(owner)}/{asset}",
         }
         if kind not in pages or not asset or any(c in asset for c in "#@"):
             return ""
@@ -1289,7 +1454,7 @@ class SphinxWriter:
     def _dataframe_manifest(self, record: dict, base_dir: Path) -> dict:
         """The dataframe as the templates read it: its declared fields, and where it is."""
         skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes",
-                "row_count", "columns", "definition_hash", "date_range", "docs", "inputs"}
+                "row_count", "columns", "definition_hash", "date_range", "docs", "inputs", "file_count", "files"}
         shown = {key: value for key, value in record.items() if key not in skip}
         location = record.get("location") or {}
         # The charts made from this dataframe, by their local names
@@ -1379,11 +1544,12 @@ class SphinxWriter:
     # --- one entry point for the build ---------------------------------------
 
     def page(self, record: dict) -> str:
-        """The page of any record that has one: dataframe, chart, model or pipeline."""
+        """The page of any record that has one: dataframe, chart, model, files or pipeline."""
         return {
             "Dataframe": self.dataframe_page,
             "Chart": self.chart_page,
             "Model": self.model_page,
+            "File": self.files_page,
             "Pipeline": self.pipeline_page,
         }[record["kind"]](record["id"])
 
@@ -1404,6 +1570,7 @@ OVERRIDABLE_TEMPLATES = frozenset(
         "dataframe_manifest.md",
         "pipeline_manifest.md",
         "model_manifest.md",
+        "file_manifest.md",
         "provenance.md",
         "pipeline_dependencies.md",
         "index.md",
@@ -1531,6 +1698,68 @@ def _format_size(size_bytes) -> str:
             return f"{int(size)} {unit}" if unit == "bytes" else f"{size:.1f} {unit}"
         size /= 1024
     return f"{size:.1f} GB"
+
+
+def _listing(record: dict) -> Optional[dict]:
+    """A files asset's files as its page lists them: a line that sums them up, and the first :data:`FILES_SHOWN`."""
+    listed = record.get("files") or []
+    if not record.get("content_hash") or not listed:
+        return None
+    count = record.get("file_count") or len(listed)
+    by_type = ", ".join(
+        f"{number:,} {_code(kind) if kind else 'with no ending'}" for kind, number in (record.get("extensions") or {}).items()
+    )
+    summary = f"**{count:,} file{'s' if count != 1 else ''}**, {_format_size(record.get('size_bytes') or 0)} in all"
+    summary += f": {by_type}." if by_type else "."
+    keys = _keys_of(listed)
+    if keys:
+        summary += " " + _keys_line(listed, keys)
+    rows = [{"path": f["path"], "size": _format_size(f["size_bytes"])} for f in listed[:FILES_SHOWN]]
+    return {"summary": summary, "rows": rows, "more": count - len(rows), "partition_keys": keys}
+
+
+def _keys_of(listed: list) -> list:
+    """The keys of the ``key=value`` folders some listed file is in, in the order first met."""
+    keys: dict = {}
+    for entry in listed:
+        for key in entry.get("partitions") or {}:
+            keys.setdefault(key, None)
+    return list(keys)
+
+
+def _keys_line(listed: list, keys: list) -> str:
+    """One sentence on the ``key=value`` folders: each key, and its values among the files listed."""
+    said = []
+    for key in keys:
+        values = sorted({(entry.get("partitions") or {}).get(key) for entry in listed} - {None})
+        shown = ", ".join(_code(v) for v in values[:6]) + (f", … ({len(values)} values)" if len(values) > 6 else "")
+        said.append(f"{_code(key)} ({shown})")
+    return f"In `key=value` folders, by {'; '.join(said)}."
+
+
+def _parts(record: dict) -> Optional[dict]:
+    """A dataframe of many parts as its page lists them: each file with its size, its rows and its partition keys."""
+    listed = record.get("files") or []
+    if not listed or not record.get("content_hash"):
+        return None
+    count = record.get("file_count") or len(listed)
+    keys = _keys_of(listed)
+    summary = f"**{count:,} file{'s' if count != 1 else ''}**, {_format_size(record.get('size_bytes') or 0)} in all"
+    if record.get("row_count") is not None:
+        summary += f", {record['row_count']:,} rows"
+    summary += "."
+    if keys:
+        summary += " " + _keys_line(listed, keys)
+    rows = [
+        {
+            "path": f["path"],
+            "size": _format_size(f["size_bytes"]),
+            "rows": f"{f['row_count']:,}" if isinstance(f.get("row_count"), int) else "",
+            "partition_values": [(f.get("partitions") or {}).get(key, "") for key in keys],
+        }
+        for f in listed[:FILES_SHOWN]
+    ]
+    return {"summary": summary, "rows": rows, "more": count - len(rows), "partition_keys": [_code(key) for key in keys]}
 
 
 def _format_metric(value) -> str:

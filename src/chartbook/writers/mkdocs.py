@@ -8,7 +8,7 @@ dialect: freshness and the chart's top, which Sphinx wrote as ``{raw}``
 fences and MkDocs takes as the HTML it is; the front pages and the lists,
 which Sphinx wrote as toctrees and MkDocs writes as lists of links, with
 its navigation in ``mkdocs.yml`` instead. The provenance panel, the
-manifests, the specs and the model page are plain Markdown and shared.
+manifests, the specs and the model and files pages are plain Markdown and shared.
 
 MkDocs is not installed by ``pip install chartbook``; ``pip install
 chartbook[mkdocs]`` brings it, with the Material theme and the notebook
@@ -48,7 +48,10 @@ class MkDocsWriter(SphinxWriter):
     #: MkDocs would render the templates as pages: they stay out of the site tree.
     THEME_TEMPLATES_IN_SITE = False
     #: The pages the writer renders besides the records': the catalog's own, and the chart listing.
-    CATALOG_PAGES = ("index.md", "cb/charts.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md", "cb/versions.md")
+    CATALOG_PAGES = (
+        "index.md", "cb/charts.md", "cb/dataframes.md", "cb/models.md", "cb/files.md", "cb/pipelines.md",
+        "cb/diagnostics.md", "cb/versions.md",
+    )
 
     def _environment(self, base_dir: Path) -> jinja2.Environment:
         """The Sphinx writer's search path, with this writer's theme folder first, in the sandbox."""
@@ -120,6 +123,7 @@ class MkDocsWriter(SphinxWriter):
             return environment.get_template("index.md").render(
                 manifest={"project": {"name": catalog.get("name", "")}},
                 model_file_list=self._pages("Model"),
+                files_file_list=self._pages("File"),
                 readme_text="",
                 today=_built_at(),
                 has_versions=self._has_versions(),
@@ -131,6 +135,8 @@ class MkDocsWriter(SphinxWriter):
             )
         if page_path == "cb/models.md":
             return environment.get_template("models.md").render(model_pages=self._pages("Model", from_root=False))
+        if page_path == "cb/files.md":
+            return environment.get_template("files.md").render(files_pages=self._pages("File", from_root=False))
         return super().catalog_page(page_path)
 
     def pipeline_page(self, pipeline_id: str) -> str:
@@ -168,6 +174,7 @@ class MkDocsWriter(SphinxWriter):
             charts=[{"title": "All charts", "link": "cb/charts.md"}, *self._pages("Chart")],
             dataframes=self._pages("Dataframe"),
             models=self._pages("Model"),
+            files=self._pages("File"),
             freshness=[fact for fact in [_freshness_of(pipeline)] if fact],
             version=_laid_out_version(pipeline),
             dependencies=self._dependencies(pipeline, self.pipeline_page_path(pipeline)),
@@ -224,6 +231,7 @@ class MkDocsWriter(SphinxWriter):
             nav.append({"Charts": [{"All charts": "cb/charts.md"}, *charts]})
             _append(nav, "Dataframes", self._pages("Dataframe"))
             _append(nav, "Models", self._pages("Model"))
+            _append(nav, "Files", self._pages("File"))
             _append(
                 nav,
                 "Notebooks",
@@ -253,6 +261,8 @@ class MkDocsWriter(SphinxWriter):
             nav.append({"Dataframes": [{"All dataframes": "cb/dataframes.md"}, *titled(self._pages("Dataframe"))]})
             if any(r["kind"] == "Model" for r in self.records.values()):
                 nav.append({"Models": [{"All models": "cb/models.md"}, *titled(self._pages("Model"))]})
+            if any(r["kind"] == "File" for r in self.records.values()):
+                nav.append({"Files": [{"All files": "cb/files.md"}, *titled(self._pages("File"))]})
             pipelines = sorted((r for r in self.records.values() if r["kind"] == "Pipeline"), key=lambda r: r["id"])
             nav.append(
                 {"Pipelines": [{"All pipelines": "cb/pipelines.md"}, *[{r.get("name") or r["id"]: self.pipeline_page_path(r)} for r in pipelines]]}

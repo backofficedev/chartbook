@@ -311,10 +311,10 @@ No prompt: a command that needs trust refuses and prints this command, so a scri
 ## chartbook path
 
 ```console
-chartbook path REF [--kind KIND] [--project-dir PATH]
+chartbook path REF [--kind KIND] [--project-dir PATH] [--files]
 ```
 
-Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note or model — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note, model or files asset — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
 
 `REF` names the asset. A dataframe is its key in `[dataframes]`; anything else has its kind in front:
 
@@ -325,6 +325,7 @@ Print the path that the enclosing `chartbook.toml` declares for an asset — a d
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
 | `model/rate_forecaster` | `[models.rate_forecaster]` |
+| `file/filings` | `[files.filings]` |
 | `model/rate_forecaster@7f3a9c2e41b0` | A {ref}`version <model-versions>` of that model, in the store |
 | `model/rate_forecaster@champion` | The version that label points at |
 | `forecasting:model/rate_forecaster@champion` | The version that label named when `forecasting` was pinned; `chartbook update` moves it |
@@ -341,6 +342,14 @@ $ chartbook path repo_rates --kind chart
 ```
 
 `--kind` is the same as writing the kind in front, for when the name comes from a variable. If `REF` already names a kind, `--kind` must agree with it.
+
+`--files` prints the asset's files instead, one per line, sorted by their path inside it: the file itself, every file under a folder, or every file a glob matches, the files its hash is made of. It is `chartbook.assets.files()` for a shell, and works for any asset with files, a dataframe of many parts included. An asset with no files there yet exits `1`.
+
+```console
+$ chartbook path file/filings --files
+/work/filings/_data/filings/year=2024/10-K.htm
+/work/filings/_data/filings/year=2025/10-K.htm
+```
 
 Another pipeline's asset, `rates:treasury`, is read as `data.load` reads it: its pinned copy in the store, and before anything is pinned, by the rules in {doc}`../guide/depending-on-pipelines`. A dependency declared and not pinned is pinned then, which writes `chartbook.lock` and says so on stderr.
 

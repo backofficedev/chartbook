@@ -481,9 +481,12 @@ store, and the Windows CI runs the tests under a long root.
    check before writing, and `store info`'s warning); not measure 1 or 2, the `\\?\` form, which
    needs a Windows machine to try readers against.*
 6. `chartbook store export` and `store import`. *Built 2026-10-29, for a folder store.*
-7. #135, the rest.
+7. #135, the rest. *Items 3 and 5 built 2026-10-29, with step 9: a dataframe of many parts
+   lists its parts on its page, and `assets.files()` gives a dataframe's files.* Items 2 (every
+   load format reads a glob) and 4 (the warning about missed siblings) are their own pull requests.
 8. #134, the shared reader.
-9. #133, `[files]`.
+9. #133, `[files]`. *Built 2026-10-29* ("As built: `[files]`", below). The rule that sends a
+   `[dataframes]` path that is not a table to `[files]` waits for #134 to be merged.
 10. The template's CI.
 
 ## As built (2026-10-28)
@@ -520,6 +523,31 @@ what it left open:
   pipeline a lockfile names; a `git` dependency's pin moves into its pipeline's folder at its
   next update. It trusts the hashes 0.2 records give and reads only a glob's files and the
   documents. A bucket is migrated as a folder, synced down and back.
+
+## As built: `[files]` (2026-10-29)
+
+Step 9, with items 3 and 5 of #135. Where it settles what the plan left open:
+
+- **`chartbook.files`** is the kind's front door, as `chartbook.models` is a model's: `path()`
+  with the kind fixed, and the bounded preview. `assets.files()` and `assets.index()` are in
+  `chartbook.assets`, since they work for every kind with files.
+- **A pinned asset's files** are the ones its record lists, under the folder the store hands a
+  reader; `assets.index()` takes each one's size and hash from a snapshot's dictionary
+  (`Store.listing`), so nothing is read. A location the store holds carries the asset's hash
+  (`FileLocation.content_hash`) for this. A local asset is hashed, with a hash cache of its own
+  in this machine's cache (`hashes/`), so a second call reads only what changed.
+- **`assets.index()`'s `path`** is the file, as `assets.files()` gives it, so a row can be opened
+  as it is; a `key=value` folder's value is text, as the folder names it.
+- **The `File` record** lists the first 1000 files (`file_count` says how many there are), so
+  that a corpus of many thousand files does not swell `index.json` past what a snapshot keeps of
+  it. A dataframe of many parts lists its parts the same way, each with its rows from its parquet
+  footer. The page shows the first 50.
+- **The preview** is of the first file the record lists that is text (by its ending, gzip
+  included) or an image a browser shows (PNG, JPEG, GIF, WebP; not SVG, which can run a script).
+  At most 4 KB is decompressed, from at most 16 KB read; bytes that are not UTF-8 are not shown.
+  An image over 2 MB is not copied into the site.
+- **`chartbook check`** takes a folder with no file in it as a path that matches nothing. The
+  default policy recommends what it does for a dataframe, and a write-up, as for a model.
 
 ## Breaking changes, for the changelog
 

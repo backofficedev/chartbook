@@ -56,6 +56,8 @@ _FILE_TYPE_FIELDS = {
     "model": ("models", "path"),
     "model_metrics": ("models", "metrics_path"),
     "model_docs": ("models", "docs_path"),
+    "file": ("files", "path"),
+    "file_docs": ("files", "docs_path"),
 }
 
 
@@ -277,6 +279,8 @@ def check_paths(
             message = f"{NOT_BUILT_YET}: {missing.file_path}"
         elif is_glob_pattern(str(missing.file_path)):
             message = f"no files match {missing.file_path}"
+        elif missing.file_type == "file" and Path(missing.file_path).is_dir():
+            message = f"the folder holds no file: {missing.file_path}"
         else:
             message = f"file not found: {missing.file_path}"
         if field == "path" and missing.file_type in _FILE_TYPE_FIELDS and _kept(manifest, missing):
@@ -1034,7 +1038,7 @@ def check_licenses(
     within_days: int = DEFAULT_WITHIN_DAYS,
     today: Optional[date] = None,
 ) -> list[Problem]:
-    """Report dataframe licenses that are expired or expire within the window.
+    """Report the licenses of dataframes and files assets that are expired or expire within the window.
 
     :param within_days: A license expiring this many days from *today* or
         sooner is reported. ``0`` reports only licenses already expired or
@@ -1046,8 +1050,13 @@ def check_licenses(
     for pipeline_id in get_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         toml_file = _manifest_file(manifest, pipeline_id, base_dir)
-        for dataframe_id, dataframe in pipeline_manifest.get("dataframes", {}).items():
-            raw = dataframe.get("license_expiration")
+        licensed = [
+            (table, key, entry)
+            for table in ("dataframes", "files")
+            for key, entry in (pipeline_manifest.get(table) or {}).items()
+        ]
+        for table, key, entry in licensed:
+            raw = entry.get("license_expiration")
             try:
                 expires = parse_expiration(raw)
             except ValueError:
@@ -1073,7 +1082,7 @@ def check_licenses(
             problems.append(
                 Problem(
                     toml_file,
-                    f"dataframes.{dataframe_id}",
+                    f"{table}.{key}",
                     "license_expiration",
                     message,
                 )

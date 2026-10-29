@@ -7,6 +7,7 @@ all user input must be validated to prevent code injection attacks.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -210,11 +211,11 @@ def validate_conf_py_values(manifest: dict, pipeline_theme: str) -> SiteConfig:
 
 
 #: Kinds of missing file that are things a pipeline *builds*: data, rendered
-#: charts, executed notebooks, and trained models with their scores. They
-#: are normally git-ignored, so on a fresh checkout that has not run the
-#: pipeline they are all absent.
+#: charts, executed notebooks, trained models with their scores, and the
+#: files of a files asset. They are normally git-ignored, so on a fresh
+#: checkout that has not run the pipeline they are all absent.
 OUTPUT_FILE_TYPES = frozenset(
-    {"dataframe", "chart", "notebook", "model", "model_metrics"}
+    {"dataframe", "chart", "notebook", "model", "model_metrics", "file"}
 )
 
 
@@ -230,6 +231,9 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     - Note markdown files (path)
     - Model files or directories (path), metrics files (metrics_path) and
       write-ups (docs_path)
+    - The files of a files asset (path: a file, a folder that holds at
+      least one file, or a glob that matches one) and its write-up
+      (docs_path)
     - Each pipeline's README (project.readme)
     - User-specified logo and favicon files
 
@@ -387,6 +391,27 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             )
                         )
 
+        # Check files assets: the path must name at least one file, as the
+        # snapshot and the index count them
+        for files_id, files_config in (pipeline_manifest.get("files") or {}).items():
+            declared = files_config.get("path")
+            if declared and declared.strip():
+                from chartbook.hashing import find_files
+
+                full_path = Path(os.path.normpath(pipeline_base_dir / declared))
+                found = find_files(full_path)
+                if found is None or not found.files:
+                    missing_files.append(
+                        MissingFile(file_path=full_path, file_type="file", item_id=files_id, pipeline_id=pipeline_id)
+                    )
+            docs_path = files_config.get("docs_path")
+            if docs_path and docs_path.strip():
+                full_path = (pipeline_base_dir / docs_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(file_path=full_path, file_type="file_docs", item_id=files_id, pipeline_id=pipeline_id)
+                    )
+
         # Check the README (project.readme; ./README.md unless set)
         readme = pipeline_manifest.get("project", {}).get("readme") or "README.md"
         readme_path = (pipeline_base_dir / readme).resolve()
@@ -458,6 +483,7 @@ def built_nothing(manifest: dict, missing_files: list) -> bool:
         ("charts", ("path",)),
         ("notebooks", ("path",)),
         ("models", ("path", "metrics_path")),
+        ("files", ("path",)),
     ):
         for entry in (pipeline_manifest.get(section) or {}).values():
             declared += sum(1 for key in keys if (entry.get(key) or "").strip())

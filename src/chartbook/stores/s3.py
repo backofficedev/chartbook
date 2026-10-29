@@ -131,6 +131,7 @@ from chartbook.store import (
     declared_name,
     gather,
     is_snapshot_folder,
+    kept_listing,
     pipeline_folder,
     plain_parts as _plain_parts,
     read_kept_record,
@@ -1538,6 +1539,10 @@ class S3Store(Store):
             for file in asset.files:
                 found.setdefault(self._where(file.location), file.size_bytes)
         return sorted(found.items())
+
+    def listing(self, content_hash: str):
+        held = _held_in(self.records(), content_hash)
+        return kept_listing(held[0]) if held else None
 
     def size_of(self, content_hash: str) -> int:
         """The total size in bytes of an asset's files, as its newest record gives them, or of every key of its object."""

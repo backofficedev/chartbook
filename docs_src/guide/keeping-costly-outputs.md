@@ -26,7 +26,7 @@ path = "./_models/forecaster.pt"
 keep = true
 ```
 
-`keep = true` goes on any dataframe, chart, notebook, note or model. `chartbook snapshot` (or
+`keep = true` goes on any dataframe, chart, notebook, note, model or files asset. `chartbook snapshot` (or
 `chartbook run --snapshot`) records the mark with the asset, and {ref}`chartbook store gc
 <chartbook-store-gc>` then keeps every version of it: for each distinct set of bytes the asset has
 had in a snapshot, the newest snapshot holding them stays, with `--aggressive` or without. What

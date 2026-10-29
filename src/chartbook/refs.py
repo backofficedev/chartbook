@@ -19,7 +19,8 @@ Each separator asks a different question, read left to right:
 
 The kind defaults to ``dataframe``, because data is what gets passed
 around; every other kind says what it is. So ``treasury_rates`` is a
-dataframe, ``chart/gdp`` a chart and ``model/rate_forecaster`` a model.
+dataframe, ``chart/gdp`` a chart, ``model/rate_forecaster`` a model and
+``file/filings`` a files asset.
 
 This module only *parses and formats*. It accepts the whole grammar, and
 knows nothing about which parts of it can be resolved yet; that is
@@ -43,9 +44,8 @@ from chartbook.identity import (
 )
 
 #: Every kind of asset, in the singular, as it is written in a reference.
-#: The first is the default. ``model`` is recognized so that references to
-#: models parse; nothing resolves one yet.
-KINDS = ("dataframe", "chart", "notebook", "note", "model")
+#: The first is the default.
+KINDS = ("dataframe", "chart", "notebook", "note", "model", "file")
 
 #: The kind a reference names when it does not say.
 DEFAULT_KIND = "dataframe"
@@ -57,6 +57,7 @@ KIND_TABLES = {
     "notebook": "notebooks",
     "note": "notes",
     "model": "models",
+    "file": "files",
 }
 
 # A part may be a path inside the asset, so it may contain "/"

@@ -1107,6 +1107,15 @@ class Store(abc.ABC):
         """Where the store keeps an asset's files, each as a name for it in the store and its size; empty for an object no pipeline owns."""
         return []
 
+    def listing(self, content_hash: str) -> Optional[tuple[hashing.FileEntry, ...]]:
+        """Each file of an asset, by its path in the asset, with its size and hash, as a snapshot's record gives them.
+
+        Nothing is read but the records, whose files' hashes make the
+        asset's (:func:`read_kept_record`). None when no record says: an
+        object no pipeline owns, or a store that keeps no records.
+        """
+        return None
+
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:
         """Remove what no snapshot uses (a snapshot begun and never written, a sync service's copies); what was removed, or with *dry_run* would be, each with its size.
 
@@ -1303,6 +1312,13 @@ def _kept_files(stored: object, pipeline_folder: Path, own: str) -> Optional[tup
     if not files or (single and len(files) != 1):
         return None
     return at, single, tuple(files)
+
+
+def kept_listing(asset: "KeptAsset") -> tuple[hashing.FileEntry, ...]:
+    """An asset's files as a record holds them, each by its path in the asset, sorted as a hash lists them."""
+    return tuple(
+        sorted((hashing.FileEntry(f.relative, f.size_bytes, f.content_hash) for f in asset.files), key=lambda e: e.path)
+    )
 
 
 def _makes(single: bool, files: tuple) -> str:
@@ -2411,6 +2427,10 @@ class FolderStore(Store):
             for file in asset.files:
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
+
+    def listing(self, content_hash: str) -> Optional[tuple[hashing.FileEntry, ...]]:
+        held = self._held(content_hash)
+        return kept_listing(held[0]) if held else None
 
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from every pipeline's folder (:meth:`sweep`); what was removed, each with its size.

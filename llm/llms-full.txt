@@ -129,8 +129,10 @@ Reports, one per line as `file: [table] field: message`: fields the policy requi
 Print the path the enclosing `chartbook.toml` declares for an asset of the current pipeline.
 
 ```bash
-chartbook path REF [--kind KIND] [--project-dir PATH]
+chartbook path REF [--kind KIND] [--project-dir PATH] [--files]
 ```
+
+With `--files`, the asset's files are printed instead, one per line, sorted: the file, a folder's files, or a glob's matches (`chartbook.assets.files()`).
 
 `REF` names the asset. A dataframe is its key in `[dataframes]` (`repo_public`); any other asset has its kind in front: `chart/repo_rates`, `notebook/analysis`, `note/methodology`. `--kind chart` is the same as writing `chart/` in front. Each kind has its own names. The manifest is found by walking up from the current directory (or `--project-dir`). The absolute path is the only thing printed, whether or not the file exists, so Make, shell, R and Stata can capture it for inputs and outputs. An undeclared name exits 1 and names the table to add. Of the rest of the reference grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`: `@rev` resolves for a version of one of this pipeline's own models (`model/x@7f3a9c2e41b0`, `model/x@champion`); a registry parses and is refused as not yet supported; and `#part` (`treasury_rates#dgs10`, one column) is an address for documentation only. `data.load()`, `data.path()` and `chartbook path` refuse a `#` on purpose: ChartBook does not select columns or rows. Load or locate the whole dataframe and pick the column with polars or SQL.
 
@@ -371,6 +373,7 @@ ChartBook uses a TOML configuration file (`chartbook.toml`) to define your proje
 [notes]            # Additional documentation notes
 [notebooks]        # Jupyter notebook references
 [models]           # Trained models
+[files]            # Files that are not tables: archives, text, PDFs, images, arrays
 [dependencies]     # Other pipelines this one reads from
 [scripts]          # Named commands; `build` is what `chartbook run` runs
 [sources]          # Databases the pipeline's dataframes may live in (backend = "duckdb" or "databricks", url)
@@ -529,6 +532,38 @@ docs_path = "./docs_src/dataframes/revenue_data.md"
 ```
 
 Each dataframe needs exactly one of `docs_path` or `docs` (inline markdown string).
+
+### [files] - Files That Are Not Tables
+
+A file, a folder or a glob of files that the pipeline keeps whatever is inside: gzipped JSON lines, text or HTML, PDFs, images, NumPy arrays, a SQLite file, a vendor's zip kept byte for byte. ChartBook moves, versions and documents the bytes and never reads them, but for a short preview on the page. Do not declare such files under `[dataframes]`, which are tables `data.load` reads.
+
+```toml
+[files.earnings_releases]
+name = "Earnings Releases"
+description = "The data API's earnings releases, one file a quarter, as the API sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a file, a folder, or a glob
+sources = ["Vendor API"]
+providers = ["Vendor"]
+license = "Licensed to the department"
+restrictions = "Research use only"
+tags = ["Earnings"]
+docs_path = "./docs_src/files/earnings_releases.md"
+keep = true
+```
+
+`path` is required; the rest are a dataframe's governance fields (`name`, `description`, `docs_path` or `docs`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method`, `tags`, `keep`) and fields of your own. The address is `file/<id>`, and another pipeline's is `pipeline:file/<id>`. `chartbook snapshot`, `pin`, `update`, `restore`, `lineage` and `store gc` treat it as any other asset.
+
+```python
+from chartbook import assets
+
+assets.path("file/earnings_releases")    # the path as declared
+assets.files("file/earnings_releases")   # the files, sorted: the file, a folder's files, a glob's matches
+assets.index("file/earnings_releases")   # LazyFrame: path, size_bytes, sha256, and a column per key=value folder (as text)
+```
+
+`assets.files` and `assets.index` work for every asset with files, a dataframe of many parts included. Of another pipeline's asset, `assets.index` takes each file's size and hash from the store's record and reads nothing; of this pipeline's, it hashes the files, reading each again only when it has changed. The page shows the file count, the total size, a count by type, the first 50 files with their sizes, the keys of `key=value` folders, and a preview: the first lines of a text or JSON-lines file (gzip included; at most 4 KB decompressed; JSON pretty-printed) or a thumbnail of an image. `index.json` has a `File` record with `file_count`, `extensions` and the first 1000 `files`. `chartbook check` fails when the path matches no file (a folder with nothing in it included), unless `--skip-outputs`.
+
+A dataframe of many parts (a folder or a glob) lists its parts on its page, each with its size and rows (from the parquet footer, no data read), and the partition keys of `key=value` folders and their values; its `Dataframe` record has `file_count` and `files`.
 
 ### [notes] - Additional Documentation
 

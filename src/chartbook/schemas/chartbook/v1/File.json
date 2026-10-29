@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/File.json",
+  "title": "File record",
+  "description": "A files asset that a pipeline declares in [files]: a file, a folder of files or a glob of them, whatever is inside. ChartBook does not read it. Other fields the manifest declares for it (sources, providers, license, restrictions...) are carried as they are.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "pipeline"
+  ],
+  "properties": {
+    "kind": {
+      "const": "File"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The asset's fully qualified address, `pipeline:file/name`."
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "file"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "string",
+      "description": "The ID of the pipeline that declares the asset."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the asset's files are.",
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "file"
+        },
+        "path": {
+          "type": "string",
+          "description": "As declared in chartbook.toml, relative to the pipeline's root: a file, a folder, or a glob."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        },
+        "modified_at": {
+          "type": "string",
+          "description": "When the file, or the newest of its files, was last written, in UTC. Absent when not built."
+        }
+      }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "Hash of the asset's content: of its file, or of the listing of its files. Absent when its path matches no file."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The size of all its files together."
+    },
+    "file_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "How many files it is: 1 for a path that names one file."
+    },
+    "extensions": {
+      "type": "object",
+      "description": "How many of its files there are of each type, by the end of their names in lower case (`.jsonl.gz`, `.pdf`; `` for none).",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Its first 1000 files, sorted by path; `file_count` says how many there are. A path that names one file lists that file, by its name.",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "size_bytes",
+          "content_hash"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the folder, or to the glob's fixed prefix, with forward slashes."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+            "description": "Hash of this file."
+          },
+          "partitions": {
+            "type": "object",
+            "description": "The keys of the `key=value` folders it is in, and their values, as text.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "keep": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}
