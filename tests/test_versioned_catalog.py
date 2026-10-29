@@ -154,9 +154,10 @@ class TestWithMkDocs:
 
 def _plant(store_root: Path, commit: str, document: dict) -> Path:
     """Write a snapshot record straight into a folder store, as anyone who can write a shared one could."""
-    folder = store_root / "snapshots" / commit / "_top"
+    named = commit[:12] if len(commit) == 40 and all(c in "0123456789abcdef" for c in commit) else "0" * 12
+    folder = store_root / "pipelines" / "pipeline_a" / f"2026-01-01T000000Z_{named}" / "_chartbook"
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / "20260101T000000.000000Z.json"  # named as a record is, or it is passed over
+    path = folder / "snapshot.json"  # named as a record is, or it is passed over
     path.write_text(json.dumps(document), encoding="utf-8", newline="\n")
     return path
 

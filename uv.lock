@@ -741,7 +741,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ablog", specifier = ">=0.11.11" },
-    { name = "boto3", marker = "extra == 's3'", specifier = ">=1.28" },
+    { name = "boto3", marker = "extra == 's3'", specifier = ">=1.35" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "cookiecutter", specifier = ">=2.2" },
     { name = "cruft" },
@@ -780,7 +780,7 @@ provides-extras = ["databricks", "mkdocs", "s3"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "boto3", specifier = ">=1.28" },
+    { name = "boto3", specifier = ">=1.35" },
     { name = "colorama" },
     { name = "doit", specifier = ">=0.36.0" },
     { name = "hatch", specifier = ">=1.14" },

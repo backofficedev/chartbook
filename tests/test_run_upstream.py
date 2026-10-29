@@ -11,6 +11,7 @@ import os
 import pytest
 from click.testing import CliRunner
 
+from tests.fixtures import clear_keeping_its_bytes
 from chartbook import config, lock, run, snapshot
 from chartbook.cli import main
 from chartbook.run import RunError
@@ -79,8 +80,7 @@ class TestUpstream:
         snapshot.make(up)
         lock.pin(down)
         taken = _snapshots_of("up")[0]
-        os.chmod(taken.path, 0o600)
-        taken.path.unlink()  # the store no longer has it; the pin stays
+        clear_keeping_its_bytes(default_store(), taken)  # the record is gone; the bytes stay
         assert run.run(down, upstream=True, echo=lambda line: None).failed is None
         assert _order(work) == ["down"]
 

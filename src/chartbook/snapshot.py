@@ -31,17 +31,18 @@ to. A snapshot that would be the same as the one before it is not made.
 Where they are kept::
 
     ~/.chartbook/store/
-      snapshots/
-        4f2a91c0…/                       the commit
-          _top/                          a pipeline at the repository's top
-            20261013T182205.123456Z.json
-          examples--yield_curve/         one in a folder of the repository
-            20261013T182205.123456Z.json
+      pipelines/
+        ftsfr+fed_yield_curve/                 the pipeline
+          2026-10-13T182205Z_4f2a91c0e1b2/     when it was made _ its commit
+            _data/treasury_rates.parquet       what is new in it, in its place
+            _chartbook/snapshot.json           the record
 
 A record is JSON in the index's format, like a lockfile: an envelope and
-one record for each asset, each with its content hash. The bytes are
-objects in the store like any other, and a snapshot keeps them from being
-cleared (:func:`chartbook.lock.plan_gc`).
+one record for each asset, each with its content hash, and, for each of
+its files, where the store keeps it (``stored``): each file is kept once in
+the pipeline's folder, in the first snapshot that had it
+(:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
+from being cleared (:func:`chartbook.lock.plan_gc`).
 
 **Clearing old ones.** Every snapshot is kept until ``chartbook store gc``
 is run, and then one is kept if a lockfile pins it, if it is the newest of
@@ -97,11 +98,15 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
-from chartbook.store import Store, StoreError, declared_name, default_store
+from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
-SCHEMA = "chartbook/snapshot/v1"
+SCHEMA = "chartbook/snapshot/v2"
+
+#: The versions of a record this version reads: v1 is a store of ChartBook
+#: 0.2's, as ``store migrate`` finds it, and lists no file but a folder's.
+READS = ("chartbook/snapshot/v1", SCHEMA)
 
 
 #: The folder, under a commit's, for a pipeline at the top of its repository.
@@ -134,7 +139,7 @@ class StoreNotReadyError(SnapshotError):
 
 def schema_path() -> Path:
     """The JSON Schema file for a snapshot record's envelope."""
-    return SCHEMAS_DIR / "snapshot" / "v1.json"
+    return SCHEMAS_DIR / "snapshot" / "v2.json"
 
 
 @dataclass(frozen=True)
@@ -211,6 +216,10 @@ class Snapshot:
             "files": [...]}``. With the assets, they are enough to lay the
             version out as a folder and build its site
             (:func:`materialize`). None for a snapshot made before.
+        stored: Where the store keeps the files of what it holds, as its
+            record says: ``{"records": {name: …}, "index": …, "documents":
+            …}``, each as :attr:`chartbook.store.StoredObject.stored` has
+            it. Kept apart from the records, which a lockfile copies.
     """
 
     pipeline: str
@@ -227,6 +236,7 @@ class Snapshot:
     first_commit: str = field(default="", compare=False)
     index: Optional[dict] = field(default=None, compare=False)
     documents: Optional[dict] = field(default=None, compare=False)
+    stored: dict = field(default_factory=dict, compare=False)
 
     @property
     def built_by_run(self) -> bool:
@@ -282,11 +292,16 @@ class Snapshot:
             document["labels"] = {
                 name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
             }
+        held = self.stored.get("records") or {}
+
+        def with_stored(part: dict, stored: Optional[dict]) -> dict:
+            return {**part, "stored": stored} if stored else part
+
         if self.index:
-            document["index"] = self.index
+            document["index"] = with_stored(self.index, self.stored.get("index"))
         if self.documents:
-            document["documents"] = self.documents
-        document["records"] = [self.assets[name] for name in sorted(self.assets)]
+            document["documents"] = with_stored(self.documents, self.stored.get("documents"))
+        document["records"] = [with_stored(self.assets[name], held.get(name)) for name in sorted(self.assets)]
         return document
 
 
@@ -529,9 +544,9 @@ def not_whole(store: Store, record: dict) -> Optional[str]:
 
 
 def materialize_in_source(
-    directory: Path, pipeline: str, raw: dict, store: Store
+    directory: Path, pipeline: str, raw: dict, store: Union[Store, "PendingSnapshot"]
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
-    """Write each table or query dataframe out as parquet, into the store.
+    """Write each table or query dataframe out as parquet, into the store: a snapshot being made, at ``_chartbook/tables/<name>.parquet``.
 
     A table in a DuckDB file is what the pipeline made, as much as a parquet
     file is; a snapshot holds files, so the table is written out as one.
@@ -635,8 +650,14 @@ def materialize_in_source(
                 except Exception:  # noqa: BLE001 - never opened, or closed already
                     pass
             # A copy, never a link: the file is about to be deleted with its folder
-            stored = store.put(out, links=("reflink", "copy"))
-        found.append((local, source_record(ref, pipeline, entry, source, stored, keep=keep), None))
+            if isinstance(store, PendingSnapshot):
+                stored = store.put(out, place=f"{TABLES_DIR}/{name}.parquet", links=("reflink", "copy"))
+            else:
+                stored = store.put(out, links=("reflink", "copy"))
+        record = source_record(ref, pipeline, entry, source, stored, keep=keep)
+        if stored.stored:
+            record["stored"] = stored.stored  # where it is kept, which make() takes off the record
+        found.append((local, record, None))
     return found
 
 
@@ -782,7 +803,7 @@ def read(path: Union[str, Path]) -> Snapshot:
             f"no more"
         ) from None
     try:
-        if document.get("schema") != SCHEMA:
+        if document.get("schema") not in READS:
             raise ValueError(
                 f"its schema is {document.get('schema')!r}, and this version of "
                 f"ChartBook reads {SCHEMA!r}"
@@ -795,6 +816,15 @@ def read(path: Union[str, Path]) -> Snapshot:
         if not isinstance(document.get("made_at"), str) or not _MADE_AT.match(document["made_at"]):
             raise ValueError(f"its made_at, {document.get('made_at')!r}, is not a time as a snapshot writes one")
         validate_pipeline_id(document.get("root"))
+        if path.name == "snapshot.json":
+            # Where a store keeps it says whose it is and at what commit, and must agree
+            from chartbook.store import pipeline_folder
+
+            folder = path.parent.parent
+            if folder.parent.name != pipeline_folder(document["root"]):
+                raise ValueError(f"it names the pipeline {document['root']}, and is in the folder of another, {folder.parent.name}")
+            if not folder.name.endswith("_" + code["commit"][:12]):
+                raise ValueError(f"its commit, {code['commit'][:7]}, is not the one its folder, {folder.name}, is named by")
         subdirectory = code.get("subdirectory", "")
         if subdirectory and safe_relative(subdirectory) != subdirectory:
             raise ValueError(f"its subdirectory, {subdirectory!r}, is not a plain path")
@@ -802,7 +832,23 @@ def read(path: Union[str, Path]) -> Snapshot:
             why = improper_path(record)
             if why:
                 raise ValueError(f"its record for {record.get('id')!r} {why}")
-        assets = {local_name(record): record for record in document["records"]}
+        # Where the files are is the store's to read; the records are kept as a lockfile has them
+        assets, held = {}, {}
+        for record in document["records"]:
+            record = dict(record)
+            stored = record.pop("stored", None)
+            assets[local_name(record)] = record
+            if isinstance(stored, dict):
+                held[local_name(record)] = stored
+        stored = {"records": held} if held else {}
+        kept = {}
+        for name in ("index", "documents"):
+            if document.get(name):
+                kept[name] = dict(document[name])
+                if isinstance(kept[name].get("stored"), dict):
+                    stored[name] = kept[name].pop("stored")
+                else:
+                    kept[name].pop("stored", None)
         return Snapshot(
             pipeline=document["root"],
             commit=code["commit"],
@@ -816,8 +862,9 @@ def read(path: Union[str, Path]) -> Snapshot:
             tags=_tag_names(document.get("tags")),
             repository=web_link(document.get("repository")),
             first_commit=_first_commit_in(document.get("first_commit")),
-            index=dict(document["index"]) if document.get("index") else None,
-            documents=dict(document["documents"]) if document.get("documents") else None,
+            index=kept.get("index"),
+            documents=kept.get("documents"),
+            stored=stored,
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -936,11 +983,13 @@ def newest_for(
     store = store if store is not None else default_store()
     code = code_of(directory)
     commits = store.snapshot_commits()
-    if not commits:
+    # A record that cannot be read is said to be, not passed over: its folder names its commit
+    prefixes = store.snapshot_commit_prefixes() - {commit[:12] for commit in commits}
+    if not commits and not prefixes:
         return None, code
     # Newest first, and the commit the folder is on comes first of all
     for commit in _git(code.top, "rev-list", "HEAD").split():
-        if commit in commits:
+        if commit in commits or commit[:12] in prefixes:
             found = [t for t in find(store, commit, code.subdirectory) if not made_in_the_future(t)]
             if found:
                 return found[0], code
@@ -1037,6 +1086,17 @@ def all_snapshots(store: Store) -> list[Snapshot]:
     """
     found = [read(file) for file in store.all_snapshot_files()]
     return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+
+
+def is_at(path: Union[str, Path], commit: str) -> bool:
+    """Whether a record's file is of a snapshot at *commit*, by where it is: in a folder named ``<time>_<first 12 of the commit>``.
+
+    For a record that cannot be read, which says nothing of itself.
+    """
+    path = Path(path)
+    if path.name == "snapshot.json":
+        return path.parent.parent.name.endswith("_" + commit[:12])
+    return commit in str(path)  # a store of ChartBook 0.2: under the full commit
 
 
 def readable_snapshots(store: Store) -> tuple[list[Snapshot], list[tuple[Path, str]]]:
@@ -1825,7 +1885,22 @@ def remove(store: Store, taken: Snapshot) -> bool:
 
 
 def _count(path: Path) -> int:
-    """Which of the snapshots made at one instant a file is: 1, unless numbered."""
+    """Which of the snapshots made at one instant a file is: 1, unless numbered.
+
+    A store names a snapshot's folder by the second, and gives a second
+    snapshot of the same second the next one's name: its folder's name
+    orders them.
+    """
+    if path.name == "snapshot.json":
+        from chartbook.store import is_snapshot_folder
+
+        folder = path.parent.parent.name
+        try:
+            made = json.loads(path.read_text(encoding="utf-8")).get("made_at", "")
+            later = datetime.strptime(folder[:18], "%Y-%m-%dT%H%M%SZ") - datetime.strptime(made[:19], "%Y-%m-%dT%H:%M:%S")
+        except (OSError, ValueError, AttributeError, TypeError):
+            return 1
+        return 1 + int(later.total_seconds()) if is_snapshot_folder(folder) else 1
     _, _, number = path.stem.partition("-")
     return int(number) if number.isdigit() else 1
 
@@ -1912,7 +1987,7 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         at_moment = [t for t in found if t.same_moment(commit, made_at)]
         held = [t for t in at_moment if all(t.content().get(local_name(r)) == r["content_hash"] for r in plain.values())]
         if not at_moment:
-            why = next((reason for path, reason in unreadable if commit in str(path)), None)
+            why = next((reason for path, reason in unreadable if is_at(path, commit)), None)
             said = f": a record at that commit cannot be read ({why})" if why else ""
             gaps.append(
                 f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
@@ -2203,9 +2278,41 @@ def make(
                 f"own lineage.\n{shown}{more}\n`chartbook lineage` shows the whole graph."
             )
     raw = _read_manifest_file(directory)
-    assets: dict[str, dict] = {}
-    not_built: list[tuple[str, str]] = []
     check_within(directory, pipeline)
+    check_own_name(directory, pipeline, raw)
+    made_at = made_at or _now()
+    pending = store.begin(pipeline, code.commit, made_at, base=directory)
+    try:
+        return _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep)
+    except BaseException:
+        # What was put in a snapshot that is not written goes with it
+        pending.discard()
+        raise
+
+
+def check_own_name(directory: Path, pipeline: str, raw: dict) -> None:
+    """Refuse a pipeline that keeps a file a snapshot would hold under ``_chartbook/``, the one name a snapshot's folder keeps for ChartBook.
+
+    :raises SnapshotError: Naming the first such file and what to do.
+    """
+    named = [(str(local), declared) for local, declared, _ in declared_files(directory)]
+    named += [("a document", relative) for relative in document_paths(directory, raw)[0]]
+    for what, declared in named:
+        parts = [part for part in re.split(r"[\\/]+", str(declared).strip()) if part not in ("", ".")]
+        if parts and parts[0].lower() == OWN_DIR:
+            raise SnapshotError(
+                f"{pipeline} keeps {what} at {declared!r}, under {OWN_DIR}/: a snapshot's folder in the store keeps "
+                f"that name for ChartBook's own files. Rename the folder (and the paths in chartbook.toml), "
+                f"commit, and make the snapshot again."
+            )
+
+
+def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store, pending, made_at: str,
+          built_by_run: bool, deep: bool) -> SnapshotReport:
+    """The rest of :func:`make`, once the snapshot is begun: what is put in it, and whether it is written."""
+    assets: dict[str, dict] = {}
+    held: dict[str, dict] = {}
+    not_built: list[tuple[str, str]] = []
     marked = keeps_of(raw)
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
@@ -2214,7 +2321,8 @@ def make(
             assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked)
             not_built.append((str(ref), declared_path))
             continue
-        stored = store.put(absolute, links=LINKS)
+        stored = pending.put(absolute, links=LINKS)
+        held[str(local)] = stored.stored
         reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
         record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading)
         if local.kind == "model":
@@ -2228,7 +2336,9 @@ def make(
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
-    for local, record, reason in materialize_in_source(directory, pipeline, raw, store):
+    for local, record, reason in materialize_in_source(directory, pipeline, raw, pending):
+        if "stored" in record:
+            held[str(local)] = record.pop("stored")
         assets[str(local)] = record
         if reason is not None:
             not_built.append((record["id"], reason))
@@ -2262,7 +2372,7 @@ def make(
         pipeline,
         code.commit,
         code.subdirectory,
-        made_at or _now(),
+        made_at,
         assets,
         built_with=_built_with(built_by_run, "deep" if deep else "pins"),
         inputs=_inputs(directory),
@@ -2270,6 +2380,7 @@ def make(
         tags=_tags_at(directory, code.commit),
         repository=web_link(remote_to_web_url(get_git_remote_url(code.top))),
         first_commit=_first_commit(code.top),
+        stored={"records": held},
     )
     # The files a writer needs that are not assets, worked out before anything
     # is compared, so that a pipeline with none is not given a new snapshot on
@@ -2302,8 +2413,14 @@ def make(
         # above): an index is made again with the time it is made, so it is
         # not the same object, and the new snapshot holds both
         says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags
-        lost = [part["content_hash"] for part in (same.index, same.documents) if part and not store.has(part["content_hash"])]
-        if says_as_much and (same.built_by_run or not built_by_run) and not lost:
+        lost = [
+            part["content_hash"] for part in (same.index, same.documents)
+            if part and (not store.has(part["content_hash"]) or store.incomplete(part["content_hash"], part.get("size_bytes")))
+        ]
+        # A file put back into this snapshot's own folder, the store having
+        # lost it, is kept only if this snapshot is written
+        if says_as_much and (same.built_by_run or not built_by_run) and not lost and not pending.placed:
+            pending.discard()
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
         if same.built_by_run:
@@ -2326,13 +2443,16 @@ def make(
     # built (a manifest a docs build would refuse) is said, not fatal. It is
     # not tried again at this commit unless the bytes change
     index_skipped = None
+    stored = dict(snapshot.stored)
     try:
-        index = _put_index(_version_index(directory), store)
+        index, stored["index"] = _put_index(_version_index(directory), pending)
     except Exception as error:  # noqa: BLE001 - whatever the docs build would have raised
         said = str(error).strip()
         index, index_skipped = None, said.splitlines()[0].rstrip(".") if said else type(error).__name__
-    snapshot = dataclasses.replace(snapshot, index=index, documents=_put_documents(directory, documents, store))
-    path = _write(snapshot, store)
+        stored.pop("index", None)
+    kept_documents, stored["documents"] = _put_documents(directory, documents, pending)
+    snapshot = dataclasses.replace(snapshot, index=index, documents=kept_documents, stored={k: v for k, v in stored.items() if v})
+    path = pending.write(snapshot.to_document())
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
     snapshot = dataclasses.replace(snapshot, path=path)
     return SnapshotReport(
@@ -2375,8 +2495,8 @@ def _version_index(directory: Path) -> dict:
     return index_module.published(built)
 
 
-def _put_index(published: dict, store: Store) -> dict:
-    """Put an index in the store as an object holding one ``index.json``."""
+def _put_index(published: dict, pending: PendingSnapshot) -> tuple[dict, Optional[dict]]:
+    """Put an index in a snapshot being made, as ``_chartbook/index.json``; its record, and where it is kept."""
     import tempfile
 
     from chartbook import index as index_module
@@ -2384,8 +2504,8 @@ def _put_index(published: dict, store: Store) -> dict:
     with tempfile.TemporaryDirectory(prefix="chartbook-index-") as scratch:
         path = Path(scratch) / INDEX_FILE
         index_module.write_index(published, path)
-        stored = store.put(path, links=LINKS)
-    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes}
+        stored = pending.put(path, place=f"{OWN_DIR}/{INDEX_FILE}", links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes}, stored.stored
 
 
 def safe_relative(text: object) -> Optional[str]:
@@ -2595,12 +2715,12 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
     return True
 
 
-def _put_documents(directory: Path, paths: list[str], store: Store) -> Optional[dict]:
-    """Put a pipeline's documents in the store as one object, each under its own path; None if there are none."""
+def _put_documents(directory: Path, paths: list[str], pending: PendingSnapshot) -> tuple[Optional[dict], Optional[dict]]:
+    """Put a pipeline's documents in a snapshot being made, each at its own path; their record and where they are kept, or None if there are none."""
     import tempfile
 
     if not paths:
-        return None
+        return None, None
     with tempfile.TemporaryDirectory(prefix="chartbook-documents-") as scratch:
         staged = Path(scratch)
         copied = 0
@@ -2612,12 +2732,12 @@ def _put_documents(directory: Path, paths: list[str], store: Store) -> Optional[
             if _copy_regular_file(directory / relative, staged / relative):
                 copied += 1
         if not copied:
-            return None
+            return None, None
         for file in staged.rglob("*"):
             if file.is_symlink():  # never written above; checked all the same
                 raise SnapshotError(f"A link appeared among the documents being stored: {file.relative_to(staged)}")
-        stored = store.put(staged, links=LINKS)
-    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
+        stored = pending.put(staged, place="", links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}, stored.stored
 
 
 @dataclass
@@ -2783,7 +2903,12 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
             f"its path is {declared} now and was {location.get('path')} when the snapshot was made, and the "
             f"snapshot holds a folder: put it back by hand"
         )
-    held = Path(store.get(record["content_hash"]))
+    single = not is_glob_pattern(plain) and not record.get("files")
+    try:
+        held = Path(store.get(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None))
+    except StoreError as error:
+        # A file of it is a link, or not synced yet: the rest of the version is laid out
+        return f"the store does not give it: {str(error).rstrip('.')}"
     if is_glob_pattern(plain):
         _copy_tree(held, folder / glob_root(plain))
     elif record.get("files"):
@@ -2967,7 +3092,7 @@ def _stored_records(taken: Snapshot, store: Store) -> list:
     if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
         return []
     try:
-        held = Path(store.get(taken.index["content_hash"])) / INDEX_FILE
+        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE)) / INDEX_FILE
         recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
     except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
         return []
