@@ -320,3 +320,40 @@ class TestWhatTheSecondReviewFound:
         with pytest.raises(StoreError, match="no store.json, and holds the folders of a store of ChartBook 0.2"):
             FolderStore(root).put(root / "objects" / "sha256" / hashes["rates"][7:9] / hashes["rates"][9:] / "rates.parquet")
         assert not (root / "store.json").exists()
+
+
+class TestWhatTheThirdReviewFound:
+    def test_a_marker_over_a_stores_old_folders_cut_short_at_a_move_loses_nothing(self, old_store, monkeypatch):
+        """Found by a review: the journal alone was taken for a switch cut short, and what was not moved yet went."""
+        root, hashes = old_store
+        (root / "store.json").write_text(json.dumps({"schema": "chartbook/store/v2"}) + "\n", encoding="utf-8")
+        moves = []
+        rename = os.rename
+
+        def then_stop(source, target):
+            rename(source, target)
+            moves.append(target)
+            if len(moves) == 3:
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(migrate.os, "rename", then_stop)
+        with pytest.raises(KeyboardInterrupt):
+            migrate.run(root)
+        monkeypatch.setattr(migrate.os, "rename", rename)
+        found = migrate.plan(root)
+        assert found.needed and not found.unfinished
+        migrate.run(root)
+        store = FolderStore(root)
+        assert store.verify() == [] and len(snapshot.readable_snapshots(store)[0]) == 3
+        for name in ("rates", "parts", "years", "documents", "rates_2", "parts_2", "pinned"):
+            assert store.has(hashes[name]), name
+
+    def test_a_store_moved_whose_store_json_is_lost_is_not_refused(self, old_store, tmp_path):
+        """Found by a review: the record left for 0.2 was taken for 0.2's folders, and nothing could write."""
+        root, hashes = old_store
+        migrate.run(root)
+        (root / "store.json").unlink()  # a sync that has not brought it yet
+        (tmp_path / "new.txt").write_bytes(b"new")
+        FolderStore(root).put(tmp_path / "new.txt")
+        assert json.loads((root / "store.json").read_text(encoding="utf-8")) == {"schema": "chartbook/store/v2"}
+        assert not migrate.plan(root).needed

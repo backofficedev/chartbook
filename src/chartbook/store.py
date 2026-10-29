@@ -1760,6 +1760,8 @@ class FolderStore(Store):
                     failed.append((file, error.strerror or str(error)))
                 continue
             removed.append((file, size))
+        # Folders this emptied, whose times say only that: not a snapshot's just made
+        emptied = {str(file.parent) for file, _ in removed}
         for name in names:
             folder = pipeline_path / name
             if (only is not None and name != only) or not is_snapshot_folder(name) or not folder.is_dir() or folder.is_symlink():
@@ -1770,13 +1772,15 @@ class FolderStore(Store):
             ):
                 try:
                     _remove_file(cleared)
+                    emptied.add(str(cleared.parent))
                 except OSError:
                     pass
             for directory, _, _ in sorted(os.walk(folder), key=lambda walked: -len(walked[0])):
                 try:
-                    if older_than and now - os.stat(directory).st_mtime < older_than:
+                    if directory not in emptied and older_than and now - os.stat(directory).st_mtime < older_than:
                         continue  # made just now: a snapshot about to write into it
                     os.rmdir(directory)
+                    emptied.add(os.path.dirname(directory))
                 except OSError:
                     pass
         try:
@@ -2018,7 +2022,7 @@ class FolderStore(Store):
         except FileNotFoundError:
             if not create:
                 return  # nothing here yet; nothing to misread
-            if (self.root / OBJECTS_DIR).is_dir() or (self.root / "snapshots").is_dir():
+            if holds_v1(self.root):
                 raise StoreError(
                     f"The store at {self} has no store.json, and holds the folders of a store of ChartBook 0.2 "
                     f"(objects/, snapshots/): its store.json has not arrived (a sync that has not finished), or was "
@@ -2480,9 +2484,12 @@ class FolderStore(Store):
         except OSError:
             return
         for entry in entries:
+            if entry.name == "migrate.jsonl":
+                continue  # a migrate's journal, which only a migrate removes
             try:
-                # By its time alone: a writer still at work touches its note with every put
-                if now - entry.lstat().st_mtime < 2 * PENDING_FOLDER_SECONDS:
+                # By the later of its times: a clone keeps its source's, and a writer at work touches its note
+                seen = entry.lstat()
+                if now - max(seen.st_mtime, seen.st_ctime) < 2 * PENDING_FOLDER_SECONDS:
                     continue
                 if entry.is_dir() and not entry.is_symlink():
                     _remove_tree(entry, own=True)
@@ -2718,6 +2725,19 @@ def _identity(path) -> Optional[tuple]:
     except (OSError, ValueError):
         return None
     return (seen.st_dev, seen.st_ino)
+
+
+def holds_v1(root: Path) -> bool:
+    """Whether a folder holds what a store of ChartBook 0.2 held: an object, or a record other than the one a migrate leaves for 0.2 to refuse."""
+    try:
+        if any(not entry.name.startswith(".") for entry in os.scandir(root / OBJECTS_DIR)):
+            return True
+    except OSError:
+        pass
+    try:
+        return any(entry.name != "0" * 40 and not entry.name.startswith(".") for entry in os.scandir(root / "snapshots"))
+    except OSError:
+        return False
 
 
 def _folded(path: str) -> str:
@@ -3089,6 +3109,11 @@ class _FolderPending(PendingSnapshot):
 
     def discard(self) -> None:
         if self._written:
+            return
+        if self.name is not None and (self.pipeline_path / self.name / OWN_DIR / RECORD_FILE).is_file():
+            # Written, though what wrote it was cut short before it could say so: kept
+            self._written = True
+            self._drop_note()
             return
         if self.name is not None:
             try:

@@ -39,6 +39,7 @@ from typing import Callable, Optional
 
 from chartbook import hashing
 from chartbook.store import (
+    holds_v1,
     _check_length,
     plain_parts,
     MARKER_FILE,
@@ -205,11 +206,11 @@ def plan(root) -> MigrationPlan:
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
             raise MigrateError(f"The store at {root} has the layout {layout!r}, which this version does not move.")
-        if (root / TMP_DIR / JOURNAL).exists():
+        if _Journal(root).switched:
             # Switched, and cut short before the old folders went: the journal is removed last
             found.unfinished = True
             return found
-        if not (root / OBJECTS_DIR).is_dir() and not any(_records(root)):
+        if not holds_v1(root):
             return found
         # Says v2, and holds 0.2's folders: a store.json written over a 0.2 store's that had not
         # arrived, or was removed. What is in them is moved as any 0.2 store's is
@@ -270,6 +271,8 @@ class _Journal:
         self.root = root
         self.moved: dict[str, str] = {}
         self.records: dict[str, str] = {}
+        #: Whether the marker was being switched: every record and object moved, the old folders to go
+        self.switched = False
         try:
             lines = self.path.read_text(encoding="utf-8").splitlines()
         except FileNotFoundError:
@@ -283,6 +286,8 @@ class _Journal:
                 self.moved[entry["from"]] = entry["to"]
             elif "record" in entry:
                 self.records[entry["record"]] = entry["into"]
+            elif entry.get("switched"):
+                self.switched = True
 
     def _note(self, entry: dict) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -592,6 +597,8 @@ def _move_origins(root: Path, store: _Opened) -> None:
 
 def _switch(root: Path) -> None:
     """Say the new layout, and let the old go: a record ChartBook 0.2 cannot read is left where it looks."""
+    # Said first: only now is what is left of the old layout to go, if this is cut short
+    _Journal(root)._note({"switched": True})
     temporary = root / f"{MARKER_FILE}.migrate.tmp"
     temporary.write_text(json.dumps({"schema": SCHEMA}) + "\n", encoding="utf-8", newline="\n")
     os.replace(temporary, root / MARKER_FILE)

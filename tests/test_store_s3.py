@@ -705,6 +705,23 @@ class TestTwoMachinesAtOnce:
         _later(monkeypatch, PENDING_FOLDER_SECONDS + 1)  # its note, which it could not remove either, a day old
         assert [name for name, _ in store.tidy() if name.endswith("CLAIMED.txt")] == [f"{NAME}/_chartbook/CLAIMED.txt"]
 
+    def test_a_claim_written_over_at_once_is_given_up(self, work, client, monkeypatch):
+        """Found by a review: a service whose write only if new is not atomic let two claims land, the second over the first."""
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        store = S3Store(URL, cache=work / "one", client=client)
+        put_new = store._put_new
+
+        def and_another_over_it(key, body):
+            landed = put_new(key, body)
+            if landed and key.endswith("/_chartbook/CLAIMED.txt") and FOLDER in key:
+                client.put_object(Bucket=BUCKET, Key=key, Body=b"Claimed by another.")
+            return landed
+
+        monkeypatch.setattr(store, "_put_new", and_another_over_it)
+        pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
+        pending.put(folder / "_data" / "a.txt")
+        assert pending.name == "2026-10-16T010204Z_bbbbbbbbbbbb"
+
     def test_a_boto3_too_old_for_a_write_only_if_new_says_so(self, store, client, work, monkeypatch):
         import botocore.exceptions
 
