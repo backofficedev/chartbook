@@ -3117,7 +3117,9 @@ def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
 STORED_ASSETS_SHOWN = 100
 
 #: The records of an index that are a pipeline's assets, each with the kind its ID names
-_ASSET_KINDS = {"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
+_ASSET_KINDS = {
+    "Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note", "File": "file"
+}
 
 
 def stored_assets(taken: Snapshot, store: Store) -> list[dict]:

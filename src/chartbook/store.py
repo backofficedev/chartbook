@@ -1110,6 +1110,20 @@ class Store(abc.ABC):
         """Where the store keeps an asset's files, each as a name for it in the store and its size; empty for an object no pipeline owns."""
         return []
 
+    def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
+        """Each file of an asset, by its path in the asset, with its size and hash, as a snapshot's record gives them.
+
+        Nothing is read but the records, whose files' hashes make the
+        asset's (:func:`read_kept_record`). None when no record says: an
+        object no pipeline owns, or a store that keeps no records.
+
+        :param single: Whether the asset is one file. The hash of one file
+            and the hash of a listing of several are written alike, and a
+            file can hold the very listing of others (a ``SHA256SUMS`` beside
+            them), so only a hold of the shape asked for is taken.
+        """
+        return None
+
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:
         """Remove what no snapshot uses (a snapshot begun and never written, a sync service's copies); what was removed, or with *dry_run* would be, each with its size.
 
@@ -1306,6 +1320,13 @@ def _kept_files(stored: object, pipeline_folder: Path, own: str) -> Optional[tup
     if not files or (single and len(files) != 1):
         return None
     return at, single, tuple(files)
+
+
+def kept_listing(asset: "KeptAsset") -> tuple[hashing.FileEntry, ...]:
+    """An asset's files as a record holds them, each by its path in the asset, sorted as a hash lists them."""
+    return tuple(
+        sorted((hashing.FileEntry(f.relative, f.size_bytes, f.content_hash) for f in asset.files), key=lambda e: e.path)
+    )
 
 
 def _makes(single: bool, files: tuple) -> str:
@@ -1836,7 +1857,7 @@ class FolderStore(Store):
             put there, and a reader must not be handed a file of its own.
         """
         self._check_layout()
-        held = self._held(content_hash, pipeline)
+        held = _of_shape(self._held(content_hash, pipeline), single=bool(name))
         if name:
             # The one under that name first; another's bytes under that name else
             held.sort(key=lambda asset: not (asset.single and asset.files[0].relative == name))
@@ -2267,9 +2288,10 @@ class FolderStore(Store):
         object no pipeline owns is judged as *size_bytes* and *files* say
         (:func:`unsynced_part`).
         """
-        held = self._held(content_hash)
+        # Of the record's shape: one file it is read by, or several (a directory, a glob)
+        held = _of_shape(self._held(content_hash), single=bool(files) and len(files) == 1 and not every)
         if held:
-            seen = (str(self.root), content_hash)
+            seen = (str(self.root), content_hash, bool(files) and len(files) == 1 and not every)
             if seen in _found_whole:
                 return None
             what = None
@@ -2373,7 +2395,7 @@ class FolderStore(Store):
                     ) from None
                 removed = True
         if removed:
-            _found_whole.discard((str(self.root), content_hash))
+            _found_whole.difference_update({(str(self.root), content_hash, True), (str(self.root), content_hash, False)})
         path = self.unowned_path(content_hash)
         if not path.is_dir():
             return removed
@@ -2418,6 +2440,10 @@ class FolderStore(Store):
             for file in asset.files:
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
+
+    def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
+        held = [asset for asset in self._held(content_hash) if asset.single == single]
+        return kept_listing(held[0]) if held else None
 
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:
         """Remove what no snapshot uses from every pipeline's folder (:meth:`sweep`); what was removed, each with its size.
@@ -2548,6 +2574,17 @@ class FolderStore(Store):
         return problems
 
 
+def _of_shape(held: list, single: bool) -> list:
+    """The holds of an asset of the shape asked for, one file or several, where any is; else all, in their order.
+
+    A file's bytes may be another asset's listing (a ``SHA256SUMS`` of a
+    folder has that folder's hash): a hold of the other shape is never read
+    in place of one of this shape that is there but not whole yet.
+    """
+    shaped = [asset for asset in held if asset.single == single]
+    return shaped or list(held)
+
+
 def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     """What of an asset's files is not there as its record has it, in a few words; None when all are.
 
@@ -2605,7 +2642,11 @@ def in_place(asset: KeptAsset) -> Optional[Path]:
         if file.location != base.joinpath(*file.relative.split("/")):
             return None
     try:
-        there = {unicodedata.normalize("NFC", file.relative_to(base).as_posix()) for file in hashing.directory_files(base)}
+        # Every name in it, whatever it is (a named pipe planted there too): a reader of the folder meets them all
+        there = {
+            unicodedata.normalize("NFC", (Path(folder) / name).relative_to(base).as_posix())
+            for folder, _, names in os.walk(base) for name in names if not hashing.is_ignored(name)
+        }
     except OSError:
         return None
     return base if there == {unicodedata.normalize("NFC", file.relative) for file in asset.files} else None

@@ -151,7 +151,7 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
     # A Markdown file in the project root can override a page template
     files.update(p for p in base_dir.glob("*.md") if p.is_file())
 
-    for section in ("dataframes", "charts", "notebooks", "notes", "models"):
+    for section in ("dataframes", "charts", "notebooks", "notes", "models", "files"):
         for entry in (pipeline_manifest.get(section) or {}).values():
             for key in ("path", "docs_path", "excel_path", "metrics_path"):
                 declared = entry.get(key)
@@ -164,7 +164,7 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
                         for match in glob.glob(str(declared_path), recursive=True)
                     )
                 elif declared_path.is_dir():
-                    # A model may be a directory: every file in it counts
+                    # A model or a files asset may be a directory: every file in it counts
                     files.update(_walk_files(declared_path))
                 else:
                     files.add(declared_path)
@@ -245,6 +245,7 @@ def pipeline_owned_paths(pipeline_id: str, pipeline_manifest: dict) -> list[Path
     owned = [
         Path("cb") / "dataframes" / slug,
         Path("cb") / "models" / slug,
+        Path("cb") / "files" / slug,
         Path("cb") / "notebooks" / slug,
         Path("cb") / "download_chart" / slug,
         Path("cb") / "download_dataframe" / slug,
@@ -272,6 +273,10 @@ def _pages_exist(build_dir: Path, pipeline_id: str, pipeline_manifest: dict) -> 
     expected += [
         build_dir / "cb" / "models" / slug / f"{model_id}.md"
         for model_id in pipeline_manifest.get("models") or {}
+    ]
+    expected += [
+        build_dir / "cb" / "files" / slug / f"{files_id}.md"
+        for files_id in pipeline_manifest.get("files") or {}
     ]
     return all(page.is_file() for page in expected)
 

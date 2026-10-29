@@ -506,7 +506,12 @@ class TestGlobDataframe:
         assert record["content_hash"] == expected.content_hash
         assert record["size_bytes"] == expected.size_bytes
         assert record["row_count"] == pl.scan_parquet(resolved).select(pl.len()).collect().item()
-        assert "files" not in record
+        # Its parts, each with its rows from its footer (#135)
+        assert record["file_count"] == len(expected.files)
+        assert [(f["path"], f["size_bytes"], f["content_hash"]) for f in record["files"]] == [
+            (entry.path, entry.size_bytes, entry.content_hash) for entry in expected.files
+        ]
+        assert sum(f["row_count"] for f in record["files"]) == record["row_count"]
 
 
 class TestDeterminism:

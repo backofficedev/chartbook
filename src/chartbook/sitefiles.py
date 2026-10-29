@@ -31,6 +31,8 @@ THEME_FILES_NOT_AT_ROOT = (
     "dataframes.md",
     "models",
     "models.md",
+    "files",
+    "files.md",
     "diagnostics.md",
     "charts.md",
     "versions.md",
@@ -58,7 +60,8 @@ def copy_plan(
     and, when downloads are enabled, a dataframe that is one file to
     ``cb/download_dataframe/<slug>/<name>.parquet``, or the ending of its
     format (``<name>.csv.gz``; :func:`download_link`). A table, a query or
-    a folder of parts has no file to offer.
+    a folder of parts has no file to offer. A files asset's preview image
+    goes to ``_static/<slug>/files/<name>.<ending>``, where its page shows it.
 
     :param skip: Pipelines the build leaves out: nothing of theirs is copied.
     :param reused: Pipelines an incremental build keeps from an earlier one:
@@ -73,7 +76,7 @@ def copy_plan(
     plan: list[tuple[Path, Path]] = []
     for record in index.get("records", []):
         kind = record.get("kind")
-        if kind not in ("Chart", "Notebook", "Note", "Dataframe") or record.get("pipeline") in skipped:
+        if kind not in ("Chart", "Notebook", "Note", "Dataframe", "File") or record.get("pipeline") in skipped:
             continue
         if kind == "Note" and not with_notes:
             continue
@@ -93,9 +96,22 @@ def copy_plan(
             plan.append((Path(source), root / "cb" / "notebooks" / slug / Path(source).name))
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
+        elif kind == "File":
+            from chartbook.files import listing_root, preview_of
+
+            preview = preview_of(record.get("files") or [], listing_root(source))
+            if preview is not None and preview["kind"] == "image":
+                plan.append((preview["file"], root / thumbnail_path(record, preview)))
         elif enable_data_download and downloadable(record):
             plan.append((Path(source), root / "cb" / "download_dataframe" / slug / download_link(record)["download_file"]))
     return plan
+
+
+def thumbnail_path(record: dict, preview: dict) -> str:
+    """Where a files asset's preview image is copied, under the site's root, and its page shows it from."""
+    from chartbook.files import extension
+
+    return f"_static/{_slug(record['pipeline'])}/files/{record['ref']['name']}{extension(preview['path'])}"
 
 
 def downloadable(record: dict) -> bool:
@@ -415,7 +431,7 @@ def write_site(
     )
     for record in built_index["records"]:
         kind = record.get("kind")
-        if kind not in ("Dataframe", "Chart", "Model", "Pipeline"):
+        if kind not in ("Dataframe", "Chart", "Model", "File", "Pipeline"):
             continue
         owner = record["id"] if kind == "Pipeline" else record.get("pipeline")
         # A pipeline site's front page is the site's, written whatever is reused
