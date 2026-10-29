@@ -273,6 +273,14 @@ Hive-partitioned data:
 path = "./_data/revenue_data/**/*.parquet"
 ```
 
+A dataset kept as one file a period is a glob too, so that a new year's file is part of it:
+
+```toml
+path = "./_data/transcripts_*.parquet"
+```
+
+`chartbook check` warns when a `path` names one such file (`transcripts_2026.parquet`) and no asset declares the rest ({ref}`chartbook check <chartbook-check>`, "One file of a set").
+
 Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.

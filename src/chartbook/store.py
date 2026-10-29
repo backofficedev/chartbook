@@ -2741,14 +2741,30 @@ def _identity(path) -> Optional[tuple]:
     return (seen.st_dev, seen.st_ino)
 
 
+#: What a desktop leaves in a folder it shows, which is nobody's data (and a sync service may not remove).
+_LEFT_BY_A_DESKTOP = frozenset({"desktop.ini", "thumbs.db", "icon\r"})
+
+
+def _files_in(folder: Path) -> Iterator[str]:
+    """The names of the files under a folder, but for what a desktop leaves there (``.DS_Store``, ``desktop.ini``)."""
+    for _, _, files in os.walk(folder):
+        for name in files:
+            if not name.startswith(".") and name.lower() not in _LEFT_BY_A_DESKTOP:
+                yield name
+
+
 def holds_v1(root: Path) -> bool:
-    """Whether a folder holds the folders of a store of ChartBook 0.2: objects/, or a commit's records under snapshots/ other than the one a migrate leaves for 0.2 to refuse."""
-    if (root / OBJECTS_DIR).is_dir():
+    """Whether a folder holds what a store of ChartBook 0.2 held: a file under objects/, or under a commit's folder in snapshots/ other than the one a migrate leaves for 0.2 to refuse.
+
+    A folder a sync left empty, or holding only what a desktop leaves, holds nothing.
+    """
+    if next(_files_in(root / OBJECTS_DIR), None) is not None:
         return True
     try:
-        return any(_FULL_COMMIT.match(entry.name) and entry.name != "0" * 40 for entry in os.scandir(root / "snapshots"))
+        commits = [entry.path for entry in os.scandir(root / "snapshots") if _FULL_COMMIT.match(entry.name) and entry.name != "0" * 40]
     except OSError:
         return False
+    return any(next(_files_in(Path(path)), None) is not None for path in commits)
 
 
 def _folded(path: str) -> str:

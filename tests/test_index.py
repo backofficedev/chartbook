@@ -856,6 +856,14 @@ class TestWhatTheWriterNeeds:
         os.utime(directory, (old, old))
         assert index._modified_at(str(directory)) > before
 
+    def test_a_file_in_a_folder_with_a_bracket_in_its_name_has_a_time(self, tmp_path):
+        """Found by a reviewer: in `Research [2026]/`, every path was read as a glob that matched nothing."""
+        folder = tmp_path / "Research [2026]" / "_data"
+        folder.mkdir(parents=True)
+        (folder / "rates.parquet").write_bytes(b"r")
+        assert index._modified_at(str(folder / "rates.parquet")).endswith("Z")
+        assert index._modified_at(str(folder / "*.parquet")) == index._modified_at(str(folder / "rates.parquet"))
+
     def test_code_changed_at_is_a_docs_builds_fact_only(self, project):
         """Found by a reviewer: a file's modification time was passed off as the code's history."""
         from chartbook.manifest import apply_code_change_times

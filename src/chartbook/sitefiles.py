@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from chartbook.config import untrusted_source
-from chartbook.utils import is_glob_pattern
 
 #: Files of the theme that are not copied to the root of the Sphinx tree:
 #: generated folders and pages the writer renders, and the theme's charts
@@ -124,7 +123,9 @@ def downloadable(record: dict) -> bool:
     source = location.get("resolved_path")
     if location.get("kind") != "file" or not source or not_built(record):
         return False
-    return not is_glob_pattern(source) and not Path(source).is_dir()
+    from chartbook import hashing
+
+    return not hashing.is_pattern(source) and not Path(source).is_dir()
 
 
 def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:

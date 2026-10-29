@@ -2724,6 +2724,7 @@ def _echo_pin_report(report):
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
             "outside": "outside the repository",
+            "glob_name": "named like a pattern",
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
@@ -2759,7 +2760,7 @@ def _echo_pin_report(report):
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":
                 click.echo(f"  let go: {event.asset} ({event.detail})")
-            elif event.status == "outside":
+            elif event.status in ("outside", "glob_name"):
                 click.echo(f"  not pinned: {event.asset}: {event.detail}")
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")

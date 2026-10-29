@@ -22,7 +22,7 @@ from chartbook import hashing, migrate, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.refs import AssetRef
-from chartbook.store import FolderStore, StoreError
+from chartbook.store import FolderStore, StoreError, holds_v1
 
 FIRST, SECOND, OTHER = "a" * 40, "b" * 40, "c" * 40
 
@@ -510,3 +510,78 @@ class TestWhatTheFourthReviewFound:
             migrate.run(root)
             _all_there(root, hashes)
         assert stopped >= 10
+
+
+class TestWhatTheFifthReviewFound:
+    """gc refuses a store a migrate has not finished: what it refuses, a migrate must be able to clear."""
+
+    @staticmethod
+    def _store(root: Path, *args: str):
+        return CliRunner().invoke(main, ["store", *args], env={"CHARTBOOK_STORE": str(root)})
+
+    @pytest.mark.parametrize("left", [
+        "objects/",
+        "objects/.DS_Store",
+        "objects/desktop.ini",
+        "objects/sha256/ab/",
+        "snapshots/" + "a" * 40 + "/",
+        "snapshots/" + "a" * 40 + "/_top/.DS_Store",
+        "snapshots/" + "a" * 40 + "/_top/20261001T100000.000000Z (1).json",
+    ])
+    def test_what_a_sync_leaves_of_the_old_folders_never_stops_gc_for_good(self, old_store, left):
+        root, hashes = old_store
+        migrate.run(root)
+        target = root / left
+        if left.endswith("/"):
+            target.mkdir(parents=True, exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("{}", encoding="utf-8")
+        if self._store(root, "gc", "--dry-run").exit_code != 0:
+            said = self._store(root, "migrate", "--yes")
+            assert said.exit_code == 0, said.output
+        said = self._store(root, "gc", "--dry-run")
+        assert said.exit_code == 0, said.output
+        store = FolderStore(root)
+        assert store.verify() == [] and all(store.has(content_hash) for content_hash in hashes.values())
+
+    def test_what_a_desktop_leaves_in_a_new_store_is_not_0_2s(self, tmp_path):
+        root = tmp_path / "store"
+        (tmp_path / "x.txt").write_text("x", encoding="utf-8")
+        FolderStore(root).put(tmp_path / "x.txt")
+        for left in ("desktop.ini", ".DS_Store", "snapshots/desktop.ini", "objects/.DS_Store", "objects (1)/x",
+                     "snapshots/" + "0" * 40 + " (1)/x", "snapshots/" + "a" * 40 + "/Thumbs.db"):
+            (root / left).parent.mkdir(parents=True, exist_ok=True)
+            (root / left).write_text("x", encoding="utf-8")
+        assert not holds_v1(root)
+        FolderStore(root).tidy(dry_run=True)
+
+    def test_a_journal_left_with_nothing_of_0_2s_is_cleared_by_a_migrate(self, old_store):
+        root, hashes = old_store
+        migrate.run(root)
+        (root / "tmp" / "migrate.jsonl").write_text('{"from": "objects/x", "to": "pipelines/y"}\n', encoding="utf-8")
+        assert self._store(root, "gc", "--dry-run").exit_code != 0
+        found = migrate.plan(root)
+        assert found.needed and found.unfinished
+        migrate.run(root)
+        assert self._store(root, "gc", "--dry-run").exit_code == 0
+        _all_there(root, hashes)
+
+    def test_a_0_2_object_come_after_a_switch_is_moved_not_removed(self, old_store, tmp_path, monkeypatch):
+        """Found by a review: a 0.2 machine's pin (an object, no record) went with the old folders when a journal was left."""
+        root, hashes = old_store
+        unlink = Path.unlink
+        monkeypatch.setattr(Path, "unlink", lambda self, *a, **k: None if self.name == "migrate.jsonl" else unlink(self, *a, **k))
+        migrate.run(root)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        work = tmp_path / "late"
+        work.mkdir()
+        (work / "pin.parquet").write_bytes(b"late pin")
+        late = _object(root, work / "pin.parquet", True)
+        (root / "roots" / ("1" * 32 + ".json")).write_text(
+            json.dumps({"lockfile": str(work / "chartbook.lock"), "hashes": [late.content_hash]}), encoding="utf-8"
+        )
+        assert not migrate.plan(root).unfinished
+        migrate.run(root)
+        store = FolderStore(root)
+        assert store.has(late.content_hash) and store.verify() == []

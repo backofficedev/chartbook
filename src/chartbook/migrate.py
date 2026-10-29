@@ -40,6 +40,7 @@ from typing import Callable, Optional
 from chartbook import hashing
 from chartbook.store import (
     holds_v1,
+    _files_in,
     MIGRATE_JOURNAL,
     _check_length,
     plain_parts,
@@ -213,6 +214,8 @@ def plan(root) -> MigrationPlan:
             found.unfinished = True
             return found
         if not holds_v1(root):
+            # A journal with nothing of 0.2's left: one a migrate left behind, which a switch clears
+            found.unfinished = journal.path.exists()
             return found
         # Says v2, and holds 0.2's folders: a store.json written over a 0.2 store's that had not
         # arrived, or was removed. What is in them is moved as any 0.2 store's is
@@ -243,6 +246,8 @@ def plan(root) -> MigrationPlan:
     found.unowned = sorted(held - set(owners))
     found.shared = sum(1 for content_hash, pipelines in owners.items() if len(pipelines) > 1 and content_hash in held)
     found.size_bytes = sum(_size(_object(root, content_hash)) for content_hash in held)
+    if layout == SCHEMA and not records and not held:
+        found.unfinished = True  # nothing to move: what is left of 0.2's folders goes with a switch
     return found
 
 
@@ -281,7 +286,22 @@ def _switched_whole(root: Path, journal: "_Journal") -> bool:
             f"brought them yet. Nothing was moved or removed. Wait for the sync, then run this again."
         )
     # A record of 0.2's come since the switch is moved as any is, not removed with the old folders
-    return all(journal.written(path) for path, _ in _records(root))
+    records = _records(root)
+    if not all(journal.written(path) for path, _ in records):
+        return False
+    # And so is an object come since, a 0.2 machine's pin: one no record names and nothing was moved from
+    known = {"/".join(Path(name).parts[:4]) for name in journal.moved}
+    for _, document in records:
+        for part in _parts(document):
+            folder = _object(root, part.get("content_hash"))
+            if folder is not None:
+                known.add(folder.relative_to(root).as_posix())
+    objects = root / OBJECTS_DIR / hashing.ALGORITHM
+    for prefix in (objects.iterdir() if objects.is_dir() else ()):
+        for folder in (prefix.iterdir() if prefix.is_dir() else ()):
+            if folder.relative_to(root).as_posix() not in known and any(not _SYNC_COPY.search(name) for name in _files_in(folder)):
+                return False
+    return True
 
 
 class _Journal:
