@@ -973,7 +973,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         )
         lock.pin(downstream, git_cache=cache)
         # Each repository's pipeline keeps its own: the store keeps the same bytes once in each pipeline's folder
-        assert len(default_store().files_of(HELLO)) == 1 and len(default_store()._held(HELLO)) == 2
+        assert len(default_store().files_of(HELLO)) == 2 and len(default_store()._held(HELLO)) == 2
         assert default_store().delete(HELLO)
         for guard in (None, lambda would_be_written: None):
             store_module._found_whole.clear()

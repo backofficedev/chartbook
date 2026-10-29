@@ -271,7 +271,7 @@ class _Moving(_FolderPending):
         super().__init__(store, pipeline, commit, made_at, None, "snapshot")
         self.journal = journal
 
-    def _write_file(self, source: str, target: Path, links: tuple) -> tuple[str, str]:
+    def _write_file(self, source: str, target: Path, links: tuple, expect: Optional[str] = None) -> tuple[str, str]:
         objects = self.store.root / OBJECTS_DIR
         if Path(source).is_relative_to(objects) and not os.path.islink(source):
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -282,7 +282,7 @@ class _Moving(_FolderPending):
             os.chmod(target, 0o444)
             known = self.known.get(source)
             return known or hashing.format_hash(hashing._file_hex(target)), "move"
-        return super()._write_file(source, target, links)
+        return super()._write_file(source, target, links, expect)
 
 
 class _Opened(FolderStore):

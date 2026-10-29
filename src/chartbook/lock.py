@@ -3054,6 +3054,11 @@ class GcPlan:
         files: For each object in *delete* that a snapshot holds, the names
             in the store of its files that no kept asset uses: what goes
             with it.
+        recent_files: The names in the store of the files of the objects in
+            *recent*: what is not removed, as they are not.
+        unused: What no snapshot uses besides, each name with its size: a
+            snapshot's folder begun and never written, a sync service's
+            copies beside a snapshot's files (:meth:`chartbook.store.Store.tidy`).
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
@@ -3078,6 +3083,8 @@ class GcPlan:
     read_here: list[Path] = field(default_factory=list)
     forget_old: list[Path] = field(default_factory=list)
     files: dict = field(default_factory=dict)
+    recent_files: set = field(default_factory=set)
+    unused: list = field(default_factory=list)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -3144,6 +3151,13 @@ def plan_gc(
         is removed from a store when what it must keep is in doubt.
     """
     store = store if store is not None else default_store()
+    # Asked many times over: the records are read once for the whole plan
+    with store.reading():
+        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive)
+
+
+def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool) -> GcPlan:
+    """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
         keep_lineage=keep_lineage, aggressive=aggressive,
@@ -3275,6 +3289,7 @@ def plan_gc(
     kept_files = {name for content_hash in keep for name, _ in store.files_of(content_hash)}
     plan.files = {}
     counted: set = set()
+    recent_files: set = set()
     for content_hash in store.hashes():
         if content_hash in keep:
             plan.kept += 1
@@ -3285,6 +3300,7 @@ def plan_gc(
             continue  # gone since it was listed: another gc, or a put replacing it
         if age < recent_seconds:
             plan.recent.append(content_hash)
+            recent_files |= {name for name, _ in store.files_of(content_hash)}
             continue
         files = store.files_of(content_hash)
         if files:
@@ -3294,6 +3310,10 @@ def plan_gc(
             plan.delete.append((content_hash, sum(freed.values())))
         else:
             plan.delete.append((content_hash, store.size_of(content_hash)))
+    plan.recent_files = recent_files
+    # What no snapshot uses beside that: a snapshot never written, a sync service's copies
+    named = {name for names in plan.files.values() for name in names}
+    plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]
     return plan
 
 
@@ -3436,10 +3456,13 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     # What the cleared snapshots held goes now, file by file, but what a
     # snapshot that stays uses
     stuck: dict = {}
+    tidied: set = set()
     try:
-        store.tidy()
+        # Never what either plan spared for being new
+        tidied = {name for name, _ in store.tidy(keep=plan.recent_files | now.recent_files)}
     except TidyError as error:
         stuck = dict(error.failed)
+        tidied = {name for name, _ in error.removed}
         if not any(name in stuck for names in plan.files.values() for name in names):
             failures.append(("what no snapshot uses", str(error)))
     except (StoreError, OSError) as error:
@@ -3458,8 +3481,13 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
                 f"Cannot remove the object {content_hash} at {store}/{left[0]}: {stuck[left[0]]}",
             ))
             continue
+        files = plan.files.get(content_hash)
         try:
-            gone = store.delete(content_hash) or not store.has(content_hash)
+            if files is None:
+                gone = store.delete_unowned(content_hash)
+            else:
+                # Its files went with its snapshots, unless a snapshot being made has taken one meanwhile
+                gone = set(files) <= tidied
         except (StoreError, OSError) as error:
             failures.append((f"the object {content_hash}", str(error)))
             continue
