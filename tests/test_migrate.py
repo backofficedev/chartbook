@@ -299,3 +299,24 @@ class TestWhatTheReviewFound:
         assert found.needed and found.unfinished
         migrate.run(root)
         assert not (root / "objects").exists() and FolderStore(root).verify() == []
+
+
+class TestWhatTheSecondReviewFound:
+    def test_a_marker_over_a_stores_old_folders_loses_nothing_and_a_dry_run_moves_nothing(self, old_store):
+        """store.json said v2 over a store of 0.2's (its store.json lost to a sync): a dry run once removed objects/."""
+        root, hashes = old_store
+        (root / "store.json").write_text(json.dumps({"schema": "chartbook/store/v2"}) + "\n", encoding="utf-8")
+        before = sorted(p.relative_to(root).as_posix() for p in (root / "objects").rglob("*") if p.is_file())
+        said = CliRunner().invoke(main, ["store", "migrate", "--dry-run"], env={"CHARTBOOK_STORE": str(root)})
+        assert said.exit_code == 0 and "holds 0.2's folders too" in said.output and "Nothing was moved" in said.output
+        assert sorted(p.relative_to(root).as_posix() for p in (root / "objects").rglob("*") if p.is_file()) == before
+        migrate.run(root)
+        store = FolderStore(root)
+        assert store.verify() == [] and len(snapshot.readable_snapshots(store)[0]) == 3
+
+    def test_no_marker_is_written_over_a_stores_old_folders(self, old_store):
+        root, hashes = old_store
+        (root / "store.json").unlink()
+        with pytest.raises(StoreError, match="no store.json, and holds the folders of a store of ChartBook 0.2"):
+            FolderStore(root).put(root / "objects" / "sha256" / hashes["rates"][7:9] / hashes["rates"][9:] / "rates.parquet")
+        assert not (root / "store.json").exists()

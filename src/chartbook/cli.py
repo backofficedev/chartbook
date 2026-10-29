@@ -3623,12 +3623,11 @@ def store_migrate(dry_run, yes):
     if not plan.needed:
         click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
         return
-    if plan.unfinished:
-        migrate.run(the_store.root, echo=click.echo)
-        click.echo(f"A migrate cut short is finished: what was left of the old layout is gone from {the_store}.")
-        return
     left = len(plan.records) - plan.done
-    click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
+    if plan.layout == "chartbook/store/v2" and not plan.unfinished:
+        click.echo(f"The store at {the_store} says it has the layout of ChartBook 0.3, and holds 0.2's folders too.")
+    elif not plan.unfinished:
+        click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
     click.echo(
         f"Would move {left} snapshot(s) of {len(plan.records)} into their pipelines' folders, from "
         f"{plan.objects} object(s), {_format_bytes(plan.size_bytes)}"
@@ -3643,6 +3642,8 @@ def store_migrate(dry_run, yes):
         click.echo(f"{_format_bytes(plan.to_read)} of globs and documents is read once, to hash each file.")
     if plan.lost:
         click.echo(f"{plan.lost} asset(s) the store had lost already, in 0.2, are named by their records still, as they were.")
+    if plan.unfinished:
+        click.echo(f"A migrate was cut short after it switched the store at {the_store}; what is left of the old layout is to go.")
     if dry_run:
         click.echo("Nothing was moved (--dry-run).")
         return

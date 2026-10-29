@@ -286,3 +286,53 @@ class TestTheFactory:
         with pytest.raises(ValueError, match="plugin 'nowhere.plugin:Store' for broken:// stores cannot be loaded: no module named nowhere"):
             store_module.store_for_url("broken://x")
         store_module._plugin_store_class.cache_clear()
+
+
+class TestWhatTheThirdReviewFound:
+    """The folder store's gc and a snapshot being made, met at once."""
+
+    def test_a_folder_made_just_now_is_not_removed_for_being_empty(self, tmp_path):
+        store = FolderStore(tmp_path.resolve() / "store")
+        folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        made = pending._claim() / "_data" / "deep"
+        made.mkdir(parents=True)  # a snapshot about to write a file into it
+        store.tidy()
+        assert made.is_dir()
+
+    def test_two_snapshots_putting_back_one_file_both_succeed(self, tmp_path):
+        store = FolderStore(tmp_path.resolve() / "store")
+        folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = first.put(folder / "_data" / "rates.parquet")
+        first.write(TestSnapshotFolders._record(first, COMMIT, rates=put))
+        ((name, _),) = store.files_of(put.content_hash)
+        (store.root / name).chmod(0o644)
+        (store.root / name).unlink()  # lost; two snapshots now put it back at once
+        a = store.begin("acme/rates", "b" * 40, "2026-10-17T01:02:03.000000Z", base=folder)
+        b = store.begin("acme/rates", "c" * 40, "2026-10-18T01:02:03.000000Z", base=folder)
+        a.put(folder / "_data" / "rates.parquet")
+        (store.root / name).chmod(0o644)
+        (store.root / name).unlink()
+        b.put(folder / "_data" / "rates.parquet")
+        assert (store.root / name).read_bytes() == b"rates-1"
+        written = a._write_file(str(folder / "_data" / "rates.parquet"), store.root / name, ("copy",), expect=put.content_hash)
+        assert written[0] == put.content_hash  # the other put it back: no error
+
+    def test_a_record_this_machine_cannot_follow_is_said_and_nothing_goes(self, tmp_path):
+        import warnings
+
+        store = FolderStore(tmp_path.resolve() / "store")
+        folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        first = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = first.put(folder / "_data" / "rates.parquet")
+        document = TestSnapshotFolders._record(first, COMMIT, rates=put)
+        document["records"][0]["stored"]["files"][0]["kept_as"] = "../escape.parquet"  # one it does not follow
+        first.write(document)
+        stray = first._claim() / "stray.txt"
+        stray.write_text("x", encoding="utf-8")
+        with warnings.catch_warnings(record=True) as said:
+            warnings.simplefilter("always")
+            store.tidy(keep=())
+        assert any("Nothing in" in str(w.message) for w in said)
+        assert stray.exists()

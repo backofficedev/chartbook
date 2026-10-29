@@ -111,7 +111,7 @@ class MigrationPlan:
     @property
     def needed(self) -> bool:
         """Whether there is anything to move: the store is laid out as 0.2 laid one out, or a migrate was cut short."""
-        return self.unfinished or self.layout == V1_SCHEMA or bool(self.layout is None and (self.records or self.objects))
+        return self.unfinished or self.layout == V1_SCHEMA or bool(self.records or self.objects)
 
 
 def _object(root: Path, content_hash: str) -> Optional[Path]:
@@ -205,9 +205,14 @@ def plan(root) -> MigrationPlan:
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
             raise MigrateError(f"The store at {root} has the layout {layout!r}, which this version does not move.")
-        # Switched, and cut short before the old folders went
-        found.unfinished = (root / OBJECTS_DIR).exists() or (root / TMP_DIR / JOURNAL).exists()
-        return found
+        if (root / TMP_DIR / JOURNAL).exists():
+            # Switched, and cut short before the old folders went: the journal is removed last
+            found.unfinished = True
+            return found
+        if not (root / OBJECTS_DIR).is_dir() and not any(_records(root)):
+            return found
+        # Says v2, and holds 0.2's folders: a store.json written over a 0.2 store's that had not
+        # arrived, or was removed. What is in them is moved as any 0.2 store's is
     journal = _Journal(root)
     records = _records(root)
     found.records = [path for path, _ in records]
@@ -357,7 +362,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
     if not found.needed:
         return found
     root = found.root
-    if found.layout == SCHEMA:
+    if found.unfinished:
         _switch(root)  # cut short after the marker was switched: what is left of the old goes
         return found
     store = _Opened(root)
