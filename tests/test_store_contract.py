@@ -336,3 +336,19 @@ class TestWhatTheThirdReviewFound:
             store.tidy(keep=())
         assert any("Nothing in" in str(w.message) for w in said)
         assert stray.exists()
+
+    def test_what_a_writer_that_died_left_in_tmp_goes_two_days_on(self, tmp_path):
+        import os
+        import time
+
+        store = FolderStore(tmp_path.resolve() / "store")
+        store._check_layout(create=True)
+        tmp = store.root / "tmp"
+        tmp.mkdir()
+        old, new = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending"
+        old.write_text("folder x\n", encoding="utf-8")
+        new.write_text("folder y\n", encoding="utf-8")
+        then = time.time() - 3 * 86400
+        os.utime(old, (then, then))
+        store.tidy()
+        assert not old.exists() and new.exists()

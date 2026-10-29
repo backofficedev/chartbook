@@ -2433,6 +2433,8 @@ class FolderStore(Store):
                 gone, stuck = self.sweep(folder, keep=keep, dry_run=dry_run)
                 removed += [(path.relative_to(self.root).as_posix(), size) for path, size in gone]
                 failed += [(path.relative_to(self.root).as_posix(), why) for path, why in stuck]
+        if not dry_run:
+            self._tidy_tmp()
         if failed and not dry_run:
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""
@@ -2442,6 +2444,26 @@ class FolderStore(Store):
                 [(name, f"{why}. {self._not_this_users_remedy()}") for name, why in failed],
             )
         return removed
+
+    def _tidy_tmp(self) -> None:
+        """Remove what a writer that died left under ``tmp/``: its notes, a file half written, a staging folder; two days on."""
+        tmp = self.root / TMP_DIR
+        now = time.time()
+        try:
+            entries = list(tmp.iterdir())
+        except OSError:
+            return
+        for entry in entries:
+            try:
+                # By its time alone: a writer still at work touches its note with every put
+                if now - entry.lstat().st_mtime < 2 * PENDING_FOLDER_SECONDS:
+                    continue
+                if entry.is_dir() and not entry.is_symlink():
+                    _remove_tree(entry, own=True)
+                else:
+                    _remove_file(entry)
+            except OSError:
+                continue
 
     def longest_paths(self) -> tuple[int, int]:
         """How long the store's paths are, in characters: the longest of a file it holds, and the longest a new snapshot of one of its pipelines would make.
