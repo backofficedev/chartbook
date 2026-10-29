@@ -3628,12 +3628,13 @@ def store_migrate(dry_run, yes):
         click.echo(f"The store at {the_store} says it has the layout of ChartBook 0.3, and holds 0.2's folders too.")
     elif not plan.unfinished:
         click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
-    click.echo(
-        f"Would move {left} snapshot(s) of {len(plan.records)} into their pipelines' folders, from "
-        f"{plan.objects} object(s), {_format_bytes(plan.size_bytes)}"
-        + (f"; {plan.done} were moved by a migrate cut short" if plan.done else "")
-        + "."
-    )
+    if not plan.unfinished:
+        click.echo(
+            f"Would move {left} snapshot(s) of {len(plan.records)} into their pipelines' folders, from "
+            f"{plan.objects} object(s), {_format_bytes(plan.size_bytes)}"
+            + (f"; {plan.done} were moved by a migrate cut short" if plan.done else "")
+            + "."
+        )
     if plan.unowned:
         click.echo(f"{len(plan.unowned)} object(s) no snapshot names go to pipelines/+unowned/, until no lockfile names them.")
     if plan.shared:
