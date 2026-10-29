@@ -376,7 +376,7 @@ class PinEvent:
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
-PROBLEM_STATUSES = frozenset({"lost", "unsynced", "unreachable", "unfetched", "no_snapshot", "outside"})
+PROBLEM_STATUSES = frozenset({"lost", "unsynced", "unreachable", "unfetched", "no_snapshot", "outside", "glob_name"})
 
 #: What to do about an object a snapshot names that the store does not have.
 #: In a store that machines share through a sync service, the likeliest
@@ -2528,6 +2528,13 @@ def _pin_asset(
                 )
             )
             return _asset_record(ref, key, declared_path, None, True)
+
+    named = hashing.glob_named(declared_path, absolute)
+    if named is not None:
+        # Its files would be stored as named and read back as a pattern
+        detail = f"its path {hashing.glob_named_said(declared_path, named)}"
+        report.events.append(PinEvent("glob_name", key, asset_id, old=old, detail=detail))
+        return _asset_record(ref, key, declared_path, None, True)
 
     if old is None or may_move:
         found = hashing.find_files(absolute)

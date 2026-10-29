@@ -186,7 +186,7 @@ chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-out
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
 - **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
-- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
+- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing), or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
 - **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
 - **a build tool's task that says `chartbook build`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook build` would run the build command, which runs that task again (see {ref}`chartbook build <chartbook-build>`).

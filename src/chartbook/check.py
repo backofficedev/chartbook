@@ -337,6 +337,32 @@ def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def check_glob_names(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report an asset's path that names a file or folder with a glob character in its name.
+
+    Its files are found as they are named, but a reader takes the declared
+    path for a pattern (:func:`chartbook.hashing.glob_named`), so
+    ``chartbook snapshot`` refuses it. A folder above the pipeline's own,
+    such as ``Research [2026]/``, is not part of the path and is fine.
+    """
+    from chartbook.hashing import glob_named, glob_named_said
+
+    problems = []
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for section in _DECLARING:
+            for name, entry in (pipeline_manifest.get(section) or {}).items():
+                path = entry.get("path") if isinstance(entry, dict) else None
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                named = glob_named(path, os.path.normpath(os.path.join(pipeline_dir, path)))
+                if named is not None:
+                    problems.append(
+                        Problem(pipeline_dir / "chartbook.toml", f"{section}.{name}", "path", glob_named_said(path, named))
+                    )
+    return problems
+
+
 #: A run of digits, or a date with ``-`` or ``_`` between its parts
 #: (``2026``, ``2026-10``, ``20261027``, ``2026_10``): what tells one file
 #: of a set from the others
@@ -1427,6 +1453,7 @@ def run_checks(
             manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_glob_names(manifest, base_dir),
         *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),

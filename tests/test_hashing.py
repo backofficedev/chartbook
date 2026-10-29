@@ -251,6 +251,34 @@ class TestFindFiles:
         assert find_files(project / "_data" / "none" / "*.parquet") is None
 
 
+class TestGlobNamed:
+    """A declared path whose own parts name a file or folder with a glob character, which is refused."""
+
+    @pytest.fixture
+    def pipeline(self, tmp_path):
+        # A folder above the pipeline's own may have one: it is not in a declared path
+        pipeline = tmp_path / "Research [2026]" / "proj"
+        (pipeline / "_data" / "[raw]").mkdir(parents=True)
+        (pipeline / "_data" / "[raw]" / "part.parquet").write_bytes(b"")
+        (pipeline / "_data" / "rates.parquet").write_bytes(b"")
+        return pipeline
+
+    @pytest.mark.parametrize(
+        "declared, named",
+        [
+            ("_data/rates.parquet", None),
+            ("./_data/*.parquet", None),
+            ("_data/part-[0-9].parquet", None),  # a pattern, not a name
+            ("_data/[raw]", "_data/[raw]"),
+            ("./_data/[raw]/*.parquet", "_data/[raw]"),
+            ("_data/[raw]/part.parquet", "_data/[raw]"),
+            ("_data/../_data/[raw]", "_data/[raw]"),
+        ],
+    )
+    def test_names_the_part_that_is_there(self, pipeline, declared, named):
+        assert hashing.glob_named(declared, os.path.normpath(pipeline / declared)) == named
+
+
 class TestGlobRoot:
     @pytest.mark.parametrize(
         "pattern,root",

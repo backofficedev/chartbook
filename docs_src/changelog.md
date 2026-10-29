@@ -13,7 +13,9 @@ A dataframe whose `path` names one file, beside files named the same but for a n
 
 ### Fixed — a file in a folder with `[` in its name is hashed as itself
 
-A path is joined to the pipeline's folder before its files are found, so a pipeline in a folder such as `Research [2026]/` had a glob character in every path, and a file or folder that was there was read as a glob that matched nothing: it had no hash or time in the index, and `chartbook snapshot` recorded it as not built. Now a path that is there as written is that file or folder, whatever characters are in it, and a glob in such a folder is matched below the folders that are there as named.
+A path is joined to the pipeline's folder before its files are found, so a pipeline in a folder such as `Research [2026]/` had a glob character in every path, and a file or folder that was there was read as a glob that matched nothing: it had no hash or time in the index, and `chartbook snapshot` recorded it as not built. Now a path that is there as written is that file or folder, whatever characters are in it, and a glob in such a folder is matched below the folders that are there as named. So is a dataframe's download link. Reading its data is not fixed yet: polars takes a `[` anywhere in a path for a pattern, so `data.load`, the glimpse on a dataframe's page and the dates in its table may still find no file there.
+
+A declared path whose own parts name such a file or folder, `path = "./_data/[raw]"` or `"./_data/[raw]/*.parquet"`, is refused: a reader decides from the declared path whether it is a glob, and would take `[raw]` for a pattern. `chartbook check` fails it, `chartbook snapshot` stops on it (and so does `chartbook run --snapshot`, before it builds), and a `git` dependency's asset declared so is not pinned and is a problem, each saying to rename it. A folder above the pipeline's own, such as `Research [2026]/`, is not part of a declared path and is fine.
 
 ### Added — a lockfile says which pipeline each dependency's pins came from
 

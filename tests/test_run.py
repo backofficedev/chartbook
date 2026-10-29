@@ -843,6 +843,33 @@ class TestGitDependencies:
         (problem,) = [e for e in report.problems if e.asset.endswith(":abs")]
         assert "outside the repository" in problem.detail and str(secret.resolve()) in problem.detail
 
+    def test_a_path_naming_a_file_with_a_glob_character_is_not_pinned(self, work, cache):
+        """Its files would be stored as named, and its record read back as a pattern."""
+        repository = _pipeline(
+            work / "bracketed",
+            None,
+            dataframes={
+                "odd": {"path": "./data[1].parquet", "docs": "d"},
+                "honest": {"path": "./data.parquet", "docs": "d"},
+            },
+        )
+        (repository / "data.parquet").write_bytes(b"theirs")
+        (repository / "data[1].parquet").write_bytes(b"theirs too")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A file named like a pattern")
+        top = _pipeline(work / "top", {"build": "true"}, {"bracketed": {"git": "../bracketed"}})
+
+        report = lock.pin(top)
+        statuses = {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
+        assert statuses == {"odd": "glob_name", "honest": "pinned"}
+        (problem,) = report.problems
+        assert problem.detail == (
+            "its path './data[1].parquet' names 'data[1].parquet', a file or folder whose name has a glob "
+            "character ([, ? or *), which a reader would take for a pattern; rename it"
+        )
+        assert "content_hash" not in lock.read_lock(top).assets["bracketed:odd"]
+
     def test_a_script_in_a_repository_can_be_run(self, work, cache):
         """A checkout is read-only, and a build script is still a program."""
         repository = _pipeline(work / "scripted", {"build": "./build.sh"})

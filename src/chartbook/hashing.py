@@ -311,6 +311,37 @@ def is_pattern(path: Union[str, Path]) -> bool:
     return is_glob_pattern(text) and not os.path.exists(text)
 
 
+def glob_named(declared: str, absolute: Union[str, Path]) -> Optional[str]:
+    """The first part of a declared path that is a file or folder with a glob character in its name; None if none is.
+
+    The files of such a path are found as they are named (:func:`is_pattern`),
+    but whoever reads it later decides from the declared path whether it is
+    a glob, and takes ``_data/[raw]`` for a pattern. So such a path is refused
+    (:func:`glob_named_said`) rather than read two ways. The folders above
+    the pipeline's own (``Research [2026]/``) are not part of it.
+
+    :param declared: The path as the manifest writes it.
+    :param absolute: That path joined to the pipeline's folder.
+    :returns: The declared path up to that part, as declared.
+    """
+    # The declared parts, but for a leading climb, are the last parts of the absolute path
+    tail = [part for part in Path(os.path.normpath(declared)).parts if part != os.pardir]
+    parts = Path(absolute).parts
+    above = len(parts) - len(tail)
+    for i, part in enumerate(tail if above >= 0 else ()):
+        if _GLOB_CHARACTERS & set(part) and os.path.lexists(os.path.join(*parts[: above + i + 1])):
+            return Path(*tail[: i + 1]).as_posix()
+    return None
+
+
+def glob_named_said(declared: str, part: str) -> str:
+    """What is said of a path :func:`glob_named` refuses, after "its path"."""
+    return (
+        f"{declared!r} names {part!r}, a file or folder whose name has a glob character "
+        f"([, ? or *), which a reader would take for a pattern; rename it"
+    )
+
+
 def split_glob(pattern: Union[str, Path]) -> tuple[Path, str]:
     """A glob's root, and the pattern to match with that root taken as written.
 

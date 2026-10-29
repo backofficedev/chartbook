@@ -13,6 +13,7 @@ from click.testing import CliRunner
 
 from chartbook.check import (
     Problem,
+    check_glob_names,
     check_licenses,
     check_paths,
     check_required_fields,
@@ -211,6 +212,29 @@ class TestCheckPaths:
         (problem,) = check_paths(manifest, project)
         assert (problem.table, problem.field) == ("dataframes.dataframe_0", "path")
         assert "no files match" in problem.message
+
+
+class TestCheckGlobNames:
+    def test_a_path_naming_a_folder_with_a_glob_character_fails(self, pipeline_project, lenient_policy):
+        """Found by a reviewer: such a folder was stored as itself, and its record read back as a pattern."""
+        (pipeline_project / "_data" / "[raw]").mkdir()
+        (pipeline_project / "_data" / "[raw]" / "part.parquet").write_bytes(b"")
+        _edit_toml(pipeline_project, lambda c: c["dataframes"]["dataframe_0"].update(path="./_data/[raw]"))
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 1
+        assert (
+            "chartbook.toml: [dataframes.dataframe_0] path: './_data/[raw]' names '_data/[raw]', a file or folder "
+            "whose name has a glob character ([, ? or *), which a reader would take for a pattern; rename it"
+        ) in result.output
+
+    def test_a_pattern_and_a_folder_above_the_pipeline_are_fine(self, tmp_path, lenient_policy):
+        from tests.fixtures import create_pipeline_project
+
+        project = create_pipeline_project(tmp_path / "Research [2026]" / "proj")
+        _edit_toml(project, lambda c: c["dataframes"]["dataframe_0"].update(path="_data/test_pipeline/dataframe_[0-9].parquet"))
+        assert check_glob_names(load_manifest(project), project) == []
+        result = _invoke("--project-dir", project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
 
 
 class TestCheckSiblings:

@@ -155,6 +155,27 @@ class TestMaking:
         assert "outside the pipeline's folder" in str(e.value)
         assert not (default_store().root / "snapshots").exists()
 
+    def test_a_path_naming_a_folder_with_a_glob_character_is_refused(self, maker, work):
+        """Found by a reviewer: `_data/[raw]` was stored as the folder, and its record read back as a pattern."""
+        (maker / "_data" / "[raw]").mkdir(parents=True)
+        (maker / "_data" / "[raw]" / "part.parquet").write_bytes(b"part")
+        _manifest(
+            maker,
+            {
+                "project": {"id": "acme/maker"},
+                "dataframes": {
+                    "rates": {"path": "./_data/rates.parquet", "docs": "d"},
+                    "raw": {"path": "./_data/[raw]/*.parquet", "docs": "d"},
+                },
+            },
+        )
+        _commit(work)
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        assert "'acme/maker:raw', and its path './_data/[raw]/*.parquet' names '_data/[raw]'" in str(e.value)
+        assert "which a reader would take for a pattern; rename it" in str(e.value)
+        assert not (default_store().root / "snapshots").exists()
+
     def test_it_is_frozen(self, maker):
         """Its owner rewrites the file in place. The snapshot keeps what it had."""
         taken = snapshot.make(maker).snapshot
