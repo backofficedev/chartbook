@@ -2814,8 +2814,9 @@ class _PutLater:
         """
         entry = next((e for e in after.dependencies if e.get("id") == key), {})
         commit = (entry.get("location") or {}).get("commit")
-        pipeline = entry.get("pinned_from") or key
         base = next((base for _, _, _, base in held if base is not None), None)
+        # By the pipeline's own ID, as its clone names it, where a lockfile of 0.2 says nothing of it
+        pipeline = entry.get("pinned_from") or (_pipeline_of_clone(Path(base), entry, Path(base)) if base else None) or key
         try:
             validate_pipeline_id(pipeline)
             pending = self._store.begin(pipeline, commit, snapshot._now(), base=base, made_by="pin")

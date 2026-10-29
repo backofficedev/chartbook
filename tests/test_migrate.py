@@ -183,8 +183,8 @@ class TestMigrate:
         root, hashes = old_store
         moved = migrate._move_record
 
-        def once(store, journal, path, document):
-            moved(store, journal, path, document)
+        def once(store, journal, path, document, prepared):
+            moved(store, journal, path, document, prepared)
             if document["root"] == "acme/rates" and document["code"]["commit"] == SECOND:
                 raise KeyboardInterrupt
 
@@ -217,3 +217,85 @@ class TestMigrate:
         assert "Moved." in said.output and FolderStore(root).verify() == []
         again = CliRunner().invoke(main, ["store", "migrate"])
         assert again.exit_code == 0 and "nothing to move" in again.output
+
+
+class TestWhatTheReviewFound:
+    """Each of a review's reproductions against stores made by 0.2.0."""
+
+    def _every_byte(self, root: Path) -> dict:
+        return {p.name: p.read_bytes() for p in root.rglob("*") if p.is_file() and "objects" in p.parts}
+
+    def test_cut_short_just_after_a_file_is_moved_loses_nothing(self, old_store, monkeypatch):
+        root, hashes = old_store
+        moves = []
+        rename = os.rename
+
+        def then_stop(source, target):
+            rename(source, target)
+            moves.append(target)
+            if len(moves) == 3:
+                raise KeyboardInterrupt  # between the move and anything after it
+
+        monkeypatch.setattr(migrate.os, "rename", then_stop)
+        with pytest.raises(KeyboardInterrupt):
+            migrate.run(root)
+        monkeypatch.setattr(migrate.os, "rename", rename)
+        assert all(Path(target).is_file() for target in moves)  # never taken back
+        migrate.run(root)
+        store = FolderStore(root)
+        assert store.verify() == []
+        for name in ("rates", "parts", "years", "documents", "rates_2", "parts_2", "pinned"):
+            assert store.has(hashes[name]), name
+
+    def test_an_object_not_whole_moves_nothing(self, old_store):
+        root, hashes = old_store
+        digest = hashes["parts"].split(":", 1)[1]
+        (root / "objects" / "sha256" / digest[:2] / digest[2:] / "b.txt").unlink()  # a sync not finished
+        with pytest.raises(migrate.MigrateError, match="(?s)does not have b.txt.*Nothing was moved"):
+            migrate.run(root)
+        assert not (root / "pipelines").exists() and (root / "objects").is_dir()
+
+    def test_a_sync_services_copy_in_a_globs_object_is_left_out(self, old_store):
+        root, hashes = old_store
+        digest = hashes["years"].split(":", 1)[1]
+        (root / "objects" / "sha256" / digest[:2] / digest[2:] / "t_2026 (1).txt").write_bytes(b"2026")
+        migrate.run(root)
+        store = FolderStore(root)
+        assert sorted(p.name for p in Path(store.get(hashes["years"])).iterdir()) == ["t_2025.txt", "t_2026.txt"]
+        assert store.verify() == []
+
+    def test_a_record_written_to_climb_out_moves_nothing(self, old_store, tmp_path):
+        root, hashes = old_store
+        forged = root / "snapshots" / FIRST / "_top" / "20261001T100000.000000Z.json"
+        document = json.loads(forged.read_text(encoding="utf-8"))
+        document["records"][1]["location"]["path"] = "./" + "../" * 20 + str(tmp_path / "escaped.parquet").lstrip("/")
+        forged.write_text(json.dumps(document), encoding="utf-8")
+        with pytest.raises(migrate.MigrateError, match="not a plain path"):
+            migrate.run(root)
+        assert not (tmp_path / "escaped.parquet").exists() and not (root / "pipelines").exists()
+
+    def test_cut_short_after_a_record_is_written_makes_it_once(self, old_store, monkeypatch):
+        root, hashes = old_store
+        wrote = migrate._Journal.wrote
+
+        def lost_it(self, record, into):
+            raise KeyboardInterrupt  # the record is written; the journal never hears
+
+        monkeypatch.setattr(migrate._Journal, "wrote", lost_it)
+        with pytest.raises(KeyboardInterrupt):
+            migrate.run(root)
+        monkeypatch.setattr(migrate._Journal, "wrote", wrote)
+        migrate.run(root)
+        assert len(snapshot.readable_snapshots(FolderStore(root))[0]) == 3
+
+    def test_cut_short_while_the_old_folders_go_is_finished_next_time(self, old_store, monkeypatch):
+        root, hashes = old_store
+        remove = migrate._remove_tree
+        monkeypatch.setattr(migrate, "_remove_tree", lambda path: (_ for _ in ()).throw(KeyboardInterrupt()))
+        with pytest.raises(KeyboardInterrupt):
+            migrate.run(root)
+        monkeypatch.setattr(migrate, "_remove_tree", remove)
+        found = migrate.plan(root)
+        assert found.needed and found.unfinished
+        migrate.run(root)
+        assert not (root / "objects").exists() and FolderStore(root).verify() == []

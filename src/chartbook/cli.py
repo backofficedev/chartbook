@@ -3623,6 +3623,10 @@ def store_migrate(dry_run, yes):
     if not plan.needed:
         click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
         return
+    if plan.unfinished:
+        migrate.run(the_store.root, echo=click.echo)
+        click.echo(f"A migrate cut short is finished: what was left of the old layout is gone from {the_store}.")
+        return
     left = len(plan.records) - plan.done
     click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
     click.echo(
@@ -3637,6 +3641,8 @@ def store_migrate(dry_run, yes):
         click.echo(f"{plan.shared} object(s) two pipelines' snapshots share are copied for the second.")
     if plan.to_read:
         click.echo(f"{_format_bytes(plan.to_read)} of globs and documents is read once, to hash each file.")
+    if plan.lost:
+        click.echo(f"{plan.lost} asset(s) the store had lost already, in 0.2, are named by their records still, as they were.")
     if dry_run:
         click.echo("Nothing was moved (--dry-run).")
         return
@@ -3645,7 +3651,7 @@ def store_migrate(dry_run, yes):
         return
     try:
         migrate.run(the_store.root, echo=click.echo)
-    except StoreError as e:
+    except (StoreError, OSError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("What was moved stays moved: run this again to go on.", err=True)
         raise SystemExit(1)

@@ -80,3 +80,28 @@ def test_the_command_says_it_and_no_traceback(windows, pipeline, tmp_path, monke
     said = CliRunner().invoke(main, ["snapshot", "--project-dir", str(pipeline)])
     assert said.exit_code == 1 and "Traceback" not in said.output
     assert "Windows refuses a path of 260 or more" in said.output
+
+
+@pytest.fixture
+def windows_refuses(windows, monkeypatch):
+    """As Windows with long paths off does: a folder of 248 characters or more is not made, and says only that it is not there."""
+    import os
+
+    made = os.mkdir
+
+    def mkdir(path, *arguments, **keywords):
+        if len(str(path)) >= 248:
+            raise FileNotFoundError(2, "No such file or directory", str(path))
+        return made(path, *arguments, **keywords)
+
+    monkeypatch.setattr(os, "mkdir", mkdir)
+
+
+def test_the_check_comes_before_the_folder_it_guards(windows_refuses, pipeline, tmp_path, monkeypatch):
+    """Found by a reviewer: the snapshot's folder was made before any check, so Windows said "No such file" first."""
+    # A root whose snapshot folder alone crosses 248: pipelines/acme+rates/<31> adds 53
+    deep = tmp_path.resolve() / ("d" * max(1, 200 - len(str(tmp_path.resolve()))))
+    root = deep / "store"
+    monkeypatch.setenv("CHARTBOOK_STORE", str(root))
+    with pytest.raises(PathTooLongError):
+        snapshot.make(pipeline)

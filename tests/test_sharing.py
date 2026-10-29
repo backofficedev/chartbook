@@ -140,6 +140,38 @@ class TestImport:
         done = sharing.import_snapshots(theirs, sent)
         assert done.copied == [] and all("is a link, or leads out of the folder" in why for _, why in done.refused)
 
+    def test_a_record_written_to_mislead_is_refused_and_the_rest_go(self, two_snapshots, tmp_path):
+        import json
+
+        store, first, second, rates = two_snapshots
+        sent = tmp_path / "acme+rates"
+        shutil.copytree(store.pipeline_path("acme/rates"), sent)
+        (newer,) = [p for p in sent.iterdir() if p.name.startswith("2026-10-02")]
+        record = newer / "_chartbook" / "snapshot.json"
+        record.chmod(0o644)
+        document = json.loads(record.read_text(encoding="utf-8"))
+        document["made_at"] = "not a time"
+        record.write_text(json.dumps(document), encoding="utf-8")
+        theirs = FolderStore(tmp_path.resolve() / "theirs")
+        done = sharing.import_snapshots(theirs, sent)
+        assert done.copied == [("acme/rates", first.commit, first.made_at)] and len(done.refused) == 1
+
+    def test_a_snapshot_of_another_pipeline_in_its_folder_is_refused(self, two_snapshots, tmp_path):
+        import json
+
+        store, first, second, rates = two_snapshots
+        sent = tmp_path / "acme+rates"
+        shutil.copytree(store.pipeline_path("acme/rates"), sent)
+        for record in sent.glob("*/_chartbook/snapshot.json"):
+            record.chmod(0o644)
+            document = json.loads(record.read_text(encoding="utf-8"))
+            document["root"] = "bob/forecast"  # to land in the receiver's own pipeline
+            record.write_text(json.dumps(document), encoding="utf-8")
+        theirs = FolderStore(tmp_path.resolve() / "theirs")
+        done = sharing.import_snapshots(theirs, sent)
+        assert done.copied == [] and len(done.refused) == 2
+        assert not theirs.pipeline_path("bob/forecast").exists()
+
     def test_not_from_inside_the_store(self, two_snapshots):
         store, *_ = two_snapshots
         with pytest.raises(sharing.SharingError, match="in the store it would be imported into"):

@@ -206,6 +206,9 @@ class PathTooLongError(StoreError):
 #: Windows' limit on a path's length, unless long paths are turned on (MAX_PATH).
 WINDOWS_PATH_LIMIT = 260
 
+#: Windows' limit on a folder's path when it is made: MAX_PATH less room for a file's 8.3 name.
+WINDOWS_FOLDER_LIMIT = 248
+
 #: Whether this is Windows, where a path has a limit; a test of another system sets it.
 _ON_WINDOWS = os.name == "nt"
 
@@ -235,26 +238,41 @@ LONG_PATHS_REMEDY = (
 )
 
 
-def too_long(path: Union[str, Path]) -> Optional[str]:
+def too_long(path: Union[str, Path], folder: bool = False) -> Optional[str]:
     """Why a path cannot be written or read on this machine, in a sentence; None when it can.
 
-    Windows refuses a path of :data:`WINDOWS_PATH_LIMIT` characters or more
-    unless long paths are turned on, and says only "No such file or
-    directory" (#136).
+    Windows refuses a path of :data:`WINDOWS_PATH_LIMIT` characters or more,
+    and a folder of :data:`WINDOWS_FOLDER_LIMIT` or more, unless long paths
+    are turned on, and says only "No such file or directory" (#136). A path
+    in the ``\\\\?\\`` form has no limit.
+
+    :param folder: Whether *path* is a folder to be made.
     """
     text = str(path)
-    if not _ON_WINDOWS or len(text) < WINDOWS_PATH_LIMIT or long_paths_enabled():
+    limit = WINDOWS_FOLDER_LIMIT if folder else WINDOWS_PATH_LIMIT
+    if not _ON_WINDOWS or len(text) < limit or text.startswith("\\\\?\\") or long_paths_enabled():
         return None
     return (
-        f"{text} is {len(text)} characters long, and Windows refuses a path of {WINDOWS_PATH_LIMIT} or more unless "
-        f"long paths are turned on, which they are not on this machine. {LONG_PATHS_REMEDY}."
+        f"{text} is {len(text)} characters long, and Windows refuses {'a folder' if folder else 'a path'} of {limit} "
+        f"or more unless long paths are turned on, which they are not on this machine. {LONG_PATHS_REMEDY}."
     )
 
 
-def _check_length(path: Union[str, Path]) -> None:
-    why = too_long(path)
+def _check_length(path: Union[str, Path], folder: bool = False) -> None:
+    why = too_long(path, folder)
     if why is not None:
         raise PathTooLongError(why)
+    if not folder:
+        _check_length(Path(path).parent, folder=True)
+
+
+def _exists(path: Union[str, Path]) -> bool:
+    """Whether a file is there, asked in the form Windows takes whatever its length: a file another machine wrote may be past this one's limit."""
+    text = str(path)
+    if _ON_WINDOWS and len(text) >= WINDOWS_FOLDER_LIMIT and not text.startswith("\\\\?\\"):
+        absolute = os.path.abspath(text)
+        text = "\\\\?\\UNC\\" + absolute[2:] if absolute.startswith("\\\\") else "\\\\?\\" + absolute
+    return os.path.lexists(text)
 
 
 class StoreUnreachableError(StoreError):
@@ -1722,6 +1740,7 @@ class FolderStore(Store):
 
     def note_origin(self, commit: str, name: str, top: str) -> None:
         note = self.origins_file(commit, name)
+        _check_length(note)
         note.parent.mkdir(parents=True, exist_ok=True)
         try:
             known = note.read_text(encoding="utf-8").splitlines()
@@ -1759,7 +1778,7 @@ class FolderStore(Store):
         # folder had not come yet was not, and the message says a sync may
         # explain it
         held = self._held(content_hash, pipeline)
-        return any(os.path.lexists(file.location) for asset in held for file in asset.files) or (
+        return any(_exists(file.location) for asset in held for file in asset.files) or (
             self.unowned_path(content_hash).is_dir()
         )
 
@@ -1870,6 +1889,13 @@ class FolderStore(Store):
             raise FileNotFoundError(f"Nothing at {path} to put in the store.")
 
         self._check_layout(create=True)
+        # The longest it could be, before anything is written: under its hash, its own names
+        root_of_files = os.path.abspath(found.root)
+        for file in found.files:
+            relative = os.path.relpath(os.path.abspath(file), root_of_files)
+            _check_length(self.unowned_path(hashing.format_hash("0" * 64)) / (
+                declared_name(relative) or relative if found.single else relative
+            ))
         staging = self.root / TMP_DIR / uuid.uuid4().hex[:12]
         staging.mkdir(parents=True)
         try:
@@ -2532,6 +2558,9 @@ def gather(asset: KeptAsset, views: Path) -> Path:
     view = views / asset.content_hash.split(":", 1)[1]
     if _whole_in(view, asset):
         return view
+    for file in asset.files:
+        _check_length(view.joinpath(*file.relative.split("/")))
+        _check_length(views / f".{view.name}.{'0' * 12}.tmp" / file.relative)
     views.mkdir(parents=True, exist_ok=True)
     if asset.single and view.is_dir() and not view.is_symlink():
         (file,) = asset.files
@@ -2646,6 +2675,7 @@ class _FolderPending(PendingSnapshot):
             self.pipeline_path.mkdir(parents=True, exist_ok=True)
             for later in range(86400):
                 name = snapshot_folder_name(self.made_at, self.commit, later)
+                _check_length(self.pipeline_path / name / OWN_DIR / f"{'0' * 12}.tmp")
                 # Noted first, so that `store gc` never meets the folder without its note
                 self._note_line(FOLDER_MARK + (self.pipeline_path / name).relative_to(self.store.root).as_posix())
                 try:

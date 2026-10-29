@@ -32,12 +32,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
 
 from chartbook import hashing
 from chartbook.store import (
+    _check_length,
+    plain_parts,
     MARKER_FILE,
     OBJECTS_DIR,
     ORIGINS_FILE,
@@ -87,6 +90,10 @@ class MigrationPlan:
         shared: How many objects two pipelines' records name, copied for the
             second.
         done: Records already moved by a migrate that was cut short.
+        lost: The parts of records whose objects 0.2 had lost already: the
+            records name them still, as they did.
+        unfinished: Whether a migrate cut short after it switched the
+            marker left the old folders: the next run removes them.
     """
 
     root: Path
@@ -98,11 +105,13 @@ class MigrationPlan:
     to_read: int = 0
     shared: int = 0
     done: int = 0
+    lost: int = 0
+    unfinished: bool = False
 
     @property
     def needed(self) -> bool:
-        """Whether there is anything to move: the store is laid out as 0.2 laid one out."""
-        return self.layout == V1_SCHEMA or (self.layout is None and (self.records or self.objects))
+        """Whether there is anything to move: the store is laid out as 0.2 laid one out, or a migrate was cut short."""
+        return self.unfinished or self.layout == V1_SCHEMA or bool(self.layout is None and (self.records or self.objects))
 
 
 def _object(root: Path, content_hash: str) -> Optional[Path]:
@@ -130,8 +139,8 @@ def _records(root: Path) -> list[tuple[Path, dict]]:
                 continue
             if document.get("schema") != "chartbook/snapshot/v1":
                 raise ValueError(f"its schema is {document.get('schema')!r}")
-            document["code"]["commit"], document["made_at"], document["root"]  # noqa: B018 - what is needed
-        except (OSError, ValueError, KeyError, TypeError) as error:
+            _check_record(document)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
             raise MigrateError(
                 f"Cannot read the snapshot record {path}: {error}. A sync that has not finished is the likeliest "
                 f"cause: run this again once it has. If it stays unreadable, remove it (it is one snapshot's "
@@ -141,6 +150,36 @@ def _records(root: Path) -> list[tuple[Path, dict]]:
     # Oldest first, so that each file goes to the first snapshot that had it
     found.sort(key=lambda pair: (pair[1]["made_at"], pair[0].name))
     return found
+
+
+def _check_record(document: dict) -> None:
+    """Refuse a record that names what no store of 0.2 wrote: a commit, a time, an ID or a path a reader would not take.
+
+    A record may be anyone's who could write to the store, and migrate makes
+    a path of each name in it.
+
+    :raises ValueError: Saying what is wrong.
+    """
+    from chartbook.identity import validate_pipeline_id
+    from chartbook.snapshot import _COMMIT, _MADE_AT, improper_path
+
+    if not isinstance(document["code"]["commit"], str) or not _COMMIT.match(document["code"]["commit"]):
+        raise ValueError("its commit is not a full commit hash")
+    if not isinstance(document["made_at"], str) or not _MADE_AT.match(document["made_at"]):
+        raise ValueError(f"its made_at, {document['made_at']!r}, is not a time as a snapshot writes one")
+    validate_pipeline_id(document["root"])
+    for record in document.get("records") or []:
+        why = improper_path(record) if isinstance(record, dict) else "is not a record"
+        location = (record.get("location") or {}) if isinstance(record, dict) else {}
+        if not why and location.get("kind") == "file" and _plain(location.get("path", "")) and plain_parts(_plain(location.get("path", ""))) is None:
+            why = f"has the path {location.get('path')!r}, which is not a plain path inside its pipeline's folder"
+        if why:
+            raise ValueError(f"its record for {record.get('id') if isinstance(record, dict) else record!r} {why}")
+    documents = document.get("documents")
+    if isinstance(documents, dict):
+        for name in documents.get("files") or []:
+            if not isinstance(name, str) or plain_parts(name) is None:
+                raise ValueError(f"its documents list {name!r}, which is not a plain path inside its pipeline's folder")
 
 
 def _parts(document: dict) -> list[dict]:
@@ -166,6 +205,8 @@ def plan(root) -> MigrationPlan:
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
             raise MigrateError(f"The store at {root} has the layout {layout!r}, which this version does not move.")
+        # Switched, and cut short before the old folders went
+        found.unfinished = (root / OBJECTS_DIR).exists() or (root / TMP_DIR / JOURNAL).exists()
         return found
     journal = _Journal(root)
     records = _records(root)
@@ -187,6 +228,10 @@ def plan(root) -> MigrationPlan:
                 owners.setdefault(part["content_hash"], set()).add(document["root"])
                 if part in (document.get("documents"),) or _is_glob(part):
                     found.to_read += _size(_object(root, part["content_hash"]))
+    found.lost = sum(
+        1 for _, document in records for part in _parts(document)
+        if isinstance(part.get("content_hash"), str) and part["content_hash"] not in held
+    )
     found.unowned = sorted(held - set(owners))
     found.shared = sum(1 for content_hash, pipelines in owners.items() if len(pipelines) > 1 and content_hash in held)
     found.size_bytes = sum(_size(_object(root, content_hash)) for content_hash in held)
@@ -274,15 +319,25 @@ class _Moving(_FolderPending):
     def _write_file(self, source: str, target: Path, links: tuple, expect: Optional[str] = None) -> tuple[str, str]:
         objects = self.store.root / OBJECTS_DIR
         if Path(source).is_relative_to(objects) and not os.path.islink(source):
+            _check_length(target)
+            self._inside(target)
             target.parent.mkdir(parents=True, exist_ok=True)
             if os.path.lexists(target):
                 raise StoreError(f"{target} is in the store already.")
             self.journal.move(Path(source), target)
+            # Placed before it is moved: a migrate cut short now never takes this folder back
+            self.placed = True
             os.rename(source, target)
-            os.chmod(target, 0o444)
+            try:
+                os.chmod(target, 0o444)
+            except OSError:
+                pass  # a disk that keeps no such mode: the file is the store's all the same
             known = self.known.get(source)
             return known or hashing.format_hash(hashing._file_hex(target)), "move"
         return super()._write_file(source, target, links, expect)
+
+    def discard(self) -> None:
+        """A migrate never takes back what it moved: the journal says where it is, and the next run goes on."""
 
 
 class _Opened(FolderStore):
@@ -302,18 +357,23 @@ def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
     if not found.needed:
         return found
     root = found.root
+    if found.layout == SCHEMA:
+        _switch(root)  # cut short after the marker was switched: what is left of the old goes
+        return found
     store = _Opened(root)
     journal = _Journal(root)
     records = _records(root)
+    prepared = _prepare(root, journal, records)
     for number, (path, document) in enumerate(records, 1):
         if journal.written(path):
             continue
         echo(f"[{number}/{len(records)}] {document['root']} at {document['code']['commit'][:7]}, made {document['made_at']}")
-        _move_record(store, journal, path, document)
+        _move_record(store, journal, path, document, prepared)
     for content_hash in found.unowned:
         folder = _object(root, content_hash)
         target = root / PIPELINES_DIR / UNOWNED_DIR / content_hash.split(":", 1)[1]
         if folder.is_dir() and not target.exists():
+            _check_length(target / ("x" * 12))
             target.parent.mkdir(parents=True, exist_ok=True)
             journal.move(folder, target)
             os.rename(folder, target)
@@ -322,77 +382,187 @@ def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
     return found
 
 
-def _move_record(store: _Opened, journal: _Journal, path: Path, document: dict) -> None:
-    """Make one 0.2 record a snapshot's folder of this layout, its files moved into place."""
-    from chartbook.snapshot import SCHEMA as RECORD_SCHEMA, materialized_name
+@dataclass
+class _Part:
+    """One asset of a 0.2 record, as it is to be moved: where it goes in its pipeline, and each of its files with its hash."""
+
+    place: str
+    single: bool
+    names: list
+    known: dict
+
+
+#: A name a sync service gives the second of two copies: ``part-0 (1).parquet``.
+_SYNC_COPY = re.compile(r" \([0-9]+\)(\.[^/]*)?$")
+
+
+def _shape(part: dict, what: str) -> tuple[str, bool, Optional[list], dict]:
+    """Where a part goes in its pipeline's folder, whether it is one file, its files' names in its object (None for a glob's, which its record does not list), and the hashes its record gives."""
+    from chartbook.snapshot import materialized_name
+
+    location = part.get("location") or {}
+    listed = part.get("files") if isinstance(part.get("files"), list) else None
+    if what == "index":
+        return f"{OWN_DIR}/index.json", True, ["index.json"], {"index.json": part["content_hash"]}
+    if what == "documents":
+        return "", False, [name for name in part.get("files") or [] if isinstance(name, str)], {}
+    if location.get("kind") in ("table", "query"):
+        name = materialized_name(part)
+        return f"{TABLES_DIR}/{name}", True, [name], {name: part["content_hash"]}
+    if _is_glob(part):
+        return _plain(str(hashing.glob_root(location.get("path", "")))), False, None, {}
+    if listed is not None:
+        names = [entry["path"] for entry in listed if isinstance(entry, dict) and isinstance(entry.get("path"), str)]
+        return _plain(location.get("path", "")), False, names, {
+            entry["path"]: entry.get("content_hash") for entry in listed if isinstance(entry, dict) and isinstance(entry.get("content_hash"), str)
+        }
+    name = declared_name(location.get("path", "")) or ""
+    return _plain(location.get("path", "")), True, [name], {name: part["content_hash"]}
+
+
+def _prepare(root: Path, journal: _Journal, records: list) -> dict:
+    """Check every object each record names before anything is moved, and work out each part's files and hashes.
+
+    An object is whole as its record has it (each file's size), and a
+    glob's files and the documents, whose records list no hash for each
+    file, are hashed where they are and must make the asset's hash; a sync
+    service's copy among them (``x (1).parquet``) is left out when that
+    makes it. An object 0.2 had lost already is passed over: the record
+    names it still, as it did.
+
+    :raises MigrateError: Listing each object that is not whole or not what
+        its name says: nothing is moved.
+    """
+    prepared: dict = {}
+    problems: list = []
+    for path, document in records:
+        if journal.written(path):
+            continue
+        for index, (what, part) in enumerate(_tagged(document)):
+            content_hash = part.get("content_hash")
+            folder = _object(root, content_hash) if isinstance(content_hash, str) else None
+            if folder is None:
+                continue
+            if not folder.is_dir() and not _moved_under(journal, folder):
+                continue  # lost in 0.2 already
+            place, single, names, known = _shape(part, what)
+            if place and plain_parts(place) is None:
+                problems.append(f"{part.get('id', what)} in {path.name}: its place {place!r} is not a plain path")
+                continue
+            if names is None:
+                names = sorted(
+                    Path(os.path.relpath(file, folder)).as_posix() for file in hashing.directory_files(folder)
+                ) if folder.is_dir() else []
+                names += [name for name in _moved_under(journal, folder) if name not in names]
+            if single and names and not os.path.lexists(journal.where(folder.joinpath(*names[0].split("/")))):
+                # One file under another name than the declared one: the one the object holds
+                held = sorted(file.name for file in folder.iterdir() if file.is_file()) if folder.is_dir() else []
+                names = held[:1] or names
+                known = {names[0]: content_hash} if held else known
+            bad = next((name for name in names if plain_parts(name) is None), None)
+            if bad is not None:
+                problems.append(f"{part.get('id', what)} in {path.name}: it names {bad!r}, which is not a plain path in its object")
+                continue
+            sources = {name: journal.where(folder.joinpath(*name.split("/"))) for name in names}
+            gone = [name for name, source in sources.items() if not os.path.isfile(source) or os.path.islink(source)]
+            if not names or gone:
+                problems.append(
+                    f"the object {content_hash} ({part.get('id', what)}) does not have "
+                    f"{', '.join(gone[:3]) or 'any file'}{' and more' if len(gone) > 3 else ''}, or has it as a link"
+                )
+                continue
+            sizes = {
+                entry["path"]: entry.get("size_bytes") for entry in part.get("files") or [] if isinstance(entry, dict)
+            } if not single else {names[0]: part.get("size_bytes")}
+            short = [name for name, size in sizes.items() if isinstance(size, int) and name in sources and os.stat(sources[name]).st_size != size]
+            if short:
+                problems.append(f"the object {content_hash} ({part.get('id', what)}) has {short[0]} at another size than its record says")
+                continue
+            if not single and len(known) < len(names):
+                # Its record gives no hash for each file: read them here, before anything moves
+                cache = hashing.HashCache()
+                hashes = {name: hashing.format_hash(cache.file_hex(source)) for name, source in sources.items()}
+
+                def makes(chosen: list) -> str:
+                    return hashing.hash_listing(
+                        hashing.FileEntry(name, os.stat(sources[name]).st_size, hashes[name]) for name in chosen
+                    ).content_hash
+
+                if makes(names) != content_hash:
+                    without = [name for name in names if not _SYNC_COPY.search(name)]
+                    if without != names and makes(without) == content_hash:
+                        names = without  # a sync service's copy, left where it was
+                    else:
+                        problems.append(f"the object {content_hash} ({part.get('id', what)}): its files do not make its hash")
+                        continue
+                known = {name: hashes[name] for name in names}
+            prepared[(str(path), index)] = _Part(place, single, names, known)
+    if problems:
+        shown = "\n".join(f"  {problem}" for problem in problems[:20])
+        more = f"\n  and {len(problems) - 20} more" if len(problems) > 20 else ""
+        raise MigrateError(
+            f"Some objects are not whole, or not what their names say:\n{shown}{more}\nIn a store a sync service keeps, the "
+            f"likeliest cause is a sync that has not finished: run this again once it has. `chartbook store verify` with "
+            f"ChartBook 0.2 says more of each. Nothing was moved."
+        )
+    return prepared
+
+
+def _tagged(document: dict) -> list:
+    """What a record names, each with what it is: ``record``, ``index`` or ``documents``."""
+    tagged = [("record", record) for record in document.get("records") or [] if isinstance(record, dict)]
+    return tagged + [(name, document[name]) for name in ("index", "documents") if isinstance(document.get(name), dict)]
+
+
+def _move_record(store: _Opened, journal: _Journal, path: Path, document: dict, prepared: dict) -> None:
+    """Make one 0.2 record a snapshot's folder of this layout, its files moved into place.
+
+    A migrate cut short leaves what it moved where it moved it, noted in the
+    journal, and never removes it: the next run takes it from there.
+    """
+    from chartbook.snapshot import SCHEMA as RECORD_SCHEMA
 
     root = store.root
-    pending = _Moving(store, document["root"], document["code"]["commit"], document["made_at"], journal)
+    moment = (document["root"], document["code"]["commit"], document["made_at"])
+    store._forget()
+    there = next((r for r in store.records() if r.readable and (r.pipeline, r.commit, r.made_at) == moment), None)
+    if there is not None:
+        journal.wrote(path, there.path)  # written by a migrate cut short before it said so
+        return
+    pending = _Moving(store, *moment, journal)
     written = dict(document, schema=RECORD_SCHEMA)
     written["records"] = []
-    try:
-        for part in [record for record in document.get("records") or [] if isinstance(record, dict)]:
-            written["records"].append(_placed(pending, journal, root, part, "record", materialized_name))
-        for name in ("index", "documents"):
-            if isinstance(document.get(name), dict):
-                written[name] = _placed(pending, journal, root, document[name], name, materialized_name)
-        into = pending.write(written)
-    except BaseException:
-        if not pending.placed:
-            pending.discard()
-        raise
+    for index, (what, part) in enumerate(_tagged(document)):
+        shaped = prepared.get((str(path), index))
+        moved = _placed(pending, journal, root, part, shaped) if shaped is not None else part
+        if what == "record":
+            written["records"].append(moved)
+        else:
+            written[what] = moved
+    into = pending.write(written)
     journal.wrote(path, into)
 
 
-def _placed(pending: _Moving, journal: _Journal, root: Path, part: dict, what: str, materialized_name) -> dict:
+def _placed(pending: _Moving, journal: _Journal, root: Path, part: dict, shaped: _Part) -> dict:
     """One asset of a record, its files put in the snapshot being written; the record with where they are kept."""
-    content_hash = part.get("content_hash")
-    folder = _object(root, content_hash) if isinstance(content_hash, str) else None
-    if folder is None:
-        return part  # not built, or a hash that is none
-    location = part.get("location") or {}
-    listed = part.get("files") if isinstance(part.get("files"), list) else None
-    known = {}
-    if what == "index":
-        place, single, names = f"{OWN_DIR}/index.json", True, ["index.json"]
-    elif what == "documents":
-        place, single, names = "", False, [name for name in part.get("files") or [] if isinstance(name, str)]
-    elif location.get("kind") in ("table", "query"):
-        place, single, names = f"{TABLES_DIR}/{materialized_name(part)}", True, [materialized_name(part)]
-    elif _is_glob(part):
-        place, single = _plain(str(hashing.glob_root(location.get("path", "")))), False
-        names = None
-    elif listed is not None:
-        place, single = _plain(location.get("path", "")), False
-        names = [entry["path"] for entry in listed if isinstance(entry, dict) and isinstance(entry.get("path"), str)]
-        known = {entry["path"]: entry.get("content_hash") for entry in listed if isinstance(entry, dict)}
+    content_hash = part["content_hash"]
+    folder = _object(root, content_hash)
+    sources = [(name, str(journal.where(folder.joinpath(*name.split("/"))))) for name in shaped.names]
+    gone = next((name for name, source in sources if not os.path.lexists(source)), None)
+    if gone is not None:
+        raise MigrateError(
+            f"{gone} of the object {content_hash} is neither where it was nor where a migrate moved it. Nothing more "
+            f"was moved; see that the store's sync has finished, and run this again."
+        )
+    for name, source in sources:
+        if shaped.known.get(name):
+            pending.known[source] = shaped.known[name]
+    if shaped.single:
+        stored = pending.put_listed([(declared_name(shaped.place) or shaped.names[0], sources[0][1])], shaped.place, True)
     else:
-        place, single = _plain(location.get("path", "")), True
-        names = [declared_name(location.get("path", "")) or ""]
-    if names is None:
-        # A glob's record lists no file: what the object held, as it was hashed
-        names = sorted(
-            Path(os.path.relpath(file, folder)).as_posix() for file in hashing.directory_files(folder)
-        ) if folder.is_dir() else []
-        names += [name for name in _moved_under(journal, folder) if name not in names]
-    if single and names and not os.path.lexists(journal.where(folder / names[0])):
-        # One file under another name than the declared one: the one the object holds
-        held = [file.name for file in folder.iterdir() if file.is_file()] if folder.is_dir() else []
-        names = held[:1] or names
-    sources = [(name, str(journal.where(folder.joinpath(*name.split("/"))))) for name in names]
-    if not sources or not all(os.path.lexists(source) for _, source in sources):
-        return part  # an object 0.2 lost: the record names it, as it did
-    for (name, source) in sources:
-        if single:
-            pending.known[source] = content_hash
-        elif known.get(name):
-            pending.known[source] = known[name]
-    if single:
-        stored = pending.put_listed([(declared_name(place) or names[0], sources[0][1])], place, True)
-    else:
-        stored = pending.put_listed(sources, place, False)
+        stored = pending.put_listed(sources, shaped.place, False)
     if stored.content_hash != content_hash:
-        return part  # its object was not what its name said: left for `store verify`, and not followed
+        raise MigrateError(f"The object {content_hash}, moved, does not make its hash. Nothing more was moved; run this again.")
     return {**part, "stored": stored.stored}
 
 

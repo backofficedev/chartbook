@@ -105,25 +105,58 @@ def copy_snapshots(records: Iterable[KeptRecord], into: Store, echo: Callable[[s
         ):
             done.there.append(moment)
             continue
+        what = f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}"
+        why = _not_to_copy(record)
+        if why is not None:
+            done.refused.append((what, why))
+            continue
         try:
             document = json.loads(record.path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
-            done.refused.append((str(record.path), f"its record cannot be read: {error}"))
+            done.refused.append((what, f"its record cannot be read: {error}"))
             continue
-        pending = into.begin(record.pipeline, record.commit, record.made_at)
+        pending = None
         try:
+            pending = into.begin(record.pipeline, record.commit, record.made_at)
             why = _copy_parts(document, record, pending, done)
-            if why is not None:
-                pending.discard()
-                done.refused.append((f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}", why))
-                continue
-            pending.write(document)
+            if why is None:
+                pending.write(document)
+        except (OSError, ValueError, StoreError) as error:
+            why = str(error) or type(error).__name__
         except BaseException:
-            pending.discard()
+            if pending is not None:
+                pending.discard()
             raise
+        if why is not None:
+            if pending is not None:
+                pending.discard()
+            done.refused.append((what, why))
+            continue
         done.copied.append(moment)
         echo(f"{record.pipeline} at {record.commit[:7]}, made {record.made_at}")
     return done
+
+
+def _not_to_copy(record: KeptRecord) -> Optional[str]:
+    """Why a snapshot is not to be copied, by what a store asks of its record; None if it may be.
+
+    Read as any record is (:func:`chartbook.snapshot.read`): its schema, its
+    time, its pipeline's ID, its paths, and its folder's name, which must
+    be its pipeline's and its commit's. A record or a folder that is a link
+    is refused, as a reader refuses one.
+    """
+    from chartbook.snapshot import SnapshotError, read
+
+    folder = record.folder
+    if record.path.is_symlink() or (record.path.parent).is_symlink() or folder.is_symlink() or folder.parent.is_symlink():
+        return "its record, or a folder holding it, is a link"
+    try:
+        taken = read(record.path)
+    except SnapshotError as error:
+        return str(error)
+    if folder.parent.name != pipeline_folder(taken.pipeline):
+        return f"it is in the folder {folder.parent.name}, and is a snapshot of {taken.pipeline}, whose folder is {pipeline_folder(taken.pipeline)}"
+    return None
 
 
 def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Optional[str]:
@@ -131,8 +164,10 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
     parts = [part for part in document.get("records") or [] if isinstance(part, dict)]
     parts += [document[name] for name in ("index", "documents") if isinstance(document.get(name), dict)]
     for part in parts:
-        if not isinstance(part.get("content_hash"), str) or "stored" not in part:
-            continue
+        if not isinstance(part.get("content_hash"), str):
+            continue  # declared and not built
+        if "stored" not in part:
+            return f"its record's {part.get('id', 'part')} names {part['content_hash']}, and does not say where its files are"
         kept = _kept_files(part["stored"], record.folder.parent, record.folder.name)
         if kept is None:
             return f"its record's {part.get('id', 'part')} says nothing a store could follow"
@@ -203,7 +238,8 @@ def import_snapshots(store: FolderStore, source: Union[str, Path], echo: Callabl
     source = Path(source).expanduser().resolve()
     if not source.is_dir():
         raise SharingError(f"{source} is not a folder.")
-    if source == store.root or source.is_relative_to(store.root / PIPELINES_DIR):
+    inside = Path(os.path.realpath(store.root))
+    if source == inside or source.is_relative_to(inside / PIPELINES_DIR):
         raise SharingError(f"{source} is in the store it would be imported into.")
     records = [record for folder in _pipeline_folders(source) for record in _records_in(folder)]
     if not records:
@@ -211,8 +247,4 @@ def import_snapshots(store: FolderStore, source: Union[str, Path], echo: Callabl
             f"{source} holds no snapshot: a pipeline's folder from a store (its snapshots' folders, each with "
             f"_chartbook/{RECORD_FILE}), or a folder `chartbook store export` wrote."
         )
-    for record in records:
-        if record.readable and record.folder.parent.name != pipeline_folder(record.pipeline):
-            echo(f"Note: {record.folder.parent.name} holds snapshots of {record.pipeline}, which go in {pipeline_folder(record.pipeline)}.")
-            break
     return copy_snapshots(records, store, echo)

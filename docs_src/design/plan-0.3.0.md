@@ -391,9 +391,9 @@ other person's pipelines then pin it by its ID, with `chartbook pin` and `chartb
 dependency named by its ID alone already works.
 
 *Proposed:* **`chartbook store export <id> --to <folder>`** writes the pipeline's folder as a store
-holds it. With `--latest`, or `--snapshot …`, it writes only those snapshots, each with every file
-it needs in its own folder: one complete snapshot, readable without ChartBook, that can be dropped
-into a store like any other. *Decided 2026-10-28 ("we should never duplicate files"):* there is no
+holds it. With `--latest` it writes the newest alone, every file it needs in its own folder: one
+complete snapshot, readable without ChartBook, that can be dropped into a store like any other.
+With `--snapshot …` it writes those named, each file once among them, in the first that has it. *Decided 2026-10-28 ("we should never duplicate files"):* there is no
 `--readable` copy beside it, since the export is readable already.
 
 **`chartbook store import <folder>`** checks every file against its dictionary, copies in what the
