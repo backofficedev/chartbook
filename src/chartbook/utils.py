@@ -246,12 +246,16 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
         # Fix row count in glimpse to show actual total rows
         return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
+    except FileNotFoundError:
+        return f"Error reading file: {Path(filepath).name} is not there."
     # A panic in polars is a BaseException: a page, not a crash of the build
     except (Exception, pl.exceptions.PanicException) as e:
-        # The file by its name: a machine's paths belong on no page
+        # The file by its name: a machine's paths belong on no page, nor
+        # the end of one that polars cuts short ("...chartbook/x.parquet")
         said = str(e)
         for folder in {str(Path(filepath).parent), str(Path(filepath).parent.resolve())}:
             said = said.replace(folder + os.sep, "").replace(folder, ".")
+        said = re.sub(r"\.\.\.\S*/([^/\s]+)", r"\1", said)
         return f"Error reading file: {said}"
 
 

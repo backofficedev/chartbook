@@ -580,9 +580,12 @@ def ref(
     ``read_options`` (:func:`chartbook.formats.sql`). A table in a source is
     its quoted identifier. A query in a source is the query, in
     parentheses, so it stands where a table would. Paste it into SQL you
-    run with :func:`connect`, or with your own tooling. An Arrow IPC file
-    has none: DuckDB reads one with no function of its own, and
-    :func:`sql` hands it the file itself.
+    run with :func:`connect`, or with your own tooling. A folder of parquet
+    is the list of its parts, with its Hive keys put on by file. An Arrow
+    IPC file has none, since DuckDB reads one with no function of its own,
+    and nor has a JSON lines file with ``schema_overrides``, which polars
+    applies: :func:`sql` hands DuckDB what :func:`load` reads of each
+    (:func:`chartbook.formats.handed`).
 
     :param reference: The dataframe: a name of this pipeline's, or
         ``pipeline:name`` for a pinned one of another's.
@@ -590,7 +593,8 @@ def ref(
     :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
     :raises AssetNotPinnedError: If another pipeline's dataframe has no
         pinned copy.
-    :raises ValueError: For an Arrow IPC file.
+    :raises ValueError: For an Arrow IPC file, or a JSON lines file with
+        ``schema_overrides``.
     """
     from chartbook.backends import backend_for
 
@@ -617,8 +621,10 @@ def sql(
     live in, or a fresh in-memory DuckDB of its own when it names only
     files. An Arrow IPC file, which DuckDB has no reader of its own for, is
     handed to it as an Arrow dataset under a name of its own, which DuckDB
-    reads lazily as it would a file. ChartBook never parses or rewrites the
-    SQL; what is between the
+    reads lazily as it would a file; a JSON lines file with
+    ``schema_overrides`` is handed as the frame :func:`load` gives, so that
+    its overrides mean in SQL what they mean there. ChartBook never parses
+    or rewrites the SQL; what is between the
     braces is a reference, and everything else is yours, in that engine's
     dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or
     inside a string, is written twice: ``{{'a': 1}}``. A warehouse reads
@@ -681,19 +687,19 @@ def sql(
             )
     arrow = {}
     for text, location in locations.items():
-        if location.kind == "file" and formats.reading_of(location).format == "ipc":
-            # DuckDB has no reader of Arrow IPC of its own: the files go in as
-            # a dataset, under a name of their own, the same each call, so a
-            # :memory: source keeps one view of them and not one a call
+        handed = formats.handed(location) if location.kind == "file" else None
+        if handed is not None:
+            # An Arrow IPC file, or a JSON lines file with overrides: DuckDB is
+            # handed it, under a name of its own, the same each call, so a
+            # :memory: source keeps one view of it and not one a call
             if not _takes_arrow(engine):
                 raise ValueError(
-                    f"The query names {text.strip()}, an Arrow IPC file, and runs in the source "
-                    f"{engine.source!r}, a {engine.name} engine, which ChartBook cannot hand one to. "
-                    f"Load it with data.load() and join the frames in Polars."
+                    f"The query names {text.strip()}, which DuckDB is handed rather than given a "
+                    f"reader of, and runs in the source {engine.source!r}, a {engine.name} engine, "
+                    f"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."
                 )
-            dataset = formats.arrow_dataset(location)
-            name = formats.arrow_name(dataset)
-            arrow[name] = dataset
+            name = formats.handed_name(location)
+            arrow[name] = handed
             replacement = quote_identifier(name)
         elif location.kind == "file":
             replacement = backend_for(location).ref(location)

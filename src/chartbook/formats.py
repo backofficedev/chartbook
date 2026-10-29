@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping, Optional, Union
@@ -337,19 +338,35 @@ def _visible(parts) -> bool:
     return not any(part.startswith((".", "_")) for part in parts)
 
 
+#: What a folder holds beside its data that is plainly not a table: a file
+#: with one of these endings, or named one of these (``README.txt``, ``schema.json``).
+_DOCUMENTS = (".md", ".rst", ".html", ".htm", ".pdf", ".log", ".crc", ".yaml", ".yml", ".toml", ".xml")
+_DOCUMENT_NAMES = ("readme", "license", "licence", "notice", "changelog", "manifest", "schema")
+
+
+def _a_document(name: str) -> bool:
+    """Whether a file of a folder is plainly not one of its tables, by its name."""
+    last = name.rsplit("/", 1)[-1].lower()
+    return last.endswith(_DOCUMENTS) or last.split(".", 1)[0] in _DOCUMENT_NAMES
+
+
 def _chosen(read: Reading, names: list[str]) -> list[str]:
     """The files of a folder, by their path in it, that a read of its format takes.
 
     Those its format's endings name. When there are none and the entry
-    names the format itself, every file but one named as another format's:
-    a folder of ``.dat`` or ``.json`` files is read as CSV or JSON lines
-    when its entry says so.
+    names the format itself, those with the ending most of its other files
+    have, none plainly not a table: a folder of ``.dat`` or ``.json`` files
+    is read as CSV or JSON lines when its entry says so, and the
+    ``README.txt`` or ``schema.json`` beside them is passed over.
     """
     visible = [name for name in names if _visible(name.split("/"))]
     chosen = [name for name in visible if name.lower().endswith(ENDINGS[read.format])]
-    if not chosen and read.said_by == "format":
-        chosen = [name for name in visible if format_of_name(name) is None]
-    return chosen
+    if chosen or read.said_by != "format":
+        return chosen
+    candidates = [name for name in visible if format_of_name(name) is None and not _a_document(name)]
+    endings = [Path(name).suffix.lower() for name in candidates]
+    most = max((endings.count(ending) for ending in endings), default=0)
+    return [name for name, ending in zip(candidates, endings) if endings.count(ending) == most]
 
 
 def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
@@ -457,28 +474,83 @@ def files_of(path: Union[str, Path], read: Reading, files=(), listed=()) -> list
 # --- Reading ----------------------------------------------------------------
 
 
-def _keys(parts_of) -> set:
-    """The Hive keys among the parts of some paths: ``year`` of ``year=2024``."""
-    return {part.split("=", 1)[0] for parts in parts_of for part in parts if "=" in part and not part.startswith("=")}
+#: The column a read of a folder's files names each row's file in, for a moment.
+_FILE = "__chartbook_file__"
+
+
+def _partitions(files: list[str], folder: Path) -> dict:
+    """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
+
+    A key is one every file's path has, as polars reads a folder whose
+    files are at one depth. Its type is inferred as polars infers it:
+    whole numbers (``007`` is 7), then numbers, ``true`` and ``false``,
+    dates, times of day with a date, else text; a value is URL-decoded, and
+    ``__HIVE_DEFAULT_PARTITION__`` is null.
+
+    :returns: ``{key: (polars type, {file: value})}``, in the order the keys come.
+    """
+    from urllib.parse import unquote
+
+    raw: dict = {}
+    for file in files:
+        for part in Path(file).relative_to(folder).parent.parts:
+            if "=" in part and not part.startswith("="):
+                key, value = part.split("=", 1)
+                raw.setdefault(key, {})[file] = None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value)
+    found = {}
+    for key, values in raw.items():
+        if len(values) < len(files):
+            continue
+        kind, parse = _hive_type([value for value in values.values() if value is not None])
+        found[key] = (kind, {file: None if values[file] is None else parse(values[file]) for file in files})
+    return found
+
+
+def _hive_type(values: list[str]):
+    """The polars type of a Hive key's values, and how one is read as it."""
+    from datetime import date, datetime
+
+    def every(test) -> bool:
+        try:
+            return bool(values) and all(test(value) is not None for value in values)
+        except ValueError:
+            return False
+
+    if every(lambda v: re.fullmatch(r"[+-]?\d+", v)):
+        return pl.Int64, int
+    if every(float):
+        return pl.Float64, float
+    if all(value in ("true", "false") for value in values) and values:
+        return pl.Boolean, lambda v: v == "true"
+    if every(lambda v: re.fullmatch(r"\d{4}-\d{2}-\d{2}", v) and date.fromisoformat(v)):
+        return pl.Date, date.fromisoformat
+    if every(lambda v: re.fullmatch(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?", v) and datetime.fromisoformat(v)):
+        return pl.Datetime("us"), datetime.fromisoformat
+    return pl.String, str
 
 
 def _hive(scan, files: list[str], folder: Path):
     """A scan of a folder's files with its Hive keys as columns: those below the folder, and none above it.
 
     Polars, handed files and not their folder, takes a ``key=value`` part
-    anywhere in a path for a column: a folder declared as
-    ``./_data/prices/year=2024`` would gain ``year``. The keys of the folders
-    above it are left out, as a read of the folder itself leaves them; with
-    none below, the files are read with no keys at all. (A file's own column
-    of a key's name that only a folder above has is not kept: polars gives
-    the folder's value in its place.)
+    anywhere in a path for a column, above the folder as well as below it,
+    and in place of a file's own column of that name: a folder declared as
+    ``./_data/prices/year=2024`` would gain ``year``. So the files are read
+    with no keys, and the keys below the folder (:func:`_partitions`) are
+    put on by each row's file, as a read of the folder itself has them. A
+    file's own column of a key's name is kept as it is.
     """
-    below = _keys(Path(file).relative_to(folder).parent.parts for file in files)
-    if not below:
+    keys = _partitions(files, folder)
+    if not keys:
         return scan(files, hive_partitioning=False)
-    frame = scan(files, hive_partitioning=True)
-    above = _keys([Path(folder).parts]) - below
-    return frame.drop(sorted(above), strict=False) if above else frame
+    frame = scan(files, hive_partitioning=False, include_file_paths=_FILE)
+    own = set(frame.collect_schema().names())
+    put = [
+        pl.col(_FILE).replace_strict(values, default=None, return_dtype=kind).alias(key)
+        for key, (kind, values) in keys.items()
+        if key not in own
+    ]
+    return frame.with_columns(put).drop(_FILE)
 
 
 def _csv_options(read: Reading, sources) -> dict:
@@ -505,21 +577,66 @@ def _tab_separated(sources) -> bool:
 
 def _scan(read: Reading, sources, folder: Optional[Path]):
     """The polars scan of a format's files, unchecked; a JSON lines file's columns not given their types yet."""
-    if read.format in ("parquet", "ipc"):
-        scan = pl.scan_parquet if read.format == "parquet" else pl.scan_ipc
+    if read.format == "parquet":
         if isinstance(sources, list) and folder is not None:
-            return _hive(scan, sources, folder)
-        return scan(sources, hive_partitioning=True)
+            return _hive(pl.scan_parquet, sources, folder)
+        # A file, a glob, or a folder handed whole: as parquet always was
+        return pl.scan_parquet(sources, hive_partitioning=True)
+    if read.format == "ipc":
+        # A glob's or a folder's keys, below it, as DuckDB is given them
+        # (arrow_dataset); a file's path gives none
+        if isinstance(sources, str) and is_glob_pattern(sources):
+            from chartbook import hashing
+
+            return _hive(pl.scan_ipc, _files(sources), hashing.glob_root(sources))
+        if isinstance(sources, list) and folder is not None:
+            return _hive(pl.scan_ipc, sources, folder)
+        return pl.scan_ipc(sources, hive_partitioning=False)
     if read.format == "csv":
-        return pl.scan_csv(sources, **_csv_options(read, sources))
-    # Each file's types inferred from its own lines, then the frames joined
-    # by name, as DuckDB's union_by_name joins them: polars infers a glob's
-    # from its first file alone, and a field the later files bring is lost
+        frame, (polars_names, names) = _csv(read, sources)
+        return frame.rename(dict(zip(polars_names, names))) if polars_names != names else frame
+    # Each file's types inferred from its own lines, and the files read as
+    # one under all of their columns, as DuckDB's union_by_name reads them:
+    # polars infers a glob's from its first file alone, and a field the
+    # later files bring would be lost
     length = read.options.get("infer_schema_length", SAMPLE_ROWS)
-    frames = [pl.scan_ndjson(file, infer_schema_length=length) for file in _files(sources)]
-    if len(frames) == 1:
-        return frames[0]
-    return pl.concat(frames, how="diagonal_relaxed")
+    files = _files(sources)
+    if len(files) == 1:
+        return pl.scan_ndjson(files[0], infer_schema_length=length)
+    schemas = [pl.scan_ndjson(file, infer_schema_length=length).collect_schema() for file in files]
+    merged = pl.concat([pl.DataFrame(schema=schema) for schema in schemas], how="diagonal_relaxed").schema
+    return pl.scan_ndjson(files, schema=merged)
+
+
+def _csv(read: Reading, sources) -> tuple:
+    """A CSV file's scan, and its columns' names: as polars gives them, and as both engines are to give them.
+
+    A file with no header has its columns named ``column_1``, ``column_2``
+    and so on, which polars names otherwise by version and DuckDB names
+    otherwise again; an empty name in a header is named so too, which
+    DuckDB will not take. ``schema_overrides`` name the columns so.
+    """
+    options = _csv_options(read, sources)
+    overrides = options.pop("schema_overrides", None) or {}
+    polars_names = pl.scan_csv(sources, **{**options, "infer_schema_length": 0}).collect_schema().names()
+    if options.get("has_header", True):
+        names = [name if name != "" else f"column_{i}" for i, name in enumerate(polars_names, start=1)]
+    else:
+        names = [f"column_{i}" for i in range(1, len(polars_names) + 1)]
+    named = dict(zip(names, polars_names))
+    # True or false is read as text and then as one of the words DuckDB
+    # takes for one (yes, t, 1...), where polars would take true and false alone
+    truths = [named.get(column, column) for column, kind in overrides.items() if kind == pl.Boolean]
+    if overrides:
+        options["schema_overrides"] = {
+            named.get(column, column): pl.String if kind == pl.Boolean else kind for column, kind in overrides.items()
+        }
+    frame = pl.scan_csv(sources, **options)
+    if truths:
+        frame = frame.with_columns(
+            pl.col(column).str.to_lowercase().replace_strict(_BOOLEANS, return_dtype=pl.Boolean) for column in truths
+        )
+    return frame, (polars_names, names)
 
 
 #: What a read raises when the bytes are not what they are taken to be. A
@@ -548,8 +665,10 @@ def scan(
     first :data:`SAMPLE_ROWS` rows, as DuckDB infers them, or
     ``infer_schema_length``; each JSON lines file of a glob or a folder from
     its own, so that a field the later ones bring is kept. A CSV file's
-    ``schema_overrides`` are the types it is parsed as, and a JSON lines
-    file's are cast to after it is read, as DuckDB reads each.
+    ``schema_overrides`` are the types it is parsed as, in DuckDB too; a
+    JSON lines file's are cast to after it is read (:func:`_cast`), and
+    DuckDB is handed what is read here (:func:`handed`). A CSV file with no
+    header has its columns named ``column_1``, ``column_2``, …
 
     The schema is read here, so that a file that is not of its format is
     said now, by name: the footer of a parquet or Arrow IPC file, the first
@@ -596,27 +715,50 @@ def scan(
             f"column of. Its columns are: {', '.join(schema.names()[:12])}{', ...' if len(schema) > 12 else ''}.",
         )
     if read.format == "jsonl" and overrides:
-        frame = _cast(frame, schema, _overrides(read))
+        frame = _cast(frame, schema, _overrides(read), shown, path)
     return frame
 
 
-#: The text a cast to Boolean takes, as DuckDB's takes it.
-_BOOLEANS = {"true": True, "false": False, "t": True, "f": False, "1": True, "0": False}
+#: The words a cast of text to Boolean takes, whatever their capitals.
+_BOOLEANS = {
+    "true": True, "false": False, "t": True, "f": False, "yes": True, "no": False,
+    "y": True, "n": False, "1": True, "0": False,
+}
 
 
-def _cast(frame, schema, overrides: dict):
-    """A JSON lines file's columns given their types after the read, as DuckDB's ``cast`` gives them.
+def _cast(frame, schema, overrides: dict, shown: str, path):
+    """A JSON lines file's columns given their types after the read.
 
-    Text becomes a date, a time or a true-or-false by parsing it, which
-    polars' own cast no longer does; everything else is cast.
+    This is the one meaning they have: ``data.sql()`` is handed the frame
+    read here (:func:`handed`), as DuckDB's own casts round, trim and parse
+    otherwise than polars' do. Text is trimmed; a number in it is read
+    whole or refused; a date is ``YYYY-MM-DD``, as both engines write one,
+    and not a guess between day and month; a time with a date is ISO 8601,
+    an offset made UTC; true or false is one of :data:`_BOOLEANS`. A struct
+    or a list is no one type, and is refused.
     """
     given = []
     for column, kind in overrides.items():
-        value = pl.col(column)
-        if schema[column] == pl.String and kind in (pl.Date, pl.Datetime, pl.Time):
-            value = {pl.Date: value.str.to_date, pl.Datetime: value.str.to_datetime, pl.Time: value.str.to_time}[kind]()
-        elif schema[column] == pl.String and kind == pl.Boolean:
-            value = value.str.to_lowercase().replace_strict(_BOOLEANS, return_dtype=pl.Boolean)
+        value, was = pl.col(column), schema[column]
+        if was.is_nested():
+            raise UnreadableTableError(
+                path,
+                "jsonl",
+                f"{shown}: read_options.schema_overrides gives {column!r} a type, and it is a "
+                f"{was}, which is read as it is. Select or unnest its fields in polars or SQL.",
+            )
+        if was == pl.String:
+            value = value.str.strip_chars()
+            if kind == pl.Date:
+                value = value.str.to_date("%Y-%m-%d")
+            elif kind == pl.Datetime:
+                value = value.str.to_datetime(time_unit="us", time_zone="UTC").dt.replace_time_zone(None)
+            elif kind == pl.Time:
+                value = value.str.to_time()
+            elif kind == pl.Boolean:
+                value = value.str.to_lowercase().replace_strict(_BOOLEANS, return_dtype=pl.Boolean)
+            else:
+                value = value.cast(kind)
         else:
             value = value.cast(kind)
         given.append(value.alias(column))
@@ -665,6 +807,8 @@ def _reason(error: BaseException, path=None) -> str:
     if path is not None:
         for absolute in (str(Path(str(path)).parent), str(Path(str(path)).parent.resolve())):
             text = text.replace(absolute + os.sep, "")
+        # And the end of a path polars cuts short: "...chartbook/x.parquet"
+        text = re.sub(r"\.\.\.\S*/([^/\s]+)", r"\1", text)
     return text[:300] or type(error).__name__
 
 
@@ -708,32 +852,86 @@ def _identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
+#: DuckDB's name of each polars type a Hive key can have.
+_DUCKDB_KEYS = {"Int64": "BIGINT", "Float64": "DOUBLE", "Boolean": "BOOLEAN", "Date": "DATE", "Datetime": "TIMESTAMP", "String": "VARCHAR"}
+
+
+def _literal(value, kind) -> str:
+    """A Hive key's value as a DuckDB literal of its type."""
+    from chartbook.backends import quote_literal
+
+    name = _DUCKDB_KEYS[kind.base_type().__name__]
+    if value is None:
+        return f"NULL::{name}"
+    if name == "BOOLEAN":
+        return "true" if value else "false"
+    if name == "DATE":
+        return f"DATE {quote_literal(value.isoformat())}"
+    if name == "TIMESTAMP":
+        return f"TIMESTAMP {quote_literal(value.isoformat(sep=' '))}"
+    if name == "VARCHAR":
+        return quote_literal(value)
+    return f"{value!r}::{name}"
+
+
+def _with_keys(read_parquet: str, tables: list[str], folder: Path) -> str:
+    """A read of a folder's files with its Hive keys below it put on by each row's file, as :func:`_hive` puts them on.
+
+    DuckDB, like polars, takes a ``key=value`` part anywhere in a path, and
+    gives a key above and below a folder the value above, in every row. Its
+    types are its own too (``007`` is text to it). So it reads the files
+    with no keys, and is given each file's.
+    """
+    from chartbook.backends import quote_literal
+
+    keys = _partitions(tables, folder)
+    own = set(pl.scan_parquet(tables[0], hive_partitioning=False).collect_schema().names()) if keys else set()
+    keys = {key: kind_values for key, kind_values in keys.items() if key not in own}
+    if not keys:
+        return read_parquet
+    rows = ", ".join(
+        "(" + ", ".join([quote_literal(Path(file).as_posix())] + [_literal(values[file], kind) for kind, values in keys.values()]) + ")"
+        for file in tables
+    )
+    columns = ", ".join([_FILE] + [_identifier(key) for key in keys])
+    return (
+        f"(select * exclude ({_FILE}) from {read_parquet[:-1]}, filename = '{_FILE}') "
+        f"join (values {rows}) as chartbook_keys({columns}) using ({_FILE}))"
+    )
+
+
 def sql(location) -> str:
     """A file as DuckDB reads it in SQL: ``read_parquet('…')``, ``read_csv('…', …)`` or ``read_json('…', …)``.
 
-    A CSV or JSON lines file is given its ``read_options`` under DuckDB's
-    names, and what DuckDB would otherwise guess is said as polars reads
-    it: the separator, the header and the columns' names without one, the
-    quote and its escape, an empty field as null and a quoted empty one as
-    empty, and the rows its types are inferred from (:data:`SAMPLE_ROWS`).
-    It has no Hive columns, as polars reads none. A JSON lines file's
-    ``schema_overrides`` are casts after the read, and the files of a glob
-    or a folder are joined by name. What is left to inference is DuckDB's:
-    it finds dates in text, where polars leaves text.
+    A folder of parquet is its parts, with the Hive keys below it as polars
+    reads them. A CSV or JSON lines file is given its ``read_options`` under
+    DuckDB's names, and what DuckDB would otherwise guess is said as polars
+    reads it: the separator, the header, the columns' names where polars'
+    are not DuckDB's, the quote and its escape, an empty field as null and a
+    quoted empty one as empty, and the rows its types are inferred from
+    (:data:`SAMPLE_ROWS`). It has no Hive columns, as polars reads none, and
+    the files of a JSON lines glob or folder are joined by name. What is
+    left to inference is DuckDB's: it finds dates in text, where polars
+    leaves text.
 
-    :raises ValueError: For an Arrow IPC file, which DuckDB has no reader of
-        its own for (``data.sql()`` hands it the file itself,
-        :func:`arrow_dataset`); or a folder with no file of its format.
+    :raises ValueError: For a file DuckDB is handed rather than given a
+        reader of (:func:`handed`): an Arrow IPC file, which DuckDB has no
+        reader of its own for, or a JSON lines file with
+        ``schema_overrides``; or a folder with no file of its format.
     """
     from chartbook.backends import quote_literal
 
     read = reading_of(location)
     path = Path(location.path)
-    if read.format == "ipc":
+    if read.format == "ipc" or (read.format == "jsonl" and read.options.get("schema_overrides")):
+        what = (
+            "an Arrow IPC file, which DuckDB reads with no function of its own"
+            if read.format == "ipc"
+            else "a JSON lines file with schema_overrides, which polars applies and DuckDB is handed"
+        )
         raise ValueError(
-            f"{path.name} is an Arrow IPC file, which DuckDB reads with no function of its own, so "
-            f"there is no text to stand for it in SQL. data.sql() hands DuckDB the file itself, and "
-            f"data.load() reads it."
+            f"{path.name} is {what}, so there is no text to stand for it in SQL. data.sql() hands "
+            f"DuckDB what data.load() reads."
         )
     if read.format == "parquet":
         # With / on every system: DuckDB reads it so on Windows too, and SQL
@@ -744,17 +942,11 @@ def sql(location) -> str:
         sources, folder = _sources(path, read, location.files, location.listed)
         if folder is None:
             return f"read_parquet({quote_literal(text)})"
-        # A folder, as its tables: DuckDB handed the folder takes only its
-        # files named .parquet (not Hive's 000000_0), and the keys of the
-        # folders above it, which polars' read of it leaves out
+        # A folder, as its tables: handed the folder, DuckDB takes only its
+        # files named .parquet (not Hive's 000000_0)
         tables = sources if isinstance(sources, list) else [str(file) for file in files_of(path, read)]
         listed = ", ".join(quote_literal(Path(file).as_posix()) for file in tables)
-        below = _keys(Path(file).relative_to(folder).parent.parts for file in tables)
-        above = _keys([folder.parts]) - below
-        read_parquet = f"read_parquet([{listed}], hive_partitioning = true)"
-        if not above:
-            return read_parquet
-        return f"(select * exclude ({', '.join(_identifier(key) for key in sorted(above))}) from {read_parquet})"
+        return _with_keys(f"read_parquet([{listed}], hive_partitioning = false)", tables, folder)
     sources, folder = _sources(path, read, location.files, location.listed)
     many = isinstance(sources, list) or is_glob_pattern(sources)
     if isinstance(sources, list):
@@ -763,43 +955,72 @@ def sql(location) -> str:
         text = quote_literal(Path(sources).as_posix())
     options = read.options
     sample = options.get("infer_schema_length", SAMPLE_ROWS)
+    if read.format == "jsonl":
+        given = ["format = 'newline_delimited'", f"sample_size = {sample}", "hive_partitioning = false"]
+        if many:
+            given.append("union_by_name = true")
+        return f"read_json({text}, {', '.join(given)})"
+    # As polars reads it, which says now what it cannot read: a glob whose
+    # files have other columns, say, which DuckDB would read as the first's
+    scan(path, read.format, read.options, files=location.files, listed=location.listed)
+    _, (polars_names, names) = _csv(read, sources)
+    quote = options.get("quote_char", '"')
+    nulls = options.get("null_values", [])
+    nulls = [""] + [n for n in ([nulls] if isinstance(nulls, str) else nulls) if n != ""]
+    given = [
+        f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(sources) else ','))}",
+        f"header = {'true' if options.get('has_header', True) else 'false'}",
+        f"quote = {quote_literal(quote)}",
+        f"escape = {quote_literal(quote)}",
+        "nullstr = [" + ", ".join(quote_literal(n) for n in nulls) + "]",
+        "allow_quoted_nulls = false",
+        f"sample_size = {sample}",
+    ]
+    if names != polars_names or not options.get("has_header", True) or any("_duplicated_" in name for name in names):
+        # The names as polars gives them, which DuckDB gives otherwise
+        given.append("names = [" + ", ".join(quote_literal(name) for name in names) + "]")
     overrides = {column: TYPES[_type(name)] for column, name in (options.get("schema_overrides") or {}).items()}
-    if read.format == "csv":
-        quote = options.get("quote_char", '"')
-        nulls = options.get("null_values", [])
-        nulls = [""] + [n for n in ([nulls] if isinstance(nulls, str) else nulls) if n != ""]
-        given = [
-            f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(sources) else ','))}",
-            f"header = {'true' if options.get('has_header', True) else 'false'}",
-            f"quote = {quote_literal(quote)}",
-            f"escape = {quote_literal(quote)}",
-            "nullstr = [" + ", ".join(quote_literal(n) for n in nulls) + "]",
-            "allow_quoted_nulls = false",
-            f"sample_size = {sample}",
-        ]
-        if not options.get("has_header", True):
-            # The names polars gives, which are not DuckDB's (and not the same
-            # in every polars), so that the two agree, overrides and all
-            names = _scan(read, sources, folder).collect_schema().names()
-            given.append("names = [" + ", ".join(quote_literal(name) for name in names) + "]")
-        if overrides:
-            given.append("types = {" + ", ".join(f"{quote_literal(c)}: {quote_literal(t)}" for c, t in overrides.items()) + "}")
-        if "skip_lines" in options:
-            given.append(f"skip = {options['skip_lines']}")
-        if options.get("decimal_comma"):
-            given.append("decimal_separator = ','")
-        given.append("hive_partitioning = false")
-        return f"read_csv({text}, {', '.join(given)})"
-    given = ["format = 'newline_delimited'", f"sample_size = {sample}", "hive_partitioning = false"]
-    if many:
-        given.append("union_by_name = true")
-    read_json = f"read_json({text}, {', '.join(given)})"
-    if not overrides:
-        return read_json
-    # DuckDB's JSON reader takes a whole schema or none: a column is given
-    # its type after the read instead, as polars gives it
-    casts = ", ".join(f"cast({_identifier(c)} as {t}) as {_identifier(c)}" for c, t in overrides.items())
-    return f"(select * replace ({casts}) from {read_json})"
+    if overrides:
+        given.append("types = {" + ", ".join(f"{quote_literal(c)}: {quote_literal(t)}" for c, t in overrides.items()) + "}")
+    if "skip_lines" in options:
+        given.append(f"skip = {options['skip_lines']}")
+    if options.get("decimal_comma"):
+        given.append("decimal_separator = ','")
+    given.append("hive_partitioning = false")
+    return f"read_csv({text}, {', '.join(given)})"
+
+
+def handed(location):
+    """What DuckDB is handed of a file it is given no reader of, or None: what ``data.sql()`` registers in its place.
+
+    An Arrow IPC file, which DuckDB has no reader of its own for, is a
+    pyarrow dataset (:func:`arrow_dataset`). A JSON lines file with
+    ``schema_overrides`` is the frame polars reads of it: DuckDB's casts
+    round, trim and parse text otherwise than polars', and its reader finds
+    dates in text that an override to String would then give back
+    rewritten, so it is handed the values ``data.load()`` gives.
+    """
+    read = reading_of(location)
+    if read.format == "ipc":
+        return arrow_dataset(location)
+    if read.format == "jsonl" and read.options.get("schema_overrides"):
+        return scan_location(location)
+    return None
+
+
+def handed_name(location) -> str:
+    """The name what DuckDB is handed of a file goes by in SQL.
+
+    One per file and its reading, the same each call, so that a source's
+    engine keeps one view of it and not one a call.
+    """
+    import hashlib
+    import json
+
+    read = reading_of(location)
+    files = [str(file) for file in files_of(location.path, read, location.files, location.listed)]
+    said = json.dumps([read.format, read.options, sorted(files)], sort_keys=True, default=str)
+    return f"chartbook_{read.format}_" + hashlib.sha256(said.encode("utf-8")).hexdigest()[:16]
 
 
 def arrow_dataset(location):
@@ -807,9 +1028,11 @@ def arrow_dataset(location):
 
     DuckDB has no reader of Arrow IPC files of its own; it reads a dataset
     lazily, as it would a file, taking only the columns and rows a query
-    asks for. A glob's or a folder's Hive keys are columns, as polars reads
-    them. Text is plain ``string``: polars writes ``string_view``, and the
-    filter DuckDB hands a dataset in a join has no kernel for it.
+    asks for. A glob's or a folder's Hive keys below it are columns, of the
+    types polars gives them (:func:`_partitions`); a file's path gives none.
+    Text is plain ``string``, a dictionary's too: polars writes
+    ``string_view``, and the filter DuckDB hands a dataset in a join has no
+    kernel for it.
 
     :raises FileNotFoundError: If there is no file to read.
     """
@@ -823,20 +1046,22 @@ def arrow_dataset(location):
     if not found:
         raise FileNotFoundError(f"{location.path}: no Arrow IPC file is there yet.")
     path = Path(location.path)
-    if is_glob_pattern(str(path)):
-        root = hashing.glob_root(path)
-    elif path.is_dir():
-        root = path
-    else:
-        root = None
-    given = {"partitioning": ds.HivePartitioning.discover(), "partition_base_dir": str(root)} if root else {}
+    root = hashing.glob_root(path) if is_glob_pattern(str(path)) else path if path.is_dir() else None
+    given = {}
+    if root is not None:
+        own = set(ds.dataset(found[:1], format="ipc").schema.names)
+        keys = [(key, kind) for key, (kind, _) in _partitions(found, Path(root)).items() if key not in own]
+        if keys:
+            arrow = {"Int64": pa.int64(), "Float64": pa.float64(), "Boolean": pa.bool_(), "Date": pa.date32(), "Datetime": pa.timestamp("us"), "String": pa.string()}
+            fields = pa.schema([(key, arrow[kind.base_type().__name__]) for key, kind in keys])
+            given = {"partitioning": ds.partitioning(fields, flavor="hive"), "partition_base_dir": str(root)}
     schema = ds.dataset(found, format="ipc", **given).schema
     plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
     return ds.dataset(found, format="ipc", schema=plain, **given)
 
 
 def _plain(kind):
-    """An Arrow type with its views and large kinds as their plain ones, all the way down."""
+    """An Arrow type with its views and large kinds as their plain ones, all the way down, a dictionary's values too."""
     import pyarrow as pa
 
     types = pa.types
@@ -844,6 +1069,8 @@ def _plain(kind):
         return pa.string()
     if types.is_binary_view(kind) or types.is_large_binary(kind):
         return pa.binary()
+    if types.is_dictionary(kind):
+        return pa.dictionary(kind.index_type, _plain(kind.value_type), kind.ordered)
     if types.is_struct(kind):
         return pa.struct([child.with_type(_plain(child.type)) for child in kind])
     if types.is_fixed_size_list(kind):
@@ -860,11 +1087,3 @@ def _is_list_view(kind) -> bool:
     import pyarrow as pa
 
     return any(getattr(pa.types, check, lambda _: False)(kind) for check in ("is_list_view", "is_large_list_view"))
-
-
-def arrow_name(dataset) -> str:
-    """The name an Arrow dataset goes by in SQL: one per set of files, so that a source's engine keeps one view of them, not one a call."""
-    import hashlib
-
-    listed = "\n".join(sorted(dataset.files))
-    return "chartbook_ipc_" + hashlib.sha256(listed.encode("utf-8")).hexdigest()[:16]
