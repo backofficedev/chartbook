@@ -1357,12 +1357,22 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
     That is a warning and not a problem: a model may be kept on purpose,
     and retraining is the pipeline's build to run.
     """
+    from chartbook.config import without_credentials
     from chartbook.models import staleness
+    from chartbook.store import StoreError
 
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for model_id, model in (pipeline_manifest.get("models") or {}).items():
-            found = staleness(pipeline_dir, model_id, model)
+            try:
+                found = staleness(pipeline_dir, model_id, model)
+            except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                warnings.warn(
+                    f"{display_path(pipeline_dir / 'chartbook.toml', base_dir)}: [models.{model_id}] "
+                    f"trained_on: not checked. {without_credentials(str(error))}",
+                    stacklevel=2,
+                )
+                continue
             if found is None or not found.stale:
                 continue
             moved = "; ".join(
@@ -1391,7 +1401,9 @@ def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
     A label that matches more than one version is a problem: it does not
     say which.
     """
+    from chartbook.config import without_credentials
     from chartbook.models import versions_in
+    from chartbook.store import StoreError
 
     problems = []
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
@@ -1401,7 +1413,15 @@ def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
             aliases = model.get("aliases")
             if not isinstance(aliases, dict) or not aliases:
                 continue
-            kept = versions_in(pipeline_dir, model_id, aliases)
+            try:
+                kept = versions_in(pipeline_dir, model_id, aliases)
+            except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                warnings.warn(
+                    f"{toml_file}: [models.{model_id}.aliases] not checked. {without_credentials(str(error))}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                continue
             for label, points_at in aliases.items():
                 digits = str(points_at).split(":", 1)[-1]
                 matches = [
