@@ -40,6 +40,7 @@ from typing import Callable, Optional
 from chartbook import hashing
 from chartbook.store import (
     holds_v1,
+    MIGRATE_JOURNAL,
     _check_length,
     plain_parts,
     MARKER_FILE,
@@ -64,7 +65,7 @@ from chartbook.store import (
 )
 
 #: The journal of a migrate, under ``tmp/``: one line for each move, and for each record once moved.
-JOURNAL = "migrate.jsonl"
+JOURNAL = MIGRATE_JOURNAL
 
 #: The record left where ChartBook 0.2 looks, which it cannot read: its schema is none it knows.
 SENTINEL_SCHEMA = "chartbook/snapshot/moved-to-store-v2"
@@ -206,7 +207,8 @@ def plan(root) -> MigrationPlan:
     if layout not in (None, V1_SCHEMA):
         if layout != SCHEMA:
             raise MigrateError(f"The store at {root} has the layout {layout!r}, which this version does not move.")
-        if _Journal(root).switched:
+        journal = _Journal(root)
+        if journal.switched and _switched_whole(root, journal):
             # Switched, and cut short before the old folders went: the journal is removed last
             found.unfinished = True
             return found
@@ -261,6 +263,25 @@ def _plain(declared: str) -> str:
     """A declared path as a place in a pipeline's folder: ``/`` between parts, no ``./``."""
     parts = [part for part in str(declared).replace("\\", "/").split("/") if part not in ("", ".")]
     return "/".join(parts)
+
+
+def _switched_whole(root: Path, journal: "_Journal") -> bool:
+    """Whether a migrate that switched the marker moved everything 0.2's folders hold, which may then go.
+
+    :raises MigrateError: If what the journal says was moved is not there:
+        another machine's migrate, whose moves a sync has not brought yet.
+    """
+    if not holds_v1(root):
+        return True  # nothing of 0.2's left to lose
+    missing = sorted(name for name in [*journal.moved.values(), *journal.records.values()] if not os.path.lexists(root / name))
+    if missing:
+        raise MigrateError(
+            f"The journal of a migrate of the store at {root} ({TMP_DIR}/{JOURNAL}) says {len(missing)} file(s) were "
+            f"moved that are not there, such as {missing[0]}: another machine moved the store, and a sync has not "
+            f"brought them yet. Nothing was moved or removed. Wait for the sync, then run this again."
+        )
+    # A record of 0.2's come since the switch is moved as any is, not removed with the old folders
+    return all(journal.written(path) for path, _ in _records(root))
 
 
 class _Journal:

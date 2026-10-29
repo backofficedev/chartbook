@@ -722,6 +722,25 @@ class TestTwoMachinesAtOnce:
         pending.put(folder / "_data" / "a.txt")
         assert pending.name == "2026-10-16T010204Z_bbbbbbbbbbbb"
 
+    def test_a_claim_written_over_beside_anothers_file_is_left_to_it(self, work, client, monkeypatch):
+        """Found by a review: a claim not this one's was removed when the other had already put a file beside it."""
+        folder = _pipeline(work, {"_data/a.txt": b"a"})
+        store = S3Store(URL, cache=work / "one", client=client)
+        put_new = store._put_new
+
+        def another_over_it_and_putting(key, body):
+            landed = put_new(key, body)
+            if landed and key.endswith("/_chartbook/CLAIMED.txt") and FOLDER in key:
+                client.put_object(Bucket=BUCKET, Key=key, Body=b"Claimed by another.")
+                client.put_object(Bucket=BUCKET, Key=f"{HERE}/_data/theirs.txt", Body=b"x")
+            return landed
+
+        monkeypatch.setattr(store, "_put_new", another_over_it_and_putting)
+        pending = store.begin("acme/rates", COMMIT, FIRST, base=folder)
+        pending.put(folder / "_data" / "a.txt")
+        assert pending.name != FOLDER
+        assert client.get_object(Bucket=BUCKET, Key=f"{HERE}/_chartbook/CLAIMED.txt")["Body"].read() == b"Claimed by another."
+
     def test_a_boto3_too_old_for_a_write_only_if_new_says_so(self, store, client, work, monkeypatch):
         import botocore.exceptions
 

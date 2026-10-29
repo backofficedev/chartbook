@@ -357,8 +357,8 @@ class TestWhatTheThirdReviewFound:
         store._check_layout(create=True)
         tmp = store.root / "tmp"
         tmp.mkdir()
-        old, new, journal = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending", tmp / "migrate.jsonl"
-        for path in (old, new, journal):
+        old, new = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending"
+        for path in (old, new):
             path.write_text("folder x\n", encoding="utf-8")
         then = time.time() - 3 * 86400
         os.utime(old, (then, then))  # a clone keeps its source's time; it was made now
@@ -371,6 +371,10 @@ class TestWhatTheThirdReviewFound:
         monkeypatch.setattr(store_module, "time", clock)
         store.tidy()
         assert not old.exists() and new.exists()
+        journal = tmp / "migrate.jsonl"
+        journal.write_text("{}\n", encoding="utf-8")
+        os.utime(journal, (0, 0))
+        store._tidy_tmp()  # gc itself refuses a store with one
         assert journal.exists()  # a migrate's, however old
 
     def test_a_cleared_snapshots_empty_folders_go_at_once(self, tmp_path):
