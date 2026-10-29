@@ -8,23 +8,28 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    # The newest Python every pin in pyproject.toml has wheels for
+    # The project's own Python where .python-version names it (a project made
+    # for uv has one); else 3.12, the template's default
     - name: Set up Python
       id: python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ hashFiles('.python-version') == '' && '3.12' || '' }}
+        python-version-file: ${{ hashFiles('.python-version') != '' && '.python-version' || '' }}
     - name: Cache Python environment
       id: cache-python-env
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock', '**/.python-version') }}
         restore-keys: |
           ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-
-    # A project made for uv has a pyproject.toml; the others have a requirements.txt
+    # A project made for uv has a pyproject.toml; the others have a requirements.txt.
+    # uv uses the Python set up above and downloads none, so a mismatch fails here
     - name: Install Python environment
       if: steps.cache-python-env.outputs.cache-hit != 'true'
+      env:
+        UV_PYTHON_DOWNLOADS: never
       run: |
         if [ -f requirements.txt ]; then
           python -m venv .venv
@@ -32,7 +37,7 @@ jobs:
           pip install -r requirements.txt
         else
           pip install uv
-          uv sync
+          uv sync --python "${{ steps.python.outputs.python-path }}"
         fi
     - name: Test with pytest
       run: |

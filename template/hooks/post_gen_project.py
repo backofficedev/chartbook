@@ -99,6 +99,11 @@ elif environment_manager == "pixi":
     remove_file("pyproject.toml")
     # Keep pixi.toml and requirements.txt
 
+# The Python chosen, exactly, for uv (its pyproject.toml only says the
+# least), as `uv init` writes it; uv and the GitHub workflow read it
+if environment_manager != "uv":
+    remove_file(".python-version")
+
 # Remove LaTeX-related files if not selected
 if not include_latex:
     # print("Removing LaTeX files...")

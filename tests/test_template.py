@@ -867,18 +867,47 @@ class TestTheWorkflow:
         assert rendered == (PROJECT_TEMPLATE / self.WORKFLOW).read_text(encoding="utf-8")
         assert "key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles(" in rendered
 
+    #: What setup-python is given: the project's .python-version where there is one, else 3.12
+    PYTHON = {
+        "python-version": "${{ hashFiles('.python-version') == '' && '3.12' || '' }}",
+        "python-version-file": "${{ hashFiles('.python-version') != '' && '.python-version' || '' }}",
+    }
+
     @pytest.mark.skipif(os.name == "nt" or shutil.which("bash") is None, reason="the workflow's steps are run by bash, on Linux")
     @pytest.mark.parametrize(
-        "manager, installs",
-        [("pip", "pip install -r requirements.txt"), ("uv", "uv sync"), ("conda", "pip install -r requirements.txt"), ("pixi", "pip install -r requirements.txt")],
+        "manager, python, installs",
+        [
+            ("pip", "3.12", "pip install -r requirements.txt"),
+            ("uv", "3.12", "uv sync --python {interpreter}"),
+            ("uv", "3.11", "uv sync --python {interpreter}"),
+            ("conda", "3.12", "pip install -r requirements.txt"),
+            ("pixi", "3.12", "pip install -r requirements.txt"),
+        ],
     )
-    def test_it_installs_a_project_made_for_any_environment_manager(self, template_dir, temp_dir, manager, installs):
-        """Found by a reviewer: a project made for uv has no requirements.txt, and the install stopped there."""
+    def test_it_installs_a_project_made_for_any_environment_manager(self, template_dir, temp_dir, manager, python, installs):
+        """Found by a reviewer: a project made for uv has no requirements.txt, and the install stopped there.
+
+        And then that its Python was always 3.12, while the project asks for
+        the one chosen when it was made, which uv went and downloaded.
+        """
         import tomli
         from packaging.specifiers import SpecifierSet
 
-        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True, "environment_manager": manager}))
+        context = {**WITH_CHARTBOOK, "include_github_actions": True, "environment_manager": manager, "python_version": python}
+        project = Path(generate_project(template_dir, temp_dir, context))
         steps = {step.get("name"): step for step in self._steps(project)}
+
+        # The Python set up is the one the project names, which a project made for uv does
+        assert steps["Set up Python"]["uses"] == "actions/setup-python@v5"
+        assert steps["Set up Python"]["with"] == self.PYTHON
+        named = project / ".python-version"
+        assert named.is_file() == (manager == "uv")
+        set_up = named.read_text(encoding="utf-8").strip() if named.is_file() else "3.12"
+        if manager == "uv":
+            assert set_up == python
+            requires = tomli.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["project"]["requires-python"]
+            assert SpecifierSet(requires).contains(set_up)
+
         # Each command the step runs writes down what it was asked, and does nothing
         fake, ran = temp_dir / "bin", temp_dir / "ran.txt"
         fake.mkdir()
@@ -887,18 +916,23 @@ class TestTheWorkflow:
                 f'#!/bin/sh\necho "{command} $*" >> "{ran}"\nmkdir -p .venv/bin && touch .venv/bin/activate\n', encoding="utf-8"
             )
             (fake / command).chmod(0o755)
+        install = steps["Install Python environment"]
+        # uv downloads no Python of its own: one outside .venv would be gone on the next cache hit
+        assert install["env"] == {"UV_PYTHON_DOWNLOADS": "never"}
+        interpreter = f"/opt/hostedtoolcache/Python/{set_up}.7/x64/bin/python"  # what setup-python says it set up
+        script = install["run"].replace("${{ steps.python.outputs.python-path }}", interpreter)
+        assert "${{" not in script
         subprocess.run(
-            ["bash", "-e", "-c", steps["Install Python environment"]["run"]],
-            cwd=project, check=True, env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}"},
+            ["bash", "-e", "-c", script],
+            cwd=project, check=True, env={**os.environ, **install["env"], "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}"},
         )
-        assert ran.read_text(encoding="utf-8").splitlines()[-1] == installs
-        # The cache is of what it installs from, and of the Python it is for
-        key = steps["Cache Python environment"]["with"]["key"]
-        assert all(name in key for name in ("requirements.txt", "pyproject.toml", "uv.lock", "steps.python.outputs.python-version"))
-        if manager == "uv":
-            # Its Python is one the project takes
-            requires = tomli.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["project"]["requires-python"]
-            assert SpecifierSet(requires).contains(steps["Set up Python"]["with"]["python-version"])
+        assert ran.read_text(encoding="utf-8").splitlines()[-1] == installs.format(interpreter=interpreter)
+
+        # The cache is of what it installs from, and of the Python set up
+        cache = steps["Cache Python environment"]
+        assert cache["uses"] == "actions/cache@v4"
+        assert all(name in cache["with"]["key"] for name in ("requirements.txt", "pyproject.toml", "uv.lock", ".python-version"))
+        assert cache["with"]["key"].startswith("${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-")
 
     def test_it_checks_the_manifest_in_the_environment_it_installs(self, template_dir, temp_dir):
         from click.testing import CliRunner
