@@ -1850,7 +1850,7 @@ class FolderStore(Store):
             put there, and a reader must not be handed a file of its own.
         """
         self._check_layout()
-        held = self._held(content_hash, pipeline)
+        held = _of_shape(self._held(content_hash, pipeline), single=bool(name))
         if name:
             # The one under that name first; another's bytes under that name else
             held.sort(key=lambda asset: not (asset.single and asset.files[0].relative == name))
@@ -1859,11 +1859,6 @@ class FolderStore(Store):
                 else dataclasses.replace(asset, files=(dataclasses.replace(asset.files[0], relative=name),))
                 for asset in held
             ]
-        else:
-            # Asked for by no name: an asset of several files. Its hold first,
-            # for one file's bytes can make the same hash (a SHA256SUMS beside
-            # the files it lists); the order is otherwise kept, as sort is stable
-            held.sort(key=lambda asset: asset.single)
         missing = None
         pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
         for asset in held:
@@ -2286,9 +2281,10 @@ class FolderStore(Store):
         object no pipeline owns is judged as *size_bytes* and *files* say
         (:func:`unsynced_part`).
         """
-        held = self._held(content_hash)
+        # Of the record's shape: one file it is read by, or several (a directory, a glob)
+        held = _of_shape(self._held(content_hash), single=bool(files) and len(files) == 1 and not every)
         if held:
-            seen = (str(self.root), content_hash)
+            seen = (str(self.root), content_hash, bool(files) and len(files) == 1 and not every)
             if seen in _found_whole:
                 return None
             what = None
@@ -2392,7 +2388,7 @@ class FolderStore(Store):
                     ) from None
                 removed = True
         if removed:
-            _found_whole.discard((str(self.root), content_hash))
+            _found_whole.difference_update({(str(self.root), content_hash, True), (str(self.root), content_hash, False)})
         path = self.unowned_path(content_hash)
         if not path.is_dir():
             return removed
@@ -2557,6 +2553,17 @@ class FolderStore(Store):
         return problems
 
 
+def _of_shape(held: list, single: bool) -> list:
+    """The holds of an asset of the shape asked for, one file or several, where any is; else all, in their order.
+
+    A file's bytes may be another asset's listing (a ``SHA256SUMS`` of a
+    folder has that folder's hash): a hold of the other shape is never read
+    in place of one of this shape that is there but not whole yet.
+    """
+    shaped = [asset for asset in held if asset.single == single]
+    return shaped or list(held)
+
+
 def _unsynced_file(asset: KeptAsset) -> Optional[str]:
     """What of an asset's files is not there as its record has it, in a few words; None when all are.
 
@@ -2614,7 +2621,11 @@ def in_place(asset: KeptAsset) -> Optional[Path]:
         if file.location != base.joinpath(*file.relative.split("/")):
             return None
     try:
-        there = {unicodedata.normalize("NFC", file.relative_to(base).as_posix()) for file in hashing.directory_files(base)}
+        # Every name in it, whatever it is (a named pipe planted there too): a reader of the folder meets them all
+        there = {
+            unicodedata.normalize("NFC", (Path(folder) / name).relative_to(base).as_posix())
+            for folder, _, names in os.walk(base) for name in names if not hashing.is_ignored(name)
+        }
     except OSError:
         return None
     return base if there == {unicodedata.normalize("NFC", file.relative) for file in asset.files} else None

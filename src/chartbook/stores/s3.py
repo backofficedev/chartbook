@@ -84,6 +84,7 @@ from urllib.parse import parse_qsl, urlsplit
 
 from chartbook import hashing
 from chartbook.store import (
+    _of_shape,
     CLEARED_FILE,
     FOLDER_MARK,
     FROZEN_LINKS,
@@ -267,8 +268,9 @@ def _named_first(held: list[KeptAsset], name: Optional[str]) -> list[KeptAsset]:
     bytes can make the same hash (a SHA256SUMS beside the files it lists),
     as the folder store has it (:meth:`chartbook.store.FolderStore.get`).
     """
+    held = _of_shape(held, single=bool(name))
     if not name:
-        return sorted(held, key=lambda asset: asset.single)
+        return held
     return sorted(held, key=lambda asset: not (asset.single and asset.files[0].relative == name))
 
 
@@ -1303,8 +1305,15 @@ class S3Store(Store):
         tried: set = set()
         own = self._pipeline_seen(pipeline)
         for seen in ([own] if own is not None else []) + [None]:
+            first = seen is not None
             seen = seen if seen is not None else self._seen()
-            for asset in _named_first(self._held(seen, content_hash, pipeline), name):
+            held = self._held(seen, content_hash, pipeline)
+            if first and name and held and not any(asset.single for asset in held):
+                # Asked for one file by its name, and the pipeline's own folder holds only an asset of
+                # several with those bytes for its hash: every pipeline's are looked in first
+                if any(asset.single for asset in self._held(self._seen(), content_hash, pipeline)):
+                    continue
+            for asset in _named_first(held, name):
                 # The pipeline's own holds come again in every pipeline's: each copy is tried once
                 copy = tuple(str(file.location) for file in asset.files)
                 if copy in tried:
@@ -1520,7 +1529,7 @@ class S3Store(Store):
         for folder in (self._unowned_cache(content_hash), self.views / content_hash.split(":", 1)[1]):
             if folder.exists() and not folder.is_symlink():
                 _remove_tree(folder, own=True)
-        _found_whole.discard((self.url, content_hash))
+        _found_whole.difference_update({(self.url, content_hash, True), (self.url, content_hash, False)})
 
     def hashes(self) -> Iterator[str]:
         """The hash of every asset in the bucket, in order: what its records hold, and the objects no pipeline owns."""
@@ -1601,7 +1610,7 @@ class S3Store(Store):
         _split_hash(content_hash)
         # An asset is named by its content and does not change: one found
         # whole is not looked at again in this process
-        if (self.url, content_hash) in _found_whole:
+        if (self.url, content_hash, bool(files) and len(files) == 1 and not every) in _found_whole:
             return None
         try:
             self._check_layout()
@@ -1610,13 +1619,14 @@ class S3Store(Store):
             if self._from_the_cache(content_hash, lay_out=False) is not None:
                 return None
             raise
-        held = self._held(seen, content_hash)
+        # Of the record's shape: one file it is read by, or several (a directory, a glob)
+        held = _of_shape(self._held(seen, content_hash), single=bool(files) and len(files) == 1 and not every)
         if held:
             wrong = None
             for asset in held:
                 wrong = self._not_uploaded_file(asset, seen)
                 if wrong is None:
-                    _found_whole.add((self.url, content_hash))
+                    _found_whole.add((self.url, content_hash, bool(files) and len(files) == 1 and not every))
                     return None
             what, waiting = wrong
             if not waiting:

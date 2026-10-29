@@ -771,3 +771,80 @@ class TestWhatTheReviewFound:
         (tmp_path / "asset").mkdir()
         for path in ("../x.txt", "/x.txt", "C:/x.txt", "a\\..\\..\\x.txt", "", "./x.txt"):
             assert files.preview_of([{"path": path, "size_bytes": 2}], tmp_path / "asset") is None, path
+
+
+class TestWhatTheSecondReviewFound:
+    """A file whose bytes are another asset's listing, met while one of them is not whole yet."""
+
+    @pytest.mark.parametrize("kind", ["folder", "s3"])
+    def test_a_hold_of_the_shape_asked_for_is_never_traded_for_the_other(self, kind, tmp_path, monkeypatch):
+        from chartbook import hashing
+        from chartbook.store import FolderStore, StoreError
+
+        work = tmp_path.resolve()
+        folder = work / "rates"
+        (folder / "_data" / "delivery").mkdir(parents=True)
+        (folder / "_data" / "delivery" / "a.csv").write_bytes(b"a,b\n")
+        (folder / "_data" / "delivery" / "b.csv").write_bytes(b"c,d\n")
+        listed = hashing.hash_path(folder / "_data" / "delivery")
+        sums = "".join(f"{e.content_hash.split(':', 1)[1]}  {e.path}\n" for e in listed.files)
+        (folder / "_data" / "sums").mkdir()
+        (folder / "_data" / "sums" / "SHA256SUMS").write_text(sums, encoding="utf-8")
+        assert hashing.hash_path(folder / "_data" / "sums" / "SHA256SUMS").content_hash == listed.content_hash
+        if kind == "folder":
+            store = FolderStore(work / "store")
+        else:
+            pytest.importorskip("moto")
+            from chartbook.stores.s3 import S3Store
+            from tests.mocked_s3 import URL, mocked_s3
+
+            context = mocked_s3(monkeypatch)
+            client = context.__enter__()
+            store = S3Store(URL, cache=work / "cache", client=client)
+        pending = store.begin("acme/rates", "a" * 40, "2026-10-16T01:02:03.000000Z", base=folder)
+        glob = pending.put(folder / "_data" / "delivery")
+        one = pending.put(folder / "_data" / "sums" / "SHA256SUMS")
+        pending.write({
+            "schema": "chartbook/snapshot/v2", "root": "acme/rates", "code": {"commit": "a" * 40},
+            "made_at": pending.made_at, "records": [
+                {"id": "acme/rates:file/sums", "content_hash": one.content_hash, "size_bytes": one.size_bytes, "stored": one.stored},
+                {"id": "acme/rates:file/delivery", "content_hash": glob.content_hash, "size_bytes": glob.size_bytes, "stored": glob.stored},
+            ],
+        })
+        # The folder's files not all there yet: a sync, or an upload, that has not finished
+        ((name, _), *_) = [f for f in store.files_of(glob.content_hash) if f[0].endswith("a.csv")]
+        if kind == "folder":
+            (store.root / name).chmod(0o644)
+            (store.root / name).unlink()
+        else:
+            client.delete_object(Bucket="chartbook-test", Key=f"stores/one/{name}")
+            store._forget()
+        assert store.incomplete(glob.content_hash, glob.size_bytes, None, False) is not None
+        with pytest.raises(StoreError):
+            store.get(glob.content_hash)  # never the SHA256SUMS in its place
+        assert (Path(store.get(one.content_hash, name="SHA256SUMS")) / "SHA256SUMS").read_text(encoding="utf-8") == sums
+        if kind == "s3":
+            context.__exit__(None, None, None)
+
+    @pytest.mark.skipif(not hasattr(__import__("os"), "mkfifo"), reason="named pipes are POSIX's")
+    def test_a_named_pipe_planted_in_a_folder_of_the_store_is_never_handed_to_a_reader(self, tmp_path):
+        import os
+
+        from chartbook.store import FolderStore
+
+        work = tmp_path.resolve()
+        folder = work / "rates"
+        (folder / "_data" / "parts").mkdir(parents=True)
+        (folder / "_data" / "parts" / "a.parquet").write_bytes(b"a")
+        store = FolderStore(work / "store")
+        pending = store.begin("acme/rates", "a" * 40, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = pending.put(folder / "_data" / "parts")
+        pending.write({
+            "schema": "chartbook/snapshot/v2", "root": "acme/rates", "code": {"commit": "a" * 40},
+            "made_at": pending.made_at,
+            "records": [{"id": "acme/rates:parts", "content_hash": put.content_hash, "size_bytes": put.size_bytes, "stored": put.stored}],
+        })
+        kept = Path(store.get(put.content_hash))
+        kept.chmod(0o755)
+        os.mkfifo(kept / "x.parquet")
+        assert not (Path(store.get(put.content_hash)) / "x.parquet").exists()  # gathered from what its record lists
