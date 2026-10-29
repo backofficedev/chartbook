@@ -231,6 +231,25 @@ class TestFindFiles:
         assert find_files(tmp_path / "not_built.parquet") is None
         assert find_files(tmp_path / "none" / "*.parquet") is None
 
+    def test_under_a_folder_with_glob_characters_in_its_name(self, tmp_path):
+        """Found by a reviewer: a pipeline in `Research [2026]/` had every path read as a glob that matched nothing."""
+        project = tmp_path / "Research [2026]" / "proj[1]"  # no ? or *, which Windows refuses
+        tree = project / "_data" / "rates"
+        (tree / "year=2024").mkdir(parents=True)
+        (tree / "a.parquet").write_bytes(b"hello")
+        (tree / "year=2024" / "part.parquet").write_bytes(b"")
+        assert find_files(tree / "a.parquet") == PathFiles(tree, (tree / "a.parquet",), single=True)
+        assert hash_path(tree / "a.parquet").content_hash == f"sha256:{HELLO_SHA256}"
+        found = find_files(tree)
+        assert found.root == tree and sorted(found.files) == sorted(directory_files(tree))
+        # A glob in it is matched below the folders that are there as named,
+        # and listed from the same root as anywhere else
+        found = find_files(tree / "**" / "*.parquet")
+        assert found.root == tree
+        assert sorted(found.files) == [tree / "a.parquet", tree / "year=2024" / "part.parquet"]
+        assert [f.path for f in hash_path(tree / "**" / "*.parquet").files] == ["a.parquet", "year=2024/part.parquet"]
+        assert find_files(project / "_data" / "none" / "*.parquet") is None
+
 
 class TestGlobRoot:
     @pytest.mark.parametrize(

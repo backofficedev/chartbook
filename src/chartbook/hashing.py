@@ -301,26 +301,56 @@ class PathFiles:
     single: bool
 
 
+def is_pattern(path: Union[str, Path]) -> bool:
+    """Whether a path, made absolute, is a glob: it has glob characters and is not there as written.
+
+    A pipeline in ``Research [2026]/`` gives every one of its paths a ``[``;
+    a file or folder that is there under its own name is that file or folder.
+    """
+    text = str(path)
+    return is_glob_pattern(text) and not os.path.exists(text)
+
+
+def split_glob(pattern: Union[str, Path]) -> tuple[Path, str]:
+    """A glob's root, and the pattern to match with that root taken as written.
+
+    The root is the glob's leading folders that are there under their own
+    names, ``[`` and all. That is :func:`glob_root` wherever those names have
+    no glob characters in them.
+    """
+    parts = Path(pattern).parts
+    fixed = 0
+    while fixed < len(parts) - 1 and os.path.isdir(os.path.join(*parts[: fixed + 1])):
+        fixed += 1
+    if not fixed:
+        return Path("."), str(pattern)
+    root = Path(*parts[:fixed])
+    return root, os.path.join(glob.escape(str(root)), *parts[fixed:])
+
+
 def find_files(path: Union[str, Path]) -> Optional[PathFiles]:
     """Find the files a declared ``path`` names: a file, a glob or a directory.
 
     This is the one place that decides which files make up an asset, so
-    that what is hashed and what is stored are the same files.
+    that what is hashed and what is stored are the same files. A path that
+    is there as written is a file or a directory, whatever characters are
+    in it (:func:`is_pattern`).
 
     :param path: An absolute path, which may contain glob characters.
     :returns: The files, or None if nothing is there yet: the file does not
         exist, or the glob matches no file.
     """
     text = str(path)
-    if is_glob_pattern(text):
+    if is_pattern(text):
+        root, pattern = split_glob(text)
         matches = tuple(
             Path(match)
-            for match in glob.glob(text, recursive=True)
+            for match in glob.glob(pattern, recursive=True)
             if os.path.isfile(match) and not is_ignored(match)
         )
         if not matches:
             return None
-        return PathFiles(glob_root(text), matches, single=False)
+        return PathFiles(root, matches, single=False)
     if os.path.isdir(text):
         return PathFiles(Path(text), tuple(directory_files(text)), single=False)
     if os.path.isfile(text):
@@ -352,7 +382,7 @@ def escapes(path: Union[str, Path], root: Union[str, Path]) -> Optional[Path]:
         return Path(real)
 
     text = str(path)
-    if not is_glob_pattern(text):
+    if not is_pattern(text):
         # The path itself, before anything is listed under it
         found = outside(text)
         if found is not None:
