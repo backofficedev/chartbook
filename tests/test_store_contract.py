@@ -211,6 +211,17 @@ class TestSnapshotFolders:
         assert store.has(parts.content_hash) and (Path(store.get(parts.content_hash)) / "a.txt").read_bytes() == b"a"
         assert store.verify() == []
 
+    def test_one_whose_record_was_written_is_kept_by_a_discard(self, store, tmp_path):
+        """Found by a review: a record written, its answer lost (a connection cut, a Ctrl-C), and its files then discarded."""
+        folder = self._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = pending.put(folder / "_data" / "rates.parquet")
+        pending.write(self._record(pending, COMMIT, rates=put))
+        pending._written = False  # what wrote it never heard back
+        pending.discard()
+        store._forget()
+        assert store.has(put.content_hash) and len(store.all_snapshot_files()) == 1 and store.verify() == []
+
     def test_one_a_pin_made_is_not_an_owners(self, store, tmp_path):
         folder = self._pipeline(tmp_path, {"_data/rates.parquet": b"rates-1"})
         pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder, made_by="pin")
@@ -337,18 +348,38 @@ class TestWhatTheThirdReviewFound:
         assert any("Nothing in" in str(w.message) for w in said)
         assert stray.exists()
 
-    def test_what_a_writer_that_died_left_in_tmp_goes_two_days_on(self, tmp_path):
+    def test_what_a_writer_that_died_left_in_tmp_goes_two_days_on(self, tmp_path, monkeypatch):
         import os
         import time
+        import types
 
         store = FolderStore(tmp_path.resolve() / "store")
         store._check_layout(create=True)
         tmp = store.root / "tmp"
         tmp.mkdir()
-        old, new = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending"
-        old.write_text("folder x\n", encoding="utf-8")
-        new.write_text("folder y\n", encoding="utf-8")
+        old, new, journal = tmp / "aaaaaaaaaaaa.pending", tmp / "bbbbbbbbbbbb.pending", tmp / "migrate.jsonl"
+        for path in (old, new, journal):
+            path.write_text("folder x\n", encoding="utf-8")
         then = time.time() - 3 * 86400
-        os.utime(old, (then, then))
+        os.utime(old, (then, then))  # a clone keeps its source's time; it was made now
+        store.tidy()
+        assert old.exists()
+        later = time.time() + 3 * 86400
+        os.utime(new, (later, later))  # touched by a writer still at work, as the clock will then read
+        clock = types.SimpleNamespace(**{name: getattr(time, name) for name in dir(time) if not name.startswith("_")})
+        clock.time = lambda: later
+        monkeypatch.setattr(store_module, "time", clock)
         store.tidy()
         assert not old.exists() and new.exists()
+        assert journal.exists()  # a migrate's, however old
+
+    def test_a_cleared_snapshots_empty_folders_go_at_once(self, tmp_path):
+        """Found by a review: the folders the sweep had just emptied looked made just now, and stayed."""
+        store = FolderStore(tmp_path.resolve() / "store")
+        folder = TestSnapshotFolders._pipeline(tmp_path, {"_data/deep/one.txt": b"one"})
+        pending = store.begin("acme/rates", COMMIT, "2026-10-16T01:02:03.000000Z", base=folder)
+        put = pending.put(folder / "_data" / "deep" / "one.txt")
+        record = pending.write(TestSnapshotFolders._record(pending, COMMIT, one=put))
+        assert store.remove_snapshot(record) is True
+        store.tidy()
+        assert list((store.root / "pipelines" / "acme+rates").iterdir()) == []

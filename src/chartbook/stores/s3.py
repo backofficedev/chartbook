@@ -779,7 +779,9 @@ class S3Store(Store):
             if not create:
                 return  # nothing here yet; nothing to misread
             for old in (OBJECTS_DIR, SNAPSHOTS_DIR):
-                if next(self._list(self._key(old) + "/"), None) is not None:
+                # What a store of 0.2 held: not the record a migrate leaves there for 0.2 to refuse
+                held = (entry for entry in self._list(self._key(old) + "/") if not entry["Key"].startswith(self._key(SNAPSHOTS_DIR, "0" * 40) + "/"))
+                if next(held, None) is not None:
                     raise StoreError(
                         f"The store {self} has no store.json, and holds the folders of a store of ChartBook 0.2 "
                         f"(objects/, snapshots/): its store.json has not arrived (a copy into the bucket that has not "
@@ -1934,8 +1936,11 @@ class _S3Pending(PendingSnapshot):
                 # A folder listed a moment ago may have filled since, its claim gone with its record written
                 there = [entry["Key"] for entry in self.store._list(self.store._key(PIPELINES_DIR, self.folder, name) + "/")]
                 if there == [key]:
-                    self.name, self._claim_key = name, key
-                    break
+                    # Read back: on a service whose write only if new is not one step, another's may be over it
+                    if self.store._read(key) == self._claim_text:
+                        self.name, self._claim_key = name, key
+                        break
+                    continue  # another's claim, which is not this one's to remove
                 try:
                     self.store._try_delete([key])
                 except StoreError:
@@ -2232,6 +2237,17 @@ class _S3Pending(PendingSnapshot):
     def discard(self) -> None:
         if self._written:
             return
+        if self.name is not None:
+            record = self.store._key(PIPELINES_DIR, self.folder, self.name, OWN_DIR, RECORD_FILE)
+            try:
+                written = self.store._exists(record)
+            except StoreError:
+                written = True  # not known: nothing is removed that a record there may name
+            if written:
+                # Written, though the answer was lost (a connection cut, a Ctrl-C): its files are kept
+                self._written = True
+                self._drop_note()
+                return
         keys = self._uploaded + ([self._claim_key] if self._claim_key is not None else [])
         if keys:
             try:
