@@ -443,6 +443,22 @@ class TestStaleness:
         (record,) = [r for r in built["records"] if r["id"] == "acme/forecast:model/m"]
         assert record["stale_inputs"] == []
 
+    def test_check_on_a_store_of_0_2_says_so_and_does_not_crash(self, trained, monkeypatch):
+        """Found trying 0.3.0 on a real store before migrating it: every other command
+        said what to do, and `chartbook check` raised the StoreError as a traceback."""
+        import os
+
+        rates, forecast = trained
+        store = Path(os.environ["CHARTBOOK_STORE"])
+        store.mkdir(parents=True, exist_ok=True)
+        (store / "store.json").write_text('{"schema": "chartbook/store/v1"}', encoding="utf-8", newline="\n")
+        with pytest.warns(UserWarning, match=r"^chartbook.toml: \[models.m\] trained_on: not checked. The store at .* has the layout of ChartBook 0.2 .*chartbook store migrate"):
+            check.check_model_staleness(load_manifest(forecast), forecast)
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        assert result.exception is None or isinstance(result.exception, SystemExit), result.output
+        assert "trained_on: not checked" in result.output
+
     def test_a_version_keeps_the_inputs_it_was_first_made_with(self, trained):
         """Found by a reviewer: a later snapshot of the same bytes wrote the inputs
         as they were then, so the record did not mean "trained with", and `pin`

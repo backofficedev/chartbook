@@ -1357,12 +1357,22 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
     That is a warning and not a problem: a model may be kept on purpose,
     and retraining is the pipeline's build to run.
     """
+    from chartbook.config import without_credentials
     from chartbook.models import staleness
+    from chartbook.store import StoreError
 
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for model_id, model in (pipeline_manifest.get("models") or {}).items():
-            found = staleness(pipeline_dir, model_id, model)
+            try:
+                found = staleness(pipeline_dir, model_id, model)
+            except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                warnings.warn(
+                    f"{display_path(pipeline_dir / 'chartbook.toml', base_dir)}: [models.{model_id}] "
+                    f"trained_on: not checked. {without_credentials(str(error))}",
+                    stacklevel=2,
+                )
+                continue
             if found is None or not found.stale:
                 continue
             moved = "; ".join(
