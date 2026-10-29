@@ -2423,6 +2423,8 @@ class FolderStore(Store):
         """
         removed, failed = [], []
         keep = list(keep)
+        if not dry_run:
+            self._tidy_tmp()
         try:
             names = sorted(os.listdir(self.root / PIPELINES_DIR))
         except (FileNotFoundError, NotADirectoryError):
@@ -2433,8 +2435,6 @@ class FolderStore(Store):
                 gone, stuck = self.sweep(folder, keep=keep, dry_run=dry_run)
                 removed += [(path.relative_to(self.root).as_posix(), size) for path, size in gone]
                 failed += [(path.relative_to(self.root).as_posix(), why) for path, why in stuck]
-        if not dry_run:
-            self._tidy_tmp()
         if failed and not dry_run:
             name, why = failed[0]
             more = f" (and {len(failed) - 1} more)" if len(failed) > 1 else ""
