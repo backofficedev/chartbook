@@ -271,6 +271,14 @@ Hive-partitioned data:
 path = "./_data/revenue_data/**/*.parquet"
 ```
 
+A dataset kept as one file a period is a glob too, so that a new year's file is part of it:
+
+```toml
+path = "./_data/transcripts_*.parquet"
+```
+
+`chartbook check` warns when a `path` names one such file (`transcripts_2026.parquet`) and no asset declares the rest ({ref}`chartbook check <chartbook-check>`, "One file of a set").
+
 A glob, like a folder, is one dataframe, and `data.load` reads it in every `format=` it offers. As with charts, exactly one of `docs_path` / `docs` is required.
 
 (formats)=
@@ -285,7 +293,7 @@ A dataframe's file is parquet, CSV or TSV, JSON lines (NDJSON, gzipped or not) o
 | `"jsonl"` | `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz` |
 | `"ipc"` | `.arrow`, `.feather`, `.ipc` |
 
-A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`. When its entry gives `format` and none of its files has that format's ending, it is read as the files with the ending most of its files have, passing over what is plainly not a table (a `README`, a `schema.json`, a `.md`): a folder of `.dat` files is read as CSV. A folder of parquet with nothing else in it is handed to polars whole, as it always was. A folder's Hive `key=value` folders become columns for parquet and Arrow IPC: those below it that every file has, and none above it, with the types and values polars gives them (`year=2024` a whole number, `date=2024-01-01` a date), in both engines. A filter on a key reads only the files it names, unless a `key=value` folder is above the one declared: its files are then read whole and given their keys one by one, and a file's own column of that key's name is kept as it is. A path that is there is itself, whatever its name holds: a `[`, `*` or `?` in it (`run [1]`, `tag=[draft]`) is not a glob. Polars reads no such columns from CSV or JSON lines, and DuckDB is told to read none either.
+A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`. When its entry gives `format` and none of its files has that format's ending, it is read as the files with the ending most of its files have, passing over what is plainly not a table (a `README`, a `schema.json`, a `.md`): a folder of `.dat` files is read as CSV. A folder of parquet with nothing else in it is handed to polars whole, as it always was. A folder's Hive `key=value` folders become columns for parquet and Arrow IPC: those below it that every file has, and none above it, with the types and values polars gives them (`year=2024` a whole number, `date=2024-01-01` a date), in both engines. A filter on a key reads only the files it names, unless a `key=value` folder is above the one declared: its files are then read whole and given their keys one by one, and a file's own column of that key's name is kept as it is. A file or folder below a declared path is itself, whatever its name holds: a `[`, `*` or `?` in it (`tag=[draft]`, `a[1].parquet`) is not a glob. A declared path whose own parts name one (`./_data/[raw]`) is refused: `chartbook check` fails it, and `chartbook snapshot` stops on it, each saying to rename it. Polars reads no such columns from CSV or JSON lines, and DuckDB is told to read none either.
 
 `read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own, each so that it means the same there:
 

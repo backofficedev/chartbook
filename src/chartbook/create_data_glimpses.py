@@ -76,7 +76,9 @@ class DeclaredDataframe:
     def data_files(self) -> list[str]:
         """The files on disk behind this dataframe; empty if not built yet."""
         if self.is_glob:
-            return sorted(glob.glob(str(self.path), recursive=True))
+            from chartbook.hashing import split_glob
+
+            return sorted(glob.glob(split_glob(self.path)[1], recursive=True))
         return [str(self.path)] if self.path.exists() else []
 
 

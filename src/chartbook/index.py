@@ -177,10 +177,8 @@ def _modified_at(resolved: str) -> Optional[str]:
     """When a file, or the newest file a glob names, was last written, in UTC."""
     import glob as globbing
 
-    from chartbook.utils import is_glob_pattern
-
-    if is_glob_pattern(resolved):
-        paths = globbing.glob(resolved, recursive=True)
+    if hashing.is_pattern(resolved):
+        paths = globbing.glob(hashing.split_glob(resolved)[1], recursive=True)
     elif os.path.isdir(resolved):
         # A directory's own time moves only when an entry is added or
         # removed; the newest file inside says when it was last written.

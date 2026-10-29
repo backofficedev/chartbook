@@ -13,8 +13,11 @@ The checks are thin wrappers over machinery the build already uses:
 
 from __future__ import annotations
 
+import fnmatch
 import functools
+import glob
 import os
+import re
 import warnings
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -332,6 +335,228 @@ def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 )
     return problems
+
+
+def check_glob_names(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report an asset's path that names a file or folder with a glob character in its name.
+
+    Its files are found as they are named, but a reader takes the declared
+    path for a pattern (:func:`chartbook.hashing.glob_named`), so
+    ``chartbook snapshot`` refuses it. A folder above the pipeline's own,
+    such as ``Research [2026]/``, is not part of the path and is fine.
+    """
+    from chartbook.hashing import glob_named, glob_named_said
+
+    problems = []
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for section in _DECLARING:
+            for name, entry in (pipeline_manifest.get(section) or {}).items():
+                path = entry.get("path") if isinstance(entry, dict) else None
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                named = glob_named(path, os.path.normpath(os.path.join(pipeline_dir, path)))
+                if named is not None:
+                    problems.append(
+                        Problem(pipeline_dir / "chartbook.toml", f"{section}.{name}", "path", glob_named_said(path, named))
+                    )
+    return problems
+
+
+#: A run of digits, or a date with ``-`` or ``_`` between its parts
+#: (``2026``, ``2026-10``, ``20261027``, ``2026_10``): what tells one file
+#: of a set from the others
+_NUMBER_OR_DATE = re.compile(r"[0-9]+(?:[-_][0-9]+)*")
+
+#: The sections and fields whose files belong to an asset already
+_DECLARING = ("dataframes", "charts", "notebooks", "notes", "models")
+_DECLARING_FIELDS = ("path", "docs_path", "metrics_path", "excel_path")
+
+
+def _counts(run: str) -> bool:
+    """Whether a run can tell one file of a set from another: a date, or a number of two digits or more.
+
+    ``v2`` beside ``v1``, or ``.h5`` beside ``.h4``, is more often a version
+    or a format than a part.
+    """
+    return len(run) - run.count("-") - run.count("_") >= 2
+
+
+class _Declared:
+    """Which files the manifest's paths name, asked one folder at a time.
+
+    A path to a file names that file, and one to a folder every file under
+    it. A glob is matched only when its root is the folder asked about or
+    holds it, so a check does not walk folders it has no question about.
+    A folder is known by what the disk says it is (its device and inode),
+    so a link to it, or its name in another case on macOS or Windows, is
+    the same folder. A file's name is compared without regard to case:
+    two names that differ only in it are one file on those disks, and on
+    the others the warning is the one left unsaid.
+    """
+
+    def __init__(self, manifest: dict):
+        from chartbook.hashing import is_pattern, split_glob
+
+        self._ids: dict = {}
+        self._files: dict = {}  # a folder: the names of the files named in it
+        self._folders: list = []  # folders named, and so everything under them
+        self._globs: list = []  # (the folder a glob starts in, the glob)
+        self._asked: dict = {}
+        for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+            pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+            for section in _DECLARING:
+                for entry in (pipeline_manifest.get(section) or {}).values():
+                    for field in _DECLARING_FIELDS:
+                        path = entry.get(field) if isinstance(entry, dict) else None
+                        if not isinstance(path, str) or not path.strip():
+                            continue
+                        full = os.path.join(pipeline_dir, path)
+                        if is_pattern(full):
+                            root, pattern = split_glob(full)
+                            self._globs.append((self.id(root), pattern))
+                        elif os.path.isdir(full):
+                            self._folders.append(self.id(full))
+                        else:
+                            folder, name = os.path.split(os.path.abspath(full))
+                            self._files.setdefault(self.id(folder), set()).add(name.casefold())
+
+    def id(self, folder) -> tuple:
+        """What a folder is, whatever it is called: its device and inode, or its path if it is not there."""
+        key = str(folder)
+        if key not in self._ids:
+            try:
+                found = os.stat(key)
+            except OSError:
+                found = None
+            # A file system that gives no inode (some network shares) is known by the path
+            self._ids[key] = (
+                (found.st_dev, found.st_ino) if found and found.st_ino else (None, os.path.normcase(os.path.realpath(key)))
+            )
+        return self._ids[key]
+
+    def names_in(self, folder: str) -> Optional[set]:
+        """The names, case folded, of the files in *folder* that some path names; None if a folder named holds them all."""
+        asked = self.id(folder)
+        if asked not in self._asked:
+            real = Path(os.path.realpath(folder))
+            above = {self.id(each) for each in (real, *real.parents)}
+            if any(named in above for named in self._folders):
+                names = None
+            else:
+                names = set(self._files.get(asked, ()))
+                for root, pattern in self._globs:
+                    if root in above:
+                        for match in glob.glob(pattern, recursive=True):
+                            parent, name = os.path.split(match)
+                            if self.id(parent) == asked:
+                                names.add(name.casefold())
+            self._asked[asked] = names
+        return self._asked[asked]
+
+
+def check_siblings(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn about a dataframe whose path names one file of a set.
+
+    ``transcripts_2026.parquet``, beside ``transcripts_2014.parquet`` to
+    ``transcripts_2025.parquet``, is most likely one year of a dataset
+    that is all of them. Only the dataframe's own folder is looked at. A
+    sibling is a file named as it is but for its runs of digits or dates,
+    each of the same shape as the file's, with as many digits in each part
+    (``2026-10`` stands beside ``2025-12``, not beside ``2025`` or
+    ``2026-9``; ``yields_10y`` beside ``yields_30y``, not beside
+    ``yields_2y``). One run that differs must be a date or a number of two
+    digits or more. A file that some path of the manifest names already (a
+    dataframe's, a model's, a glob's) is not one, and it takes two. The
+    warning gives the glob that names them all, each run that differs
+    written ``*``, or ``[0-9]`` for each digit where a ``*`` would take in
+    a file that is not one of them. It is a warning and not a problem: the
+    one file may be what was meant.
+
+    Models are not looked at: a model's path cannot be a glob, and a number
+    in a model's name more often marks an old version than a part.
+    """
+    from chartbook.hashing import is_ignored
+
+    declared: Optional[_Declared] = None  # read once some dataframe has siblings
+    listed: dict = {}  # a folder: the names of its files
+    matched: dict = {}  # (a folder, a pattern): the names that match, with their runs
+
+    def matches(folder: str, head: str, pattern: str, tail: str) -> list:
+        if (folder, pattern) not in matched:
+            if folder not in listed:
+                try:
+                    with os.scandir(folder) as entries:
+                        listed[folder] = [e.name for e in entries if e.is_file() and not is_ignored(e.name)]
+                except OSError:
+                    listed[folder] = []
+            fullmatch = re.compile(pattern).fullmatch
+            matched[folder, pattern] = [
+                (name, found.groups())
+                for name in listed[folder]
+                if name.startswith(head) and name.endswith(tail) and (found := fullmatch(name))
+            ]
+        return matched[folder, pattern]
+
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        toml_file = display_path(pipeline_dir / "chartbook.toml", base_dir)
+        for dataframe_id, dataframe in (pipeline_manifest.get("dataframes") or {}).items():
+            path = dataframe.get("path")
+            if not isinstance(path, str) or not path.strip() or is_glob_pattern(path):
+                continue
+            folder, name = os.path.split(os.path.join(pipeline_dir, path))
+            runs = list(_NUMBER_OR_DATE.finditer(name))
+            if not any(_counts(run.group()) for run in runs) or not os.path.isfile(os.path.join(folder, name)):
+                continue
+            # The name with each run as a group of its own shape
+            pattern, last = "", 0
+            for run in runs:
+                shape = re.sub("[0-9]+", lambda digits: "[0-9]{%d}" % len(digits.group()), re.escape(run.group()))
+                pattern += re.escape(name[last : run.start()]) + f"({shape})"
+                last = run.end()
+            head, tail = name[: runs[0].start()], name[last:]
+            found = [(other, groups) for other, groups in matches(folder, head, pattern + re.escape(tail), tail) if other != name]
+            if not found:
+                continue
+            declared = declared or _Declared(manifest)
+            named = declared.names_in(folder)
+            if named is None:
+                continue
+            siblings = [(other, groups) for other, groups in found if other.casefold() not in named]
+            differ = {i for i, run in enumerate(runs) if any(groups[i] != run.group() for _, groups in siblings)}
+            if len(siblings) < 2 or not any(_counts(runs[i].group()) for i in differ):
+                continue
+
+            # Each run that differs a *, unless that would take in a file that is
+            # not one of them (transcripts_sample.parquet): then a digit for a digit
+            glob_name, exact, last = "", "", 0
+            for i, run in enumerate(runs):
+                between = name[last : run.start()]
+                glob_name += between + ("*" if i in differ else run.group())
+                exact += between + (re.sub("[0-9]", "[0-9]", run.group()) if i in differ else run.group())
+                last = run.end()
+            ours = {name, *(other for other, _ in found)}
+            takes = re.compile(fnmatch.translate(glob_name + tail)).match
+            if any(takes(other) and other not in ours for other in listed[folder]):
+                glob_name = exact
+            cut = max(path.rfind("/"), path.rfind("\\")) + 1
+            # Written with / on any system: a \ in a TOML string starts an escape
+            suggested = (path[:cut] + glob_name + tail).replace("\\", "/").replace('"', '\\"')
+            names = [other for other, _ in siblings]
+            if len(names) <= 3:
+                shown = ", ".join(sorted(names))
+            else:
+                shown = f"{min(names)} … {max(names)}"  # all of one length, so in the order of their numbers
+            but_for = "a number or date" if len(differ) == 1 else "numbers or dates"
+            warnings.warn(
+                f"{toml_file}: [dataframes.{dataframe_id}] path: {path} may be one file of a set: no asset "
+                f"declares the {len(names)} files beside it named the same but for {but_for} ({shown}). "
+                f"If they are one dataset, write path = \"{suggested}\".",
+                UserWarning,
+                stacklevel=2,
+            )
+    return []
 
 
 def _dependency_table(key: str) -> str:
@@ -1228,6 +1453,8 @@ def run_checks(
             manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_glob_names(manifest, base_dir),
+        *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),
         *check_ids(manifest, base_dir),

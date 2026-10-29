@@ -176,6 +176,7 @@ Successfully generated documentation in /work/rate_forecast/docs
 Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
 ```
 
+(chartbook-check)=
 ## chartbook check
 
 ```console
@@ -185,7 +186,7 @@ chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-out
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
 - **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
-- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
+- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing), or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
 - **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
 - **a build tool's task that says `chartbook build`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook build` would run the build command, which runs that task again (see {ref}`chartbook build <chartbook-build>`).
@@ -245,9 +246,26 @@ chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found
 chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
 ```
 
+**One file of a set.** A dataframe whose `path` names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:
+
+```console
+$ chartbook check
+warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)
+```
+
+It is meant to say nothing where nothing is wrong, so it asks a lot before it speaks:
+
+- Only the file's own folder is looked at.
+- A sibling's name differs from the file's only in its runs of digits (`2026`, `20261027`) or dates with `-` or `_` between their parts (`2026-10`, `2026_10`), each with as many digits in each part: `2026-10` stands beside `2025-12`, not beside `2025` or `2026-9`, and `yields_10y` beside `yields_30y`, not beside `yields_2y`.
+- At least one run that differs is a date or a number of two digits or more. `results_v2` beside `results_v1`, or `data.h5` beside `data.h4`, is more often a version or a format than a part, and is passed by; so is `part_1` beside `part_2`.
+- A file that a path of the manifest names already, a dataframe's, a model's or a glob's, is not counted, and there must be two or more that no path names.
+
+Where more than one run differs (`transcripts_2026_q4` beside the other quarters of 2024 to 2026), each is a `*` in the glob (`transcripts_*_q*.parquet`). Where a `*` would take in a file that is not one of them, such as `transcripts_sample.parquet`, the glob has a `[0-9]` for each digit instead (`transcripts_[0-9][0-9][0-9][0-9].parquet`). Models are not looked at: a model's path is a file or a folder, never a glob.
+
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Seven things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 

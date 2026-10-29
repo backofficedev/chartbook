@@ -465,6 +465,22 @@ class TestLoad:
         # A key above the folder still puts them on by file, as it must
         assert formats._FILE in data.load("above", project_dir=directory).explain()
 
+    def test_a_pipeline_in_a_folder_with_a_bracket_in_its_name_is_read(self, tmp_path):
+        """A pipeline in `Research [2026]/`: a glob in it was matched as written, `[2026]` a pattern
+        that matched nothing, so its parquet, CSV and Arrow IPC globs were "no file yet"."""
+        directory = _pipeline(tmp_path / "Research [2026]" / "rates", {
+            "x": {"path": "./_data/x.parquet"}, "parts": {"path": "./_data/parts"}, "years": {"path": "./_data/y_*.parquet"},
+            "csvs": {"path": "./_data/c_*.csv"}, "ipcs": {"path": "./_data/i/k=*/*.arrow", "format": "ipc"},
+        })
+        _write(pl.DataFrame({"i": [1]}), directory / "_data" / "x.parquet")
+        _write(pl.DataFrame({"i": [2]}), directory / "_data" / "parts" / "a.parquet")
+        _write(pl.DataFrame({"i": [3]}), directory / "_data" / "y_2025.parquet")
+        (directory / "_data" / "c_2025.csv").write_text("i\n4\n", encoding="utf-8")
+        _write(pl.DataFrame({"i": [5]}), directory / "_data" / "i" / "k=1" / "a.arrow")
+        for name, expected in (("x", [1]), ("parts", [2]), ("years", [3]), ("csvs", [4]), ("ipcs", [5])):
+            assert data.load(name, project_dir=directory).collect()["i"].to_list() == expected, name
+            assert data.sql(f"select i from {{{name}}}", project_dir=directory).collect()["i"].to_list() == expected, name
+
     @pytest.mark.parametrize("junk", [False, True])
     def test_a_name_a_glob_would_read_otherwise_is_itself(self, tmp_path, junk):
         """Found by a third review: polars and DuckDB take each listed path for a glob, so `tag=[draft]`,

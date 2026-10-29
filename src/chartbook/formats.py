@@ -450,18 +450,25 @@ def _nothing(path: Path, names, read: Reading, pinned: bool = False) -> str:
     return f"The folder {path.name!r} holds no {NAMES[read.format]} file{unless}.{hint}"
 
 
+def _pattern(sources: str) -> str:
+    """A glob as a reader that globs takes it: the folders it is in that are there under their own names (``Research [2026]/``) escaped."""
+    from chartbook import hashing
+
+    return hashing.split_glob(sources)[1]
+
+
 def _files(sources) -> list[str]:
     """The files a glob matches, in order; a list or a file as they are."""
     if isinstance(sources, list):
         return sources
     if is_glob_pattern(sources):
-        return sorted(match for match in glob.glob(sources, recursive=True) if os.path.isfile(match))
+        return sorted(match for match in glob.glob(_pattern(sources), recursive=True) if os.path.isfile(match))
     return [sources]
 
 
 def _matches_any(pattern: str) -> bool:
     """Whether a glob matches a file: the first one found says so, with no walk of the rest."""
-    return any(os.path.isfile(match) for match in glob.iglob(pattern, recursive=True))
+    return any(os.path.isfile(match) for match in glob.iglob(_pattern(pattern), recursive=True))
 
 
 def _scan_files(scan, files: list[str], **options):
@@ -737,7 +744,7 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
         if isinstance(sources, list):
             return _scan_files(pl.scan_parquet, sources, hive_partitioning=True)
         # A file, a glob, or a folder handed whole: as parquet always was
-        frame = pl.scan_parquet(sources, hive_partitioning=True)
+        frame = pl.scan_parquet(_pattern(sources) if is_glob_pattern(sources) and not os.path.exists(sources) else sources, hive_partitioning=True)
         if folder is not None:
             try:
                 frame.collect_schema()
@@ -752,7 +759,7 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
         if isinstance(sources, str) and is_glob_pattern(sources):
             from chartbook import hashing
 
-            return _hive(pl.scan_ipc, _files(sources), hashing.glob_root(sources))
+            return _hive(pl.scan_ipc, _files(sources), hashing.split_glob(sources)[0])
         if isinstance(sources, list) and folder is not None:
             return _hive(pl.scan_ipc, sources, folder)
         if isinstance(sources, list):
@@ -785,6 +792,8 @@ def _csv(read: Reading, sources) -> tuple:
     """
     options = _csv_options(read, sources)
     overrides = options.pop("schema_overrides", None) or {}
+    if isinstance(sources, str) and is_glob_pattern(sources) and not os.path.exists(sources):
+        sources = _pattern(sources)
     polars_names = pl.scan_csv(sources, **{**options, "infer_schema_length": 0}).collect_schema().names()
     if options.get("has_header", True):
         names = [name if name != "" else f"column_{i}" for i, name in enumerate(polars_names, start=1)]
@@ -1159,10 +1168,10 @@ def sql(location) -> str:
         if isinstance(sources, list):
             return f"read_parquet({quote_literal(_escaped(path.as_posix()))})"  # a file named as a glob would be
         if is_glob_pattern(sources):
-            return f"read_parquet({quote_literal(path.as_posix())}, hive_partitioning = true)"
+            return f"read_parquet({quote_literal(Path(_pattern(sources)).as_posix())}, hive_partitioning = true)"
         return f"read_parquet({quote_literal(path.as_posix())})"
     many = isinstance(sources, list) and folder is not None or isinstance(sources, str) and is_glob_pattern(sources)
-    text = _listed(sources) if isinstance(sources, list) else quote_literal(Path(sources).as_posix())
+    text = _listed(sources) if isinstance(sources, list) else quote_literal(Path(_pattern(sources) if is_glob_pattern(sources) else sources).as_posix())
     options = read.options
     sample = options.get("infer_schema_length", SAMPLE_ROWS)
     if read.format == "jsonl":
@@ -1258,7 +1267,7 @@ def arrow_dataset(location):
     if not found:
         raise FileNotFoundError(f"{location.path}: no Arrow IPC file is there yet.")
     path = Path(location.path)
-    root = hashing.glob_root(path) if is_glob_pattern(str(path)) else path if path.is_dir() else None
+    root = hashing.split_glob(path)[0] if is_glob_pattern(str(path)) and not path.exists() else path if path.is_dir() else None
     keys = list(_partitions(found, Path(root))) if root is not None else []
     if not keys:
         schema = ds.dataset(found, format="ipc").schema
