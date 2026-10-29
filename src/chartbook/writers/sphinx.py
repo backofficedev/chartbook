@@ -485,7 +485,7 @@ class SphinxWriter:
 
     def dataframe_page(self, record_id: str) -> str:
         """The Markdown page of one dataframe, from its record and the files it names."""
-        from chartbook.sitefiles import downloadable, not_built, not_built_text
+        from chartbook.sitefiles import download_link, downloadable, not_built, not_built_text
 
         record = self.records[record_id]
         pipeline = self.records[record["pipeline"]]
@@ -508,12 +508,17 @@ class SphinxWriter:
             freshness = []
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
-            glimpse = get_dataframe_glimpse(Path(resolved))
+            # Read as data.load() reads it: its format and the reader's options are the record's
+            glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))
             try:
                 first, last = _most_recent_valid_datapoints(
-                    Path(resolved), record.get("date_col", ""), size_threshold_mb=self.size_threshold
+                    Path(resolved),
+                    record.get("date_col", ""),
+                    size_threshold_mb=self.size_threshold,
+                    format=record.get("format"),
+                    read_options=record.get("read_options"),
                 )
-            except Exception:  # noqa: BLE001 - as the generator does: a page, not a crash
+            except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - as the generator does: a page, not a crash
                 first, last = None, None
             freshness = [_freshness("Data updated", location.get("modified_at"))]
         template = environment.from_string(_DATAFRAME_PAGE)
@@ -535,6 +540,7 @@ class SphinxWriter:
             parts=_parts(record),
             # Only a file the build copies for download is linked
             enable_data_download=self.enable_data_download and downloadable(record),
+            **download_link(record),
             freshness=[fact for fact in freshness if fact],
         )
 
@@ -546,7 +552,7 @@ class SphinxWriter:
         the chart file's ``modified_at``; "Data updated" is its dataframe's,
         which for a table or query is the engine file's.
         """
-        from chartbook.sitefiles import downloadable
+        from chartbook.sitefiles import download_link, downloadable
 
         record = self.records[record_id]
         pipeline = self.records[record["pipeline"]]
@@ -596,6 +602,7 @@ class SphinxWriter:
             dot_or_dotdot="..",
             # Its dataframe's manifest is on the page, with a download only of a file the build copies
             enable_data_download=self.enable_data_download and dataframe is not None and downloadable(dataframe),
+            **(download_link(dataframe) if dataframe is not None else {}),
         )
 
     def model_page(self, record_id: str) -> str:
@@ -1801,19 +1808,28 @@ def _format_metric(value) -> str:
     return f"{value:.6g}"
 
 
-def _most_recent_valid_datapoints(parquet_path: Path, date_col: str = "date", size_threshold_mb: float = 50):
+def _most_recent_valid_datapoints(
+    parquet_path: Path,
+    date_col: str = "date",
+    size_threshold_mb: float = 50,
+    format=None,
+    read_options=None,
+):
     """The least and greatest of each column's last non-null date, as text, for the dataframe table.
 
     "N/A" without a date column or for a folder of parts; "N/A (large file)"
-    over the size threshold, so a big file is not read for two dates.
+    over the size threshold, so a big file is not read for two dates. The
+    file is read as ``data.load()`` reads it (:mod:`chartbook.formats`).
     """
+    from chartbook import formats
+
     if date_col in ("", "NA", "N/A"):
         return "N/A", "N/A"
     if is_glob_pattern(str(parquet_path)):
         return "N/A", "N/A"
     if os.path.getsize(parquet_path) / (1024 * 1024) > size_threshold_mb:
         return "N/A (large file)", "N/A (large file)"
-    frame = pl.read_parquet(parquet_path)
+    frame = formats.scan(parquet_path, format, read_options).collect()
     if frame[date_col].dtype != pl.Datetime:
         frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
     latest = frame.select(

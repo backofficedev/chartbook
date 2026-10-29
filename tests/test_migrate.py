@@ -486,7 +486,7 @@ class TestWhatTheFourthReviewFound:
         lines = sorted({line for _, line in dis.findlinestarts(code) if line and line > code.co_firstlineno})
         stopped = 0
         for line in lines:
-            shutil.rmtree(root)
+            store_module._remove_tree(root, own=True)  # its files read-only, which Windows will not remove as they are
             shutil.copytree(pristine, root, symlinks=True)
 
             def tracer(frame, event, arg, line=line):

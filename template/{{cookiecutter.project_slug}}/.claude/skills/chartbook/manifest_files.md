@@ -618,4 +618,23 @@ date_col = "date"
 docs = "Hive-partitioned dataset with year/month partitions."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. The dataframe's page lists its parts, each with its size and rows, and the partition keys and their values; `assets.files("partitioned_data")` gives the files, to read one at a time. Glob paths only support `format="polars"` (LazyFrame) — using `"pandas"` or `"polars_eager"` with a glob path raises a `ValueError`.
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Every `format=` of `data.load` reads a glob: `"pandas"` and `"polars_eager"` collect the LazyFrame. The dataframe's page lists its parts, each with its size and rows, and the partition keys and their values; `assets.files("partitioned_data")` gives the files, to read one at a time.
+
+## The File's Format
+
+A dataframe's file is parquet, CSV/TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The path's ending says which: `.parquet`; `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz`; `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz`; `.arrow`, `.feather`, `.ipc`. Anything else, a folder included, is parquet unless `format` says otherwise:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"
+format = "csv"                                   # "parquet" | "csv" | "jsonl" | "ipc"
+read_options = { separator = ";", schema_overrides = { zip = "String" } }
+docs = "The vendor's daily drop, kept as delivered."
+```
+
+- `read_options` are for CSV and JSON lines, by polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma` (CSV), and `schema_overrides`, `infer_schema_length` (both; 20480 rows by default in both engines). `data.sql` gives DuckDB the same ones under its own names, meaning the same; polars' `comment_prefix` and `skip_rows` are not taken. A parquet or Arrow IPC file takes none.
+- An unknown `format`, an option not in that list, or one of the wrong type stops the manifest from loading; an override of a column the file lacks is refused when it is read.
+- A JSON lines file's `schema_overrides` are cast by polars after the read, and `data.sql` hands DuckDB that frame (so `data.ref` of such a file, like an Arrow IPC one, raises). A CSV file with no header has columns `column_1`, `column_2`, … in both engines.
+- A folder's Hive keys are those below it that every file has; a file's own column of a key's name is kept. Each JSON lines file of a glob is inferred from its own lines, and the files read under all their columns. With `format` given, a folder whose files lack its endings is read as the files with its most common ending, a `README` or `schema.json` passed over.
+- `data.load` reads the schema when called: a file not built raises `FileNotFoundError`, and a file that is not its format raises `UnreadableTableError` naming the format and the reader's reason.
+- A file that is not a table belongs under `[files]`, not `[dataframes]`.

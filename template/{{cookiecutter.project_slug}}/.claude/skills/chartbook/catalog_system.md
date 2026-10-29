@@ -248,13 +248,15 @@ An `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is reserved for future ver
 
 | Format | Returns | Glob support |
 |--------|---------|--------------|
-| `"polars"` (default) | `polars.LazyFrame` via `scan_parquet(hive_partitioning=True)` | Yes |
-| `"polars_eager"` | `polars.DataFrame` via `read_parquet()` | No (`ValueError`) |
-| `"pandas"` | `pandas.DataFrame` via `read_parquet()` | No (`ValueError`) |
+| `"polars"` (default) | `polars.LazyFrame` via `scan_parquet(hive_partitioning=True)` (or `scan_csv`, `scan_ndjson`, `scan_ipc`) | Yes |
+| `"polars_eager"` | `polars.DataFrame`: the LazyFrame, collected | Yes |
+| `"pandas"` | `pandas.DataFrame` via `read_parquet()`; a glob, or another format, as the LazyFrame collected | Yes |
+
+`format=` is what is returned. The file's own format is its manifest's `format` key, else its path's ending: parquet, CSV/TSV, JSON lines (gzipped or not) or Arrow IPC.
 
 ### Hive-Partitioned Data Loading
 
-When a dataframe's `path` uses a glob pattern (e.g., `**/*.parquet`), Polars `scan_parquet` automatically detects hive directory structure and adds partition columns to the LazyFrame. Only `format="polars"` supports glob patterns.
+When a dataframe's `path` uses a glob pattern (e.g., `**/*.parquet`), Polars `scan_parquet` automatically detects hive directory structure and adds partition columns to the LazyFrame (for parquet and Arrow IPC; not for CSV or JSON lines). Every `format=` reads a glob.
 
 ### Catalog Path Resolution in Python
 

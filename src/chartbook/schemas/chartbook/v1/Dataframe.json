@@ -225,6 +225,19 @@
     "date_col": {
       "type": "string"
     },
+    "format": {
+      "enum": [
+        "parquet",
+        "csv",
+        "jsonl",
+        "ipc"
+      ],
+      "description": "The format the dataframe's file is stored in, as the manifest declares it: parquet, CSV or TSV, JSON lines (gzipped or not), or Arrow IPC (Feather). Absent when the manifest leaves it to the path's ending (`.parquet`, `.csv`, `.tsv`, `.csv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.arrow`, `.feather`, `.ipc`); a path whose ending names none is parquet."
+    },
+    "read_options": {
+      "type": "object",
+      "description": "The options the manifest gives the reader of a CSV or JSON lines file, by polars' names (`separator`, `schema_overrides`, `infer_schema_length`, ...). `data.load()`, `data.sql()`, the page and this record read the file with them."
+    },
     "columns": {
       "type": "array",
       "description": "The physical schema, as data.load() returns it.",

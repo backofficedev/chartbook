@@ -12,7 +12,7 @@
 {% endif %}{% if dataframe_manifest.table %}| Table                          | {{dataframe_manifest.table | literal}} in source {{dataframe_manifest.source | literal}}             |
 {% elif dataframe_manifest.query %}| Query                          | in source {{dataframe_manifest.source | literal}}; the SQL is below                          |
 {% elif dataframe_manifest.path %}| Dataframe Path                 | {{dataframe_manifest.path | literal}}                                                        |
-{% endif %}{% if enable_data_download %}| Download Data as Parquet       | [Parquet]({{dot_or_dotdot}}/download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.parquet)         |
+{% endif %}{% if enable_data_download %}| Download Data as {{download_format}}       | [{{download_format}}]({{dot_or_dotdot}}/download_dataframe/{{pipeline_id | replace('/', '--')}}/{{download_file}})         |
 {% endif %}
 
 {% if dataframe_manifest.query %}**Query:**

@@ -2960,7 +2960,7 @@ class _FolderPending(PendingSnapshot):
             self.store._forget()
         finally:
             if os.path.lexists(temporary):
-                os.remove(temporary)
+                _remove_file(temporary)  # read-only already, which Windows will not remove as it is
         return content_hash, kind
 
     def _inside(self, target: Path) -> None:

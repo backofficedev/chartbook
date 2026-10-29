@@ -481,12 +481,15 @@ store, and the Windows CI runs the tests under a long root.
    check before writing, and `store info`'s warning); not measure 1 or 2, the `\\?\` form, which
    needs a Windows machine to try readers against.*
 6. `chartbook store export` and `store import`. *Built 2026-10-29, for a folder store.*
-7. #135, the rest. *Items 3 and 5 built 2026-10-29, with step 9: a dataframe of many parts
-   lists its parts on its page, and `assets.files()` gives a dataframe's files.* Items 2 (every
-   load format reads a glob) and 4 (the warning about missed siblings) are their own pull requests.
-8. #134, the shared reader.
-9. #133, `[files]`. *Built 2026-10-29* ("As built: `[files]`", below). The rule that sends a
-   `[dataframes]` path that is not a table to `[files]` waits for #134 to be merged.
+7. #135, the rest. *Its second item, a glob in every `data.load` format, was built 2026-10-28
+   with step 8; items 3 and 5 on 2026-10-29, with step 9: a dataframe of many parts lists its
+   parts on its page, and `assets.files()` gives a dataframe's files. Item 4, the warning about
+   missed siblings, was its own pull request.*
+8. #134, the shared reader (`chartbook.formats`). *Built 2026-10-28.* DuckDB has no reader of
+   Arrow IPC of its own, so `data.sql()` hands it such a file as an Arrow dataset.
+9. #133, `[files]`. *Built 2026-10-29* ("As built: `[files]`", below). A dataframe that cannot be
+   read as a table says to declare it under `[files]`; the rule in `chartbook check` that would
+   say so before it is read is not built.
 10. The template's CI.
 
 ## As built (2026-10-28)

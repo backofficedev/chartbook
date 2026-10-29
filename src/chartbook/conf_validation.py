@@ -223,7 +223,9 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     """Validate that all source files referenced in the manifest exist.
 
     Checks for the existence of:
-    - Dataframe parquet files (path)
+    - Dataframe files (path), in any format a dataframe is read in; the
+      format and its ``read_options`` are checked when the manifest loads
+      (:func:`chartbook.formats.check_entry`)
     - Dataframe documentation files (docs_path, when mode="path")
     - Chart HTML files (path)
     - Chart documentation files (docs_path, when mode="path")
@@ -260,15 +262,15 @@ def validate_source_files(manifest: dict, base_dir) -> list:
 
         # Check dataframe files
         for dataframe_id, dataframe_config in pipeline_manifest.get("dataframes", {}).items():
-            parquet_path = dataframe_config.get("path")
-            if parquet_path and parquet_path.strip():
+            data_path = dataframe_config.get("path")
+            if data_path and data_path.strip():
                 from chartbook.utils import is_glob_pattern
 
-                if is_glob_pattern(parquet_path):
+                if is_glob_pattern(data_path):
                     from chartbook.hashing import find_files
 
                     full_pattern = str(
-                        (pipeline_base_dir / parquet_path).as_posix()
+                        (pipeline_base_dir / data_path).as_posix()
                     )
                     # The files the index hashes and a site shows: a glob
                     # that matches only folders has none
@@ -283,7 +285,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             )
                         )
                 else:
-                    full_path = (pipeline_base_dir / parquet_path).resolve()
+                    full_path = (pipeline_base_dir / data_path).resolve()
                     if not full_path.exists():
                         missing_files.append(
                             MissingFile(

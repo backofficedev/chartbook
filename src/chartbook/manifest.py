@@ -25,6 +25,7 @@ from typing import Union
 
 import tomli
 
+from chartbook import formats
 from chartbook.identity import (
     ID_COMPONENT_PATTERN,
     _git_environment,
@@ -1573,6 +1574,8 @@ def _load_pipeline_manifest(raw_manifest):
                 dataframe_manifest["_location_kind"] = validate_dataframe_location(
                     dataframe_manifest, dataframe_id, manifest.get("sources") or {}
                 )
+                # The file's format and the reader's options, as they will be read
+                formats.check_entry(dataframe_manifest, f"[dataframes.{dataframe_id}]")
             except ValueError as error:
                 raise ValueError(f"{Path(base_dir) / 'chartbook.toml'}: {error}") from None
             if dataframe_manifest["_location_kind"] != "file":

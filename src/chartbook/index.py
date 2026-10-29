@@ -207,20 +207,24 @@ def _modified_at(resolved: str) -> Optional[str]:
     return datetime.fromtimestamp(max(stamps), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _date_range(resolved: str, date_col: str) -> Optional[dict]:
+def _date_range(resolved: str, date_col: str, entry: Optional[dict] = None) -> Optional[dict]:
     """The first and last value of a dataframe's date column, in ISO 8601.
 
     A date or datetime column is read as it is. A text column is parsed as
     dates first, since its least and greatest text need not be its first
     and last date; what does not parse is left out, and a column with no
-    date in it gives nothing. One column is read, lazily, so a large file
-    costs one column and not the whole. None when the column is not there,
-    holds no dates, or cannot be read.
+    date in it gives nothing. One column is read, lazily, so a large
+    parquet file costs one column and not the whole. The file is read as
+    its entry's ``format`` and ``read_options`` say (:mod:`chartbook.formats`).
+    None when the column is not there, holds no dates, or cannot be read.
     """
     import polars as pl
 
+    from chartbook import formats
+
+    entry = entry or {}
     try:
-        frame = pl.scan_parquet(resolved, hive_partitioning=True)
+        frame = formats.scan(resolved, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
         if date_col not in schema.names():
             return None
@@ -232,7 +236,7 @@ def _date_range(resolved: str, date_col: str) -> Optional[dict]:
         first, last = (
             frame.select(column.min().alias("first"), column.max().alias("last")).collect().row(0)
         )
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     return _span_as_text(first, last)
 
@@ -457,19 +461,23 @@ def _definition_hash(location: dict, columns: list[dict], url: Optional[str]) ->
     return hashing.format_hash(hashlib.sha256(text.encode("utf-8")).hexdigest())
 
 
-def _describe_parquet(resolved_path: str) -> Optional[tuple[list[dict], int]]:
+def _describe_file(resolved_path: str, entry: dict) -> Optional[tuple[list[dict], int]]:
     """A dataframe's columns and row count, read the way ``data.load()`` reads it.
 
-    Only the parquet footers are read. Returns None when there is nothing
-    readable there, which includes "not built yet".
+    By the shared reader, as its entry's ``format`` and ``read_options`` say
+    (:mod:`chartbook.formats`). For parquet only the footers are read; a
+    CSV or JSON lines file is read through to count its rows. Returns None
+    when there is nothing readable there, which includes "not built yet".
     """
     import polars as pl
 
+    from chartbook import formats
+
     try:
-        frame = pl.scan_parquet(resolved_path, hive_partitioning=True)
+        frame = formats.scan(resolved_path, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
         rows = frame.select(pl.len()).collect().item()
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     columns = [
         {"name": name, "dtype": dtype_name(dtype)} for name, dtype in schema.items()
@@ -779,7 +787,7 @@ def _asset_records(
                     record["location"], described[0], (entry.get("_source") or {}).get("url")
                 )
         elif "content_hash" in facts:
-            described = _describe_parquet(facts["location"]["resolved_path"])
+            described = _describe_file(facts["location"]["resolved_path"], entry)
         columns = None
         where = f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]"
         if described is not None:
@@ -797,7 +805,7 @@ def _asset_records(
         series = _series_records(ref, entry, columns, where)
         date_col = entry.get("date_col")
         if date_col and "content_hash" in facts and columns and date_col in {c["name"] for c in columns}:
-            span = _date_range(facts["location"]["resolved_path"], date_col)
+            span = _date_range(facts["location"]["resolved_path"], date_col, entry)
             if span:
                 record["date_range"] = span
         elif date_col and record.get("location", {}).get("kind") in ("table", "query") and columns:

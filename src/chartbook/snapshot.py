@@ -84,7 +84,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Union
 
-from chartbook import hashing
+from chartbook import formats, hashing
 from chartbook.identity import (
     _git_environment,
     derive_pipeline_id,
@@ -340,7 +340,13 @@ class SnapshotReport:
 
 
 def asset_record(
-    ref: AssetRef, pipeline: str, declared_path: str, content, single: bool, keep: bool = False
+    ref: AssetRef,
+    pipeline: str,
+    declared_path: str,
+    content,
+    single: bool,
+    keep: bool = False,
+    reading: Optional[dict] = None,
 ) -> dict:
     """An asset as a snapshot and a lockfile record it; with its hash if stored.
 
@@ -357,6 +363,10 @@ def asset_record(
     :param keep: Whether the manifest marks the asset ``keep = true``: every
         version of it is kept in the store (``docs_src/design/keep.md``).
         Written only when it does.
+    :param reading: A dataframe's ``format`` and ``read_options``, as its
+        manifest gives them (:func:`chartbook.formats.declared`), kept in
+        its ``location`` so that a pipeline that reads the pin reads the
+        bytes as their owner said to. Written only when given.
     """
     record = {
         "kind": record_kind(ref.kind),
@@ -364,7 +374,7 @@ def asset_record(
         "id": str(ref),
         "ref": ref.to_dict(),
         "pipeline": pipeline,
-        "location": {"kind": "file", "path": declared_path},
+        "location": {"kind": "file", "path": declared_path, **(reading or {})},
     }
     if keep:
         record["keep"] = True
@@ -2313,7 +2323,8 @@ def _make(directory: Path, pipeline: str, code: "Code", raw: dict, store: Store,
             continue
         stored = pending.put(absolute, links=LINKS)
         held[str(local)] = stored.stored
-        record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked)
+        reading = formats.declared((raw.get("dataframes") or {}).get(local.name)) if local.kind == "dataframe" else None
+        record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked, reading=reading)
         if local.kind == "model":
             scores = _scores(directory, (raw.get("models") or {}).get(local.name))
             if scores is not None:

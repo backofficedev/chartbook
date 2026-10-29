@@ -38,3 +38,24 @@ jobs:
 
     - name: Run tests
       run: uv run pytest -v -rfE
+
+  # The oldest polars pyproject.toml takes: polars 1 reads a folder of files
+  # unlike polars 2 in ways the lock alone never shows
+  test-polars-floor:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up uv and Python 3.12
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.6.6"
+        python-version: "3.12"
+        enable-cache: true
+
+    - name: Install the project and its dev group
+      run: uv sync --locked
+
+    - name: Run tests on polars 1.33
+      run: uv run --with "polars==1.33.1" pytest -rfE

@@ -58,10 +58,8 @@ from chartbook.resolve import (
     locate_in_catalog,
     require_file,
     resolve,
-    nothing_to_read,
 )
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
-from chartbook.utils import is_glob_pattern
 
 
 def path(
@@ -222,7 +220,7 @@ def get_data_path(
     *,
     project_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Get the resolved path to a dataframe's parquet file, through a catalog.
+    """Get the resolved path to a dataframe's file, through a catalog.
 
     For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing
     the glob pattern characters.
@@ -253,7 +251,7 @@ def get_data_path(
     :param project_dir: Where to look for the pipeline the call is made
         from, as for :func:`path`.
     :type project_dir: Optional[Union[str, Path]]
-    :returns: The resolved path to the parquet file (may contain glob characters).
+    :returns: The resolved path to the file (may contain glob characters).
     :rtype: Path
     :raises CatalogNotConfiguredError: If no catalog is configured, and the
         store has no snapshot of the pipeline.
@@ -355,9 +353,9 @@ def load(
     """Load a dataframe: by reference, or from a pipeline in a catalog.
 
     **By reference**, with one argument. A dataframe of the pipeline you
-    are in is loaded from where its manifest says it is: a parquet file, or
-    a table or query in one of its ``[sources]``, in which case the source's
-    engine runs it and the frame is fetched whole when it is collected. A
+    are in is loaded from where its manifest says it is: a file, or a table
+    or query in one of its ``[sources]``, in which case the source's engine
+    runs it and the frame is fetched whole when it is collected. A
     dataframe of another pipeline is loaded from the copy that
     ``chartbook.lock`` pins, so it does not change until you run
     ``chartbook update``:
@@ -396,8 +394,9 @@ def load(
     :type dataframe: Optional[str]
     :param format: Output format — ``"polars"`` (default, returns LazyFrame),
         ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated
-        alias for ``"polars"``).  Glob patterns in a dataframe's ``path`` only
-        support ``"polars"`` (LazyFrame).
+        alias for ``"polars"``). Every one reads a file, a glob or a folder.
+        This is what is returned, not what the file is: that is the entry's
+        ``format``, or its path's ending (see below).
     :type format: str
     :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
         directory, to load through.  If ``None``, the global default from
@@ -428,8 +427,27 @@ def load(
         nor the catalog.
     :raises TypeError: If the arguments are neither one reference nor a
         pipeline and a dataframe.
-    :raises ValueError: If *format* is not one of the supported values, or if
-        a glob path is used with a non-LazyFrame format.
+    :raises UnreadableTableError: If a file cannot be read as its format.
+        The message names the format and what said it, the entry's
+        ``format`` or the path's ending.
+    :raises FileNotFoundError: If the file is not there, or a glob matches
+        no file.
+    :raises ValueError: If *format* is not one of the supported values, or
+        the entry's ``format`` or ``read_options`` is not one ChartBook reads.
+
+    **The file's format.** A dataframe's file is parquet, CSV or TSV, JSON
+    lines (gzipped or not) or Arrow IPC (Feather), as its entry's ``format``
+    says, or else the ending of its ``path`` (``.parquet``, ``.csv``,
+    ``.tsv``, ``.csv.gz``, ``.jsonl``, ``.ndjson``, ``.jsonl.gz``,
+    ``.arrow``, ``.feather``, ``.ipc``); a path whose ending names none, a
+    folder say, is parquet. It is read with ``pl.scan_parquet``,
+    ``pl.scan_csv``, ``pl.scan_ndjson`` or ``pl.scan_ipc``, given the
+    entry's ``read_options``, and its schema is read at once, so a file that
+    is not what it is taken to be is said here and not when the frame is
+    collected. A gzipped file is decompressed whole, in memory, each time it
+    is read. ``"pandas"`` reads a parquet file or folder as pandas does, Hive
+    keys as categories, and anything else, a glob among them, as
+    ``"polars"`` does, collected. See :mod:`chartbook.formats`.
 
     **Examples**
 
@@ -499,54 +517,19 @@ def load(
             return frame.collect()
         if format == "pandas":
             return frame.collect().to_pandas()
-        raise ValueError(
-            f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
-            f"'pandas', or 'polars-lazyframe'."
-        )
-    file_path = location.path
-    _is_glob = is_glob_pattern(file_path)
-    # A directory pinned from another pipeline: the files its record lists, and
-    # nothing else its folder holds (a Finder .DS_Store, a sync service's copy)
-    listed = [str(file) for file in location.files]
-    said = nothing_to_read(location)
-    if said:
-        raise ValueError(said)
-    source = listed or file_path
+        raise ValueError(_invalid_format(format))
+    if format not in ("polars", "polars_eager", "pandas", "polars-lazyframe"):
+        raise ValueError(_invalid_format(format))
+    # A file, read as its format is: parquet, CSV, JSON lines or Arrow IPC
+    from chartbook import formats
 
+    where = f"Dataframe {dataframe!r}"
     if format == "pandas":
-        if _is_glob:
-            raise ValueError(
-                "Glob patterns in a dataframe's path only support format='polars' "
-                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
-                "to materialize, then .to_pandas() if needed."
-            )
-        if listed:
-            import pyarrow.dataset as ds
-
-            # As pandas reads a folder: hive partitions as categories
-            partitioning = ds.HivePartitioning.discover(infer_dictionary=True)
-            return ds.dataset(listed, format="parquet", partitioning=partitioning, partition_base_dir=str(file_path)).to_table().to_pandas()
-        import pandas as pd
-
-        return pd.read_parquet(file_path)
-    elif format == "polars":
-        import polars as pl
-
-        return pl.scan_parquet(source, hive_partitioning=True)
-    elif format == "polars_eager":
-        if _is_glob:
-            raise ValueError(
-                "Glob patterns in a dataframe's path only support format='polars' "
-                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
-                "to materialize."
-            )
-        import polars as pl
-
-        return pl.read_parquet(source, hive_partitioning=True)
-    elif format == "polars-lazyframe":
+        return formats.to_pandas(location, where)
+    if format == "polars_eager":
+        return formats.scan_location(location, where).collect()
+    if format == "polars-lazyframe":
         import warnings
-
-        import polars as pl
 
         warnings.warn(
             "format='polars-lazyframe' is deprecated. Use format='polars' instead "
@@ -554,12 +537,23 @@ def load(
             DeprecationWarning,
             stacklevel=2,
         )
-        return pl.scan_parquet(source, hive_partitioning=True)
-    else:
-        raise ValueError(
-            f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
-            f"'pandas', or 'polars-lazyframe'."
+    return formats.scan_location(location, where)
+
+
+def _invalid_format(format) -> str:
+    """What to say of a ``format=`` that data.load() does not return."""
+    from chartbook.formats import FORMATS
+
+    said = (
+        f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
+        f"'pandas', or 'polars-lazyframe'."
+    )
+    if format in FORMATS:
+        said += (
+            " That is what data.load() returns. The format a dataframe's file is stored in "
+            f'is said in its entry in [dataframes]: format = "{format}".'
         )
+    return said
 
 
 # A {reference} in SQL: anything between braces that is not itself a brace.
@@ -581,10 +575,17 @@ def ref(
     >>> data.ref("slopes")  # doctest: +SKIP
     '(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)'
 
-    A file is ``read_parquet('…')``, which DuckDB reads as a table. A table
-    in a source is its quoted identifier. A query in a source is the query,
-    in parentheses, so it stands where a table would. Paste it into SQL you
-    run with :func:`connect`, or with your own tooling.
+    A file is DuckDB's reader of its format, ``read_parquet('…')``,
+    ``read_csv('…', …)`` or ``read_json('…', …)``, given the entry's
+    ``read_options`` (:func:`chartbook.formats.sql`). A table in a source is
+    its quoted identifier. A query in a source is the query, in
+    parentheses, so it stands where a table would. Paste it into SQL you
+    run with :func:`connect`, or with your own tooling. A folder of parquet
+    is the list of its parts, with its Hive keys put on by file. An Arrow
+    IPC file has none, since DuckDB reads one with no function of its own,
+    and nor has a JSON lines file with ``schema_overrides``, which polars
+    applies: :func:`sql` hands DuckDB what :func:`load` reads of each
+    (:func:`chartbook.formats.handed`).
 
     :param reference: The dataframe: a name of this pipeline's, or
         ``pipeline:name`` for a pinned one of another's.
@@ -592,6 +593,8 @@ def ref(
     :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
     :raises AssetNotPinnedError: If another pipeline's dataframe has no
         pinned copy.
+    :raises ValueError: For an Arrow IPC file, or a JSON lines file with
+        ``schema_overrides``.
     """
     from chartbook.backends import backend_for
 
@@ -616,7 +619,12 @@ def sql(
     Each ``{reference}`` is replaced by what :func:`ref` gives for it, and
     the SQL runs in one engine: the source that the tables and queries in it
     live in, or a fresh in-memory DuckDB of its own when it names only
-    files. ChartBook never parses or rewrites the SQL; what is between the
+    files. An Arrow IPC file, which DuckDB has no reader of its own for, is
+    handed to it as an Arrow dataset under a name of its own, which DuckDB
+    reads lazily as it would a file; a JSON lines file with
+    ``schema_overrides`` is handed as the frame :func:`load` gives, so that
+    its overrides mean in SQL what they mean there. ChartBook never parses
+    or rewrites the SQL; what is between the
     braces is a reference, and everything else is yours, in that engine's
     dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or
     inside a string, is written twice: ``{{'a': 1}}``. A warehouse reads
@@ -637,7 +645,8 @@ def sql(
     :raises chartbook.backends.BackendError: If the engine refuses the SQL
         as it binds it: a name it does not know, or SQL it cannot parse.
     """
-    from chartbook.backends import DuckDBBackend, backend_for, open_backend
+    from chartbook import formats
+    from chartbook.backends import DuckDBBackend, backend_for, open_backend, quote_identifier
 
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     query = query.replace("{{", _LITERAL_OPEN).replace("}}", _LITERAL_CLOSE)
@@ -676,11 +685,44 @@ def sql(
                 f"the source {engine.source!r}, a {engine.name} engine, which reads its own tables only. "
                 f"Load them apart with data.load() and join the frames in Polars."
             )
+    arrow = {}
     for text, location in locations.items():
-        replacement = backend_for(location).ref(location) if location.kind == "file" else engine.ref(location)
+        handed = formats.handed(location) if location.kind == "file" else None
+        if handed is not None:
+            # An Arrow IPC file, or a JSON lines file with overrides: DuckDB is
+            # handed it, under a name of its own, the same each call, so a
+            # :memory: source keeps one view of it and not one a call
+            if not _takes_arrow(engine):
+                raise ValueError(
+                    f"The query names {text.strip()}, which DuckDB is handed rather than given a "
+                    f"reader of, and runs in the source {engine.source!r}, a {engine.name} engine, "
+                    f"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."
+                )
+            name = formats.handed_name(location)
+            arrow[name] = handed
+            replacement = quote_identifier(name)
+        elif location.kind == "file":
+            replacement = backend_for(location).ref(location)
+        else:
+            replacement = engine.ref(location)
         query = query.replace("{" + text + "}", replacement)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
-    return engine.sql(query)
+    return engine.sql(query, arrow=arrow) if arrow else engine.sql(query)
+
+
+def _takes_arrow(engine) -> bool:
+    """Whether an engine's ``sql()`` takes Arrow data to register (``arrow=``), as DuckDB's does.
+
+    A backend from a plugin, written before there was such an argument, is
+    handed none.
+    """
+    import inspect
+
+    try:
+        parameters = inspect.signature(engine.sql).parameters
+    except (TypeError, ValueError):
+        return False
+    return "arrow" in parameters or any(p.kind is p.VAR_KEYWORD for p in parameters.values())
 
 
 def connect(
