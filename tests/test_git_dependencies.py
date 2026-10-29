@@ -959,7 +959,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         lock.pin(downstream, git_cache=cache)
         assert puts == [] and short.read_bytes() == b"pa"
 
-    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache):
+    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache, monkeypatch):
         """Another repository commits the same bytes; downstream pins both, and the store keeps one object for the two."""
         other = work / "other"
         _write_manifest(other, {"project": {"id": "other"}, "dataframes": {"same": {"path": "./data/same.parquet", "docs": "d"}}})
@@ -981,6 +981,12 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
             assert report.problems == [] and {"committed", "same"} <= set(_statuses(report))
         for name in ("committed.parquet", "same.parquet"):
             assert (Path(default_store().get(HELLO, name=name)) / name).read_bytes() == b"hello"
+        # Each read from its own pipeline's copy, which is the one kept while it is pinned
+        from chartbook import data
+
+        monkeypatch.chdir(downstream)
+        assert "/pipelines/other/" in Path(data.path("acme/other:same")).as_posix()
+        assert "/pipelines/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
 
 
 class TestPuttingBackInAnS3Store:
