@@ -21,15 +21,16 @@ in the settings; see {doc}`reference/configuration`). A bucket in S3 works the s
 
 The work now is to make this smooth from end to end, for one person on one machine first.
 
-## Next: 0.3.0
+## 0.3.0
 
-The plan is {doc}`design/plan-0.3.0`. At its centre is a store a person can find their way
+0.3.0 carries out {doc}`design/plan-0.3.0`. At its centre is a store a person can find their way
 around: one folder for each pipeline, which can be sent to someone else and added to their store,
 by hand or with `chartbook store export` and `store import`. Inside it, each snapshot has a folder
 holding the pipeline's files under their own names, and each file is kept once, however many
 snapshots hold it, so a dataset that grows by a file a year no longer stores a full copy each time.
 With it come files that are not tables, tables stored as CSV, JSON lines or Arrow IPC, more for
-datasets of many files, and a clear message about long paths on Windows.
+datasets of many files, and a clear message about long paths on Windows. A store made by 0.2 is
+moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read this first").
 
 ## Experimental: Databricks
 

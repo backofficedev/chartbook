@@ -2,8 +2,8 @@
 
 ```{note}
 A plan, written 2026-10-28, two days after 0.2.0 was released. It says what 0.3.0 is for, the new
-layout of the store at its centre, and the order of the work. Status: **being built**; what is
-built is marked in "The order of work", and "As built" says where it differs. What the maintainer decided on 2026-10-28 is marked *decided*; the rest is *proposed*, and
+layout of the store at its centre, and the order of the work. Status: **built** (2026-10-29), but
+for what "The order of work" says is not; what was built is marked there, and "As built" says where it differs. What the maintainer decided on 2026-10-28 is marked *decided*; the rest is *proposed*, and
 much of it comes from a review of an earlier draft against the code, which is cited where it
 matters. The layout inside a pipeline's folder was revised the same day, on the maintainer's
 proposal.

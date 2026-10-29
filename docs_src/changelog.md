@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
+### Read this first: upgrading from 0.2.0
+
+0.3.0 makes the store a folder a person can read and send: one folder for each pipeline, one for each snapshot, the pipeline's files at their own paths, and each file kept once ({doc}`design/plan-0.3.0`). A dataframe can be CSV, JSON lines or Arrow IPC as well as parquet, and a pipeline can keep files that are not tables under `[files]`. Lockfiles and content hashes are unchanged: everything pinned stays pinned to the same bytes.
+
+**Upgrading a store.** 0.3 refuses a store of 0.2, and 0.2 refuses one 0.3 has moved, each saying what to do. Upgrade every machine that uses a store to 0.3, then run `chartbook store migrate --dry-run` and `chartbook store migrate` on one of them. It moves files by renaming them, so a store in a synced folder uploads nothing again; one cut short goes on when it is run again. A store in a bucket is moved by syncing it to a folder, moving that, and syncing it back.
+
+**Breaking changes:**
+
+- The store's layout, above. Its records are `chartbook/snapshot/v2`.
+- For a store plugin: `Store.begin` makes a snapshot (`PendingSnapshot`), and `get` and `has` take the pipeline.
+- ChartBook needs polars 1.33, DuckDB 1.5 and pyarrow 16 or later (was polars 1.20 and DuckDB 1.4).
+- `data.load()` reads a file's schema when it is called: a file not built yet raises `FileNotFoundError`, and one that is not its format raises `UnreadableTableError`, then and not when the frame is collected.
+- `data.sql()` and `data.ref()` read a folder of parquet as its parts, with its Hive keys from below it and none from the folders above it.
+- A declared `path` whose own parts name a file or folder with `[`, `*` or `?` in its name is refused by `chartbook check` and `chartbook snapshot`.
+
 ### Added — tables stored as CSV, JSON lines or Arrow IPC
 
 A dataframe's file can be CSV or TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather), as well as parquet, and `data.load()`, `data.sql()`, the dataframe's page, `chartbook create-data-glimpses` and the index read it as they read parquet. Data that arrives as CSV can stay that way, and an API's `.jsonl.gz` pull is a table of structs and lists. The format is the entry's new `format` key (`"parquet"`, `"csv"`, `"jsonl"` or `"ipc"`), else the ending of its path (`.parquet`, `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz`, `.arrow`, `.feather`, `.ipc`); a path whose ending names none, a folder among them, is parquet, as every path was before. The new `read_options` gives the reader of a CSV or JSON lines file its options, by polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma`, `schema_overrides` and `infer_schema_length`. `data.sql()` gives DuckDB the same ones in `read_csv(…)` or `read_json(…)`, under its own names and so that each means the same, and says what DuckDB would otherwise guess as polars reads it: the quote and its escape, the names of a file with no header (`column_1`, `column_2`, …, which ChartBook names alike in both engines and every polars) or with an empty or repeated name in its header, an empty field as null and a quoted one as empty text, and the 20480 rows both infer types from (polars' own default is 100). Polars' `comment_prefix` and `skip_rows` are left out, since DuckDB reads them otherwise. A JSON lines file's `schema_overrides` are cast by polars after the read, and `data.sql()` hands DuckDB the frame polars reads of such a file, since DuckDB's casts round, trim and parse otherwise. Each JSON lines file of a glob or a folder is inferred from its own lines, and the files read by one scan under all their columns, so a field the later ones bring is kept. DuckDB has no reader of Arrow IPC of its own, so `data.sql()` hands it the files as an Arrow dataset, once per set of files. `data.ref()` of an Arrow IPC file, or of a JSON lines file with overrides, says it has no text in SQL. A manifest with a `format` ChartBook does not read, or an option it does not pass on, does not load.
@@ -76,7 +93,7 @@ A lockfile written by 0.2.0 is read as before. An entry gains `pinned_from` when
 
 This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and never published; what it held is at the end of this release's entries, under "Earlier in this release", and its breaking changes are in the list below. The entries are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
 
-**Breaking changes** (each is marked where an entry below describes it):
+**Breaking changes:**
 
 - `chartbook install skill` is `chartbook install claude-skill`, and the skill's version is in its `SKILL.md`, not a `.chartbook-skill-version` file beside it.
 - What `chartbook build` did in 0.1.1, render the site, is `chartbook docs generate` now, and `chartbook build` makes everything current: it runs the build script, then generates the site. A `dodo.py` task that says `chartbook build -f` must say `chartbook docs generate -f`: where the pipeline also has a build command, `chartbook build` stops and says so, and `chartbook check` reports it. `chartbook browse` is `chartbook docs open`; `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.

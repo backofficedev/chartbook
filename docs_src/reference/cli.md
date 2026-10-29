@@ -1236,9 +1236,9 @@ chartbook install claude-skill -f           # overwrite files changed by hand wi
 
 ```yaml
 metadata:
-  chartbook-version: "0.2.0"
+  chartbook-version: "0.3.0"
 ```
 
-A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.1.1 to 0.2.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
+A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.2.0 to 0.3.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
 **Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
