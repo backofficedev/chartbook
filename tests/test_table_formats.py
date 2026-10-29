@@ -72,6 +72,12 @@ def _write(frame: pl.DataFrame, path: Path) -> Path:
     return path
 
 
+def _no_such_name_on_windows(values) -> None:
+    """Skip a test of folders Windows has no names for: with a ``\\``, ``*``, ``?`` or ``:`` in them."""
+    if os.name == "nt" and any(character in value for value in values for character in "\\*?:"):
+        pytest.skip("Windows has no name with a \\, *, ? or : in it")
+
+
 class TestTheFormat:
     @pytest.mark.parametrize(
         "name, expected",
@@ -512,6 +518,156 @@ class TestLoad:
         queried = data.sql("select * from {x} order by i", project_dir=directory).collect()
         assert queried.columns == expected.columns
         assert queried.cast(pl.String).rows() == expected.cast(pl.String).rows()
+
+    @pytest.mark.parametrize("values", [["q?", "qx", "why?"], ["a\\b", "plain"]])
+    @pytest.mark.parametrize("own", [False, True])
+    @pytest.mark.parametrize("junk", [False, True])
+    def test_a_question_mark_or_a_backslash_in_a_key_is_read_by_sql_as_by_load(self, tmp_path, values, own, junk):
+        """Found by a fourth review: DuckDB's own read of a folder's keys refused `tag=q?` ("Hive partition
+        mismatch"), as polars writes it with partition_by, and read `tag=a\\b` as `a`. Such a folder's
+        files are given their keys one by one, as under a key above."""
+        _no_such_name_on_windows(values)
+        directory = _pipeline(tmp_path / "rates", {"tags": {"path": "./_data/tags"}})
+        for i, value in enumerate(values):
+            frame = pl.DataFrame({"tag": [value], "i": [i]}) if own else pl.DataFrame({"i": [i]})
+            _write(frame, directory / "_data" / "tags" / f"tag={value}" / "part.parquet")
+        if junk:
+            (directory / "_data" / "tags" / "_SUCCESS").write_bytes(b"")
+        loaded = data.load("tags", project_dir=directory).collect().sort("i")
+        assert loaded["tag"].to_list() == values
+        assert data.sql("select * from {tags} order by i", project_dir=directory).collect().equals(loaded)
+
+    def test_a_key_past_uint64_under_a_key_above_is_an_int128(self, tmp_path):
+        """Found by a fourth review: under a `key=value` folder and beside a _SUCCESS, a key of
+        99999999999999999999 failed data.load in every format ("Series of type Int64; found value of type
+        Int128"): its values were put on as of the type of the first."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/env=prod/x"}})
+        folder = directory / "_data" / "env=prod" / "x"
+        for i, value in enumerate(["1", "99999999999999999999"]):
+            _write(pl.DataFrame({"i": [i]}), folder / f"k={value}" / "a.parquet")
+        (folder / "_SUCCESS").write_bytes(b"")
+        loaded = data.load("x", project_dir=directory).collect().sort("i")
+        assert loaded.schema["k"] == pl.Int128 and loaded["k"].to_list() == [1, 99999999999999999999]
+        pandas = data.load("x", format="pandas", project_dir=directory)
+        assert sorted(pandas["k"].astype(str)) == ["1", "99999999999999999999"]
+
+    @pytest.mark.parametrize("above", ["", "env=prod/"])
+    @pytest.mark.parametrize(
+        "values, expected",
+        [
+            (["10:00:00", "11:00:00"], ["10:00:00", "11:00:00"]),
+            (["10:00", "11:30"], ["10:00", "11:30"]),
+            (["10%3A00", "11%3A30"], ["10:00", "11:30"]),
+            (["a*", "ab"], ["a*", "ab"]),
+        ],
+    )
+    def test_a_key_polars_reads_no_type_of_is_text(self, tmp_path, above, values, expected):
+        """Found by a fourth review: a key of times of day, which polars takes for a type it then cannot
+        make, or with a `*` in a value, which polars takes for no key, was no column at all, in data.load
+        and data.sql alike. Its column is kept, as text, as pandas reads it and as data.sql did."""
+        _no_such_name_on_windows(values)
+        for junk in (False, True):
+            directory = _pipeline(tmp_path / f"rates{junk}", {"x": {"path": f"./_data/{above}x"}, "ipc": {"path": f"./_data/{above}ipc", "format": "ipc"}})
+            for i, value in enumerate(values):
+                _write(pl.DataFrame({"i": [i]}), directory / "_data" / f"{above}x" / f"k={value}" / "part.parquet")
+                _write(pl.DataFrame({"i": [i]}), directory / "_data" / f"{above}ipc" / f"k={value}" / "part.arrow")
+            if junk:
+                (directory / "_data" / f"{above}x" / "_SUCCESS").write_bytes(b"")
+            for name in ("x", "ipc"):
+                for read in (data.load(name, project_dir=directory), data.sql(f"select * from {{{name}}}", project_dir=directory)):
+                    frame = read.collect().sort("i")
+                    assert frame.schema["k"] == pl.String and frame["k"].to_list() == expected, (name, junk)
+
+    @pytest.mark.parametrize("above", ["", "env=prod/"])
+    def test_a_keys_value_is_in_place_of_a_files_own_column_in_arrow_ipc_too(self, tmp_path, above):
+        """Found by a fourth review: Arrow IPC files under `k=1/` and `k=2/` with a column `k` of their own,
+        of 5 and 6, gave 1 and 2 in data.load and 5 and 6 in data.sql. The key's value is in place of the
+        file's own column in both, as it is in polars' Hive read and for parquet."""
+        directory = _pipeline(tmp_path / "rates", {"ipc": {"path": f"./_data/{above}ipc", "format": "ipc"}, "pq": {"path": f"./_data/{above}pq"}})
+        for key, own in ((1, 5), (2, 6)):
+            frame = pl.DataFrame({"k": [own], "i": [key]})
+            _write(frame, directory / "_data" / f"{above}ipc" / f"k={key}" / "f.arrow")
+            _write(frame, directory / "_data" / f"{above}pq" / f"k={key}" / "f.parquet")
+        for name in ("ipc", "pq"):
+            loaded = data.load(name, project_dir=directory).collect().sort("i")
+            queried = data.sql(f"select * from {{{name}}} order by i", project_dir=directory).collect()
+            assert sorted(loaded.select("i", "k").rows()) == [(1, 1), (2, 2)], name
+            assert queried.equals(loaded), name
+
+    @pytest.mark.parametrize("first_has_it", [False, True])
+    def test_a_keys_own_column_may_be_in_some_files_only(self, tmp_path, first_has_it):
+        """Found by a fourth review: in `env=prod/x/` beside a _SUCCESS, `k=1/` holding `i` and `k=2/`
+        holding `i, k` failed data.load ("extra column in file outside of expected schema: k"). As in
+        polars' own Hive read, each file's key is its folder's, whether the file has a column of its name
+        or not; and a column that only some files have, and is no key, is still refused."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/env=prod/x"}, "z": {"path": "./_data/env=prod/z"}})
+        frames = [pl.DataFrame({"i": [1]}), pl.DataFrame({"i": [2], "k": [6]})]
+        if first_has_it:
+            frames = [pl.DataFrame({"i": [1], "k": [5]}), pl.DataFrame({"i": [2]})]
+        for key, frame in enumerate(frames, start=1):
+            _write(frame, directory / "_data" / "env=prod" / "x" / f"k={key}" / "f.parquet")
+            _write(frame.rename({"k": "z"}, strict=False), directory / "_data" / "env=prod" / "z" / f"k={key}" / "f.parquet")
+        for name in ("x", "z"):
+            (directory / "_data" / "env=prod" / name / "_SUCCESS").write_bytes(b"")
+        assert sorted(data.load("x", project_dir=directory).collect().rows()) == [(1, 1), (2, 2)]
+        assert sorted(data.sql("select i, k from {x}", project_dir=directory).collect().rows()) == [(1, 1), (2, 2)]
+        with pytest.raises(pl.exceptions.PolarsError, match="z"):
+            data.load("z", project_dir=directory).collect()
+
+    def test_a_folders_keys_are_read_with_a_scratch_file_a_value(self, tmp_path, monkeypatch):
+        """Found by a fourth review: under a key above, polars was asked a folder's keys with a scratch
+        file written for each folder of them, on every read: 20000 partitions took 7 to 10 seconds and
+        80 MB of the temporary folder. It is one a value of each key, here 3 years and 4 months, 7 files
+        and not 12, and none is left."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/env=prod/x"}})
+        folder = directory / "_data" / "env=prod" / "x"
+        for year in (2023, 2024, 2025):
+            for month in (1, 2, 3, 4):
+                _write(pl.DataFrame({"i": [year * 100 + month]}), folder / f"year={year}" / f"month={month}" / "p.parquet")
+        (folder / "_SUCCESS").write_bytes(b"")
+        written = []
+        real = formats._written
+        monkeypatch.setattr(formats, "_written", lambda frame, path: written.append(path) or real(frame, path))
+        frame = data.load("x", project_dir=directory).collect()
+        assert len(written) == 7 and not any(path.exists() for path in written)
+        assert frame.columns == ["i", "year", "month"] and frame.height == 12
+        assert (frame["i"] == frame["year"] * 100 + frame["month"]).all()
+
+    @pytest.mark.parametrize("trouble", ["only the current folder", "no folder", "a full folder"])
+    def test_a_temporary_folder_that_cannot_be_written_to_is_said_to_be(self, tmp_path, monkeypatch, trouble):
+        """Found by a fourth review: Python falls back to the current folder, a project's, when it finds no
+        temporary folder it can write to, and a folder's scratch files went there; and a temporary folder
+        that was full was "could not be read as parquet", with a format to say. Nothing is written in the
+        current folder, and the error says the temporary folder is why."""
+        import errno
+        import tempfile
+
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/env=prod/x"}})
+        folder = directory / "_data" / "env=prod" / "x"
+        for year in (2023, 2024):
+            _write(pl.DataFrame({"i": [year]}), folder / f"year={year}" / "p.parquet")
+        (folder / "_SUCCESS").write_bytes(b"")
+        before = sorted(directory.rglob("*"))
+        monkeypatch.chdir(directory)
+
+        def raising(error):
+            def raise_it(*args, **kwargs):
+                raise error
+
+            return raise_it
+
+        if trouble == "only the current folder":
+            monkeypatch.setattr(tempfile, "gettempdir", os.getcwd)
+        elif trouble == "no folder":
+            monkeypatch.setattr(tempfile, "gettempdir", raising(FileNotFoundError(errno.ENOENT, "No usable temporary directory found")))
+        else:
+            monkeypatch.setattr(pl.DataFrame, "write_parquet", raising(OSError(errno.ENOSPC, "No space left on device")))
+        for read in (lambda: data.load("x", project_dir=directory), lambda: data.sql("select * from {x}", project_dir=directory)):
+            with pytest.raises(RuntimeError, match="written to a temporary folder") as error:
+                read()
+            assert "format =" not in str(error.value)
+            assert ("No space left on device" in str(error.value)) == (trouble == "a full folder")
+        assert sorted(directory.rglob("*")) == before
 
     @pytest.mark.parametrize("format, ending", [("csv", ".dat"), ("csv", ".txt"), ("jsonl", ".json")])
     def test_a_folder_its_entry_names_the_format_of_takes_files_of_any_ending(self, tmp_path, format, ending):

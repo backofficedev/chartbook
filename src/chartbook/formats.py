@@ -398,7 +398,8 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
             found = directory_tables(path)
             if not found:
                 raise UnreadableTableError(path, read.format, _nothing(path, _names(path), read))
-            if _whole(path, found) and not is_glob_pattern(str(path)):
+            # Not when a key has a value polars takes for no key, `tag=a*` (_hive)
+            if _whole(path, found) and not is_glob_pattern(str(path)) and not _valued_with(found, path, "*"):
                 return str(path), path
             return [str(file) for file in found], path
         return alone, None
@@ -506,39 +507,122 @@ def _above(folder: Path) -> bool:
     return any("=" in part and not part.startswith("=") for part in Path(folder).parts)
 
 
+def _keys_of(parent: Path) -> list:
+    """The Hive keys a path below a folder names, each with its value as written: ``[("year", "2024")]``.
+
+    A key is a part with one ``=`` (``a=b=c`` is none), as polars takes one;
+    and one with a ``*`` in its value too, which polars passes over
+    (:func:`_partitions`).
+    """
+    return [tuple(part.split("=")) for part in Path(parent).parts if part.count("=") == 1 and not part.startswith("=")]
+
+
+def _valued_with(files, folder: Path, characters: str) -> bool:
+    """Whether a key below a folder has one of *characters* in a value: ``tag=a*``, ``tag=q?``."""
+    # Of the files with one in their path at all, which most folders have none of
+    odd = [file for file in files if any(character in str(file) for character in characters)]
+    parents = {Path(file).relative_to(folder).parent for file in odd}
+    return any(character in value for parent in parents for _, value in _keys_of(parent) for character in characters)
+
+
 def _partitions(files: list[str], folder: Path) -> dict:
     """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
 
-    Polars is asked, not imitated: a file of one row is written for each
-    folder below in a scratch folder of the same shape, and polars reads
-    that folder as it reads one it is handed, so each key, its type and
-    each value are polars' own (``007`` is 7, ``k=`` null, a time with an
-    offset in UTC, a number past Int64 an Int128, a key some files lack
-    none at all).
+    The keys are those every folder below names, once each, in the order
+    the first file's path names them. Folders that name different keys
+    (``a=1/b=x/`` beside ``a=2/``) have none, as polars reads none of them.
 
-    :returns: ``{key: (polars type, {file: value})}``, in the order of the
-        columns polars gives; empty when there is no key, or polars reads
-        none of the folder's shape.
+    Each key's type and values are polars' own, asked and not imitated: a
+    file of one row is written for each value of the key in a scratch
+    folder, under ``key=value/``, and polars reads that folder as it reads
+    one it is handed (``007`` is 7, ``k=`` null, a time with an offset in
+    UTC, a number past Int64 an Int128). That is one file a value, and not
+    one a folder: twenty years of months are 32 files, not 240.
+    A key polars cannot read, a time of day, or takes for no key, a value
+    with a ``*``, is text, and its column is kept.
+
+    :returns: ``{key: (polars type, {file: value})}``; empty when there is no key.
+    :raises RuntimeError: If no scratch file can be written (:func:`_scratch`).
+    """
+    relative = {file: Path(file).relative_to(folder).parent for file in files}
+    named = {parent: _keys_of(parent) for parent in set(relative.values())}
+    keys = [key for key, _ in named[relative[files[0]]]] if files else []
+    if not keys or len(set(keys)) < len(keys) or any(sorted(key for key, _ in each) != sorted(keys) for each in named.values()):
+        return {}
+    with _scratch() as scratch:
+        read = {
+            key: _key_values(key, sorted({dict(each)[key] for each in named.values()}), Path(scratch) / str(i))
+            for i, key in enumerate(keys)
+        }
+    return {
+        key: (kind, {file: values[dict(named[parent])[key]] for file, parent in relative.items()})
+        for key, (kind, values) in read.items()
+    }
+
+
+def _key_values(key: str, values: list[str], scratch: Path) -> tuple:
+    """A Hive key's type, and what each of its values as written is, as polars reads them (:func:`_partitions`)."""
+    for i, value in enumerate(values):
+        # A folder each, so that two values are not one folder on a disk that ignores case
+        _written(pl.DataFrame({_FILE: [value]}), scratch / str(i) / f"{key}={value}" / "part.parquet")
+    try:
+        read = pl.scan_parquet(scratch, hive_partitioning=True).collect()
+    except READ_ERRORS:
+        read = None
+    if read is not None and key in read.columns and read.height == len(values):
+        return read.schema[key], dict(zip(read[_FILE], read[key]))
+    # Text, as polars reads a key's value it is told is text: unescaped, and Hive's null
+    from urllib.parse import unquote
+
+    return pl.String, {value: None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in values}
+
+
+#: How a folder's keys are read, said when they cannot be (:func:`_scratch`).
+_SCRATCH ="A folder's Hive keys are read from a few small files written to a temporary folder"
+
+
+def _scratch():
+    """A scratch folder in the system's temporary folder, removed after: never one in the current folder.
+
+    Python falls back to the current folder, a project's, when it finds no
+    other it can write to; nothing is written there.
+
+    :raises RuntimeError: If there is no temporary folder to write to.
     """
     import tempfile
 
-    relative = {file: Path(file).relative_to(folder).parent for file in files}
-    if not any("=" in part for parent in relative.values() for part in parent.parts):
-        return {}
-    with tempfile.TemporaryDirectory() as scratch:
-        for parent in sorted(set(relative.values())):
-            (Path(scratch) / parent).mkdir(parents=True, exist_ok=True)
-            pl.DataFrame({_FILE: [parent.as_posix()]}).write_parquet(Path(scratch) / parent / "part.parquet")
-        try:
-            read = pl.scan_parquet(scratch, hive_partitioning=True).collect()
-        except READ_ERRORS:
-            return {}
-    rows = {row[_FILE]: row for row in read.iter_rows(named=True)}
-    return {
-        key: (read.schema[key], {file: rows[parent.as_posix()][key] for file, parent in relative.items()})
-        for key in read.columns
-        if key != _FILE
-    }
+    try:
+        where = tempfile.gettempdir()
+        # The current folder is Python's last resort, after the ones it is told of and the system's
+        told = [os.path.realpath(folder) for folder in tempfile._candidate_tempdir_list()[:-1]]
+        if os.path.realpath(where) == os.path.realpath(os.getcwd()) and os.path.realpath(where) not in told:
+            raise FileNotFoundError(where)
+        return tempfile.TemporaryDirectory(dir=where, prefix="chartbook-keys-")
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            f"{_SCRATCH}, and there is none Python can write to. ChartBook writes none in the current folder. "
+            f"Set TMPDIR to a folder that can be written to."
+        ) from error
+    except OSError as error:
+        raise _not_written(error) from error
+
+
+def _written(frame: pl.DataFrame, path: Path) -> None:
+    """A scratch file written, or an error that says the temporary folder is why not."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.write_parquet(path)
+    except (OSError, pl.exceptions.PolarsError) as error:
+        raise _not_written(error) from error
+
+
+def _not_written(error: BaseException) -> RuntimeError:
+    """What to say of a scratch file that could not be written: the temporary folder is full or cannot be written to."""
+    reason = getattr(error, "strerror", None) or _reason(error)
+    return RuntimeError(
+        f"{_SCRATCH}, and they could not be written there: {reason}. Free some space in it, or set TMPDIR "
+        f"to a folder that can be written to."
+    )
 
 
 def _hive(scan, files: list[str], folder: Path):
@@ -554,9 +638,10 @@ def _hive(scan, files: list[str], folder: Path):
     after the file's columns and in place of one of a key's name, as
     polars' own read puts them. A filter on them then opens every file,
     which is the price of a ``key=value`` above a folder; and of a folder
-    polars' own Hive read fails on (:func:`_by_file`).
+    polars' own Hive read fails on, or passes a key of over (``tag=a*``)
+    (:func:`_by_file`).
     """
-    if not _above(folder):
+    if not _above(folder) and not _valued_with(files, folder, "*"):
         frame = _scan_files(scan, files, hive_partitioning=True)
         try:
             frame.collect_schema()
@@ -571,19 +656,31 @@ def _by_file(scan, files: list[str], folder: Path):
 
     Also for a folder polars' Hive read fails on, as it does when a key is
     a file's column too with values a glob would read (``tag=[draft]`` and
-    ``tag=a*``, as polars itself writes them with ``partition_by``).
+    ``tag=a*``, as polars itself writes them with ``partition_by``), or a
+    key's values are times of day.
     """
+    import inspect
+
     keys = _partitions(files, folder)
     if not keys:
         return _scan_files(scan, files, hive_partitioning=False)
-    frame = _scan_files(scan, files, hive_partitioning=False, include_file_paths=_FILE)
-    own = set(frame.collect_schema().names())
-    # By the path as given, and as escaped where polars could not be told not to glob it
-    put = [
-        pl.col(_FILE).replace_strict({**values, **{_escaped(f): v for f, v in values.items()}}, default=None, return_dtype=kind).alias(key)
-        for key, (kind, values) in keys.items()
-    ]
-    return frame.drop([key for key in keys if key in own]).with_columns(put).drop(_FILE)
+    given = {}
+    if "schema" in inspect.signature(scan).parameters:
+        # A file's own column of a key's name is the key's, so one file may
+        # have it and another not, as in polars' own Hive read: each is in
+        # the schema, and is never read
+        first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
+        given["schema"] = {**first, **{key: kind for key, (kind, _) in keys.items() if key not in first}}
+    frame = _scan_files(scan, files, hive_partitioning=False, include_file_paths=_FILE, **given)
+    put = []
+    for key, (kind, values) in keys.items():
+        # By the path as given, and as escaped where polars could not be told not to glob it
+        paths = {**values, **{_escaped(file): value for file, value in values.items()}}
+        # The values of the key's own type: a dict of them is of the type of its first, and an Int128 is no Int64
+        old, new = pl.Series(list(paths), dtype=pl.String), pl.Series(list(paths.values()), dtype=kind)
+        put.append(pl.col(_FILE).replace_strict(old, new, default=None, return_dtype=kind).alias(key))
+    # In place of a file's own column of a key's name, and after its columns otherwise
+    return frame.with_columns(put).drop(_FILE)
 
 
 def _csv_options(read: Reading, sources) -> dict:
@@ -635,10 +732,7 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
         if isinstance(sources, str) and is_glob_pattern(sources):
             from chartbook import hashing
 
-            root = hashing.glob_root(sources)
-            if not _above(root):
-                return pl.scan_ipc(sources, hive_partitioning=True)
-            return _hive(pl.scan_ipc, _files(sources), root)
+            return _hive(pl.scan_ipc, _files(sources), hashing.glob_root(sources))
         if isinstance(sources, list) and folder is not None:
             return _hive(pl.scan_ipc, sources, folder)
         if isinstance(sources, list):
@@ -742,6 +836,8 @@ def scan(
         folder holds no file of it, or ``schema_overrides`` names a column
         the file does not have.
     :raises ValueError: If the format or an option is not one ChartBook reads.
+    :raises RuntimeError: If a folder's Hive keys are to be read and no
+        temporary folder can be written to (:func:`_partitions`).
     """
     read = reading(path, format, read_options, where)
     sources, folder = _sources(Path(path), read, files, listed)
@@ -944,23 +1040,27 @@ def _folder_sql(tables: list[str], folder: Path) -> str:
     gives them (``hive_types``), which it would infer otherwise (``007`` is
     text to it). With one above, DuckDB would take that key for a column and
     give a key above and below the folder the value above, in every row; so
-    it reads the files with no keys, and is given each file's.
+    it reads the files with no keys, and is given each file's. So too with a
+    ``?`` or a ``\\`` in a key's value, which DuckDB refuses or cuts short
+    (``tag=q?``, ``tag=a\\b`` read as ``a``).
     """
     from chartbook.backends import quote_literal
 
-    if not _above(folder):
+    if not _above(folder) and not _valued_with(tables, folder, "?\\"):
         # The keys every file's path has below the folder, of polars' types
-        named = [
-            {part.split("=", 1)[0] for part in Path(file).relative_to(folder).parent.parts if "=" in part and not part.startswith("=")}
-            for file in tables
-        ]
+        named = [{key for key, _ in _keys_of(Path(file).relative_to(folder).parent)} for file in tables]
         hive = {}
         if named and set.intersection(*named):
-            try:
-                hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
-            except READ_ERRORS:
+            # Polars takes `tag=a*` for no key, and has no column of it
+            if not _valued_with(tables, folder, "*"):
+                try:
+                    hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
+                except READ_ERRORS:
+                    pass
+            if not hive:
                 # Polars cannot read these files with their keys (a key that
-                # is a file's column too, say): its types of the keys alone
+                # is a file's column too, say, or a time of day): its types
+                # of the keys alone, text where it has none
                 hive = {key: kind for key, (kind, _) in _partitions(tables, folder).items()}
         keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
         if not keys:
@@ -977,11 +1077,15 @@ def _folder_sql(tables: list[str], folder: Path) -> str:
         for file in tables
     )
     columns = ", ".join([_FILE] + [_identifier(key) for key in keys])
-    # A key's value in place of a file's own column of its name, as polars puts it
-    replaced = ", ".join([_FILE] + [_identifier(key) for key in keys if key in own])
+    # A key's value in place of a file's own column of its name, as polars
+    # puts it, and after the file's columns otherwise
+    selected = f"chartbook_files.* exclude ({_FILE})"
+    replaced = [_identifier(key) for key in keys if key in own]
+    if replaced:
+        selected += " replace (" + ", ".join(f"chartbook_keys.{key} as {key}" for key in replaced) + ")"
+    selected = ", ".join([selected] + [f"chartbook_keys.{_identifier(key)}" for key in keys if key not in own])
     return (
-        f"(select chartbook_files.* exclude ({replaced}), chartbook_keys.* exclude ({_FILE}) "
-        f"from {read_parquet}, filename = '{_FILE}') as chartbook_files "
+        f"(select {selected} from {read_parquet}, filename = '{_FILE}') as chartbook_files "
         f"join (values {rows}) as chartbook_keys({columns}) using ({_FILE}))"
     )
 
@@ -1112,8 +1216,10 @@ def arrow_dataset(location):
 
     DuckDB has no reader of Arrow IPC files of its own; it reads a dataset
     lazily, as it would a file, taking only the columns and rows a query
-    asks for. A glob's or a folder's Hive keys below it are columns, of the
-    types polars gives them (:func:`_partitions`); a file's path gives none.
+    asks for. A glob's or a folder's Hive keys below it are columns
+    (:func:`_partitions`), of the types and in the places ``data.load()``
+    gives them; a key's value is in place of a file's own column of its
+    name, as it is in polars' Hive read. A file's path gives none.
     Text is plain ``string``, a dictionary's too: polars writes
     ``string_view``, and the filter DuckDB hands a dataset in a join has no
     kernel for it.
@@ -1131,17 +1237,20 @@ def arrow_dataset(location):
         raise FileNotFoundError(f"{location.path}: no Arrow IPC file is there yet.")
     path = Path(location.path)
     root = hashing.glob_root(path) if is_glob_pattern(str(path)) else path if path.is_dir() else None
-    given = {}
-    if root is not None:
-        own = set(ds.dataset(found[:1], format="ipc").schema.names)
-        keys = [(key, kind) for key, (kind, _) in _partitions(found, Path(root)).items() if key not in own]
-        if keys:
-            # Polars' types, as Arrow names them, text plain
-            arrow = {key: pl.Series([], dtype=kind).to_arrow(compat_level=pl.CompatLevel.oldest()).type for key, kind in keys}
-            fields = pa.schema([(key, _plain(kind)) for key, kind in arrow.items()])
-            given = {"partitioning": ds.partitioning(fields, flavor="hive"), "partition_base_dir": str(root)}
-    schema = ds.dataset(found, format="ipc", **given).schema
-    plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
+    keys = list(_partitions(found, Path(root))) if root is not None else []
+    if not keys:
+        schema = ds.dataset(found, format="ipc").schema
+        plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
+        return ds.dataset(found, format="ipc", schema=plain)
+    # The keys of polars' types, as Arrow names them, text plain. A dataset
+    # gives a key's value where a file has a column of its name too
+    loaded = scan_location(location).collect_schema()
+    arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
+    given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive"), "partition_base_dir": str(root)}
+    first = ds.dataset(found[:1], format="ipc").schema
+    fields = {column.name: column.with_type(_plain(column.type)) for column in first}
+    fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())
+    plain = pa.schema([fields[name] for name in loaded.names()], metadata=first.metadata)
     return ds.dataset(found, format="ipc", schema=plain, **given)
 
 
