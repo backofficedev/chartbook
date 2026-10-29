@@ -30,3 +30,9 @@ jobs:
       run: |
         source .venv/bin/activate
         pytest
+    # A checkout has built nothing, so built files are not looked for
+    - name: Check the ChartBook manifest
+      if: hashFiles('chartbook.toml') != ''
+      run: |
+        source .venv/bin/activate
+        chartbook check --skip-outputs

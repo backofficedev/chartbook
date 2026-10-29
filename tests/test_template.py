@@ -850,6 +850,45 @@ class TestOneSourceForTheSkill:
         assert rendered.read_text(encoding="utf-8") == package.read_text(encoding="utf-8")
 
 
+class TestTheWorkflow:
+    """The GitHub Actions workflow a project gets runs its tests, then `chartbook check`."""
+
+    WORKFLOW = Path(".github") / "workflows" / "python_tests.yml"
+
+    def test_it_is_copied_as_it_is(self, template_dir, temp_dir):
+        """GitHub's `${{ … }}` is not cookiecutter's to render."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
+        rendered = (project / self.WORKFLOW).read_text(encoding="utf-8")
+        assert rendered == (PROJECT_TEMPLATE / self.WORKFLOW).read_text(encoding="utf-8")
+        assert "key: ${{ runner.os }}-venv-${{ hashFiles(" in rendered
+
+    def test_it_checks_the_manifest_in_the_environment_it_installs(self, template_dir, temp_dir):
+        import yaml
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
+        steps = yaml.safe_load((project / self.WORKFLOW).read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+        names = [step.get("name") for step in steps]
+        (check,) = [step for step in steps if "chartbook" in step.get("run", "")]
+        assert names.index(check["name"]) > names.index("Install Python environment")
+        assert check["run"].splitlines() == ["source .venv/bin/activate", "chartbook check --skip-outputs"]
+        # A project made without ChartBook has no manifest, and no chartbook installed
+        assert check["if"] == "hashFiles('chartbook.toml') != ''"
+
+        # What it runs passes on a project just made, with nothing built
+        command = check["run"].splitlines()[-1].split()[1:]
+        result = CliRunner().invoke(main, [*command, "--project-dir", str(project)])
+        assert result.exit_code == 0, result.output
+
+    def test_without_chartbook_there_is_no_manifest_to_check(self, template_dir, temp_dir):
+        project = Path(generate_project(template_dir, temp_dir, {**MINIMAL_CONTEXT, "include_github_actions": True}))
+        assert (project / self.WORKFLOW).is_file()
+        assert not (project / "chartbook.toml").exists()
+        assert "chartbook" not in (project / "requirements.txt").read_text(encoding="utf-8")
+
+
 # A project with a ChartBook site and one notebook, and nothing that needs a
 # network, a licence or LaTeX: what pressing Enter at every question makes
 WITH_CHARTBOOK = {

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a new project's CI runs `chartbook check --skip-outputs`
+
+The GitHub Actions workflow the project template makes now runs `chartbook check --skip-outputs` after the tests, in the environment it installs, so a pull request that loses a write-up, a note or the README, or lets a license expire, fails its checks. Built files are not looked for, since a checkout has none. In a project made without a ChartBook site there is no `chartbook.toml`, and the step is skipped. This waited on 0.2.0 being on PyPI, which it is. A project made before can add the step to its own workflow:
+
+```yaml
+- name: Check the ChartBook manifest
+  if: hashFiles('chartbook.toml') != ''
+  run: |
+    source .venv/bin/activate
+    chartbook check --skip-outputs
+```
+
 ### Added — a lockfile says which pipeline each dependency's pins came from
 
 Each dependency in `chartbook.lock` now has `pinned_from`: the pipeline its pins came from, by that pipeline's own ID rather than the key it is depended on under. For a `path` dependency, or one named by its ID, it is the pipeline of the snapshot pinned. For a `git` dependency it is the pipeline its clone holds: its `[project] id`, else the ID its repository's address gives (`repo_url` in its manifest, else the address it was fetched from), as for any clone at the top of its repository. The store keeps a snapshot by its pipeline's ID, and the layout planned for 0.3.0 keeps each pipeline's snapshots in a folder of its own ({doc}`design/plan-0.3.0`), so this is how a reader of the lockfile will know where to look without searching the store.
