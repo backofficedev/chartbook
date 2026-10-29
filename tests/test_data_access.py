@@ -432,7 +432,7 @@ class TestSql:
 class TestConnect:
     def test_the_raw_connection_is_read_only(self, pipeline):
         con = data.connect("local", project_dir=pipeline)
-        assert con.sql("select count(*) from curve").fetchone() == (2,)
+        assert con.sql("select count(*) from curve").fetchall() == [(2,)]
         with pytest.raises(duckdb.Error):
             con.sql("create table x as select 1")
 
@@ -459,7 +459,7 @@ class TestCredentials:
         from_file = self._other_file(tmp_path, "FROM-FILE")
         (tmp_path / "home" / "sources.toml").write_text(f"[local]\nurl = 'duckdb:///{from_file}'\n", encoding="utf-8", newline="\n")  # '…': a Windows path's \\ are no escapes
         assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-FILE"]
-        assert data.connect("local", project_dir=pipeline).sql("select d from curve").fetchone() == ("FROM-FILE",)
+        assert data.connect("local", project_dir=pipeline).sql("select d from curve").fetchall() == [("FROM-FILE",)]
         from_env = self._other_file(tmp_path, "FROM-ENV")
         monkeypatch.setenv("CHARTBOOK_SOURCE_LOCAL_URL", f"duckdb:///{from_env}")
         assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-ENV"]

@@ -586,8 +586,9 @@ class DuckDBBackend(Backend):
 
         try:
             connection = self.connect()
+            # Fetched whole: a relation has no fetchone from DuckDB 2.0, and a result read only in part keeps the connection busy
             described = connection.sql(f"describe select * from {self.ref(location)}").fetchall()
-            (rows,) = connection.sql(f"select count(*) from {self.ref(location)}").fetchone()
+            ((rows,),) = connection.sql(f"select count(*) from {self.ref(location)}").fetchall()
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
         return [{"name": row[0], "dtype": row[1]} for row in described], int(rows)
@@ -605,7 +606,7 @@ class DuckDBBackend(Backend):
             return self.connect().sql(
                 f"select min(try_cast({name} as timestamp)), max(try_cast({name} as timestamp)) "
                 f"from {self.ref(location)}"
-            ).fetchone()
+            ).fetchall()[0]
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
 
