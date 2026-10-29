@@ -850,6 +850,116 @@ class TestOneSourceForTheSkill:
         assert rendered.read_text(encoding="utf-8") == package.read_text(encoding="utf-8")
 
 
+class TestTheWorkflow:
+    """The GitHub Actions workflow a project gets runs its tests, then `chartbook check`."""
+
+    WORKFLOW = Path(".github") / "workflows" / "python_tests.yml"
+
+    def _steps(self, project):
+        import yaml
+
+        return yaml.safe_load((project / self.WORKFLOW).read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+
+    def test_it_is_copied_as_it_is(self, template_dir, temp_dir):
+        """GitHub's `${{ … }}` is not cookiecutter's to render."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
+        rendered = (project / self.WORKFLOW).read_text(encoding="utf-8")
+        assert rendered == (PROJECT_TEMPLATE / self.WORKFLOW).read_text(encoding="utf-8")
+        assert "key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles(" in rendered
+
+    #: What setup-python is given: the project's .python-version where there is one, else 3.12
+    PYTHON = {
+        "python-version": "${{ hashFiles('.python-version') == '' && '3.12' || '' }}",
+        "python-version-file": "${{ hashFiles('.python-version') != '' && '.python-version' || '' }}",
+    }
+
+    @pytest.mark.skipif(os.name == "nt" or shutil.which("bash") is None, reason="the workflow's steps are run by bash, on Linux")
+    @pytest.mark.parametrize(
+        "manager, python, installs",
+        [
+            ("pip", "3.12", "pip install -r requirements.txt"),
+            ("uv", "3.12", "uv sync --python {interpreter}"),
+            ("uv", "3.11", "uv sync --python {interpreter}"),
+            ("conda", "3.12", "pip install -r requirements.txt"),
+            ("pixi", "3.12", "pip install -r requirements.txt"),
+        ],
+    )
+    def test_it_installs_a_project_made_for_any_environment_manager(self, template_dir, temp_dir, manager, python, installs):
+        """Found by a reviewer: a project made for uv has no requirements.txt, and the install stopped there.
+
+        And then that its Python was always 3.12, while the project asks for
+        the one chosen when it was made, which uv went and downloaded.
+        """
+        import tomli
+        from packaging.specifiers import SpecifierSet
+
+        context = {**WITH_CHARTBOOK, "include_github_actions": True, "environment_manager": manager, "python_version": python}
+        project = Path(generate_project(template_dir, temp_dir, context))
+        steps = {step.get("name"): step for step in self._steps(project)}
+
+        # The Python set up is the one the project names, which a project made for uv does
+        assert steps["Set up Python"]["uses"] == "actions/setup-python@v5"
+        assert steps["Set up Python"]["with"] == self.PYTHON
+        named = project / ".python-version"
+        assert named.is_file() == (manager == "uv")
+        set_up = named.read_text(encoding="utf-8").strip() if named.is_file() else "3.12"
+        if manager == "uv":
+            assert set_up == python
+            requires = tomli.loads((project / "pyproject.toml").read_text(encoding="utf-8"))["project"]["requires-python"]
+            assert SpecifierSet(requires).contains(set_up)
+
+        # Each command the step runs writes down what it was asked, and does nothing
+        fake, ran = temp_dir / "bin", temp_dir / "ran.txt"
+        fake.mkdir()
+        for command in ("python", "pip", "uv"):
+            (fake / command).write_text(
+                f'#!/bin/sh\necho "{command} $*" >> "{ran}"\nmkdir -p .venv/bin && touch .venv/bin/activate\n', encoding="utf-8"
+            )
+            (fake / command).chmod(0o755)
+        install = steps["Install Python environment"]
+        # uv downloads no Python of its own: one outside .venv would be gone on the next cache hit
+        assert install["env"] == {"UV_PYTHON_DOWNLOADS": "never"}
+        interpreter = f"/opt/hostedtoolcache/Python/{set_up}.7/x64/bin/python"  # what setup-python says it set up
+        script = install["run"].replace("${{ steps.python.outputs.python-path }}", interpreter)
+        assert "${{" not in script
+        subprocess.run(
+            ["bash", "-e", "-c", script],
+            cwd=project, check=True, env={**os.environ, **install["env"], "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}"},
+        )
+        assert ran.read_text(encoding="utf-8").splitlines()[-1] == installs.format(interpreter=interpreter)
+
+        # The cache is of what it installs from, and of the Python set up
+        cache = steps["Cache Python environment"]
+        assert cache["uses"] == "actions/cache@v4"
+        assert all(name in cache["with"]["key"] for name in ("requirements.txt", "pyproject.toml", "uv.lock", ".python-version"))
+        assert cache["with"]["key"].startswith("${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-")
+
+    def test_it_checks_the_manifest_in_the_environment_it_installs(self, template_dir, temp_dir):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "include_github_actions": True}))
+        steps = self._steps(project)
+        names = [step.get("name") for step in steps]
+        (check,) = [step for step in steps if "chartbook" in step.get("run", "")]
+        assert names.index(check["name"]) > names.index("Install Python environment")
+        assert check["run"].splitlines() == ["source .venv/bin/activate", "chartbook check --skip-outputs"]
+        # A project made without ChartBook has no manifest, and no chartbook installed
+        assert check["if"] == "hashFiles('chartbook.toml') != ''"
+
+        # What it runs passes on a project just made, with nothing built
+        command = check["run"].splitlines()[-1].split()[1:]
+        result = CliRunner().invoke(main, [*command, "--project-dir", str(project)])
+        assert result.exit_code == 0, result.output
+
+    def test_without_chartbook_there_is_no_manifest_to_check(self, template_dir, temp_dir):
+        project = Path(generate_project(template_dir, temp_dir, {**MINIMAL_CONTEXT, "include_github_actions": True}))
+        assert (project / self.WORKFLOW).is_file()
+        assert not (project / "chartbook.toml").exists()
+        assert "chartbook" not in (project / "requirements.txt").read_text(encoding="utf-8")
+
+
 # A project with a ChartBook site and one notebook, and nothing that needs a
 # network, a licence or LaTeX: what pressing Enter at every question makes
 WITH_CHARTBOOK = {

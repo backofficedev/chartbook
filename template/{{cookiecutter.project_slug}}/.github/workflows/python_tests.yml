@@ -8,25 +8,44 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    # The project's own Python where .python-version names it (a project made
+    # for uv has one); else 3.12, the template's default
     - name: Set up Python
-      uses: actions/setup-python@v4
+      id: python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: ${{ hashFiles('.python-version') == '' && '3.12' || '' }}
+        python-version-file: ${{ hashFiles('.python-version') != '' && '.python-version' || '' }}
     - name: Cache Python environment
       id: cache-python-env
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
-        key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements.txt', '**/.python-version') }}
+        key: ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/uv.lock', '**/.python-version') }}
         restore-keys: |
-          ${{ runner.os }}-venv-
+          ${{ runner.os }}-venv-${{ steps.python.outputs.python-version }}-
+    # A project made for uv has a pyproject.toml; the others have a requirements.txt.
+    # uv uses the Python set up above and downloads none, so a mismatch fails here
     - name: Install Python environment
       if: steps.cache-python-env.outputs.cache-hit != 'true'
+      env:
+        UV_PYTHON_DOWNLOADS: never
       run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
+        if [ -f requirements.txt ]; then
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+        else
+          pip install uv
+          uv sync --python "${{ steps.python.outputs.python-path }}"
+        fi
     - name: Test with pytest
       run: |
         source .venv/bin/activate
         pytest
+    # A checkout has built nothing, so built files are not looked for
+    - name: Check the ChartBook manifest
+      if: hashFiles('chartbook.toml') != ''
+      run: |
+        source .venv/bin/activate
+        chartbook check --skip-outputs
