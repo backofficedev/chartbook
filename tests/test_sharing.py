@@ -124,6 +124,22 @@ class TestImport:
         assert second.commit[:7] in what and "2026.txt is not what its record says" in why
         assert theirs.verify() == [] and len(snapshot.readable_snapshots(theirs)[0]) == 1
 
+    @pytest.mark.skipif(__import__("os").name == "nt", reason="a symlink needs a right on Windows")
+    def test_a_link_in_a_folder_sent_is_never_followed(self, two_snapshots, tmp_path):
+        """A folder someone sends may hold a link to a file of the receiver's machine, with the hash of it in its record."""
+        store, first, second, rates = two_snapshots
+        sent = tmp_path / "acme+rates"
+        shutil.copytree(store.pipeline_path("acme/rates"), sent)
+        planted = next(sent.rglob("2025.txt"))
+        mine = tmp_path / "mine.txt"
+        mine.write_bytes(b"2025")  # the bytes its record says, on the receiver's disk
+        planted.chmod(0o644)
+        planted.unlink()
+        planted.symlink_to(mine)
+        theirs = FolderStore(tmp_path.resolve() / "theirs")
+        done = sharing.import_snapshots(theirs, sent)
+        assert done.copied == [] and all("is a link, or leads out of the folder" in why for _, why in done.refused)
+
     def test_not_from_inside_the_store(self, two_snapshots):
         store, *_ = two_snapshots
         with pytest.raises(sharing.SharingError, match="in the store it would be imported into"):

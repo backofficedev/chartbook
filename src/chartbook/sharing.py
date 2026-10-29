@@ -23,6 +23,7 @@ exported: it is the pinning machine's, not the pipeline's.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
@@ -136,6 +137,11 @@ def _copy_parts(document: dict, record: KeptRecord, pending, done: Copied) -> Op
         if kept is None:
             return f"its record's {part.get('id', 'part')} says nothing a store could follow"
         at, single, files = kept
+        # A folder sent by someone may hold a link to a file of this machine's: never followed
+        inside = Path(os.path.realpath(record.folder.parent))
+        for file in files:
+            if file.location.is_symlink() or not Path(os.path.realpath(file.location)).is_relative_to(inside):
+                return f"{file.path} is a link, or leads out of the folder it came in"
         missing = next((file for file in files if not file.location.is_file()), None)
         if missing is not None:
             return f"{missing.path} is not there"
