@@ -228,7 +228,7 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
 
     try:
         filepath = Path(filepath)
-        if not is_glob_pattern(str(filepath)) and filepath.is_dir():
+        if filepath.is_dir():
             reading = formats.reading(filepath, format, read_options)
             if not formats.files_of(filepath, reading):
                 # The folder by its name: the page says where it is, and a

@@ -70,7 +70,8 @@ class DeclaredDataframe:
 
     @property
     def is_glob(self) -> bool:
-        return is_glob_pattern(self.path)
+        # A path that is there is itself, whatever it holds (``run [1]``)
+        return is_glob_pattern(self.path) and not self.path.exists()
 
     def data_files(self) -> list[str]:
         """The files on disk behind this dataframe; empty if not built yet."""

@@ -443,6 +443,76 @@ class TestLoad:
             assert data.load("x", project_dir=directory).collect_schema().names() == ["d", "r"], junk
             assert data.sql("select * from {x}", project_dir=directory).collect_schema().names() == ["d", "r"], junk
 
+    def test_a_folder_read_as_its_files_keeps_polars_partition_pruning(self, tmp_path):
+        """Found by a third review: a folder read as a list of files, every folder pinned from a store
+        and every one with a _SUCCESS, had its keys put on by file, which polars cannot prune on: a
+        filter on a year read every file, and a group-by took 4 GB where it took 263 MB. With no key
+        above the folder, polars reads the keys itself, as it did before formats."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": "./_data/x"}, "above": {"path": "./_data/env=prod/x"}})
+        for folder in (directory / "_data" / "x", directory / "_data" / "env=prod" / "x"):
+            for year in (2023, 2024):
+                _write(RATES, folder / f"year={year}" / "part-0.parquet")
+            (folder / "_SUCCESS").write_bytes(b"")
+        frame = data.load("x", project_dir=directory)
+        assert formats._FILE not in frame.explain()
+        assert frame.filter(pl.col("year") == 2024).collect().height == 3
+        # A key above the folder still puts them on by file, as it must
+        assert formats._FILE in data.load("above", project_dir=directory).explain()
+
+    @pytest.mark.parametrize("junk", [False, True])
+    def test_a_name_a_glob_would_read_otherwise_is_itself(self, tmp_path, junk):
+        """Found by a third review: polars and DuckDB take each listed path for a glob, so `tag=[draft]`,
+        `tag=a*` and `tag=q?` (as polars writes them with partition_by) gave 8 rows of 6 in data.sql,
+        `a[1].parquet` beside `a1.parquet` read a1 twice, and a folder named `run [1]` was "no file yet"."""
+        directory = _pipeline(
+            tmp_path / "rates",
+            {"tags": {"path": "./_data/tags"}, "twins": {"path": "./_data/twins"}, "run": {"path": "./_data/run [1]"}, "one": {"path": "./_data/one [x].parquet"}},
+        )
+        tags = pl.DataFrame({"tag": ["[draft]", "d", "a*", "ab", "q?", "qx"], "i": [1, 2, 3, 4, 5, 6]})
+        tags.write_parquet(directory / "_data" / "tags", partition_by="tag")
+        _write(pl.DataFrame({"i": [1]}), directory / "_data" / "twins" / "a[1].parquet")
+        _write(pl.DataFrame({"i": [2]}), directory / "_data" / "twins" / "a1.parquet")
+        _write(pl.DataFrame({"i": [1]}), directory / "_data" / "run [1]" / "a.parquet")
+        _write(pl.DataFrame({"i": [2]}), directory / "_data" / "run [1]" / "b.parquet")
+        _write(pl.DataFrame({"i": [1]}), directory / "_data" / "one [x].parquet")
+        if junk:
+            for folder in ("tags", "twins", "run [1]"):
+                (directory / "_data" / folder / "_SUCCESS").write_bytes(b"")
+        for name, expected in (("tags", [1, 2, 3, 4, 5, 6]), ("twins", [1, 2]), ("run", [1, 2]), ("one", [1])):
+            assert sorted(data.load(name, project_dir=directory).collect()["i"].to_list()) == expected, name
+            assert sorted(data.sql(f"select i from {{{name}}}", project_dir=directory).collect()["i"].to_list()) == expected, name
+        assert sorted(data.load("tags", project_dir=directory).collect()["tag"].to_list()) == sorted(tags["tag"].to_list())
+
+    def test_json_lines_files_named_as_globs_are_read_as_themselves(self, tmp_path):
+        """Polars' JSON reader takes every path for a glob, and has no switch to say otherwise: each is escaped."""
+        directory = _pipeline(tmp_path / "rates", {"j": {"path": "./_data/j", "format": "jsonl"}})
+        _write(pl.DataFrame({"i": [1]}), directory / "_data" / "j" / "b[1].jsonl")
+        _write(pl.DataFrame({"i": [2]}), directory / "_data" / "j" / "b1.jsonl")
+        assert sorted(data.load("j", project_dir=directory).collect()["i"].to_list()) == [1, 2]
+        assert sorted(data.sql("select i from {j}", project_dir=directory).collect()["i"].to_list()) == [1, 2]
+
+    @pytest.mark.parametrize("above", ["", "env=prod/"])
+    @pytest.mark.parametrize(
+        "values",
+        [["-5", "7"], ["007", "010"], ["", "3"], ["1.5", "2"], ["inf", "-inf"], ["nan", "1"], ["Infinity", "1_000"], ["%205", "x"], ["true", "false"], ["2024-01-01", "2024-01-02"]],
+    )
+    def test_a_keys_type_and_values_are_polars_own(self, tmp_path, above, values):
+        """Found by a third review: ChartBook's own reading of a key's values differed from polars' for
+        signs, nan, Infinity, 1_000, URL-escapes, an empty value and numbers past Int64, and a float key
+        of inf or nan was SQL DuckDB refused. Polars is asked, on a folder of the same shape."""
+        directory = _pipeline(tmp_path / "rates", {"x": {"path": f"./_data/{above}x"}})
+        clean = tmp_path / "clean"
+        for i, value in enumerate(values):
+            for root in (directory / "_data" / f"{above}x", clean):
+                _write(pl.DataFrame({"i": [i]}), root / f"k={value}" / "part.parquet")
+        (directory / "_data" / f"{above}x" / "_SUCCESS").write_bytes(b"")
+        expected = pl.scan_parquet(clean, hive_partitioning=True).collect().sort("i")
+        loaded = data.load("x", project_dir=directory).collect().sort("i")
+        assert loaded.equals(expected)
+        queried = data.sql("select * from {x} order by i", project_dir=directory).collect()
+        assert queried.columns == expected.columns
+        assert queried.cast(pl.String).rows() == expected.cast(pl.String).rows()
+
     @pytest.mark.parametrize("format, ending", [("csv", ".dat"), ("csv", ".txt"), ("jsonl", ".json")])
     def test_a_folder_its_entry_names_the_format_of_takes_files_of_any_ending(self, tmp_path, format, ending):
         """Found by a reviewer: a folder of .dat, .txt or .json files was refused even with format given."""

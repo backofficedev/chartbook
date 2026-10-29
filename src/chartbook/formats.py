@@ -376,13 +376,17 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
     pipeline is read as the files its record lists, *listed* (for parquet,
     the ones :func:`chartbook.resolve._held` found to be tables, *files*); a
     folder here, as the files in it of its format. A folder of parquet that
-    holds nothing else is handed to polars whole, as it always was.
+    holds nothing else is handed to polars whole, as it always was. A path
+    that is there is itself, whatever it holds (``run [1]``, ``a*.csv``): a
+    file whose name a glob would read otherwise is a list of one, which no
+    reader takes for a pattern; only a path that is not there is a glob.
 
     :returns: The path, or the files, as text; and the folder, or None.
     :raises UnreadableTableError: For a folder with no file of its format.
     """
     path = Path(path)
-    is_folder = not is_glob_pattern(str(path)) and path.is_dir()
+    is_folder = path.is_dir()
+    alone = [str(path)] if is_glob_pattern(str(path)) and path.is_file() else str(path)
     if read.format == "parquet":
         if files:
             return [str(file) for file in files], path
@@ -394,10 +398,10 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
             found = directory_tables(path)
             if not found:
                 raise UnreadableTableError(path, read.format, _nothing(path, _names(path), read))
-            if _whole(path, found):
+            if _whole(path, found) and not is_glob_pattern(str(path)):
                 return str(path), path
             return [str(file) for file in found], path
-        return str(path), None
+        return alone, None
     if listed:
         from chartbook.store import on_disk, plain_parts
 
@@ -412,7 +416,7 @@ def _sources(path: Path, read: Reading, files=(), listed=()) -> tuple:
         if not chosen:
             raise UnreadableTableError(path, read.format, _nothing(path, names, read))
         return [str(path.joinpath(*name.split("/"))) for name in chosen], path
-    return str(path), None
+    return alone, None
 
 
 def _whole(folder: Path, tables: list) -> bool:
@@ -454,6 +458,25 @@ def _files(sources) -> list[str]:
     return [sources]
 
 
+def _matches_any(pattern: str) -> bool:
+    """Whether a glob matches a file: the first one found says so, with no walk of the rest."""
+    return any(os.path.isfile(match) for match in glob.iglob(pattern, recursive=True))
+
+
+def _scan_files(scan, files: list[str], **options):
+    """A polars scan of files, each itself: told not to take them for globs where it can be, and each escaped where it cannot."""
+    import inspect
+
+    if "glob" in inspect.signature(scan).parameters:
+        return scan(files, glob=False, **options)
+    return scan([_escaped(file) for file in files], **options)
+
+
+def _escaped(file: str) -> str:
+    """A file's path as a reader that globs every path it is given reads it as itself: ``a[1].parquet`` is not ``a1.parquet``."""
+    return glob.escape(file) if is_glob_pattern(file) else file
+
+
 def files_of(path: Union[str, Path], read: Reading, files=(), listed=()) -> list[Path]:
     """The files a read of a path opens: the file, the glob's matches, or a folder's files of its format.
 
@@ -478,79 +501,89 @@ def files_of(path: Union[str, Path], read: Reading, files=(), listed=()) -> list
 _FILE = "__chartbook_file__"
 
 
+def _above(folder: Path) -> bool:
+    """Whether a ``key=value`` part is in a folder's own path, above what is read of it."""
+    return any("=" in part and not part.startswith("=") for part in Path(folder).parts)
+
+
 def _partitions(files: list[str], folder: Path) -> dict:
     """The Hive keys of a folder's files, from the folders below it and none above: ``year`` of ``year=2024/a.parquet``.
 
-    A key is one every file's path has, as polars reads a folder whose
-    files are at one depth. Its type is inferred as polars infers it:
-    whole numbers (``007`` is 7), then numbers, ``true`` and ``false``,
-    dates, times of day with a date, else text; a value is URL-decoded, and
-    ``__HIVE_DEFAULT_PARTITION__`` is null.
+    Polars is asked, not imitated: a file of one row is written for each
+    folder below in a scratch folder of the same shape, and polars reads
+    that folder as it reads one it is handed, so each key, its type and
+    each value are polars' own (``007`` is 7, ``k=`` null, a time with an
+    offset in UTC, a number past Int64 an Int128, a key some files lack
+    none at all).
 
-    :returns: ``{key: (polars type, {file: value})}``, in the order the keys come.
+    :returns: ``{key: (polars type, {file: value})}``, in the order of the
+        columns polars gives; empty when there is no key, or polars reads
+        none of the folder's shape.
     """
-    from urllib.parse import unquote
+    import tempfile
 
-    raw: dict = {}
-    for file in files:
-        for part in Path(file).relative_to(folder).parent.parts:
-            if "=" in part and not part.startswith("="):
-                key, value = part.split("=", 1)
-                raw.setdefault(key, {})[file] = None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value)
-    found = {}
-    for key, values in raw.items():
-        if len(values) < len(files):
-            continue
-        kind, parse = _hive_type([value for value in values.values() if value is not None])
-        found[key] = (kind, {file: None if values[file] is None else parse(values[file]) for file in files})
-    return found
-
-
-def _hive_type(values: list[str]):
-    """The polars type of a Hive key's values, and how one is read as it."""
-    from datetime import date, datetime
-
-    def every(test) -> bool:
+    relative = {file: Path(file).relative_to(folder).parent for file in files}
+    if not any("=" in part for parent in relative.values() for part in parent.parts):
+        return {}
+    with tempfile.TemporaryDirectory() as scratch:
+        for parent in sorted(set(relative.values())):
+            (Path(scratch) / parent).mkdir(parents=True, exist_ok=True)
+            pl.DataFrame({_FILE: [parent.as_posix()]}).write_parquet(Path(scratch) / parent / "part.parquet")
         try:
-            return bool(values) and all(test(value) is not None for value in values)
-        except ValueError:
-            return False
-
-    if every(lambda v: re.fullmatch(r"[+-]?\d+", v)):
-        return pl.Int64, int
-    if every(float):
-        return pl.Float64, float
-    if all(value in ("true", "false") for value in values) and values:
-        return pl.Boolean, lambda v: v == "true"
-    if every(lambda v: re.fullmatch(r"\d{4}-\d{2}-\d{2}", v) and date.fromisoformat(v)):
-        return pl.Date, date.fromisoformat
-    if every(lambda v: re.fullmatch(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?", v) and datetime.fromisoformat(v)):
-        return pl.Datetime("us"), datetime.fromisoformat
-    return pl.String, str
+            read = pl.scan_parquet(scratch, hive_partitioning=True).collect()
+        except READ_ERRORS:
+            return {}
+    rows = {row[_FILE]: row for row in read.iter_rows(named=True)}
+    return {
+        key: (read.schema[key], {file: rows[parent.as_posix()][key] for file, parent in relative.items()})
+        for key in read.columns
+        if key != _FILE
+    }
 
 
 def _hive(scan, files: list[str], folder: Path):
     """A scan of a folder's files with its Hive keys as columns: those below the folder, and none above it.
 
-    Polars, handed files and not their folder, takes a ``key=value`` part
-    anywhere in a path for a column, above the folder as well as below it,
-    and in place of a file's own column of that name: a folder declared as
-    ``./_data/prices/year=2024`` would gain ``year``. So the files are read
-    with no keys, and the keys below the folder (:func:`_partitions`) are
-    put on by each row's file, as a read of the folder itself has them. A
-    file's own column of a key's name is kept as it is.
+    With no ``key=value`` in the folder's own path, which is every folder of
+    a store and most others, polars is handed the files with its Hive read,
+    as it always was, and keeps its partition pruning: a filter on a key
+    opens only the files it names. With one above it, polars would take
+    that key for a column too, in place of a file's own column of its name,
+    and fail on one above and below it; so the files are read with no keys,
+    and the keys below (:func:`_partitions`) are put on by each row's file,
+    after the file's columns and in place of one of a key's name, as
+    polars' own read puts them. A filter on them then opens every file,
+    which is the price of a ``key=value`` above a folder; and of a folder
+    polars' own Hive read fails on (:func:`_by_file`).
+    """
+    if not _above(folder):
+        frame = _scan_files(scan, files, hive_partitioning=True)
+        try:
+            frame.collect_schema()
+            return frame
+        except READ_ERRORS:
+            pass
+    return _by_file(scan, files, folder)
+
+
+def _by_file(scan, files: list[str], folder: Path):
+    """A folder's files read with no keys, and the keys below it put on by each row's file (:func:`_hive`).
+
+    Also for a folder polars' Hive read fails on, as it does when a key is
+    a file's column too with values a glob would read (``tag=[draft]`` and
+    ``tag=a*``, as polars itself writes them with ``partition_by``).
     """
     keys = _partitions(files, folder)
     if not keys:
-        return scan(files, hive_partitioning=False)
-    frame = scan(files, hive_partitioning=False, include_file_paths=_FILE)
+        return _scan_files(scan, files, hive_partitioning=False)
+    frame = _scan_files(scan, files, hive_partitioning=False, include_file_paths=_FILE)
     own = set(frame.collect_schema().names())
+    # By the path as given, and as escaped where polars could not be told not to glob it
     put = [
-        pl.col(_FILE).replace_strict(values, default=None, return_dtype=kind).alias(key)
+        pl.col(_FILE).replace_strict({**values, **{_escaped(f): v for f, v in values.items()}}, default=None, return_dtype=kind).alias(key)
         for key, (kind, values) in keys.items()
-        if key not in own
     ]
-    return frame.with_columns(put).drop(_FILE)
+    return frame.drop([key for key in keys if key in own]).with_columns(put).drop(_FILE)
 
 
 def _csv_options(read: Reading, sources) -> dict:
@@ -561,6 +594,8 @@ def _csv_options(read: Reading, sources) -> dict:
     if "separator" not in options and _tab_separated(sources):
         options["separator"] = "\t"
     options.setdefault("infer_schema_length", SAMPLE_ROWS)
+    if isinstance(sources, list):
+        options["glob"] = False  # files, each itself
     return options
 
 
@@ -577,20 +612,37 @@ def _tab_separated(sources) -> bool:
 
 def _scan(read: Reading, sources, folder: Optional[Path]):
     """The polars scan of a format's files, unchecked; a JSON lines file's columns not given their types yet."""
+    # A list is files, each itself, which polars is told not to take for a
+    # glob (_scan_files): `tag=[draft]/` and `a[1].parquet` are no patterns
     if read.format == "parquet":
         if isinstance(sources, list) and folder is not None:
             return _hive(pl.scan_parquet, sources, folder)
+        if isinstance(sources, list):
+            return _scan_files(pl.scan_parquet, sources, hive_partitioning=True)
         # A file, a glob, or a folder handed whole: as parquet always was
-        return pl.scan_parquet(sources, hive_partitioning=True)
+        frame = pl.scan_parquet(sources, hive_partitioning=True)
+        if folder is not None:
+            try:
+                frame.collect_schema()
+            except READ_ERRORS:
+                from chartbook.utils import directory_tables
+
+                return _by_file(pl.scan_parquet, [str(file) for file in directory_tables(folder)], folder)
+        return frame
     if read.format == "ipc":
         # A glob's or a folder's keys, below it, as DuckDB is given them
         # (arrow_dataset); a file's path gives none
         if isinstance(sources, str) and is_glob_pattern(sources):
             from chartbook import hashing
 
-            return _hive(pl.scan_ipc, _files(sources), hashing.glob_root(sources))
+            root = hashing.glob_root(sources)
+            if not _above(root):
+                return pl.scan_ipc(sources, hive_partitioning=True)
+            return _hive(pl.scan_ipc, _files(sources), root)
         if isinstance(sources, list) and folder is not None:
             return _hive(pl.scan_ipc, sources, folder)
+        if isinstance(sources, list):
+            return _scan_files(pl.scan_ipc, sources, hive_partitioning=False)
         return pl.scan_ipc(sources, hive_partitioning=False)
     if read.format == "csv":
         frame, (polars_names, names) = _csv(read, sources)
@@ -598,9 +650,10 @@ def _scan(read: Reading, sources, folder: Optional[Path]):
     # Each file's types inferred from its own lines, and the files read as
     # one under all of their columns, as DuckDB's union_by_name reads them:
     # polars infers a glob's from its first file alone, and a field the
-    # later files bring would be lost
+    # later files bring would be lost. Polars' JSON reader takes every path
+    # for a glob, so a listed file's is escaped
     length = read.options.get("infer_schema_length", SAMPLE_ROWS)
-    files = _files(sources)
+    files = [_escaped(file) for file in _files(sources)] if isinstance(sources, list) or is_glob_pattern(sources) else [sources]
     if len(files) == 1:
         return pl.scan_ndjson(files[0], infer_schema_length=length)
     schemas = [pl.scan_ndjson(file, infer_schema_length=length).collect_schema() for file in files]
@@ -694,7 +747,7 @@ def scan(
     sources, folder = _sources(Path(path), read, files, listed)
     shown = Path(str(path)).name if public else str(path)
     shown = f"{where}: {shown}" if where else shown
-    if isinstance(sources, str) and is_glob_pattern(sources) and not _files(sources):
+    if isinstance(sources, str) and is_glob_pattern(sources) and not _matches_any(sources):
         raise FileNotFoundError(f"{shown} matches no file yet.")
     try:
         frame = _scan(read, sources, folder)
@@ -787,10 +840,12 @@ def to_pandas(location, where: Optional[str] = None):
     """
     frame = scan_location(location, where)  # says now if it cannot be read
     read = reading_of(location, where)
-    if read.format != "parquet" or is_glob_pattern(str(location.path)):
+    if read.format != "parquet":
         return frame.collect().to_pandas()
     sources, folder = _sources(Path(location.path), read, location.files, location.listed)
-    if isinstance(sources, list):
+    if isinstance(sources, str) and is_glob_pattern(sources):
+        return frame.collect().to_pandas()
+    if isinstance(sources, list) and folder is not None:
         import pyarrow.dataset as ds
 
         # As pandas reads a folder: hive partitions as categories
@@ -852,50 +907,81 @@ def _identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
-#: DuckDB's name of each polars type a Hive key can have.
-_DUCKDB_KEYS = {"Int64": "BIGINT", "Float64": "DOUBLE", "Boolean": "BOOLEAN", "Date": "DATE", "Datetime": "TIMESTAMP", "String": "VARCHAR"}
+def _duckdb_type(kind) -> str:
+    """DuckDB's name of a polars type a Hive key can have."""
+    if isinstance(kind, pl.Datetime) or kind == pl.Datetime:
+        zone = getattr(kind, "time_zone", None)
+        unit = getattr(kind, "time_unit", "us")
+        return "TIMESTAMPTZ" if zone else {"ns": "TIMESTAMP_NS", "ms": "TIMESTAMP_MS"}.get(unit, "TIMESTAMP")
+    names = {
+        "Int8": "TINYINT", "Int16": "SMALLINT", "Int32": "INTEGER", "Int64": "BIGINT", "Int128": "HUGEINT",
+        "UInt8": "UTINYINT", "UInt16": "USMALLINT", "UInt32": "UINTEGER", "UInt64": "UBIGINT",
+        "Float32": "FLOAT", "Float64": "DOUBLE", "Boolean": "BOOLEAN", "Date": "DATE", "Time": "TIME",
+    }
+    return names.get(kind.base_type().__name__, "VARCHAR")
 
 
 def _literal(value, kind) -> str:
-    """A Hive key's value as a DuckDB literal of its type."""
+    """A Hive key's value as a DuckDB literal of its type: its text, cast (``'inf'::DOUBLE``)."""
     from chartbook.backends import quote_literal
 
-    name = _DUCKDB_KEYS[kind.base_type().__name__]
-    if value is None:
-        return f"NULL::{name}"
-    if name == "BOOLEAN":
-        return "true" if value else "false"
-    if name == "DATE":
-        return f"DATE {quote_literal(value.isoformat())}"
-    if name == "TIMESTAMP":
-        return f"TIMESTAMP {quote_literal(value.isoformat(sep=' '))}"
-    if name == "VARCHAR":
-        return quote_literal(value)
-    return f"{value!r}::{name}"
+    name = _duckdb_type(kind)
+    return f"NULL::{name}" if value is None else f"{quote_literal(str(value))}::{name}"
 
 
-def _with_keys(read_parquet: str, tables: list[str], folder: Path) -> str:
-    """A read of a folder's files with its Hive keys below it put on by each row's file, as :func:`_hive` puts them on.
+def _listed(tables: list[str]) -> str:
+    """Files as DuckDB's list of them, each itself: a ``[``, ``*`` or ``?`` in a name escaped, as DuckDB takes every path for a glob."""
+    from chartbook.backends import quote_literal
 
-    DuckDB, like polars, takes a ``key=value`` part anywhere in a path, and
-    gives a key above and below a folder the value above, in every row. Its
-    types are its own too (``007`` is text to it). So it reads the files
-    with no keys, and is given each file's.
+    return "[" + ", ".join(quote_literal(_escaped(Path(file).as_posix())) for file in tables) + "]"
+
+
+def _folder_sql(tables: list[str], folder: Path) -> str:
+    """A folder's files in SQL, with the Hive keys below it as polars reads them (:func:`_hive`).
+
+    With no ``key=value`` in the folder's own path, DuckDB reads its keys
+    itself, keeping its partition pruning, and is told the types polars
+    gives them (``hive_types``), which it would infer otherwise (``007`` is
+    text to it). With one above, DuckDB would take that key for a column and
+    give a key above and below the folder the value above, in every row; so
+    it reads the files with no keys, and is given each file's.
     """
     from chartbook.backends import quote_literal
 
+    if not _above(folder):
+        # The keys every file's path has below the folder, of polars' types
+        named = [
+            {part.split("=", 1)[0] for part in Path(file).relative_to(folder).parent.parts if "=" in part and not part.startswith("=")}
+            for file in tables
+        ]
+        hive = {}
+        if named and set.intersection(*named):
+            try:
+                hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
+            except READ_ERRORS:
+                # Polars cannot read these files with their keys (a key that
+                # is a file's column too, say): its types of the keys alone
+                hive = {key: kind for key, (kind, _) in _partitions(tables, folder).items()}
+        keys = {key: kind for key, kind in hive.items() if all(key in each for each in named)}
+        if not keys:
+            return f"read_parquet({_listed(tables)}, hive_partitioning = false)"
+        types = ", ".join(f"{quote_literal(key)}: {quote_literal(_duckdb_type(kind))}" for key, kind in keys.items())
+        return f"read_parquet({_listed(tables)}, hive_partitioning = true, hive_types = {{{types}}})"
     keys = _partitions(tables, folder)
-    own = set(pl.scan_parquet(tables[0], hive_partitioning=False).collect_schema().names()) if keys else set()
-    keys = {key: kind_values for key, kind_values in keys.items() if key not in own}
+    read_parquet = f"read_parquet({_listed(tables)}, hive_partitioning = false"
     if not keys:
-        return read_parquet
+        return read_parquet + ")"
+    own = set(pl.scan_parquet(tables[0], hive_partitioning=False, glob=False).collect_schema().names())
     rows = ", ".join(
         "(" + ", ".join([quote_literal(Path(file).as_posix())] + [_literal(values[file], kind) for kind, values in keys.values()]) + ")"
         for file in tables
     )
     columns = ", ".join([_FILE] + [_identifier(key) for key in keys])
+    # A key's value in place of a file's own column of its name, as polars puts it
+    replaced = ", ".join([_FILE] + [_identifier(key) for key in keys if key in own])
     return (
-        f"(select * exclude ({_FILE}) from {read_parquet[:-1]}, filename = '{_FILE}') "
+        f"(select chartbook_files.* exclude ({replaced}), chartbook_keys.* exclude ({_FILE}) "
+        f"from {read_parquet}, filename = '{_FILE}') as chartbook_files "
         f"join (values {rows}) as chartbook_keys({columns}) using ({_FILE}))"
     )
 
@@ -933,26 +1019,24 @@ def sql(location) -> str:
             f"{path.name} is {what}, so there is no text to stand for it in SQL. data.sql() hands "
             f"DuckDB what data.load() reads."
         )
-    if read.format == "parquet":
-        # With / on every system: DuckDB reads it so on Windows too, and SQL
-        # with a path in it reads the same wherever it is pasted
-        text = path.as_posix()
-        if is_glob_pattern(text):
-            return f"read_parquet({quote_literal(text)}, hive_partitioning = true)"
-        sources, folder = _sources(path, read, location.files, location.listed)
-        if folder is None:
-            return f"read_parquet({quote_literal(text)})"
-        # A folder, as its tables: handed the folder, DuckDB takes only its
-        # files named .parquet (not Hive's 000000_0)
-        tables = sources if isinstance(sources, list) else [str(file) for file in files_of(path, read)]
-        listed = ", ".join(quote_literal(Path(file).as_posix()) for file in tables)
-        return _with_keys(f"read_parquet([{listed}], hive_partitioning = false)", tables, folder)
     sources, folder = _sources(path, read, location.files, location.listed)
-    many = isinstance(sources, list) or is_glob_pattern(sources)
-    if isinstance(sources, list):
-        text = "[" + ", ".join(quote_literal(Path(source).as_posix()) for source in sources) + "]"
-    else:
-        text = quote_literal(Path(sources).as_posix())
+    # With / on every system: DuckDB reads it so on Windows too, and SQL
+    # with a path in it reads the same wherever it is pasted
+    if read.format == "parquet":
+        if folder is not None:
+            # A folder, as its tables: handed the folder, DuckDB takes only
+            # its files named .parquet (not Hive's 000000_0)
+            from chartbook.utils import directory_tables
+
+            tables = sources if isinstance(sources, list) else [str(file) for file in directory_tables(folder)]
+            return _folder_sql(tables, folder)
+        if isinstance(sources, list):
+            return f"read_parquet({quote_literal(_escaped(path.as_posix()))})"  # a file named as a glob would be
+        if is_glob_pattern(sources):
+            return f"read_parquet({quote_literal(path.as_posix())}, hive_partitioning = true)"
+        return f"read_parquet({quote_literal(path.as_posix())})"
+    many = isinstance(sources, list) and folder is not None or isinstance(sources, str) and is_glob_pattern(sources)
+    text = _listed(sources) if isinstance(sources, list) else quote_literal(Path(sources).as_posix())
     options = read.options
     sample = options.get("infer_schema_length", SAMPLE_ROWS)
     if read.format == "jsonl":
@@ -1052,8 +1136,9 @@ def arrow_dataset(location):
         own = set(ds.dataset(found[:1], format="ipc").schema.names)
         keys = [(key, kind) for key, (kind, _) in _partitions(found, Path(root)).items() if key not in own]
         if keys:
-            arrow = {"Int64": pa.int64(), "Float64": pa.float64(), "Boolean": pa.bool_(), "Date": pa.date32(), "Datetime": pa.timestamp("us"), "String": pa.string()}
-            fields = pa.schema([(key, arrow[kind.base_type().__name__]) for key, kind in keys])
+            # Polars' types, as Arrow names them, text plain
+            arrow = {key: pl.Series([], dtype=kind).to_arrow(compat_level=pl.CompatLevel.oldest()).type for key, kind in keys}
+            fields = pa.schema([(key, _plain(kind)) for key, kind in arrow.items()])
             given = {"partitioning": ds.partitioning(fields, flavor="hive"), "partition_base_dir": str(root)}
     schema = ds.dataset(found, format="ipc", **given).schema
     plain = pa.schema([column.with_type(_plain(column.type)) for column in schema], metadata=schema.metadata)
