@@ -204,40 +204,38 @@ def directory_tables(directory) -> list:
     return tables
 
 
-def get_dataframe_glimpse(filepath):
+def get_dataframe_glimpse(filepath, format=None, read_options=None):
     """Get a simple glimpse of a dataframe showing columns and data types.
 
     Shows the first :data:`GLIMPSE_ROWS` rows, with floats rounded for
     display (:func:`glimpse_text`). Only those rows are collected, whatever
-    the size of the file; the row count is the file's own. A folder is read
-    as a reader of it reads it, by its parquet parts
-    (:func:`directory_tables`); one with no part yet is said in a sentence.
+    the size of the file; the row count is the file's own. The file is read
+    as ``data.load()`` reads it, by the shared reader
+    (:mod:`chartbook.formats`): a folder by its parts of its format
+    (for parquet, :func:`directory_tables`); one with no part yet is said
+    in a sentence.
 
-    :param filepath: Path to the parquet or CSV file, a glob of parquet
-        files, or a folder of parquet parts.
+    :param filepath: Path to the file, a glob of files, or a folder of parts.
     :type filepath: str or Path
+    :param format: The dataframe's ``format``, if its manifest gives one.
+    :type format: str, optional
+    :param read_options: The dataframe's ``read_options``, if its manifest gives them.
+    :type read_options: dict, optional
     :returns: The glimpse output as a string, or error message if file cannot be read.
     :rtype: str
     """
+    from chartbook import formats
+
     try:
         filepath = Path(filepath)
-
-        if is_glob_pattern(str(filepath)):
-            # Glob/hive-partitioned paths: use scan_parquet directly
-            lf = pl.scan_parquet(filepath, hive_partitioning=True)
-        elif filepath.is_dir():
-            tables = directory_tables(filepath)
-            if not tables:
+        if filepath.is_dir():
+            reading = formats.reading(filepath, format, read_options)
+            if not formats.files_of(filepath, reading):
                 # The folder by its name: the page says where it is, and a
                 # machine's path belongs on no page
-                return f"No parquet file in {filepath.name}/: a folder is shown by its parquet parts, and this one has none yet."
-            lf = pl.scan_parquet(tables, hive_partitioning=True)
-        elif filepath.suffix.lower() == ".csv":
-            lf = pl.scan_csv(filepath)
-        elif filepath.suffix.lower() == ".parquet":
-            lf = pl.scan_parquet(filepath)
-        else:
-            return f"Unsupported file type: {filepath.suffix}"
+                kind = formats.NAMES[reading.format]
+                return f"No {kind} file in {filepath.name}/: a folder is shown by its {kind} parts, and this one has none yet."
+        lf = formats.scan(filepath, format, read_options, public=True)
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
@@ -248,8 +246,17 @@ def get_dataframe_glimpse(filepath):
         # Fix row count in glimpse to show actual total rows
         return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
-    except Exception as e:
-        return f"Error reading file: {e!s}"
+    except FileNotFoundError:
+        return f"Error reading file: {Path(filepath).name} is not there."
+    # A panic in polars is a BaseException: a page, not a crash of the build
+    except (Exception, pl.exceptions.PanicException) as e:
+        # The file by its name: a machine's paths belong on no page, nor
+        # the end of one that polars cuts short ("...chartbook/x.parquet")
+        said = str(e)
+        for folder in {str(Path(filepath).parent), str(Path(filepath).parent.resolve())}:
+            said = said.replace(folder + os.sep, "").replace(folder, ".")
+        said = re.sub(r"\.\.\.\S*/([^/\s]+)", r"\1", said)
+        return f"Error reading file: {said}"
 
 
 def glimpse_text(sample: pl.DataFrame) -> str:

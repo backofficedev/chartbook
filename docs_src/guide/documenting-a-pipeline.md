@@ -68,7 +68,7 @@ The write-up is the part only you can provide: what the chart shows, how to read
 
 ## Dataframes
 
-A dataframe is a parquet artifact plus provenance:
+A dataframe is a data file (parquet, or CSV, JSON lines or Arrow IPC) plus provenance:
 
 ```toml
 [dataframes.repo_public]
@@ -80,7 +80,7 @@ date_col = "date"
 docs_path = "./docs_src/dataframes/repo_public.md"
 ```
 
-The same `docs_path`/`docs` rule applies. The generated page shows when the data was last updated, your write-up, a **glimpse** (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
+The same `docs_path`/`docs` rule applies. The generated page shows when the data was last updated, your write-up, a **glimpse** (schema and row count read from the file at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
 
 For hive-partitioned datasets, `path` takes a glob:
 
@@ -88,7 +88,7 @@ For hive-partitioned datasets, `path` takes a glob:
 path = "./_data/market_data/**/*.parquet"
 ```
 
-Glob-path dataframes load as polars LazyFrames only, with partition columns appearing automatically; see {doc}`catalogs-and-data`.
+A glob-path dataframe loads as one frame, in every `format=` `data.load` offers, with partition columns appearing automatically; see {doc}`catalogs-and-data`. A dataframe's file may be CSV, JSON lines or Arrow IPC as well as parquet, as its path's ending or its `format` key says ({ref}`formats`).
 
 A dataframe can also be a table, or a query, in a database the pipeline names:
 

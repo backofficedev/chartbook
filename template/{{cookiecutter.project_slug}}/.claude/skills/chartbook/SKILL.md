@@ -219,7 +219,8 @@ mine = data.load("my_data")                                   # this pipeline's 
 one = data.load("my_data").select("date", "DGS10")
 # SQL: name dataframes in braces; ChartBook substitutes names and the engine runs the rest
 # (DuckDB for files and DuckDB sources; the warehouse for a databricks source).
-# A file is read_parquet('…'), a [sources] table its identifier, a query a sub-select.
+# A file is read_parquet('…'), read_csv('…', …) or read_json('…', …) by its format, a [sources]
+# table its identifier, a query a sub-select. An Arrow IPC file is handed to DuckDB as a dataset.
 joined = data.sql("select a.date, a.x, b.y from {my_data} a join {other} b using (date)")
 # A literal brace is written twice: data.sql("select {{'a': 1}} s from {my_data}")
 data.ref("my_data")        # the name to paste into SQL you run yourself
@@ -264,7 +265,9 @@ path = "./_data/hive_dataset/**/*.parquet"
 docs = "Hive-partitioned dataset."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Glob paths only support `format="polars"` (LazyFrame).
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Every `format=` of `data.load` reads a glob (`"pandas"` and `"polars_eager"` collect the LazyFrame).
+
+A dataframe's file may be parquet, CSV/TSV, JSON lines (gzipped or not) or Arrow IPC. The path's ending says which (`.csv`, `.tsv`, `.csv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.arrow`, `.feather`, `.ipc`); anything else, a folder included, is parquet unless `format = "parquet" | "csv" | "jsonl" | "ipc"` says otherwise. `read_options` (polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma`, `schema_overrides`, `infer_schema_length`) go to the CSV or JSON lines reader, in `data.load` and, under DuckDB's names and meaning the same, in `data.sql`; polars' `comment_prefix` and `skip_rows` are not taken. A file that is not a table belongs under `[files]`, not `[dataframes]`.
 
 ## Directory Structure
 

@@ -56,8 +56,9 @@ def copy_plan(
     ``_static/<slug>/<name>.html`` (the page embeds the latter); a notebook
     to ``cb/notebooks/<slug>/<its file name>``; a note to ``cb/<name>.md``;
     and, when downloads are enabled, a dataframe that is one file to
-    ``cb/download_dataframe/<slug>/<name>.parquet``. A table, a query or a
-    folder of parts has no file to offer.
+    ``cb/download_dataframe/<slug>/<name>.parquet``, or the ending of its
+    format (``<name>.csv.gz``; :func:`download_link`). A table, a query or
+    a folder of parts has no file to offer.
 
     :param skip: Pipelines the build leaves out: nothing of theirs is copied.
     :param reused: Pipelines an incremental build keeps from an earlier one:
@@ -93,7 +94,7 @@ def copy_plan(
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
         elif enable_data_download and downloadable(record):
-            plan.append((Path(source), root / "cb" / "download_dataframe" / slug / f"{name}.parquet"))
+            plan.append((Path(source), root / "cb" / "download_dataframe" / slug / download_link(record)["download_file"]))
     return plan
 
 
@@ -110,6 +111,29 @@ def downloadable(record: dict) -> bool:
     from chartbook import hashing
 
     return not hashing.is_pattern(source) and not Path(source).is_dir()
+
+
+def download_link(record: dict) -> dict:
+    """What a dataframe's page offers for download: the file's name in the site, and its format's.
+
+    ``download_file`` is ``<name>`` with the ending of the file's format,
+    its own when it has one (``rates.csv.gz``) and the format's first
+    otherwise (``rates.parquet``); ``download_format`` is what the page
+    calls it, ``Parquet`` or ``CSV``.
+    """
+    from chartbook import formats
+
+    location = record.get("location") or {}
+    source = location.get("resolved_path") or location.get("path") or ""
+    format = formats.format_of(source, record.get("format"))
+    ending = formats.ending_of(Path(source).name)
+    if formats.format_of_name(Path(source).name) != format:
+        ending = formats.ENDINGS[format][0]
+    name = formats.NAMES[format]
+    return {
+        "download_file": f"{record['ref']['name']}{ending}",
+        "download_format": name[0].upper() + name[1:],
+    }
 
 
 def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:

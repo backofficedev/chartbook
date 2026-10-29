@@ -241,7 +241,7 @@ Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually
 
 ## `[dataframes]` — Dataframe Definitions
 
-A dataframe is in one place: a parquet file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
+A dataframe is in one place: a file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the file — a single file, a folder of parts, or a glob pattern for hive-partitioned data — stored as parquet, CSV, JSON lines or Arrow IPC ({ref}`formats`):
 
 ```toml
 [dataframes.revenue_data]
@@ -279,7 +279,49 @@ path = "./_data/transcripts_*.parquet"
 
 `chartbook check` warns when a `path` names one such file (`transcripts_2026.parquet`) and no asset declares the rest ({ref}`chartbook check <chartbook-check>`, "One file of a set").
 
-Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
+A glob, like a folder, is one dataframe, and `data.load` reads it in every `format=` it offers. As with charts, exactly one of `docs_path` / `docs` is required.
+
+(formats)=
+### The file's format: `format` and `read_options`
+
+A dataframe's file is parquet, CSV or TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The ending of its `path` says which:
+
+| `format` | Endings |
+|---|---|
+| `"parquet"` | `.parquet` |
+| `"csv"` | `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz` |
+| `"jsonl"` | `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz` |
+| `"ipc"` | `.arrow`, `.feather`, `.ipc` |
+
+A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`. When its entry gives `format` and none of its files has that format's ending, it is read as the files with the ending most of its files have, passing over what is plainly not a table (a `README`, a `schema.json`, a `.md`): a folder of `.dat` files is read as CSV. A folder of parquet with nothing else in it is handed to polars whole, as it always was. A folder's Hive `key=value` folders become columns for parquet and Arrow IPC: those below it that every file has, and none above it, with the types and values polars gives them (`year=2024` a whole number, `date=2024-01-01` a date), in both engines. A filter on a key reads only the files it names, unless a `key=value` folder is above the one declared: its files are then read whole and given their keys one by one, and a file's own column of that key's name is kept as it is. A file or folder below a declared path is itself, whatever its name holds: a `[`, `*` or `?` in it (`tag=[draft]`, `a[1].parquet`) is not a glob. A declared path whose own parts name one (`./_data/[raw]`) is refused: `chartbook check` fails it, and `chartbook snapshot` stops on it, each saying to rename it. Polars reads no such columns from CSV or JSON lines, and DuckDB is told to read none either.
+
+`read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own, each so that it means the same there:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"     # delivered as it is, with an ending that says nothing
+format = "csv"
+read_options = { separator = ";", skip_lines = 1, schema_overrides = { zip = "String" }, null_values = ["NA"] }
+docs = "The vendor's daily drop, kept as delivered, with a line about the delivery above its header."
+
+[dataframes.earnings_releases]
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a field a later quarter brings is kept
+read_options = { schema_overrides = { event_id = "String" } }
+docs = "One nested record per event, a file per quarter."
+```
+
+| Option | For | What it is |
+|---|---|---|
+| `separator` | CSV | One character; `,` by default, a tab for `.tsv` |
+| `has_header` | CSV | `true` (the default) or `false`; with none, the columns are `column_1`, `column_2`, …, in both engines and in every polars (an empty name in a header is named so too) |
+| `quote_char` | CSV | One character, `"` by default; written twice inside a quoted field, it stands for itself |
+| `skip_lines` | CSV | Lines to skip before the header, as lines: a quote in them is not read as one |
+| `null_values` | CSV | A string, or a list of strings, read as null besides an empty field; a quoted empty field (`""`) is empty text. One of them in quotes (`"NA"`) is null to polars and text to DuckDB |
+| `decimal_comma` | CSV | `true` for `1,5` meaning one and a half |
+| `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time`. A CSV file's columns are read as these types by both engines, `true` or `false` from the same words (`yes`, `t`, `1`, …). A JSON lines file's are cast to them by polars after the read (text trimmed, a date as `YYYY-MM-DD`, a time with an offset made UTC; a struct or a list is refused), and `data.sql()` hands DuckDB that frame, so that they mean the same there; such a file has no text for `data.ref()`, and DuckDB reads it whole, into memory, for each query, however little the query asks for. A column the file does not have is refused |
+| `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from, in both engines; 20480 by default, DuckDB's own |
+
+A parquet or Arrow IPC file keeps its own schema and takes none. Polars' `comment_prefix` and `skip_rows` are not taken: DuckDB reads a comment, and skips rows, otherwise than polars does. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each JSON lines file of a glob or a folder has its types inferred from its own lines, and the files are joined by their columns' names, so a field the later ones bring is kept. What is left to inference is each engine's own: DuckDB finds dates and times in text, keeps the zeros of `00123` as text, and reads a JSON field of numbers and text as JSON, where polars leaves text, reads a number and reads text; give a column its type with `schema_overrides` where the two must agree. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 

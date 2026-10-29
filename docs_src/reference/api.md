@@ -10,6 +10,7 @@ chartbook
 :maxdepth: 2
 
 ../apidocs/chartbook/chartbook.data
+../apidocs/chartbook/chartbook.formats
 ../apidocs/chartbook/chartbook.backends
 ../apidocs/chartbook/chartbook.backends.databricks
 ../apidocs/chartbook/chartbook.assets
