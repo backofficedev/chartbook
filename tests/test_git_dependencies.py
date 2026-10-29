@@ -444,6 +444,25 @@ class TestThePipelineAPinIsFrom:
         assert lock._pipeline_of_clone(checkout, {"git": "../ref_data"}, work / "downstream") == "ref_data"
         assert lock._pipeline_of_clone(checkout, {"git": (work / "ref_data").as_uri()}, work) == "ref_data"
 
+    def test_a_bare_repository_is_named_as_its_clone_is(self, work):
+        checkout = self._checkout(work, {})
+        (work / "rates.git").mkdir()
+        assert lock._pipeline_of_clone(checkout, {"git": str(work / "rates.git")}, work) == "rates"
+
+    def test_a_pin_of_something_new_at_the_same_commit_records_it(self, downstream, upstream, cache):
+        """Found by a reviewer: a lockfile from 0.2.0 gained a pin, built since in the working copy, and not the field."""
+        lock.pin(downstream, git_cache=cache)
+        locked = lock.read_lock(downstream)
+        del locked.dependencies[0]["pinned_from"]
+        lock.write_lock(locked, downstream / LOCK_FILE)
+        entry = locked.dependencies[0]
+        copy = cache.work_copy(local_url("../upstream", downstream), entry["location"]["commit"])
+        (copy / "_data").mkdir(exist_ok=True)
+        (copy / "_data" / "ignored.parquet").write_bytes(b"built by a run")
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report)["ignored"] == "pinned"
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "upstream"
+
     def test_nothing_to_name_it_by_is_none(self, work):
         checkout = self._checkout(work, {})
         assert lock._pipeline_of_clone(checkout, {"git": str(work / "not_here")}, work) is None
