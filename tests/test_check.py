@@ -16,6 +16,7 @@ from chartbook.check import (
     check_licenses,
     check_paths,
     check_required_fields,
+    check_siblings,
     display_path,
     load_policy,
     parse_expiration,
@@ -210,6 +211,124 @@ class TestCheckPaths:
         (problem,) = check_paths(manifest, project)
         assert (problem.table, problem.field) == ("dataframes.dataframe_0", "path")
         assert "no files match" in problem.message
+
+
+class TestCheckSiblings:
+    """A path that names one file of a set, as `transcripts_2026.parquet` did in #135."""
+
+    def _files(self, folder: Path, *names) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (folder / name).write_bytes(b"not read")
+
+    def _said(self, project: Path, path: str) -> list[str]:
+        _edit_toml(project, lambda c: c["dataframes"]["dataframe_0"].update(path=path))
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            assert check_siblings(load_manifest(project), project) == []
+        return [str(warning.message) for warning in caught]
+
+    def test_a_year_of_a_yearly_set_is_warned_with_the_glob(self, pipeline_project):
+        self._files(pipeline_project / "_data", *(f"transcripts_{year}.parquet" for year in range(2014, 2027)))
+        (said,) = self._said(pipeline_project, "./_data/transcripts_2026.parquet")
+        assert said.startswith("chartbook.toml: [dataframes.dataframe_0] path: ./_data/transcripts_2026.parquet ")
+        assert "the 12 files beside it" in said
+        assert "(transcripts_2014.parquet … transcripts_2025.parquet)" in said
+        assert said.endswith('write path = "./_data/transcripts_*.parquet".')
+
+    @pytest.mark.parametrize(
+        "declared, sibling, glob",
+        [
+            ("rates_2026-10.parquet", "rates_2026-09.parquet", "rates_*.parquet"),
+            ("rates_20261027.parquet", "rates_20261026.parquet", "rates_*.parquet"),
+            ("rates_2026_10.parquet", "rates_2025_12.parquet", "rates_*.parquet"),
+            ("2026-10-27_rates.parquet", "2026-10-26_rates.parquet", "*_rates.parquet"),
+            ("part_2.parquet", "part_10.parquet", "part_*.parquet"),
+        ],
+    )
+    def test_a_number_or_a_date(self, pipeline_project, declared, sibling, glob):
+        self._files(pipeline_project / "_data", declared, sibling)
+        (said,) = self._said(pipeline_project, f"_data/{declared}")
+        assert f"no asset declares the file beside it named the same but for a number or date ({sibling})" in said
+        assert said.endswith(f'write path = "_data/{glob}".')
+
+    def test_the_siblings_are_in_order(self, pipeline_project):
+        self._files(pipeline_project / "_data", "part_1.parquet", "part_10.parquet", "part_2.parquet")
+        (said,) = self._said(pipeline_project, "_data/part_1.parquet")
+        assert "(part_2.parquet, part_10.parquet)" in said
+
+    @pytest.mark.parametrize(
+        "other",
+        [
+            "transcripts_2025_old.parquet",  # more than the number differs
+            "transcripts_2025-12.parquet",  # a date of another shape
+            "transcripts_2025.csv",
+            "old_transcripts_2025.parquet",
+            "transcripts.parquet",
+            "._transcripts_2025.parquet",  # never part of an asset
+        ],
+    )
+    def test_a_file_named_otherwise_is_not_a_sibling(self, pipeline_project, other):
+        self._files(pipeline_project / "_data", "transcripts_2026.parquet", other)
+        assert self._said(pipeline_project, "_data/transcripts_2026.parquet") == []
+
+    def test_only_the_files_own_folder_is_looked_at(self, pipeline_project):
+        self._files(pipeline_project / "_data", "transcripts_2026.parquet")
+        self._files(pipeline_project / "_data" / "old", "transcripts_2025.parquet")
+        self._files(pipeline_project / "_data" / "transcripts_2025.parquet")  # a folder
+        assert self._said(pipeline_project, "_data/transcripts_2026.parquet") == []
+
+    def test_a_sibling_some_path_names_already_does_not_count(self, pipeline_project):
+        self._files(pipeline_project / "_data", *(f"transcripts_{year}.parquet" for year in range(2022, 2027)))
+        self._files(pipeline_project / "_models")
+
+        def declare(config):
+            dataframe = config["dataframes"]["dataframe_0"]
+            config["dataframes"]["older"] = {**dataframe, "path": "_data/transcripts_202[3-4].parquet"}
+            config["dataframes"]["year_2025"] = {**dataframe, "path": "_data/transcripts_2025.parquet"}
+            # A model's path, written the long way round
+            config["models"] = {"m": {"name": "M", "path": "./_models/../_data/transcripts_2022.parquet", "docs": "M"}}
+
+        _edit_toml(pipeline_project, declare)
+        assert self._said(pipeline_project, "_data/transcripts_2026.parquet") == []
+
+        _edit_toml(pipeline_project, lambda config: config["dataframes"].pop("year_2025"))
+        (said,) = self._said(pipeline_project, "_data/transcripts_2026.parquet")
+        assert "(transcripts_2025.parquet)" in said
+
+    def test_a_glob_a_folder_and_a_missing_file_are_not_looked_at(self, pipeline_project):
+        self._files(pipeline_project / "_data", "transcripts_2025.parquet", "transcripts_2026.parquet")
+        self._files(pipeline_project / "_data" / "transcripts_2024")
+        for path in ("_data/transcripts_202[56].parquet", "_data/transcripts_2024", "_data/transcripts_2027.parquet"):
+            assert self._said(pipeline_project, path) == [], path
+
+    def test_the_number_that_varies_is_the_one_with_siblings(self, pipeline_project):
+        """`rates_10y_2026` has two runs; the last that has undeclared siblings is the one said."""
+        self._files(pipeline_project / "_data", "rates_10y_2026.parquet", "rates_2y_2026.parquet")
+        (said,) = self._said(pipeline_project, "_data/rates_10y_2026.parquet")
+        assert said.endswith('write path = "_data/rates_*y_2026.parquet".')
+
+        self._files(pipeline_project / "_data", "rates_10y_2025.parquet")
+        (said,) = self._said(pipeline_project, "_data/rates_10y_2026.parquet")
+        assert said.endswith('write path = "_data/rates_10y_*.parquet".')
+
+    def test_a_model_is_not_looked_at(self, pipeline_project):
+        """A model's path cannot be a glob, and its older files are more often old versions."""
+        self._files(pipeline_project / "_models", "forecaster_2025.joblib", "forecaster_2026.joblib")
+        _edit_toml(
+            pipeline_project,
+            lambda c: c.update(models={"f": {"name": "F", "path": "_models/forecaster_2026.joblib", "docs": "F"}}),
+        )
+        assert self._said(pipeline_project, "_data/test_pipeline/dataframe_0.parquet") == []
+
+    def test_check_warns_and_passes(self, pipeline_project, lenient_policy):
+        self._files(pipeline_project / "_data", "transcripts_2025.parquet", "transcripts_2026.parquet")
+        _edit_toml(pipeline_project, lambda c: c["dataframes"]["dataframe_0"].update(path="_data/transcripts_2026.parquet"))
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 0, result.output
+        assert (
+            "warning: chartbook.toml: [dataframes.dataframe_0] path: _data/transcripts_2026.parquet may be one file of a set"
+        ) in result.stderr
 
 
 class TestCheckRequiredFields:

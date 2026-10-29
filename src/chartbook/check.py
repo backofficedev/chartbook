@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import warnings
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -332,6 +333,122 @@ def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 )
     return problems
+
+
+#: A run of digits, or a date with ``-`` or ``_`` between its parts
+#: (``2026``, ``2026-10``, ``20261027``, ``2026_10``): what tells one file
+#: of a set from the others
+_NUMBER_OR_DATE = re.compile(r"\d+(?:[-_]\d+)*")
+
+#: The sections and fields whose files belong to an asset already
+_DECLARING = ("dataframes", "charts", "notebooks", "notes", "models")
+_DECLARING_FIELDS = ("path", "docs_path", "metrics_path", "excel_path")
+
+
+def _declared_files(manifest: dict, where) -> set[str]:
+    """Every file that some path in the manifest names, a glob's and a folder's included, as *where* writes it."""
+    from chartbook.hashing import find_files
+
+    declared = set()
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for section in _DECLARING:
+            for entry in (pipeline_manifest.get(section) or {}).values():
+                for field in _DECLARING_FIELDS:
+                    path = entry.get(field) if isinstance(entry, dict) else None
+                    if not isinstance(path, str) or not path.strip():
+                        continue
+                    found = find_files(pipeline_dir / path)
+                    if found is not None:
+                        declared.update(where(file) for file in found.files)
+    return declared
+
+
+def _natural(name: str) -> list:
+    """Sort key that puts ``part_2`` before ``part_10``."""
+    return [(0, int(bit), "") if bit.isdigit() else (1, 0, bit) for bit in re.split(r"(\d+)", name)]
+
+
+def _same_but_for_a_number(file: Path) -> list[tuple[str, list[str]]]:
+    """The files beside *file* named as it is but for one run of digits or a date, with the glob that names them all.
+
+    One pair for each run in its name that has any, the last run first,
+    since a date or a part number is most often last. A sibling's run
+    has the same parts as the file's, with the same marks between them:
+    ``2026-10`` stands beside ``2025-12``, not beside ``2025``.
+    """
+    from chartbook.hashing import is_ignored
+
+    try:
+        with os.scandir(file.parent) as entries:
+            others = [e.name for e in entries if e.name != file.name and e.is_file() and not is_ignored(e.name)]
+    except OSError:
+        return []
+    found = []
+    for run in reversed(list(_NUMBER_OR_DATE.finditer(file.name))):
+        head, tail = file.name[: run.start()], file.name[run.end():]
+        marks = re.findall(r"[-_]", run.group())
+        shape = r"\d+" + "".join(re.escape(mark) + r"\d+" for mark in marks)
+        pattern = re.compile(re.escape(head) + shape + re.escape(tail))
+        siblings = sorted((name for name in others if pattern.fullmatch(name)), key=_natural)
+        if siblings:
+            found.append((f"{head}*{tail}", siblings))
+    return found
+
+
+def check_siblings(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn about a dataframe whose path names one file of a set.
+
+    ``transcripts_2026.parquet``, beside ``transcripts_2014.parquet`` to
+    ``transcripts_2025.parquet``, is most likely one year of a dataset
+    that is all of them. Only the dataframe's own folder is looked at, and
+    a sibling is a file named as it is but for one run of digits or a date.
+    A file that some path of the manifest names already (a dataframe's, a
+    model's, a glob's) is not one. The warning gives the glob that names
+    them all. It is a warning and not a problem: the one file may be what
+    was meant.
+
+    Models are not looked at: a model's path cannot be a glob, and a number
+    in a model's name more often marks an old version than a part.
+    """
+    declared: list = []  # the declared files, found once some dataframe has siblings
+    real_folders: dict = {}
+
+    def where(file) -> str:
+        folder, name = os.path.split(os.path.abspath(file))
+        if folder not in real_folders:
+            real_folders[folder] = os.path.realpath(folder)
+        return os.path.normcase(os.path.join(real_folders[folder], name))
+
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        toml_file = display_path(pipeline_dir / "chartbook.toml", base_dir)
+        for dataframe_id, dataframe in (pipeline_manifest.get("dataframes") or {}).items():
+            path = dataframe.get("path")
+            if not isinstance(path, str) or not path.strip() or is_glob_pattern(path):
+                continue
+            file = pipeline_dir / path
+            if not file.is_file():
+                continue
+            for glob, siblings in _same_but_for_a_number(file):
+                if not declared:
+                    declared.append(_declared_files(manifest, where))
+                siblings = [name for name in siblings if where(file.parent / name) not in declared[0]]
+                if siblings:
+                    break
+            else:
+                continue
+            cut = max(path.rfind("/"), path.rfind("\\")) + 1
+            listed = ", ".join(siblings) if len(siblings) <= 3 else f"{siblings[0]} … {siblings[-1]}"
+            files = "the file" if len(siblings) == 1 else f"the {len(siblings)} files"
+            warnings.warn(
+                f"{toml_file}: [dataframes.{dataframe_id}] path: {path} may be one file of a set: no asset "
+                f"declares {files} beside it named the same but for a number or date ({listed}). If they "
+                f"are one dataset, write path = \"{path[:cut]}{glob}\".",
+                UserWarning,
+                stacklevel=2,
+            )
+    return []
 
 
 def _dependency_table(key: str) -> str:
@@ -1228,6 +1345,7 @@ def run_checks(
             manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_siblings(manifest, base_dir),
         *check_dependencies(manifest, base_dir),
         *check_dependency_cycles(manifest, base_dir),
         *check_ids(manifest, base_dir),

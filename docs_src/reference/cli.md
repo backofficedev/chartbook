@@ -176,6 +176,7 @@ Successfully generated documentation in /work/rate_forecast/docs
 Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
 ```
 
+(chartbook-check)=
 ## chartbook check
 
 ```console
@@ -245,9 +246,19 @@ chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found
 chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
 ```
 
+**One file of a set.** A dataframe whose `path` names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:
+
+```console
+$ chartbook check
+warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)
+```
+
+Only the file's own folder is looked at. A sibling's name differs from the file's only in one run of digits (`2026`, `20261027`) or one date with `-` or `_` between its parts (`2026-10`, `2026_10`), with as many parts: `2026-10` stands beside `2025-12`, not beside `2025`. A file that a path of the manifest names already, a dataframe's, a model's or a glob's, is not counted. Models are not looked at: a model's path is a file or a folder, never a glob.
+
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Seven things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Eight things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 
