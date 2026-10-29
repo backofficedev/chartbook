@@ -1401,7 +1401,9 @@ def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
     A label that matches more than one version is a problem: it does not
     say which.
     """
+    from chartbook.config import without_credentials
     from chartbook.models import versions_in
+    from chartbook.store import StoreError
 
     problems = []
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
@@ -1411,7 +1413,15 @@ def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
             aliases = model.get("aliases")
             if not isinstance(aliases, dict) or not aliases:
                 continue
-            kept = versions_in(pipeline_dir, model_id, aliases)
+            try:
+                kept = versions_in(pipeline_dir, model_id, aliases)
+            except (StoreError, OSError, ValueError) as error:  # a store of 0.2, or one that cannot be read
+                warnings.warn(
+                    f"{toml_file}: [models.{model_id}.aliases] not checked. {without_credentials(str(error))}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                continue
             for label, points_at in aliases.items():
                 digits = str(points_at).split(":", 1)[-1]
                 matches = [

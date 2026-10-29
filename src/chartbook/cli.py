@@ -1020,6 +1020,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     :param build_kwargs: Passed to ``generate_docs``.
     """
     from chartbook.build_docs import generate_docs
+    from chartbook.store import StoreError
 
     if watch_interval is not None and not watch:
         raise click.UsageError("--watch-interval only applies with --watch.")
@@ -1030,7 +1031,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     if not watch:
         try:
             summary = generate_docs(incremental=incremental, **build_kwargs)
-        except (ValueError, FileNotFoundError) as e:
+        except (ValueError, FileNotFoundError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         if summary is not None:
@@ -1043,7 +1044,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     def build_once():
         try:
             summary = generate_docs(incremental=True, **build_kwargs)
-        except (ValueError, FileNotFoundError) as e:
+        except (ValueError, FileNotFoundError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         click.echo(summary.describe())

@@ -454,10 +454,22 @@ class TestStaleness:
         (store / "store.json").write_text('{"schema": "chartbook/store/v1"}', encoding="utf-8", newline="\n")
         with pytest.warns(UserWarning, match=r"^chartbook.toml: \[models.m\] trained_on: not checked. The store at .* has the layout of ChartBook 0.2 .*chartbook store migrate"):
             check.check_model_staleness(load_manifest(forecast), forecast)
+        # A model with labels is looked up in the store too, before its inputs are
+        import tomli
+
+        written = tomli.loads((forecast / "chartbook.toml").read_text(encoding="utf-8"))
+        written["models"]["m"]["aliases"] = {"prod": "abcdef123456"}
+        (forecast / "chartbook.toml").write_text(tomli_w.dumps(written), encoding="utf-8", newline="\n")
+        with pytest.warns(UserWarning, match=r"\[models.m.aliases\] not checked. The store at .* has the layout of ChartBook 0.2"):
+            check.check_model_labels(load_manifest(forecast), forecast)
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["check", "--skip-outputs"])
         assert result.exception is None or isinstance(result.exception, SystemExit), result.output
         assert "trained_on: not checked" in result.output
+        # A site of a pipeline with a model needs the store: it stops, saying what to do
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        assert result.exit_code == 1 and isinstance(result.exception, SystemExit), result.output
+        assert "Error: The store at" in result.output and "chartbook store migrate" in result.output
 
     def test_a_version_keeps_the_inputs_it_was_first_made_with(self, trained):
         """Found by a reviewer: a later snapshot of the same bytes wrote the inputs
