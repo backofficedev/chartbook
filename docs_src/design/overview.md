@@ -96,7 +96,7 @@ Decided by the maintainer, 2026-10-12.
   under "Unreleased" in the changelog. *It was published on 2026-10-26.*
 - **0.3.0 is next** ({doc}`plan-0.3.0`, proposed 2026-10-28): the store laid out by pipeline,
   with each file stored once, and the issues that came in after 0.2.0. What lands goes under
-  "Unreleased" until it is published.
+  "Unreleased" until it is published. *Built by 2026-10-29, and staged as 0.3.0 in the changelog.*
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 
@@ -114,7 +114,7 @@ Decided by the maintainer, 2026-10-12.
 | 8 | {doc}`stores-and-backends` | The store as a setting of the machine; stores and backends as plugins | Settings layers, the store interface and the S3 store built 2026-10-16 |
 | 9 | {doc}`versioned-catalog` | Index and snapshot settled; a catalog of every version of every pipeline | Step 1, the self-sufficient snapshot, built 2026-10-16 |
 | 10 | {doc}`trust` | What a build of a folder on this machine may do before you have trusted the pipeline, and how you say so | Built 2026-10-18: `chartbook trust`, `~/.chartbook/trust.toml`, the gates in `docs`, `build`, `run` and `catalog build` |
-| 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; nothing built |
+| 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.

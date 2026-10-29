@@ -925,7 +925,7 @@ class TestSql:
             assert got.rows() == [("2024-01-01", 2024)]
         views = data.connect("mem", project_dir=pipeline).sql(
             "select count(*) from duckdb_views() where view_name like 'chartbook_ipc_%'"
-        ).fetchone()[0]
+        ).fetchall()[0][0]
         assert views == 1
 
     def test_an_engine_that_takes_no_arrow_is_not_handed_any(self):

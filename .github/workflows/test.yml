@@ -39,8 +39,9 @@ jobs:
     - name: Run tests
       run: uv run pytest -v -rfE
 
-  # The oldest polars pyproject.toml takes: polars 1 reads a folder of files
-  # unlike polars 2 in ways the lock alone never shows
+  # The oldest polars and DuckDB pyproject.toml takes: polars 1 reads a folder
+  # of files unlike polars 2, and DuckDB 1.5 fetches unlike 2.0, in ways the
+  # lock, which has the newest, never shows
   test-polars-floor:
     runs-on: ubuntu-latest
     steps:
@@ -57,5 +58,5 @@ jobs:
     - name: Install the project and its dev group
       run: uv sync --locked
 
-    - name: Run tests on polars 1.33
-      run: uv run --with "polars==1.33.1" pytest -rfE
+    - name: Run tests on polars 1.33 and DuckDB 1.5
+      run: uv run --with "polars==1.33.1" --with "duckdb==1.5.6" pytest -rfE

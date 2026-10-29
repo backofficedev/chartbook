@@ -403,7 +403,7 @@ copyright = "2026"                 # Default: current year
 logo = "./assets/logo.png"         # Default: bundled asset
 favicon = "./assets/icon.png"      # Default: bundled asset
 os_compatibility = ["Windows", "Linux", "macOS"]
-requires_chartbook = ">=0.2.0"     # The ChartBook it needs, as a version specifier; one that does not meet it stops and says what to install
+requires_chartbook = ">=0.3.0"     # The ChartBook it needs, as a version specifier; one that does not meet it stops and says what to install
 build = """
 module load python/3.11
 doit

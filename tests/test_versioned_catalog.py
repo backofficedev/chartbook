@@ -338,7 +338,7 @@ class TestAForgedManifest:
         """The rule is for files from a store; a folder of the user's reads what it names."""
         from chartbook.backends import DuckDBBackend
 
-        assert DuckDBBackend("duckdb:///:memory:").connect().sql("select 1").fetchone() == (1,)
+        assert DuckDBBackend("duckdb:///:memory:").connect().sql("select 1").fetchall() == [(1,)]
 
 
 @pytest.fixture

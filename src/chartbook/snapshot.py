@@ -441,7 +441,8 @@ def _has_order_by(connection, sql: str) -> Optional[bool]:
     import json
 
     try:
-        (serialized,) = connection.execute("select json_serialize_sql(?)", [sql]).fetchone()
+        # Fetched whole: from DuckDB 2.0 a result read in part keeps the connection busy
+        ((serialized,),) = connection.execute("select json_serialize_sql(?)", [sql]).fetchall()
         statements = json.loads(serialized).get("statements") or []
     except Exception:  # noqa: BLE001 - not SQL the engine can parse; the scan says so
         return None

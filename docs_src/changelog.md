@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
+### Read this first: upgrading from 0.2.0
+
+0.3.0 makes the store a folder a person can read and send: one folder for each pipeline, one for each snapshot, the pipeline's files at their own paths, and each file kept once ({doc}`design/plan-0.3.0`). A dataframe can be CSV, JSON lines or Arrow IPC as well as parquet, and a pipeline can keep files that are not tables under `[files]`. Lockfiles and content hashes are unchanged: everything pinned stays pinned to the same bytes.
+
+**Upgrading a store.** 0.3 refuses a store of 0.2, and 0.2 refuses one 0.3 has moved, each saying what to do. Upgrade every machine that uses a store to 0.3, then run `chartbook store migrate --dry-run` and `chartbook store migrate` on one of them. It moves files by renaming them, so a store in a synced folder uploads nothing again; one cut short goes on when it is run again. A store in a bucket is moved by syncing it to a folder, moving that, and syncing it back.
+
+**Breaking changes:**
+
+- The store's layout, above. Its records are `chartbook/snapshot/v2`.
+- For a store plugin: `Store.begin` makes a snapshot (`PendingSnapshot`), and `get` and `has` take the pipeline.
+- ChartBook needs polars 1.33, DuckDB 1.5 and pyarrow 16 or later (was polars 1.20 and DuckDB 1.4).
+- `data.load()` reads a file's schema when it is called: a file not built yet raises `FileNotFoundError`, and one that is not its format raises `UnreadableTableError`, then and not when the frame is collected.
+- `data.sql()` and `data.ref()` read a folder of parquet as its parts, with its Hive keys from below it and none from the folders above it.
+- A declared `path` whose own parts name a file or folder with `[`, `*` or `?` in its name is refused by `chartbook check` and `chartbook snapshot`.
+
 ### Added — `[files]`: files that are not tables, kept, pinned and documented (#133)
 
 A pipeline can declare any file, folder or glob of files as an asset under `[files.<name>]`, whatever is inside: an archive of gzipped JSON lines kept in its source's format, a corpus of text or HTML, PDFs, images, NumPy arrays, a SQLite file, a vendor's zip. It takes `path` and the fields a dataframe has to say where it came from and who may use it (`description`, `docs_path` or `docs`, `sources`, `providers`, `license`, `restrictions`, `tags`, `keep`, and fields of your own). Its address is `file/<name>`, and another pipeline's is `pipeline:file/<name>`. `chartbook snapshot`, `pin`, `update`, `restore`, `lineage` and `store gc` treat it as any other asset. ChartBook never reads the files but for a short preview; reading them is your own code ({ref}`[files] <files>`).
@@ -18,6 +35,10 @@ A pipeline can declare any file, folder or glob of files as an asset under `[fil
 - **`chartbook check`** reports a path that matches no file, a folder with nothing in it included (not with `--skip-outputs`, as for a dataframe), a write-up that is not there, and a license that has expired. A `[policy.required]` list may name `files`; by default `name`, `description`, `sources`, `providers`, `tags`, a write-up and `path` are recommended.
 
 **A dataframe of many parts shows its parts** (#135). Its page lists each file with its size and its rows, read from the parquet footer alone, and, for data in `key=value` folders, each partition key and its values. Its record in `index.json` has the same, under `file_count` and `files`.
+
+### Fixed — DuckDB 2.0
+
+A fresh install of ChartBook takes DuckDB 2.0, in which a relation has no `fetchone()` and a result read only in part keeps its connection busy. A query in a DuckDB source was recorded by `chartbook snapshot` as not built, and the index had no row count or dates for a table or a query. ChartBook now fetches each result whole, which DuckDB 1.5 and 2.0 both take. So does the yield-curve example's `build_duckdb.py`. A build script of your own that calls `con.sql(...).fetchone()` calls `.fetchall()` instead under DuckDB 2.0.
 
 ### Added — tables stored as CSV, JSON lines or Arrow IPC
 
@@ -88,7 +109,7 @@ A lockfile written by 0.2.0 is read as before. An entry gains `pinned_from` when
 
 This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and never published; what it held is at the end of this release's entries, under "Earlier in this release", and its breaking changes are in the list below. The entries are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
 
-**Breaking changes** (each is marked where an entry below describes it):
+**Breaking changes:**
 
 - `chartbook install skill` is `chartbook install claude-skill`, and the skill's version is in its `SKILL.md`, not a `.chartbook-skill-version` file beside it.
 - What `chartbook build` did in 0.1.1, render the site, is `chartbook docs generate` now, and `chartbook build` makes everything current: it runs the build script, then generates the site. A `dodo.py` task that says `chartbook build -f` must say `chartbook docs generate -f`: where the pipeline also has a build command, `chartbook build` stops and says so, and `chartbook check` reports it. `chartbook browse` is `chartbook docs open`; `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
