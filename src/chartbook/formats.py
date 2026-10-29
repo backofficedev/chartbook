@@ -502,6 +502,21 @@ def files_of(path: Union[str, Path], read: Reading, files=(), listed=()) -> list
 _FILE = "__chartbook_file__"
 
 
+def _as_compared(path: str) -> str:
+    """A file's path as :func:`_by_file` compares it with the one polars names a row's file by.
+
+    On Windows polars writes it with ``/``, and the disk tells no letter
+    case apart; elsewhere it is the path as given.
+    """
+    return path.replace("\\", "/").lower() if os.name == "nt" else path
+
+
+def _file_compared() -> pl.Expr:
+    """The file polars names a row's, as :func:`_as_compared` writes a path."""
+    named = pl.col(_FILE)
+    return named.str.replace_all("\\", "/", literal=True).str.to_lowercase() if os.name == "nt" else named
+
+
 def _above(folder: Path) -> bool:
     """Whether a ``key=value`` part is in a folder's own path, above what is read of it."""
     return any("=" in part and not part.startswith("=") for part in Path(folder).parts)
@@ -680,10 +695,10 @@ def _by_file(scan, files: list[str], folder: Path):
     put = []
     for key, (kind, values) in keys.items():
         # By the path as given, and as escaped where polars could not be told not to glob it
-        paths = {**values, **{_escaped(file): value for file, value in values.items()}}
+        paths = {_as_compared(path): value for path, value in [*values.items(), *((_escaped(file), value) for file, value in values.items())]}
         # The values of the key's own type: a dict of them is of the type of its first, and an Int128 is no Int64
         old, new = pl.Series(list(paths), dtype=pl.String), pl.Series(list(paths.values()), dtype=kind)
-        put.append(pl.col(_FILE).replace_strict(old, new, default=None, return_dtype=kind).alias(key))
+        put.append(_file_compared().replace_strict(old, new, default=None, return_dtype=kind).alias(key))
     # In place of a file's own column of a key's name, and after its columns otherwise
     return frame.with_columns(put).drop(_FILE)
 
@@ -951,7 +966,9 @@ def to_pandas(location, where: Optional[str] = None):
 
         # As pandas reads a folder: hive partitions as categories
         partitioning = ds.HivePartitioning.discover(infer_dictionary=True)
-        return ds.dataset(sources, format="parquet", partitioning=partitioning, partition_base_dir=str(folder)).to_table().to_pandas()
+        # Each path with `/`, as pyarrow writes a file's and not the folder it is told keys start below
+        posix = [Path(source).as_posix() for source in sources]
+        return ds.dataset(posix, format="parquet", partitioning=partitioning, partition_base_dir=Path(folder).as_posix()).to_table().to_pandas()
     import pandas as pd
 
     return pd.read_parquet(location.path)
@@ -1251,7 +1268,9 @@ def arrow_dataset(location):
     # gives a key's value where a file has a column of its name too
     loaded = scan_location(location).collect_schema()
     arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
-    given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive"), "partition_base_dir": str(root)}
+    # Each path with `/`, as pyarrow writes a file's and not the folder it is told keys start below
+    found = [Path(file).as_posix() for file in found]
+    given = {"partitioning": ds.partitioning(pa.schema(list(arrow.items())), flavor="hive"), "partition_base_dir": Path(root).as_posix()}
     first = ds.dataset(found[:1], format="ipc").schema
     fields = {column.name: column.with_type(_plain(column.type)) for column in first}
     fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())

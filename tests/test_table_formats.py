@@ -470,6 +470,7 @@ class TestLoad:
         """Found by a third review: polars and DuckDB take each listed path for a glob, so `tag=[draft]`,
         `tag=a*` and `tag=q?` (as polars writes them with partition_by) gave 8 rows of 6 in data.sql,
         `a[1].parquet` beside `a1.parquet` read a1 twice, and a folder named `run [1]` was "no file yet"."""
+        _no_such_name_on_windows(["a*", "q?"])
         directory = _pipeline(
             tmp_path / "rates",
             {"tags": {"path": "./_data/tags"}, "twins": {"path": "./_data/twins"}, "run": {"path": "./_data/run [1]"}, "one": {"path": "./_data/one [x].parquet"}},
