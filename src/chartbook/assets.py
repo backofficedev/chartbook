@@ -179,7 +179,7 @@ def _located(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -
 
 def _not_there(asset: AssetRef, location: FileLocation) -> FileNotFoundError:
     return FileNotFoundError(
-        f"The {asset.kind} {str(asset)!r} has no files: nothing is at {location.path}. "
+        f"The {asset.kind} {str(asset)!r} has no files: no file is at {location.path}. "
         f"If it is this pipeline's own, its build makes them."
     )
 
@@ -257,9 +257,10 @@ def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int,
     from chartbook.utils import is_glob_pattern
 
     declared = Path(location.path)
-    listed = default_store().listing(location.content_hash) if location.content_hash else None
+    single = not is_glob_pattern(str(declared)) and declared.is_file()
+    listed = default_store().listing(location.content_hash, single) if location.content_hash else None
     if listed is not None:
-        if len(listed) == 1 and not is_glob_pattern(str(declared)) and declared.is_file():
+        if single:
             # One file, read by the name its asset gives it: the same bytes may be two assets'
             return [(declared, declared.name, listed[0].size_bytes, listed[0].content_hash)]
         root = listing_root(declared)
@@ -279,6 +280,8 @@ def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int,
         cache.save()
     except OSError:
         pass  # a cache that cannot be written is only slower
+    if not content.files and not single:
+        raise _not_there(asset, location)  # a folder with no file in it
     if not content.files:
         return [(declared, declared.name, content.size_bytes, content.content_hash)]
     root = listing_root(declared)

@@ -29,6 +29,7 @@ its file, or of the listing of its files (:mod:`chartbook.hashing`).
 import gzip
 import json
 import os
+import re
 import sys
 import zlib
 from collections import Counter
@@ -63,8 +64,22 @@ JSON_LINES_SUFFIXES = frozenset({".jsonl", ".ndjson"})
 #: an ``<img>``. SVG is left out, since opened as a page it runs scripts.
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp"})
 
-#: The largest image a page shows; a larger one is named, and not copied into the site.
+#: The largest image a page shows; a larger one is passed over for the next
+#: file that can be previewed, and is not copied into the site.
 THUMBNAIL_BYTES = 2 * 1024 * 1024
+
+#: What an ending must look like to be a file's type: a dot, then up to 12
+#: letters and digits with at least one letter (``.pdf``, ``.h5``, ``.7z``).
+#: ``.1`` of a rotated log, ``.20240101`` of a dated file and ``.3`` of
+#: ``v1.2.3`` are not types.
+_TYPE = re.compile(r"\.(?=[a-z0-9]*[a-z])[a-z0-9]{1,12}")
+
+#: How many types a record counts by name, the most common first; the files
+#: of every other type are counted together, under :data:`OTHER_TYPES`.
+TYPES_COUNTED = 20
+
+#: The key the files of every type beyond :data:`TYPES_COUNTED` are counted under.
+OTHER_TYPES = "other"
 
 #: Endings that say a file is compressed, so its type is the ending before.
 COMPRESSED_SUFFIXES = frozenset({".gz", ".bz2", ".xz", ".zst", ".lz4", ".zip"})
@@ -112,32 +127,49 @@ def path(
 
 
 def extension(name: str) -> str:
-    """A file's type, by its name: ``.jsonl.gz``, ``.pdf``; empty when it has no ending.
+    """A file's type, by its name: ``.jsonl.gz``, ``.pdf``; empty when it has none.
 
-    In lower case. A compressed file keeps the ending before its
-    compression's, so that ``x.jsonl.gz`` and ``y.csv.gz`` are told apart.
+    In lower case. An ending of digits alone is passed over, so that
+    ``app.log.1`` is a ``.log`` and ``data.20240101`` has no type; an
+    ending that does not look like a type (:data:`_TYPE`) is none. A
+    compressed file keeps the ending before its compression's, so that
+    ``x.jsonl.gz`` and ``y.csv.gz`` are told apart.
     """
-    suffixes = [s.lower() for s in Path(name).suffixes]
-    if not suffixes:
+    suffixes = [s.lower() for s in Path(name.rsplit("/", 1)[-1]).suffixes]
+    while suffixes and suffixes[-1][1:].isdigit():
+        suffixes.pop()
+    if not suffixes or not _TYPE.fullmatch(suffixes[-1]):
         return ""
-    if suffixes[-1] in COMPRESSED_SUFFIXES and len(suffixes) > 1 and len(suffixes[-2]) <= 8:
+    if suffixes[-1] in COMPRESSED_SUFFIXES and len(suffixes) > 1 and _TYPE.fullmatch(suffixes[-2]):
         return "".join(suffixes[-2:])
     return suffixes[-1]
 
 
-def count_by_extension(names: Iterable[str]) -> dict[str, int]:
-    """How many files there are of each type (:func:`extension`), by type; ``""`` for those with no ending."""
-    return dict(sorted(Counter(extension(name) for name in names).items()))
+def count_by_extension(names: Iterable[str], most: int = TYPES_COUNTED) -> dict[str, int]:
+    """How many files there are of each type (:func:`extension`), the most common first; ``""`` for those with none.
+
+    At most *most* types are named; the files of the rest are counted
+    together under :data:`OTHER_TYPES`, so that 20,000 files of 20,000
+    made-up endings make one line and not 20,000.
+    """
+    ranked = sorted(Counter(extension(name) for name in names).items(), key=lambda item: (-item[1], item[0]))
+    counted = dict(ranked[:most])
+    rest = sum(number for _, number in ranked[most:])
+    if rest:
+        counted[OTHER_TYPES] = rest
+    return counted
 
 
 def partitions(relative: str) -> dict[str, str]:
     """The ``key=value`` folders of a file's path inside its asset, in order: ``{"year": "2024"}``.
 
     Only folders count, not the file's own name, as a reader of Hive's
-    layout takes them. A folder whose key is empty is not one.
+    layout takes them. A folder whose key is empty is not one. The path is
+    as a record writes it, with ``/`` between folders; a ``\\`` is part of a
+    name.
     """
     found = {}
-    for part in relative.replace("\\", "/").split("/")[:-1]:
+    for part in relative.split("/")[:-1]:
         key, sign, value = part.partition("=")
         if sign and key:
             found[key] = value
@@ -151,9 +183,9 @@ def _bounded(file: Path) -> tuple[bytes, bool]:
     at most four times as much read.
     """
     with open(file, "rb") as f:
-        head = f.read(PREVIEW_BYTES)
+        head = f.read(PREVIEW_BYTES + 1)
         if not head.startswith(b"\x1f\x8b"):
-            return head, len(head) < PREVIEW_BYTES
+            return head[:PREVIEW_BYTES], len(head) <= PREVIEW_BYTES
         inflate = zlib.decompressobj(16 + zlib.MAX_WBITS)
         out = inflate.decompress(head, PREVIEW_BYTES)
         read = len(head)
@@ -167,7 +199,10 @@ def _bounded(file: Path) -> tuple[bytes, bool]:
                 if not more:
                     break
             out += inflate.decompress(more, PREVIEW_BYTES - len(out))
-        return out, inflate.eof and len(out) < PREVIEW_BYTES
+        # Whole only if the stream ended, and nothing follows it: a file of
+        # several gzip members (two files joined with `cat`) has more to show
+        whole = inflate.eof and len(out) < PREVIEW_BYTES and not inflate.unused_data and not f.read(1)
+        return out, whole
 
 
 def preview_text(file: Union[str, Path]) -> Optional[str]:
@@ -197,8 +232,8 @@ def preview_text(file: Union[str, Path]) -> Optional[str]:
                 try:
                     shown += json.dumps(json.loads(line), indent=2, ensure_ascii=False).splitlines()
                     continue
-                except ValueError:
-                    pass
+                except (ValueError, RecursionError):
+                    pass  # not JSON, or nested deeper than Python goes: shown as it is
             shown.append(line)
         lines = shown
     cut = len(lines) > PREVIEW_LINES or not whole
@@ -246,7 +281,7 @@ def preview_of(listed: list, root: Union[str, Path]) -> Optional[dict]:
     """
     for entry in listed:
         relative = entry.get("path") if isinstance(entry, dict) else None
-        if not isinstance(relative, str) or any(part in ("", ".", "..") for part in relative.split("/")):
+        if not _inside(relative):
             continue  # a path inside the asset, and nothing else, is read
         kind = preview_kind(relative)
         if kind is None:
@@ -263,6 +298,13 @@ def preview_of(listed: list, root: Union[str, Path]) -> Optional[dict]:
             return None
         return {"path": relative, "kind": "text", "file": file, "text": text}
     return None
+
+
+def _inside(relative: object) -> bool:
+    """Whether a path a record lists stays inside its asset on every system: parts joined by ``/``, none empty, ``.`` or ``..``, no ``\\`` and no drive."""
+    if not isinstance(relative, str) or "\\" in relative or "\0" in relative or re.match(r"[A-Za-z]:", relative):
+        return False
+    return all(part not in ("", ".", "..") for part in relative.split("/"))
 
 
 def listing_root(declared: Union[str, Path]) -> Path:

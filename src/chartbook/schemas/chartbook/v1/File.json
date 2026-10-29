@@ -100,11 +100,11 @@
     "file_count": {
       "type": "integer",
       "minimum": 1,
-      "description": "How many files it is: 1 for a path that names one file."
+      "description": "How many files it is: 1 for a path that names one file. Absent, with `content_hash`, when the path matches no file, a folder with none in it included."
     },
     "extensions": {
       "type": "object",
-      "description": "How many of its files there are of each type, by the end of their names in lower case (`.jsonl.gz`, `.pdf`; `` for none).",
+      "description": "How many of its files there are of each type, the most common first: by the end of their names in lower case (`.jsonl.gz`, `.pdf`; an ending of digits alone, as `.1` of a rotated log, is passed over; `` for none). The 20 most common are named, and the files of every other type are counted under `other`.",
       "additionalProperties": {
         "type": "integer",
         "minimum": 1

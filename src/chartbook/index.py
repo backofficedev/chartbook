@@ -81,6 +81,11 @@ _STRUCTURAL_KEYS = frozenset(
     {"path", "docs", "docs_path", "dataframe", "linked_charts", "source", "table", "query"}
 )
 
+#: Names a record uses for what is worked out of an asset's files. A field
+#: of the manifest by one of these names is not carried, so that a record
+#: says one thing under each (``files = ["raw.csv"]`` on a dataframe).
+_RESERVED_KEYS = frozenset({"files", "file_count", "extensions"})
+
 
 def record_kind(kind: str) -> str:
     """The record kind for an asset kind: ``chart`` is recorded as ``Chart``."""
@@ -144,7 +149,7 @@ def _declared_fields(entry: dict, skip: Iterable[str] = ()) -> dict:
     Keys are sorted, so that reordering a ``chartbook.toml`` does not
     reorder the index.
     """
-    skip = _STRUCTURAL_KEYS | set(skip)
+    skip = _STRUCTURAL_KEYS | _RESERVED_KEYS | set(skip)
     return {
         key: _jsonable(entry[key])
         for key in sorted(entry)
@@ -303,14 +308,16 @@ def _listed_files(content: hashing.ContentHash, resolved: str, rows: bool = Fals
     Each file with its path inside the asset, its size and its hash, and
     the keys of the ``key=value`` folders it is in (``partitions``). With
     *rows*, a parquet file's rows too, from its footer: no data is read.
-    A single file is listed under its own name.
+    A path that names one file lists that file, under its own name.
     """
     from chartbook.files import listing_root, partitions
 
     if content.files:
         entries = list(content.files)
-    else:
+    elif _names_one_file(resolved):
         entries = [hashing.FileEntry(Path(resolved).name, content.size_bytes, content.content_hash)]
+    else:
+        entries = []  # a folder with no file in it
     root = listing_root(resolved)
     listed = []
     for entry in entries[:FILES_LISTED]:
@@ -324,6 +331,13 @@ def _listed_files(content: hashing.ContentHash, resolved: str, rows: bool = Fals
             item["partitions"] = keys
         listed.append(item)
     return {"file_count": len(entries), "files": listed}
+
+
+def _names_one_file(resolved: str) -> bool:
+    """Whether a declared path names one file, hashed as its bytes, and not a folder or a glob (:func:`chartbook.hashing.find_files`)."""
+    from chartbook.utils import is_glob_pattern
+
+    return not is_glob_pattern(resolved) and os.path.isfile(resolved)
 
 
 def _parquet_rows(file: Path) -> Optional[int]:
@@ -730,12 +744,26 @@ def _asset_records(
     series: list[dict] = []
     skip: tuple = ()
     resolved = (facts.get("location") or {}).get("resolved_path")
-    if kind == "file" and content is not None:
+    for key in sorted(_RESERVED_KEYS & set(entry)):
+        warnings.warn(
+            f"{base_dir / 'chartbook.toml'}: [{KIND_TABLES[kind]}.{name}] {key}: left out of the index, which "
+            f"uses that name for the files an asset is made of. Rename the field to keep it.",
+            stacklevel=2,
+        )
+    if kind == "file" and content is not None and not content.files and not _names_one_file(resolved):
+        # A folder with no file in it, or none but what the system writes:
+        # not built, as check and a snapshot have it, and no hash of nothing
+        for key in ("content_hash", "size_bytes"):
+            record.pop(key, None)
+        record["location"].pop("modified_at", None)
+    elif kind == "file" and content is not None:
         # What the page lists and counts: the files, and how many of each type
         from chartbook.files import count_by_extension
 
-        record.update(_listed_files(content, resolved))
+        listed = _listed_files(content, resolved)
+        record["file_count"] = listed["file_count"]
         record["extensions"] = count_by_extension([entry.path for entry in content.files] or [Path(resolved).name])
+        record["files"] = listed["files"]
     elif kind == "dataframe" and content is not None and content.files:
         # A dataframe of many parts: each, with its rows, for its page
         record.update(_listed_files(content, resolved, rows=True))

@@ -261,9 +261,14 @@ def _inside(folder: Path, relative: str) -> Path:
 
 
 def _named_first(held: list[KeptAsset], name: Optional[str]) -> list[KeptAsset]:
-    """The holds of an asset, those whose one file is read under *name* first."""
+    """The holds of an asset, those whose one file is read under *name* first; with no name, those of several files first.
+
+    Asked for by no name, an asset is one of several files, and one file's
+    bytes can make the same hash (a SHA256SUMS beside the files it lists),
+    as the folder store has it (:meth:`chartbook.store.FolderStore.get`).
+    """
     if not name:
-        return held
+        return sorted(held, key=lambda asset: asset.single)
     return sorted(held, key=lambda asset: not (asset.single and asset.files[0].relative == name))
 
 
@@ -1540,8 +1545,8 @@ class S3Store(Store):
                 found.setdefault(self._where(file.location), file.size_bytes)
         return sorted(found.items())
 
-    def listing(self, content_hash: str):
-        held = _held_in(self.records(), content_hash)
+    def listing(self, content_hash: str, single: bool):
+        held = [asset for asset in _held_in(self.records(), content_hash) if asset.single == single]
         return kept_listing(held[0]) if held else None
 
     def size_of(self, content_hash: str) -> int:

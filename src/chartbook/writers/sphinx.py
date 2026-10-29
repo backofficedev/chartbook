@@ -1700,15 +1700,37 @@ def _format_size(size_bytes) -> str:
     return f"{size:.1f} GB"
 
 
+def _listed(record: dict) -> list:
+    """The files a record lists, each as the index writes one: a table with a path and a size. Anything else is passed over."""
+    listed = record.get("files")
+    return [
+        entry for entry in (listed if isinstance(listed, list) else [])
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str) and isinstance(entry.get("size_bytes"), int)
+    ]
+
+
+def _by_type(extensions: object) -> str:
+    """How many files there are of each type, as a page says it: ``2 `.pdf`, 1 with no type, 3 of other types``."""
+    from chartbook.files import OTHER_TYPES
+
+    said = []
+    for kind, number in (extensions if isinstance(extensions, dict) else {}).items():
+        if not isinstance(number, int):
+            continue
+        if kind == OTHER_TYPES:
+            said.append(f"{number:,} of other types")
+        else:
+            said.append(f"{number:,} {_code(kind) if kind else 'with no type'}")
+    return ", ".join(said)
+
+
 def _listing(record: dict) -> Optional[dict]:
     """A files asset's files as its page lists them: a line that sums them up, and the first :data:`FILES_SHOWN`."""
-    listed = record.get("files") or []
+    listed = _listed(record)
     if not record.get("content_hash") or not listed:
         return None
-    count = record.get("file_count") or len(listed)
-    by_type = ", ".join(
-        f"{number:,} {_code(kind) if kind else 'with no ending'}" for kind, number in (record.get("extensions") or {}).items()
-    )
+    count = record.get("file_count") if isinstance(record.get("file_count"), int) else len(listed)
+    by_type = _by_type(record.get("extensions"))
     summary = f"**{count:,} file{'s' if count != 1 else ''}**, {_format_size(record.get('size_bytes') or 0)} in all"
     summary += f": {by_type}." if by_type else "."
     keys = _keys_of(listed)
@@ -1722,16 +1744,24 @@ def _keys_of(listed: list) -> list:
     """The keys of the ``key=value`` folders some listed file is in, in the order first met."""
     keys: dict = {}
     for entry in listed:
-        for key in entry.get("partitions") or {}:
+        for key in _partitions_of(entry):
             keys.setdefault(key, None)
     return list(keys)
+
+
+def _partitions_of(entry: dict) -> dict:
+    """A listed file's ``key=value`` folders, as text; empty if the entry has none it can say."""
+    found = entry.get("partitions")
+    if not isinstance(found, dict):
+        return {}
+    return {str(key): str(value) for key, value in found.items()}
 
 
 def _keys_line(listed: list, keys: list) -> str:
     """One sentence on the ``key=value`` folders: each key, and its values among the files listed."""
     said = []
     for key in keys:
-        values = sorted({(entry.get("partitions") or {}).get(key) for entry in listed} - {None})
+        values = sorted({_partitions_of(entry).get(key) for entry in listed} - {None})
         shown = ", ".join(_code(v) for v in values[:6]) + (f", … ({len(values)} values)" if len(values) > 6 else "")
         said.append(f"{_code(key)} ({shown})")
     return f"In `key=value` folders, by {'; '.join(said)}."
@@ -1739,10 +1769,10 @@ def _keys_line(listed: list, keys: list) -> str:
 
 def _parts(record: dict) -> Optional[dict]:
     """A dataframe of many parts as its page lists them: each file with its size, its rows and its partition keys."""
-    listed = record.get("files") or []
+    listed = _listed(record)
     if not listed or not record.get("content_hash"):
         return None
-    count = record.get("file_count") or len(listed)
+    count = record.get("file_count") if isinstance(record.get("file_count"), int) else len(listed)
     keys = _keys_of(listed)
     summary = f"**{count:,} file{'s' if count != 1 else ''}**, {_format_size(record.get('size_bytes') or 0)} in all"
     if record.get("row_count") is not None:
@@ -1755,7 +1785,7 @@ def _parts(record: dict) -> Optional[dict]:
             "path": f["path"],
             "size": _format_size(f["size_bytes"]),
             "rows": f"{f['row_count']:,}" if isinstance(f.get("row_count"), int) else "",
-            "partition_values": [(f.get("partitions") or {}).get(key, "") for key in keys],
+            "partition_values": [_partitions_of(f).get(key, "") for key in keys],
         }
         for f in listed[:FILES_SHOWN]
     ]

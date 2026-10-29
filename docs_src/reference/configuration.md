@@ -563,7 +563,7 @@ keep = true
 | `path` | yes | A file, a folder (every file under it), or a glob (`*`, `?`, `[...]`, `**` for any depth) |
 | `docs_path` or `docs` | no | Its write-up: what is in the files, and how to read them. Recommended by the default policy |
 | `keep` | no | `true` keeps every version of it in the store, as for a dataframe ({doc}`../guide/keeping-costly-outputs`): an archive that cost an API budget to build, or embeddings that cost GPU hours |
-| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | no | As for a dataframe. You may add fields of your own |
+| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | no | As for a dataframe. You may add fields of your own, but for `files`, `file_count` and `extensions`, which the index uses for what it says of the files, and leaves out of the record with a warning |
 
 The key (`earnings_releases`) is its address, `file/earnings_releases`, and another pipeline's is `pipeline:file/earnings_releases`. A file's own name may be anything; a folder's or glob's files are those its hash is made of, so `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*` files are never among them.
 

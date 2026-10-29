@@ -549,6 +549,14 @@ Step 9, with items 3 and 5 of #135. Where it settles what the plan left open:
 - **`chartbook check`** takes a folder with no file in it as a path that matches nothing. The
   default policy recommends what it does for a dataframe, and a write-up, as for a model.
 
+After a review the same day: `files`, `file_count` and `extensions` are names a record keeps for
+itself, and a manifest's field by one of them is left out, with a warning. A folder with no file
+in it has no hash in the index either. A file's type is an ending with a letter in it (`app.log.1`
+is a `.log`), and a record names the 20 most common. The store's `listing` and `get` take a hold
+of the shape asked for, since one file's hash and a listing's are written alike (a `SHA256SUMS`
+beside the files it lists). A folder's named pipe or socket is no file of it, which moves no hash:
+neither could be hashed.
+
 ## Breaking changes, for the changelog
 
 - **The store's layout.** Upgrade every machine that shares a store, then run `chartbook store

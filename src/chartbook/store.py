@@ -1107,12 +1107,17 @@ class Store(abc.ABC):
         """Where the store keeps an asset's files, each as a name for it in the store and its size; empty for an object no pipeline owns."""
         return []
 
-    def listing(self, content_hash: str) -> Optional[tuple[hashing.FileEntry, ...]]:
+    def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
         """Each file of an asset, by its path in the asset, with its size and hash, as a snapshot's record gives them.
 
         Nothing is read but the records, whose files' hashes make the
         asset's (:func:`read_kept_record`). None when no record says: an
         object no pipeline owns, or a store that keeps no records.
+
+        :param single: Whether the asset is one file. The hash of one file
+            and the hash of a listing of several are written alike, and a
+            file can hold the very listing of others (a ``SHA256SUMS`` beside
+            them), so only a hold of the shape asked for is taken.
         """
         return None
 
@@ -1854,6 +1859,11 @@ class FolderStore(Store):
                 else dataclasses.replace(asset, files=(dataclasses.replace(asset.files[0], relative=name),))
                 for asset in held
             ]
+        else:
+            # Asked for by no name: an asset of several files. Its hold first,
+            # for one file's bytes can make the same hash (a SHA256SUMS beside
+            # the files it lists); the order is otherwise kept, as sort is stable
+            held.sort(key=lambda asset: asset.single)
         missing = None
         pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
         for asset in held:
@@ -2428,8 +2438,8 @@ class FolderStore(Store):
                 found.setdefault(file.location.relative_to(self.root).as_posix(), file.size_bytes)
         return sorted(found.items())
 
-    def listing(self, content_hash: str) -> Optional[tuple[hashing.FileEntry, ...]]:
-        held = self._held(content_hash)
+    def listing(self, content_hash: str, single: bool) -> Optional[tuple[hashing.FileEntry, ...]]:
+        held = [asset for asset in self._held(content_hash) if asset.single == single]
         return kept_listing(held[0]) if held else None
 
     def tidy(self, dry_run: bool = False, keep: Iterable[str] = ()) -> list[tuple[str, int]]:

@@ -36,6 +36,7 @@ import glob
 import hashlib
 import json
 import os
+import stat
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -274,14 +275,45 @@ def glob_root(pattern: Union[str, Path]) -> Path:
 def directory_files(directory: Union[str, Path]) -> list[Path]:
     """Every file under a directory that counts as part of it.
 
-    That is all of them but the ones :func:`is_ignored` names.
+    That is all of them but the ones :func:`is_ignored` names, and a named
+    pipe or a socket, which hold no bytes: reading a pipe waits for a writer
+    for ever, and a socket cannot be opened, so neither was ever part of a
+    hash. Folders are walked as :func:`os.walk` walks them: one that cannot
+    be listed is passed over, and a link to a folder is not followed.
     """
-    return [
-        Path(folder) / name
-        for folder, _, names in os.walk(directory)
-        for name in names
-        if not is_ignored(name)
-    ]
+    found = []
+    pending = [os.fspath(directory)]
+    while pending:
+        folder = pending.pop()
+        try:
+            with os.scandir(folder) as listing:
+                entries = list(listing)
+        except OSError:
+            continue
+        folders = []
+        for entry in entries:
+            try:
+                is_folder = entry.is_dir()
+            except OSError:
+                is_folder = False
+            if is_folder:
+                if not entry.is_symlink():
+                    folders.append(entry.path)
+            elif not is_ignored(entry.name) and not _holds_no_bytes(entry):
+                found.append(Path(entry.path))
+        pending.extend(reversed(folders))
+    return found
+
+
+def _holds_no_bytes(entry: os.DirEntry) -> bool:
+    """Whether a folder's entry is a named pipe or a socket. A regular file is told by the listing, with no call to the system."""
+    if entry.is_file(follow_symlinks=False):
+        return False
+    try:
+        mode = entry.stat().st_mode
+    except OSError:
+        return False  # a link to nothing: hashing it says so, as before
+    return stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)
 
 
 def hash_directory(

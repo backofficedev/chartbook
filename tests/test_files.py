@@ -621,3 +621,153 @@ class TestMkDocs:
         assert "cb/files/test_pipeline/releases.md" in nav
         assert "## Files" not in (site / "index.html").read_text(encoding="utf-8")  # rendered, not raw
         assert "cb/files/test_pipeline/releases.html" in (site / "index.html").read_text(encoding="utf-8")
+
+
+class TestWhatTheReviewFound:
+    """Found by an adversarial review of `[files]`, 2026-10-29."""
+
+    def test_a_field_of_ones_own_named_files_is_left_out_of_the_record(self, pipeline_project, monkeypatch):
+        """A manifest carries fields of its own; `files` on a dataframe passed into its record, and its page broke on it."""
+        project = pipeline_project.resolve()
+        _edit_toml(project, lambda c: c["dataframes"]["dataframe_0"].update(files=["raw_input.csv"], file_count="two"))
+        with pytest.warns(UserWarning, match=r"\[dataframes\.dataframe_0\] files: left out of the index"):
+            record = _records(project)["test_pipeline:dataframe_0"]
+        assert "files" not in record and "file_count" not in record
+        _valid(record)
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+
+    def test_a_page_passes_over_a_listing_it_cannot_read(self):
+        from chartbook.writers.sphinx import _listing, _parts
+
+        record = {
+            "content_hash": "sha256:00", "size_bytes": 3, "extensions": {".txt": 1},
+            "files": ["raw.csv", {"path": "a.txt", "size_bytes": 3, "partitions": "year=2024"}],
+        }
+        assert [row["path"] for row in _listing(record)["rows"]] == ["a.txt"]
+        assert [row["path"] for row in _parts(record)["rows"]] == ["a.txt"]
+        assert _parts({"content_hash": "sha256:00", "files": "raw.csv"}) is None
+
+    def test_json_nested_deeper_than_python_goes_is_shown_as_it_is(self, tmp_path, monkeypatch):
+        """On Python 3.10 to 3.12, pretty-printing 2,000 nested arrays raises RecursionError."""
+        (tmp_path / "a.jsonl").write_text("[" * 2000 + "]" * 2000 + "\n", encoding="utf-8")
+        assert files.preview_text(tmp_path / "a.jsonl").startswith("[")
+
+        def too_deep(*args, **kwargs):
+            raise RecursionError("maximum recursion depth exceeded")
+
+        monkeypatch.setattr(files.json, "dumps", too_deep)
+        assert files.preview_text(tmp_path / "a.jsonl") == "[" * (files.PREVIEW_LINE_LENGTH - 1) + "…"
+
+    @pytest.mark.parametrize("sums", ["sums", "a_sums"])
+    def test_a_file_whose_bytes_are_a_listing_is_read_as_itself(self, tmp_path, sums):
+        """A SHA256SUMS beside the files it lists has their listing's hash. Each pin is read as what it is, whichever
+        the record names first: the store's listing and the folder it hands a reader are of the shape asked for."""
+        work = tmp_path.resolve() / "work"
+        a, b = work / "a", work / "b"
+        (a / "_data" / "delivery").mkdir(parents=True)
+        b.mkdir()
+        (a / "_data" / "delivery" / "a.csv").write_text("a,b\n", encoding="utf-8", newline="\n")
+        (a / "_data" / "delivery" / "b.csv").write_text("c,d\n", encoding="utf-8", newline="\n")
+        listing = "".join(
+            f"{hashing.hash_file(f).content_hash.split(':', 1)[1]}  {f.name}\n" for f in sorted((a / "_data" / "delivery").iterdir())
+        )
+        (a / "_data" / "SHA256SUMS").write_text(listing, encoding="utf-8", newline="\n")
+        glob_hash = hashing.hash_path(str(a / "_data" / "delivery" / "*.csv")).content_hash
+        assert hashing.hash_path(a / "_data" / "SHA256SUMS").content_hash == glob_hash
+        declared = {"delivery": {"path": "./_data/delivery/*.csv"}, sums: {"path": "./_data/SHA256SUMS"}}
+        (a / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/a"}, "files": declared}), encoding="utf-8", newline="\n"
+        )
+        (b / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/b"}, "dependencies": {"a": {"path": "../a"}}}), encoding="utf-8", newline="\n"
+        )
+        for directory in (a, b):
+            (directory / "README.md").write_text("# A pipeline\n", encoding="utf-8", newline="\n")
+        _git(work, "init", "--quiet", "-b", "main")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
+        _commit(work)
+        snapshot.make(a)
+        lock.pin(b)
+        assert [p.name for p in assets.files("a:file/delivery", project_dir=b)] == ["a.csv", "b.csv"]
+        delivery = assets.index("a:file/delivery", project_dir=b).collect()
+        assert [Path(p).name for p in delivery["path"]] == ["a.csv", "b.csv"] and delivery["size_bytes"].to_list() == [4, 4]
+        assert [p.name for p in assets.files(f"a:file/{sums}", project_dir=b)] == ["SHA256SUMS"]
+        table = assets.index(f"a:file/{sums}", project_dir=b).collect()
+        assert [Path(p).name for p in table["path"]] == ["SHA256SUMS"] and table["size_bytes"].to_list() == [len(listing)]
+
+    def test_a_folder_with_no_file_in_it_is_not_built(self, project):
+        """Not one file named after the folder, of size 0: no file, as check and a snapshot have it."""
+        (project / "_data" / "empty").mkdir()
+        (project / "_data" / "finder").mkdir()
+        (project / "_data" / "finder" / ".DS_Store").write_bytes(b"finder")
+        (project / "_data" / "nested" / "a" / "b").mkdir(parents=True)
+        _edit_toml(
+            project,
+            lambda c: c["files"].update(
+                empty={"path": "./_data/empty"}, finder={"path": "./_data/finder"}, nested={"path": "./_data/nested"}
+            ),
+        )
+        records = _records(project)
+        for name in ("empty", "finder", "nested"):
+            record = records[f"test_pipeline:file/{name}"]
+            _valid(record)
+            assert not {"content_hash", "size_bytes", "file_count", "extensions", "files"} & set(record), name
+            assert "modified_at" not in record["location"]
+            for read in (assets.files, assets.index):
+                with pytest.raises(FileNotFoundError, match="has no files"):
+                    read(f"file/{name}", project_dir=project)
+
+    def test_only_what_looks_like_a_type_is_one(self):
+        assert files.extension("app.log.1") == ".log"
+        assert files.extension("data.20240101") == "" and files.extension("v1.2.3") == ""
+        assert files.extension("archive.2024-01.zip") == ".zip" and files.extension("weights.safetensors") == ".safetensors"
+        assert files.extension("a.b c") == ""
+
+    def test_the_types_past_the_most_common_are_counted_together(self, pipeline_project):
+        """20,000 files of 20,000 made-up endings are one count, not 20,000 keys and a page line in alphabetical order."""
+        from chartbook.writers.sphinx import _listing
+
+        names = [f"x{i}.t{i:03d}" for i in range(30)] + ["a.pdf", "b.pdf", "c.pdf"]
+        counted = files.count_by_extension(names)
+        assert list(counted)[0] == ".pdf" and counted[".pdf"] == 3
+        assert len(counted) == files.TYPES_COUNTED + 1
+        assert counted[files.OTHER_TYPES] == 30 - (files.TYPES_COUNTED - 1)
+        # Rotated logs are one type, on the record and on the page
+        project = pipeline_project.resolve()
+        (project / "_data" / "logs").mkdir()
+        for i in range(30):
+            (project / "_data" / "logs" / f"app.log.{i}").write_text("x\n", encoding="utf-8", newline="\n")
+        _edit_toml(project, lambda c: c.update(files={"logs": {"path": "./_data/logs"}}))
+        record = _records(project)["test_pipeline:file/logs"]
+        assert record["extensions"] == {".log": 30}
+        assert "30 `.log`" in _listing(record)["summary"]
+        assert "3 of other types" in _listing(dict(record, extensions={".log": 27, files.OTHER_TYPES: 3}))["summary"]
+
+    def test_a_backslash_is_part_of_a_folders_name(self):
+        """A record writes its paths with `/`; on POSIX `k=a\\b` is one folder's name."""
+        assert files.partitions("k=a\\b/x.txt") == {"k": "a\\b"}
+
+    def test_a_gzip_of_several_members_says_more_follows(self, tmp_path):
+        joined = tmp_path / "joined.txt.gz"
+        joined.write_bytes(gzip.compress(b"first\n") + gzip.compress(b"second\n"))
+        assert files.preview_text(joined) == "first\n…"
+        single = tmp_path / "single.txt.gz"
+        single.write_bytes(gzip.compress(b"first\n"))
+        assert files.preview_text(single) == "first"
+
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes on this system")
+    def test_a_named_pipe_in_a_folder_is_no_file_of_it(self, tmp_path):
+        """Reading a pipe waits for a writer for ever, so a folder with one in it was never hashed: no hash moves."""
+        (tmp_path / "a.txt").write_text("a\n", encoding="utf-8", newline="\n")
+        before = hashing.hash_path(tmp_path).content_hash
+        os.mkfifo(tmp_path / "pipe")
+        assert hashing.directory_files(tmp_path) == [tmp_path / "a.txt"]
+        assert hashing.hash_path(tmp_path).content_hash == before
+
+    def test_a_preview_reads_nothing_outside_its_asset(self, tmp_path):
+        (tmp_path / "x.txt").write_text("x\n", encoding="utf-8", newline="\n")
+        (tmp_path / "asset").mkdir()
+        for path in ("../x.txt", "/x.txt", "C:/x.txt", "a\\..\\..\\x.txt", "", "./x.txt"):
+            assert files.preview_of([{"path": path, "size_bytes": 2}], tmp_path / "asset") is None, path
