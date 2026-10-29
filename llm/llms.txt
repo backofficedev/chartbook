@@ -69,6 +69,9 @@ chartbook trust              # Say this folder's pipeline is yours to build (at 
 chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)
+chartbook store migrate      # Move a store made by ChartBook 0.2 to 0.3's layout (a folder per pipeline, a folder per snapshot, each file once); once, after every machine has 0.3; --dry-run first
+chartbook store export ID --to DIR   # One pipeline's snapshots into DIR/pipelines/<pipeline>/, to send (--latest, --snapshot COMMIT[@MADE_AT])
+chartbook store import DIR    # Copy the snapshots in DIR (an export, or a pipeline's folder) into this store, each file checked against its record
 chartbook config             # Configure default catalog path
 chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
 chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml

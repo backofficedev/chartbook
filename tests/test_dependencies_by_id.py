@@ -475,9 +475,9 @@ class TestWhatTheThirdReviewFound:
         from chartbook.store import default_store
 
         work, first, second = elsewhere
-        newer = default_store().root / "snapshots" / ("e" * 40) / "_root"
+        newer = default_store().root / "pipelines" / "acme+rates" / f"2026-01-01T000000Z_{'e' * 12}" / "_chartbook"
         newer.mkdir(parents=True)
-        (newer / "20260101T000000.000000Z.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}), encoding="utf-8", newline="\n")
+        (newer / "snapshot.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}), encoding="utf-8", newline="\n")
         forecast = _forecast(work / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         assert _pinned(forecast)["location"]["commit"] == second.commit

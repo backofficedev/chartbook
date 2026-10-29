@@ -207,7 +207,7 @@ class _Walker:
         return [taken for taken in self.found if taken.same_moment(commit, made_at)]
 
     def _missing(self, commit: str, made_at: str) -> str:
-        why = next((reason for path, reason in self.unreadable if commit in str(path)), None)
+        why = next((reason for path, reason in self.unreadable if snapshot.is_at(path, commit)), None)
         said = (
             f": a record at that commit cannot be read ({why})" if why
             else " (`store gc` lets old lineage go unless it is run with --keep-lineage)"

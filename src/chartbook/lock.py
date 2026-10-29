@@ -90,7 +90,7 @@ from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
 from chartbook.store import LINKS as STORE_LINKS
-from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, default_store
+from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoredObject, StoreError, TidyError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -2564,7 +2564,7 @@ def _pin_asset(
                     PinEvent("not_built", key, asset_id, detail=declared_path)
                 )
             return _asset_record(ref, key, declared_path, None, True)
-        stored = store.put(absolute, links=PIN_LINKS)
+        stored = store.put(absolute, links=PIN_LINKS, base=within, key=key)
         if old is None:
             status = "pinned"
         elif stored.content_hash == old:
@@ -2598,7 +2598,7 @@ def _pin_asset(
         # which adds the name. A file that is there and still arriving is
         # not this, and is still said to be
         try:
-            stored = store.put(absolute, links=PIN_LINKS)
+            stored = store.put(absolute, links=PIN_LINKS, base=within, key=key)
         except (OSError, StoreError):
             stored = None  # a store this user cannot write, or the file gone: said as before
         if stored is not None and isinstance(store, _PutLater):
@@ -2615,7 +2615,7 @@ def _pin_asset(
         status = "kept" if same else "stale"
         report.events.append(PinEvent(status, key, asset_id, old=old, new=old))
     elif same:
-        store.put(absolute, links=PIN_LINKS)
+        store.put(absolute, links=PIN_LINKS, base=within, key=key)
         report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
     else:
         report.events.append(
@@ -2730,14 +2730,17 @@ class _PutLater:
     def __repr__(self) -> str:
         return repr(self._store)
 
-    def put(self, path: Union[str, Path], links: Iterable[str] = STORE_LINKS) -> StoredObject:
+    def put(
+        self, path: Union[str, Path], links: Iterable[str] = STORE_LINKS, base: Optional[Path] = None, key: str = ""
+    ) -> StoredObject:
+        """Hold a put of what *path* names, from the clone of the dependency *key* whose pipeline's folder is *base*."""
         if hashing.find_files(path) is None:
             raise FileNotFoundError(f"Nothing at {path}")
         stand_in = ""
         if self._hold:
             # No hash a lockfile could hold, however it was written
             stand_in = f"held:{uuid.uuid4().hex}"
-            self.held[stand_in] = (path, tuple(links))
+            self.held[stand_in] = (path, tuple(links), base, key)
         return StoredObject(content_hash=stand_in, size_bytes=0, path=Path(path), files=(), created=False)
 
     def forget_held(self, report: "PinReport") -> None:
@@ -2758,14 +2761,11 @@ class _PutLater:
         if not self._hold:
             raise StoreError("a pin that is only worked out is never put in the store")
         stored = {}
-        for stand_in, (path, links) in self.held.items():
-            if stand_in in self.recheck:
-                try:
-                    stored[stand_in] = self._store.put(path, links=links)
-                except (OSError, StoreError):
-                    pass  # only a name to add: it stays said as not whole
-                continue
-            stored[stand_in] = self._store.put(path, links=links)
+        by_key: dict = {}
+        for stand_in, (path, links, base, key) in self.held.items():
+            by_key.setdefault(key, []).append((stand_in, path, links, base))
+        for key, held in by_key.items():
+            stored.update(self._put_from_clone(key, held, after))
         self.held = {}
         rechecked, self.recheck = self.recheck, {}
         restored = {
@@ -2808,6 +2808,73 @@ class _PutLater:
             return dataclasses.replace(event, status=status, old=old, new=new)
 
         report.events[:] = [as_put(event) for event in report.events]
+
+
+    def _put_from_clone(self, key: str, held: list, after: "Lock") -> dict:
+        """Put what was held from one dependency's clone, as a snapshot a pin made in its pipeline's folder; what was put, by stand-in.
+
+        The files go where its owner's snapshots keep theirs, each kept once
+        (:class:`chartbook.store.PendingSnapshot`), and the snapshot is
+        written only if it holds something the store did not: a pin of bytes
+        its owner's snapshot already holds adds nothing. A pin by ID never
+        takes such a snapshot for its owner's (``made_by``).
+        """
+        entry = next((e for e in after.dependencies if e.get("id") == key), {})
+        commit = (entry.get("location") or {}).get("commit")
+        base = next((base for _, _, _, base in held if base is not None), None)
+        # By the pipeline's own ID, as its clone names it, where a lockfile of 0.2 says nothing of it
+        pipeline = entry.get("pinned_from") or (_pipeline_of_clone(Path(base), entry, Path(base)) if base else None) or key
+        try:
+            validate_pipeline_id(pipeline)
+            pending = self._store.begin(pipeline, commit, snapshot._now(), base=base, made_by="pin")
+        except (ValueError, TypeError, StoreError):
+            pending = None  # no pipeline or commit to file it under: an object no pipeline owns
+        stored = {}
+        try:
+            for stand_in, path, links, _ in held:
+                try:
+                    stored[stand_in] = (pending or self._store).put(path, links=links)
+                except (OSError, StoreError):
+                    if stand_in in self.recheck:
+                        continue  # only a name to add: it stays said as not whole
+                    raise
+            if pending is None:
+                return stored
+            new = [put for put in stored.values() if put.stored and not self._store.has(put.content_hash)]
+            if not pending.placed and not new:
+                pending.discard()
+                return stored
+            records = []
+            for record in after.assets.values():
+                put = stored.get(record.get("content_hash"))
+                if put is None or not put.stored:
+                    continue
+                kept = snapshot.renamed(record, pipeline)
+                kept.update(content_hash=put.content_hash, size_bytes=put.size_bytes, stored=put.stored)
+                kept.pop("files", None)
+                if put.entries and "files" in record:
+                    kept["files"] = [
+                        {"path": e.path, "size_bytes": e.size_bytes, "content_hash": e.content_hash} for e in put.entries
+                    ]
+                records.append(kept)
+            code = {"commit": commit}
+            subdirectory = (entry.get("location") or {}).get("subdirectory")
+            if subdirectory:
+                code["subdirectory"] = subdirectory
+            document = {
+                "schema": snapshot.SCHEMA,
+                "root": pipeline,
+                "code": code,
+                "made_at": pending.made_at,
+                "made_by": "pin",
+                "records": sorted(records, key=lambda record: record["id"]),
+            }
+            pending.write(document)
+        except BaseException:
+            if pending is not None:
+                pending.discard()
+            raise
+        return stored
 
 
 def _refuse_a_cycle(project_dir: Path, root: str, store: Store, git_cache: Optional[GitCache], read: list, before: "Lock"):
@@ -2972,6 +3039,9 @@ class GcPlan:
         snapshots_kept: Each snapshot that is kept, with why.
         snapshots_delete: Each snapshot that is to be removed, with why it
             may be.
+        pinned_kept, pinned_delete: Likewise for the snapshots a pin made
+            from a clone, where a ``git`` dependency's bytes are kept: not
+            anyone's snapshots, and counted with the objects.
         recent: Objects that nothing names, stored too recently to remove.
         delete: Objects that nothing names, each with its size in bytes.
         not_read: Lockfiles a store names that are not read here, as they are
@@ -2989,6 +3059,14 @@ class GcPlan:
             as well, which takes its place, and, with *forget_missing*, one
             that cannot be found.
         forget: Lockfiles that could not be found and are to be forgotten.
+        files: For each object in *delete* that a snapshot holds, the names
+            in the store of its files that no kept asset uses: what goes
+            with it.
+        recent_files: The names in the store of the files of the objects in
+            *recent*: what is not removed, as they are not.
+        unused: What no snapshot uses besides, each name with its size: a
+            snapshot's folder begun and never written, a sync service's
+            copies beside a snapshot's files (:meth:`chartbook.store.Store.tidy`).
         kept_versions: Each version of an asset marked ``keep = true`` that
             a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
             what the marks keep, for the bill.
@@ -3002,6 +3080,8 @@ class GcPlan:
     snapshots: int = 0
     snapshots_kept: list = field(default_factory=list)
     snapshots_delete: list = field(default_factory=list)
+    pinned_kept: list = field(default_factory=list)
+    pinned_delete: list = field(default_factory=list)
     kept_versions: list = field(default_factory=list)
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
@@ -3010,6 +3090,9 @@ class GcPlan:
     elsewhere: list = field(default_factory=list)
     read_here: list[Path] = field(default_factory=list)
     forget_old: list[Path] = field(default_factory=list)
+    files: dict = field(default_factory=dict)
+    recent_files: set = field(default_factory=set)
+    unused: list = field(default_factory=list)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -3076,6 +3159,13 @@ def plan_gc(
         is removed from a store when what it must keep is in doubt.
     """
     store = store if store is not None else default_store()
+    # Asked many times over: the records are read once for the whole plan
+    with store.reading():
+        return _plan_gc(store, forget_missing, recent_seconds, keep_days, keep_lineage, aggressive)
+
+
+def _plan_gc(store: Store, forget_missing: bool, recent_seconds: float, keep_days: float, keep_lineage: bool, aggressive: bool) -> GcPlan:
+    """The rest of :func:`plan_gc`, within one reading of the store's records."""
     plan = GcPlan(
         forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
         keep_lineage=keep_lineage, aggressive=aggressive,
@@ -3197,10 +3287,17 @@ def plan_gc(
     plan.snapshots_kept = snapshots.keep
     plan.snapshots_delete = snapshots.remove
     plan.kept_versions = snapshots.kept_versions
-    named_by_snapshots = snapshots.kept_hashes()
+    _keep_what_only_they_hold(plan, keep)
+    _plan_pinned(store, plan, keep, recent_seconds)
+    named_by_snapshots = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept + plan.pinned_kept))
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots
 
+    # A file another kept asset uses is not freed, and one two assets share is counted once
+    kept_files = {name for content_hash in keep for name, _ in store.files_of(content_hash)}
+    plan.files = {}
+    counted: set = set()
+    recent_files: set = set()
     for content_hash in store.hashes():
         if content_hash in keep:
             plan.kept += 1
@@ -3211,9 +3308,68 @@ def plan_gc(
             continue  # gone since it was listed: another gc, or a put replacing it
         if age < recent_seconds:
             plan.recent.append(content_hash)
+            recent_files |= {name for name, _ in store.files_of(content_hash)}
+            continue
+        files = store.files_of(content_hash)
+        if files:
+            freed = {name: size for name, size in files if name not in kept_files and name not in counted}
+            counted |= set(freed)
+            plan.files[content_hash] = sorted(name for name, _ in files if name not in kept_files)
+            plan.delete.append((content_hash, sum(freed.values())))
         else:
             plan.delete.append((content_hash, store.size_of(content_hash)))
+    plan.recent_files = recent_files
+    # What no snapshot uses beside that: a snapshot never written, a sync service's copies
+    named = {name for names in plan.files.values() for name in names}
+    plan.unused = [(name, size) for name, size in store.tidy(dry_run=True, keep=recent_files) if name not in named]
     return plan
+
+
+def _keep_what_only_they_hold(plan: "GcPlan", keep: set) -> None:
+    """Keep a snapshot that holds bytes a lockfile pins and no kept snapshot holds: a snapshot's record is what says where its files are.
+
+    The newest such first, so that of two holding the same bytes the newer is kept.
+    """
+    held = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept))
+    for taken, why in sorted(plan.snapshots_delete, key=lambda pair: pair[0].made_at, reverse=True):
+        if (taken.hashes() & keep) - held:
+            plan.snapshots_delete.remove((taken, why))
+            plan.snapshots_kept.append((taken, "a lockfile pins bytes it alone holds"))
+            held |= taken.hashes()
+
+
+def _plan_pinned(store: Store, plan: "GcPlan", keep: set, recent_seconds: float) -> None:
+    """Which snapshots a pin made from a clone are kept, and which go.
+
+    They are where a ``git`` dependency's pinned bytes are kept, not
+    anyone's snapshots: newest first, one is kept while it holds bytes a
+    lockfile pins that nothing kept holds, and one stored in the last
+    *recent_seconds* is left alone (what it alone names is recent, as an
+    object is).
+    """
+
+    def age(taken) -> float:
+        ages = []
+        for content_hash in taken.asset_hashes():
+            try:
+                ages.append(store.age_of(content_hash))
+            except ObjectNotFoundError:
+                continue
+        return min(ages, default=float("inf"))
+
+    pinned = []
+    for path in store.pinned_snapshot_files():
+        try:
+            pinned.append(snapshot.read(path))
+        except snapshot.SnapshotError as error:
+            raise LockError(f"{error}. Nothing is removed from a store when what it must keep is in doubt.") from None
+    held = set().union(*(taken.hashes() for taken, _ in plan.snapshots_kept))
+    for taken in sorted(pinned, key=lambda taken: taken.made_at, reverse=True):
+        if (taken.hashes() & keep) - held:
+            plan.pinned_kept.append((taken, "a lockfile pins what it holds"))
+            held |= taken.hashes()
+        elif age(taken) >= recent_seconds:
+            plan.pinned_delete.append((taken, "no lockfile pins what it alone holds"))
 
 
 def _users_own_store(store: Store) -> bool:
@@ -3296,11 +3452,50 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     still_unnamed = {content_hash for content_hash, _ in now.delete}
     removed = 0
     size_bytes = 0
+    # Where a git dependency's bytes were kept, which only a pin made
+    still_pinned = {taken.path for taken, _ in now.pinned_delete}
+    for taken, _ in plan.pinned_delete:
+        if taken.path not in still_pinned:
+            continue
+        try:
+            snapshot.remove(store, taken)
+        except (StoreError, OSError) as error:
+            failures.append((f"where a pin kept {taken.pipeline} at {taken.commit[:7]}", str(error)))
+    # What the cleared snapshots held goes now, file by file, but what a
+    # snapshot that stays uses
+    stuck: dict = {}
+    tidied: set = set()
+    try:
+        # Never what either plan spared for being new
+        tidied = {name for name, _ in store.tidy(keep=plan.recent_files | now.recent_files)}
+    except TidyError as error:
+        stuck = dict(error.failed)
+        tidied = {name for name, _ in error.removed}
+        if not any(name in stuck for names in plan.files.values() for name in names):
+            failures.append(("what no snapshot uses", str(error)))
+    except (StoreError, OSError) as error:
+        failures.append(("what no snapshot uses", str(error)))
+    # What a snapshot still holds stays: only an object no pipeline owns is removed by its hash
+    held = store.held_hashes()
     for content_hash, size in plan.delete:
         if content_hash not in still_unnamed or content_hash in kept_back:
             continue
+        if content_hash in held:
+            continue
+        left = [name for name in plan.files.get(content_hash, ()) if name in stuck]
+        if left:
+            failures.append((
+                f"the object {content_hash}",
+                f"Cannot remove the object {content_hash} at {store}/{left[0]}: {stuck[left[0]]}",
+            ))
+            continue
+        files = plan.files.get(content_hash)
         try:
-            gone = store.delete(content_hash)
+            if files is None:
+                gone = store.delete_unowned(content_hash)
+            else:
+                # Its files went with its snapshots, unless a snapshot being made has taken one meanwhile
+                gone = set(files) <= tidied
         except (StoreError, OSError) as error:
             failures.append((f"the object {content_hash}", str(error)))
             continue

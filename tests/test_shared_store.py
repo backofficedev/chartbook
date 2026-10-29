@@ -170,10 +170,9 @@ class TestAFileThereBeforeAllOfItsBytes:
         lock.update(forecast)
         (tmp_path / "copy.parquet").write_bytes(whole)
         default_store().put(tmp_path / "copy.parquet")
-        assert (held.parent / "copy.parquet").is_file()
         _cut(held, b"")  # the name this pin reads, made and not filled yet
         (problem,) = lock.verify(forecast).problems
-        assert "has 0 bytes of treasury.parquet where its record says" in problem.message
+        assert "has 0 bytes of _data/treasury.parquet where its record says" in problem.message
 
     def test_update_at_the_snapshot_it_is_pinned_to_says_it_once(self, half):
         forecast, first, second, held, whole = half
@@ -294,13 +293,14 @@ class TestASyncServicesCopies:
         second = _snapshot_again(rates, 4.2)
         folder = second.path.parent
         shutil.copy(second.path, folder / f"{second.path.stem} (1).json")
-        shutil.copy(folder / "origins", folder / "origins (1)")
         store = default_store()
+        note = store.origins_file(second.commit, snapshot.record_name(second.subdirectory))
+        shutil.copy(note, note.with_name(f"{note.stem} (1).txt"))
         assert [taken.made_at for taken in snapshot.readable_snapshots(store)[0]] == [first.made_at, second.made_at]
         assert len(snapshot.all_snapshots(store)) == 2
         plan = lock.plan_gc(store, keep_days=0)
         assert len(plan.snapshots_kept) + len(plan.snapshots_delete) == 2
-        assert not is_record_name(f"{second.path.stem} (1).json") and is_record_name(second.path.name)
+        assert second.path.name == "snapshot.json" and folder / "snapshot (1).json" not in store.all_snapshot_files()
 
     def test_the_catalog_lists_a_version_once(self, drive):
         from chartbook import versions
@@ -715,10 +715,11 @@ class TestAVersionsSite:
         work, machine, rates = drive
         taken = snapshot.make(rates).snapshot
         store = default_store()
+        ((place, _),) = store.files_of(taken.assets["treasury"]["content_hash"])
         assert store.delete(taken.assets["treasury"]["content_hash"])  # not synced here yet
         first = versions.render(taken, store)
         assert not first.built
-        store.put(rates / "_data" / "treasury.parquet", links=("copy",))  # the sync finishes
+        shutil.copy(rates / "_data" / "treasury.parquet", store.root / place)  # the sync finishes
         second = versions.render(taken, store)
         # Laid out from the store this time; whatever its build said is kept now
         assert second.now and "not all in the store yet" not in second.why
@@ -756,11 +757,11 @@ class TestAFileADirectorysRecordDoesNotList:
         os.chmod(held, stat.S_IRWXU)
         shutil.copy(held / "part-0.parquet", held / "part-0 (1).parquet")
         _forget_whole()
-        (problem,) = lock.verify(forecast).problems
-        assert "holds part-0 (1).parquet, which its record does not list" in problem.message
+        # The store reads a directory as its record lists it: the copy is not among them
+        assert lock.verify(forecast).problems == []
         monkeypatch.chdir(forecast)
-        with pytest.raises(AssetNotPinnedError, match="remove that file from the object's folder"):
-            data.load("acme/rates:parts")
+        assert data.load("acme/rates:parts").collect()["a"].to_list() == [1, 2]
+        assert "part-0 (1).parquet" not in {p.name for p in Path(default_store().get(taken.assets["parts"]["content_hash"])).iterdir()}
 
 
 class TestAFilesOwnNameNotThereYet:
@@ -1740,7 +1741,7 @@ class TestADirectoryOfMixedNames:
         snapshot.make(rates)
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        (half,) = [p for p in (work / "Google Drive" / "chartbook-store").rglob(second) if "objects" in p.parts]
+        (half,) = [p for p in (work / "Google Drive" / "chartbook-store").rglob(second) if "pipelines" in p.parts]
         whole = half.read_bytes()
         half.chmod(0o644)
         kept = len(whole) // 2 if written == "first half" else 0
@@ -1889,38 +1890,43 @@ class TestWhatGcCannotRemove:
 
     @staticmethod
     def _treasury(store, taken) -> Path:
-        return store.object_path(taken.assets["treasury"]["content_hash"])
+        ((name, _),) = store.files_of(taken.assets["treasury"]["content_hash"])
+        return store.root / name
 
     def test_the_rest_goes_and_what_stayed_is_said(self, drive, monkeypatch):
         store, first, second = self._two_to_remove(drive, monkeypatch)
         held = self._treasury(store, first)
-        remove_tree = store_module._remove_tree
+        their = self._treasury(store, second)
+        remove_file = store_module._remove_file
 
-        def another_users(directory):
-            if directory == held:
-                raise PermissionError(errno.EPERM, "Operation not permitted", str(directory / "treasury.parquet"))
-            remove_tree(directory)
+        def another_users(path):
+            if Path(path) == held:
+                raise PermissionError(errno.EPERM, "Operation not permitted", str(path))
+            remove_file(path)
 
-        monkeypatch.setattr(store_module, "_remove_tree", another_users)
+        monkeypatch.setattr(store_module, "_remove_file", another_users)
         result = CliRunner().invoke(main, ["store", "gc", "--yes", "--keep-days", "0"])
         assert result.exit_code == 1, result.output
         assert "Traceback" not in result.output and isinstance(result.exception, SystemExit)
         assert "Removed 2 snapshot(s) and " in result.output
         assert "Error: 1 thing(s) could not be removed:" in result.output
-        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/objects/sha256/" in result.output
+        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/pipelines/" in result.output
         assert "Operation not permitted. It is another user's, most likely" in result.output
         assert "its owner removes it" in result.output and "write permission on it and on the folder holding it" in result.output
-        assert held.is_dir() and not self._treasury(store, second).exists()
+        assert held.is_file() and not their.exists()
         assert not first.path.exists() and not second.path.exists()
-        # Nothing else is in the way next time: the object stays to be removed then
-        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
-        assert [h for h, _ in plan.delete] == [first.assets["treasury"]["content_hash"]]
+        # No snapshot names it now: the next gc removes the file, once it can
+        assert lock.plan_gc(store, recent_seconds=0, keep_days=0).delete == []
+        monkeypatch.setattr(store_module, "_remove_file", remove_file)
+        lock.run_gc(lock.plan_gc(store, recent_seconds=0, keep_days=0), store)
+        assert not held.exists()
 
     @pytest.mark.skipif(sys.platform != "darwin" or not hasattr(os, "chflags"), reason="chflags uchg is macOS's")
     def test_a_folder_made_unremovable(self, drive, monkeypatch):
         """The real thing: a folder this user cannot write, nor make writable."""
         store, first, second = self._two_to_remove(drive, monkeypatch)
         held = self._treasury(store, first)
+        their = self._treasury(store, second)
         os.chflags(held, stat.UF_IMMUTABLE)
         try:
             plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
@@ -1928,10 +1934,10 @@ class TestWhatGcCannotRemove:
                 lock.run_gc(plan, store)
             ((what, why),) = raised.value.failures
             assert what == f"the object {first.assets['treasury']['content_hash']}"
-            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/objects/sha256/")
+            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/pipelines/")
             assert "Operation not permitted" in why and "its owner removes it" in why
             assert raised.value.removed_snapshots == 2 and raised.value.removed >= 1
-            assert held.is_dir() and not self._treasury(store, second).exists()
+            assert held.is_file() and not their.exists()
         finally:
             os.chflags(held, 0)
 
@@ -1968,7 +1974,7 @@ class TestWhatGcCannotRemove:
             return unlink(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "unlink", refused)
-        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/snapshots/.*: Permission denied\. It is another user's"):
+        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/pipelines/.*: Permission denied\. It is another user's"):
             store.remove_snapshot(taken.path)
 
 

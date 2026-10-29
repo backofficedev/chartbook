@@ -10,6 +10,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
+from tests.fixtures import clear_keeping_its_bytes
 from chartbook import lineage, lock, snapshot
 from chartbook.cli import main
 from chartbook.store import default_store
@@ -307,9 +308,8 @@ class TestWhatTheThirdReviewFound:
         # The version's snapshot is let go of by hand, so the walk looks among the objects
         found, _ = snapshot.readable_snapshots(store)
         (maker,) = [t for t in found if t.pipeline == "acme/model" and t.assets["model/m"]["content_hash"] == version]
-        os.chmod(maker.path, stat.S_IRUSR | stat.S_IWUSR)
-        maker.path.unlink()
-        twin = Path(store.get(version)).parent / (version.split(":", 1)[1][2:12] + "f" * 52)
+        clear_keeping_its_bytes(store, maker)
+        twin = Path(store.get(version)).parent / (version.split(":", 1)[1][:12] + "f" * 52)
         import shutil
 
         shutil.copytree(store.get(version), twin)
