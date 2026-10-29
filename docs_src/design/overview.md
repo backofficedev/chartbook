@@ -2237,3 +2237,5 @@ Each is explained where it lives.
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
   parties can register others. ({doc}`../guide/plotting-backends`)
 - The project template's CI should run `chartbook check --skip-outputs`, once 0.2.0 is on PyPI.
+  *Done 2026-10-28:* 0.2.0 is on PyPI, and the template's workflow runs it after the tests, in
+  the environment it installs, where the project has a `chartbook.toml`.

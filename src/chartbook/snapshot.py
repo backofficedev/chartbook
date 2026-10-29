@@ -2078,7 +2078,7 @@ def require_committed(
 
 
 def check_within(directory: Union[str, Path], pipeline: str) -> None:
-    """Refuse a manifest whose declared paths reach outside the pipeline's folder.
+    """Refuse a manifest whose declared paths reach outside the pipeline's folder, or name a file with a glob character.
 
     What :func:`make` checks when it stores; here, so that it can be found
     out before a build, not after one.
@@ -2095,6 +2095,10 @@ def check_within(directory: Union[str, Path], pipeline: str) -> None:
                 f"pipeline's folder. A snapshot is what the pipeline built, so "
                 f"everything in it must be under {directory}."
             )
+        named = hashing.glob_named(declared_path, absolute)
+        if named is not None:
+            said = hashing.glob_named_said(declared_path, named)
+            raise SnapshotError(f"{pipeline} declares {str(local.in_pipeline(pipeline))!r}, and its path {said}.")
 
 
 #: What a tag name may be, to be recorded and shown: git's own rules are
