@@ -3544,6 +3544,30 @@ def store_info():
         raise SystemExit(1)
     click.echo(f"Cache: {shown_store_url(str(cache))}")
     click.echo("  where what is read from a remote store is kept on this machine")
+    _say_how_long_paths_are(folder)
+
+
+def _say_how_long_paths_are(folder) -> None:
+    """On Windows, say when the store's folder leaves its paths too little room (#136)."""
+    from chartbook import store as stores
+
+    if folder is None or not stores._ON_WINDOWS or stores.long_paths_enabled():
+        return
+    try:
+        longest, made = stores.FolderStore(folder).longest_paths()
+    except (stores.StoreError, OSError):
+        return
+    # Before any snapshot: an ID of 34 characters, and an ordinary file 30 deep in its pipeline
+    expected = max(longest, made, len(str(folder)) + len("\\pipelines\\") + 34 + 33 + 30)
+    if expected < stores.WINDOWS_PATH_LIMIT - 20:
+        return
+    click.echo(
+        click.style("Warning: ", fg="yellow", bold=True)
+        + f"the store's folder is {len(str(folder))} characters long, and its paths reach about {expected}: Windows "
+        f"refuses a path of {stores.WINDOWS_PATH_LIMIT} or more on this machine, where long paths are not turned on. "
+        f"{stores.LONG_PATHS_REMEDY}.",
+        err=True,
+    )
 
 
 @store.command("migrate")

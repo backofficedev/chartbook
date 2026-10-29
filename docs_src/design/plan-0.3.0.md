@@ -477,7 +477,9 @@ store, and the Windows CI runs the tests under a long root.
 3. `store gc` on snapshot folders. *Built 2026-10-28, with step 2.*
 4. `chartbook store migrate`. *Built 2026-10-28, with step 2: a store is never left in a layout
    nothing can move.*
-5. Long paths on Windows (#136).
+5. Long paths on Windows (#136). *Built 2026-10-29: measures 3 to 5 (short names, the message, the
+   check before writing, and `store info`'s warning); not measure 1 or 2, the `\\?\` form, which
+   needs a Windows machine to try readers against.*
 6. `chartbook store export` and `store import`.
 7. #135, the rest.
 8. #134, the shared reader.

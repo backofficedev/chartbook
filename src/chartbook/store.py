@@ -198,6 +198,64 @@ class TidyError(StoreError):
         self.failed = failed
 
 
+class PathTooLongError(StoreError):
+    """Raised on Windows, before anything is written, when a path the store would write is longer than Windows takes (#136)."""
+
+
+#: Windows' limit on a path's length, unless long paths are turned on (MAX_PATH).
+WINDOWS_PATH_LIMIT = 260
+
+#: Whether this is Windows, where a path has a limit; a test of another system sets it.
+_ON_WINDOWS = os.name == "nt"
+
+
+@functools.lru_cache(maxsize=None)
+def long_paths_enabled() -> bool:
+    """Whether this machine takes a path past Windows' limit: any but Windows, or Windows with ``LongPathsEnabled``.
+
+    Python itself is long-path aware, so on Windows the setting alone decides.
+    """
+    if not _ON_WINDOWS:
+        return True
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\FileSystem") as key:
+            return winreg.QueryValueEx(key, "LongPathsEnabled")[0] == 1
+    except (OSError, ImportError):
+        return False
+
+
+#: How to lift Windows' limit, or keep under it: said wherever a path is too long.
+LONG_PATHS_REMEDY = (
+    "Either turn long paths on (an administrator sets LongPathsEnabled to 1 under "
+    "HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem, or turns on \"Enable Win32 long paths\" in Group "
+    "Policy), or use a store in a shorter folder ([store] url in your settings, or CHARTBOOK_STORE)"
+)
+
+
+def too_long(path: Union[str, Path]) -> Optional[str]:
+    """Why a path cannot be written or read on this machine, in a sentence; None when it can.
+
+    Windows refuses a path of :data:`WINDOWS_PATH_LIMIT` characters or more
+    unless long paths are turned on, and says only "No such file or
+    directory" (#136).
+    """
+    text = str(path)
+    if not _ON_WINDOWS or len(text) < WINDOWS_PATH_LIMIT or long_paths_enabled():
+        return None
+    return (
+        f"{text} is {len(text)} characters long, and Windows refuses a path of {WINDOWS_PATH_LIMIT} or more unless "
+        f"long paths are turned on, which they are not on this machine. {LONG_PATHS_REMEDY}."
+    )
+
+
+def _check_length(path: Union[str, Path]) -> None:
+    why = too_long(path)
+    if why is not None:
+        raise PathTooLongError(why)
+
+
 class StoreUnreachableError(StoreError):
     """Raised when a remote store cannot be reached at all: no network, no service."""
 
@@ -1592,6 +1650,8 @@ class FolderStore(Store):
                         f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of "
                         f"the store; it is not read. `chartbook store verify` checks a store."
                     )
+            for file in asset.files:
+                _check_length(file.location)  # written by a machine that takes longer paths than this one
             missing = next((file for file in asset.files if not os.path.isfile(file.location)), None)
             if missing is not None:
                 continue
@@ -1679,6 +1739,8 @@ class FolderStore(Store):
             else:
                 content = hashing.hash_directory(staging)
             final = self.unowned_path(content.content_hash)
+            for file in hashing.directory_files(staging):
+                _check_length(final / file.relative_to(staging))
             created = self._move_into_place(
                 staging,
                 final,
@@ -2141,6 +2203,21 @@ class FolderStore(Store):
             )
         return removed
 
+    def longest_paths(self) -> tuple[int, int]:
+        """How long the store's paths are, in characters: the longest of a file it holds, and the longest a new snapshot of one of its pipelines would make.
+
+        A new snapshot's folder is named by the second it is made, so its
+        files' paths are the ones the pipeline's last snapshot has, under
+        a folder name of the same length.
+        """
+        longest = made = 0
+        for record in self.records():
+            for asset in record.assets:
+                for file in asset.files:
+                    longest = max(longest, len(str(file.location)))
+                    made = max(made, len(str(record.folder.joinpath(*file.path.split("/")))))
+        return longest, made
+
     def unowned_hashes(self) -> list[str]:
         """The hash of every object no pipeline owns, in order."""
         self._check_layout()
@@ -2390,6 +2467,7 @@ class _FolderPending(PendingSnapshot):
 
     def _write_file(self, source: str, target: Path, links: tuple) -> tuple[str, str]:
         """Write one file into the store at *target*, its own bytes, and return its hash and how it was made."""
+        _check_length(target)
         tmp = self.store.root / TMP_DIR
         tmp.mkdir(parents=True, exist_ok=True)
         temporary = tmp / f"{uuid.uuid4().hex[:12]}.part"
@@ -2538,6 +2616,7 @@ class _FolderPending(PendingSnapshot):
             written.setdefault("made_by", self.made_by)
             document = written
         own = self._claim() / OWN_DIR
+        _check_length(own / f"{'0' * 12}.tmp")
         own.mkdir(exist_ok=True)
         record = own / RECORD_FILE
         temporary = own / f"{uuid.uuid4().hex[:12]}.tmp"
