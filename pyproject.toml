@@ -31,11 +31,14 @@ dependencies = [
     "tomli-w>=1.1.0",
     # Data loading
     "packaging",
-    # 1.20 has the IO-plugin seam that DuckDB's lazy frames are built on
-    "polars>=1.20",
-    "pyarrow",
-    # The local SQL engine: [sources] with backend = "duckdb", and data.sql()
-    "duckdb>=1.4",  # .pl(lazy=True) arrived in 1.4
+    # DuckDB's lazy frames are built on polars' IO-plugin seam: DuckDB 1.5's
+    # ask it for is_pure, which polars has from 1.33
+    "polars>=1.33",
+    # polars writes text in an Arrow IPC file as string_view, which pyarrow reads from 16
+    "pyarrow>=16",
+    # The local SQL engine: [sources] with backend = "duckdb", and data.sql().
+    # 1.4's lazy frames (.pl(lazy=True)) close their connection under polars 1.33 and later
+    "duckdb>=1.5",
     "python-decouple>=3.8",
     # Plotting
     "matplotlib>=3.7.0",
@@ -79,7 +82,7 @@ dependencies = [
 #
 # The store in an S3 bucket: [store] url = "s3://bucket/prefix"
 s3 = [
-    "boto3>=1.28",
+    "boto3>=1.35",
 ]
 # A source in a Databricks SQL warehouse: [sources.x] backend = "databricks"
 databricks = [
@@ -113,7 +116,7 @@ dev = [
     "openpyxl",
     "requests",
     "seaborn",
-    "boto3>=1.28",
+    "boto3>=1.35",
     "moto[s3]>=5",
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
@@ -195,7 +198,7 @@ extra-dependencies = [
     "requests",
     "seaborn",
     # The S3 store, against a mocked bucket
-    "boto3>=1.28",
+    "boto3>=1.35",
     "moto[s3]>=5",
     # The MkDocs writer's build test
     "mkdocs>=1.6",

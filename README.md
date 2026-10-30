@@ -69,6 +69,21 @@ from chartbook import models
 joblib.dump(model, models.path("rate_forecaster"))  # the model gets a page: scores, lineage
 ```
 
+### Keep files that are not tables
+
+```toml
+[files.filings]
+path = "./_data/filings/**/*.htm"     # a file, a folder, or a glob: text, PDFs, images, archives
+license = "SEC public data"
+```
+
+```python
+from chartbook import assets
+
+for path in assets.files("file/filings"):  # the files, sorted; another pipeline's as pinned
+    ...
+```
+
 ### Browse your catalog
 
 ```bash

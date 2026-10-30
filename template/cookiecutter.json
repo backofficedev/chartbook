@@ -21,7 +21,7 @@
     "include_crsp_stock": false,
     "include_crsp_compustat": false,
 
-    "_chartbook_version": "0.2.0",
+    "_chartbook_version": "0.3.0",
 
     "__prompts__": {
         "project_name": "Project name, the site's title",
@@ -42,7 +42,7 @@
         "include_r_scripts": "R examples (needs conda or pixi)",
         "include_stata_scripts": "A Stata example (needs Stata)",
         "include_chartbook": "A ChartBook site: chartbook.toml and docs_src/ (keep yes)",
-        "include_github_actions": "A GitHub Actions workflow that runs the tests",
+        "include_github_actions": "A GitHub Actions workflow that runs the tests and chartbook check",
         "include_fred": "Data from FRED (downloaded)",
         "include_fed_yield_curve": "The Fed's yield curve (downloaded)",
         "include_ofr_api": "Data from the OFR API (downloaded; with FRED, adds a chart)",

@@ -21,6 +21,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
+from chartbook import store as store_module
 from chartbook import data, index, lock, snapshot
 from chartbook.cli import main
 from chartbook.manifest import load_manifest
@@ -96,6 +97,13 @@ def user(work, maker):
     return directory
 
 
+def _origins_note(taken) -> Path:
+    """The store's note of the folders a snapshot's commit was made from, its folder made."""
+    note = default_store().origins_file(taken.commit, snapshot.record_name(taken.subdirectory))
+    note.parent.mkdir(parents=True, exist_ok=True)
+    return note
+
+
 def _statuses(report) -> dict:
     return {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
 
@@ -108,12 +116,16 @@ class TestMaking:
         assert report.made and report.not_built == []
         assert (taken.pipeline, taken.commit, taken.subdirectory) == ("acme/maker", commit, "maker")
         assert sorted(taken.assets) == ["chart/curve", "rates"]
-        assert taken.path.parent == default_store().root / "snapshots" / commit / "maker"
-
-        # The bytes are in the store, under the hash the record gives
+        # In the pipeline's folder, in a folder named by when it was made and its commit
         store = default_store()
+        folder = store.root / "pipelines" / "acme+maker" / store_module.snapshot_folder_name(taken.made_at, commit)
+        assert taken.path == folder / "_chartbook" / "snapshot.json"
+
+        # The bytes are in the store, at their path in the pipeline, under the hash the record gives
         rates = taken.assets["rates"]
         assert rates["id"] == "acme/maker:rates"
+        assert (folder / "_data" / "rates.parquet").read_bytes() == b"rates-1"
+        assert store.get(rates["content_hash"]) == folder / "_data"  # read where it is kept
         assert (store.get(rates["content_hash"]) / "rates.parquet").read_bytes() == b"rates-1"
         assert taken.asset_hashes() == {record["content_hash"] for record in taken.assets.values()}
         # The store keeps the version's index and documents too
@@ -123,7 +135,7 @@ class TestMaking:
         taken = snapshot.make(maker).snapshot
         document = json.loads(taken.path.read_text(encoding="utf-8"))
         assert list(document) == ["schema", "root", "code", "made_at", "built_with", "first_commit", "index", "documents", "records"]
-        assert document["schema"] == "chartbook/snapshot/v1"
+        assert document["schema"] == "chartbook/snapshot/v2"
         assert document["code"] == {"commit": taken.commit, "subdirectory": "maker"}
         assert [record["id"] for record in document["records"]] == [
             "acme/maker:chart/curve",
@@ -153,6 +165,27 @@ class TestMaking:
             snapshot.make(maker)
         assert "'acme/maker:other' at '../secret.txt'" in str(e.value)
         assert "outside the pipeline's folder" in str(e.value)
+        assert not (default_store().root / "pipelines").exists()
+
+    def test_a_path_naming_a_folder_with_a_glob_character_is_refused(self, maker, work):
+        """Found by a reviewer: `_data/[raw]` was stored as the folder, and its record read back as a pattern."""
+        (maker / "_data" / "[raw]").mkdir(parents=True)
+        (maker / "_data" / "[raw]" / "part.parquet").write_bytes(b"part")
+        _manifest(
+            maker,
+            {
+                "project": {"id": "acme/maker"},
+                "dataframes": {
+                    "rates": {"path": "./_data/rates.parquet", "docs": "d"},
+                    "raw": {"path": "./_data/[raw]/*.parquet", "docs": "d"},
+                },
+            },
+        )
+        _commit(work)
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        assert "'acme/maker:raw', and its path './_data/[raw]/*.parquet' names '_data/[raw]'" in str(e.value)
+        assert "which a reader would take for a pattern; rename it" in str(e.value)
         assert not (default_store().root / "snapshots").exists()
 
     def test_it_is_frozen(self, maker):
@@ -168,19 +201,26 @@ class TestMaking:
         (directory / "x.parquet").write_bytes(b"x")
         commit = _commit(directory)
         taken = snapshot.make(directory).snapshot
-        assert taken.subdirectory == ""
-        assert taken.path.parent == default_store().root / "snapshots" / commit / "_top"
+        assert taken.subdirectory == "" and taken.commit == commit
+        assert taken.path.parent.parent.parent == default_store().pipeline_path(taken.pipeline)
+        assert (taken.path.parent.parent / "x.parquet").read_bytes() == b"x"
         assert "subdirectory" not in json.loads(taken.path.read_text(encoding="utf-8"))["code"]
 
     def test_two_pipelines_never_share_a_folder_in_the_store(self, work):
+        """A folder is named by the ID, ``/`` as ``+``; letter case, which macOS and Windows do not tell apart, and a name Windows keeps, get a hash."""
+        ids = ["acme/rates", "Acme/rates", "acme/Rates", "acme_rates", "a/b_c", "a_b/c", "con", "nul.x", "acme."]
+        folders = [store_module.pipeline_folder(pipeline) for pipeline in ids]
+        assert len({folder.lower() for folder in folders}) == len(ids)
+        assert folders[0] == "acme+rates" and folders[3] == "acme_rates"
+        assert folders[1].startswith("acme+rates~") and folders[6].startswith("con~") and folders[8].startswith("acme.~")
+
+    def test_two_pipelines_in_one_repository_are_told_apart(self, work):
         """``a--b/c`` and ``a/b--c`` would both be ``a--b--c``; so would ``_top`` and the top."""
-        store = default_store()
-        commit = "0" * 40
         names = ["", "_top", "a--b/c", "a/b--c", "a/b/c"]
-        folders = [store.snapshot_folder(commit, snapshot.record_name(name)) for name in names]
-        assert len(set(folders)) == len(names)
-        assert folders[0].name == "_top" and folders[4].name == "a--b--c"
-        assert folders[1].name.startswith("_top~") and folders[2].name.startswith("a--b--c~")
+        recorded = [snapshot.record_name(name) for name in names]
+        assert len(set(recorded)) == len(names)
+        assert recorded[0] == "_top" and recorded[4] == "a--b--c"
+        assert recorded[1].startswith("_top~") and recorded[2].startswith("a--b--c~")
 
     def test_a_pipeline_deep_in_its_repository(self, work):
         directory = _manifest(
@@ -191,7 +231,8 @@ class TestMaking:
         commit = _commit(work)
         taken = snapshot.make(directory).snapshot
         assert taken.subdirectory == "pipelines/macro/rates"
-        assert taken.path.parent.name == "pipelines--macro--rates"
+        # Its files at their paths in the pipeline's own folder, not the repository's
+        assert (taken.path.parent.parent / "x.parquet").read_bytes() == b"x"
         assert snapshot.find(default_store(), commit, "pipelines/macro/rates") == [taken]
 
     def test_a_folder_and_a_glob(self, work):
@@ -226,7 +267,7 @@ class TestEverythingMustBeCommitted:
         assert "acme/maker has changes that are not committed:" in said
         assert " M maker/chartbook.toml" in said
         assert "everything in the pipeline's folder must be committed first." in said
-        assert not (default_store().root / "snapshots").exists()
+        assert not (default_store().root / "pipelines").exists()
 
     def test_a_new_file_git_does_not_ignore(self, maker):
         (maker / "pull.py").write_text("print('new')\n", encoding="utf-8", newline="\n")
@@ -326,7 +367,7 @@ class TestSeveral:
         first = snapshot.make(maker)
         again = snapshot.make(maker)
         assert not again.made and again.snapshot == first.snapshot
-        assert len(list(first.snapshot.path.parent.glob("*.json"))) == 1
+        assert len(list(default_store().pipeline_path("acme/maker").iterdir())) == 1
 
     def test_new_data_at_the_same_commit_is_a_new_one(self, maker, work):
         """A pipeline that pulls from outside: other bytes, and no file changed."""
@@ -800,7 +841,7 @@ class TestKeeping:
         taken = snapshot.make(maker).snapshot
         assert snapshot.origins(default_store(), taken) == [work]
         snapshot.make(maker)  # again, with nothing changed: noted once
-        assert (taken.path.parent / "origins").read_text(encoding="utf-8").splitlines() == [str(work)]
+        assert _origins_note(taken).read_text(encoding="utf-8").splitlines() == [str(work)]
 
 
 class TestClearingOldSnapshots:
@@ -820,7 +861,7 @@ class TestClearingOldSnapshots:
         """Found by a reviewer: a first design kept every such snapshot, and a
         CI runner's checkout is gone the moment the job ends."""
         first, second, third = three
-        (third.path.parent / "origins").write_text(str(tmp_path / "ci-runner-checkout") + "\n", encoding="utf-8", newline="\n")
+        _origins_note(third).write_text(str(tmp_path / "ci-runner-checkout") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert [t for t, _ in plan.remove] == [first, second]
         assert [t for t, _ in plan.keep] == [third]
@@ -840,8 +881,8 @@ class TestClearingOldSnapshots:
         (directory / "_output" / "m.json").write_bytes(b"v2")
         newest = snapshot.make(directory).snapshot
         snapshot._write(dataclasses.replace(newest, made_at="2099-01-01T00:00:00.000000Z", labels={}), default_store())
-        for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
-            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
+        for taken in snapshot.all_snapshots(default_store()):
+            _origins_note(taken).write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         assert (first, "a label points at a version in it") in _plan(default_store(), keep_days=7).keep
 
     def test_a_clock_behind_does_not_remove_a_new_snapshot(self, maker, tmp_path):
@@ -849,7 +890,7 @@ class TestClearingOldSnapshots:
         from datetime import datetime, timedelta, timezone
 
         taken = snapshot.make(maker).snapshot
-        (taken.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
+        _origins_note(taken).write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         behind = datetime.now(timezone.utc) - timedelta(minutes=15)
         plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7, now=behind)
         assert plan.remove == [] and plan.keep == [(taken, "it is dated after now, by less than 7 days")]
@@ -880,8 +921,8 @@ class TestClearingOldSnapshots:
         assert third.labels == {"model/m": {"champion": version}}
         assert snapshot.read(third.path).labels == {"model/m": {"champion": version}}
         # Another machine: the folder is not here. The label still keeps the first.
-        for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
-            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
+        for taken in snapshot.all_snapshots(default_store()):
+            _origins_note(taken).write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert (first, "a label points at a version in it") in plan.keep
         assert [t.made_at for t, _ in plan.remove] == [OLD]
@@ -895,7 +936,7 @@ class TestClearingOldSnapshots:
         (directory / "_output" / "m.json").write_bytes(b"v4")
         fourth = snapshot.make(directory).snapshot
         assert fourth.labels == {}
-        (fourth.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
+        _origins_note(fourth).write_text(str(tmp_path / "elsewhere") + "\n", encoding="utf-8", newline="\n")
         plan = _plan(default_store())
         assert {t.made_at for t, _ in plan.remove} == {OLDER, OLD}
 
@@ -1063,25 +1104,26 @@ class TestClearingOldSnapshots:
 
     def test_a_line_in_origins_that_is_not_a_folder_says_nothing(self, three):
         first, second, third = three
-        note = third.path.parent / "origins"
+        note = _origins_note(third)
         note.write_text("relative/thing\n" + note.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
         assert all(path.is_absolute() for path in snapshot.origins(default_store(), third))
         plan = _plan(default_store())  # no crash, and the same answer
         assert [t for t, _ in plan.remove] == [first, second]
 
-    def test_removing_the_last_record_leaves_anothers_half_written_one_alone(self, maker, work):
+    def test_removing_a_snapshot_leaves_one_being_made_alone(self, maker, work):
+        """Another process is making a snapshot: its folder has files and no record yet."""
         first = snapshot.make(maker, made_at=OLDER).snapshot
         (maker / "pull.py").write_text("print(1)\n", encoding="utf-8", newline="\n")
         _commit(work)
         _build(maker, rates=b"rates-2")
         snapshot.make(maker)
-        folder = first.path.parent
-        half = folder / "deadbeef.tmp"  # another process, writing a record here now
-        half.write_text("{", encoding="utf-8", newline="\n")
         store = default_store()
+        being_made = store.pipeline_path("acme/maker") / "2026-10-28T120000Z_0123456789ab"
+        (being_made / "_data").mkdir(parents=True)
+        (being_made / "_data" / "rates.parquet").write_bytes(b"rates-9")
         lock.run_gc(lock.plan_gc(store, recent_seconds=0), store)
-        assert not first.path.exists()
-        assert half.exists() and folder.exists() and not (folder / "origins").exists()
+        assert not first.path.exists() and not _origins_note(first).exists()
+        assert (being_made / "_data" / "rates.parquet").read_bytes() == b"rates-9"
 
     def test_gc_removes_the_record_and_then_what_only_it_named(self, three):
         first, second, third = three
@@ -1104,8 +1146,11 @@ class TestClearingOldSnapshots:
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
         lock.run_gc(plan, store)
-        assert not first.path.parent.exists() or any(first.path.parent.glob("*.json"))
-        assert third.path.parent.exists() and (third.path.parent / "origins").exists()
+        # Its folder goes, or keeps only what a later snapshot uses, and says so
+        folder = first.path.parent.parent
+        assert not first.path.exists()
+        assert not folder.exists() or (folder / "_chartbook" / "CLEARED.txt").is_file()
+        assert third.path.exists() and _origins_note(third).exists()
 
     def test_the_command(self, three, monkeypatch):
         first, second, third = three

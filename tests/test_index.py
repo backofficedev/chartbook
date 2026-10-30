@@ -506,7 +506,12 @@ class TestGlobDataframe:
         assert record["content_hash"] == expected.content_hash
         assert record["size_bytes"] == expected.size_bytes
         assert record["row_count"] == pl.scan_parquet(resolved).select(pl.len()).collect().item()
-        assert "files" not in record
+        # Its parts, each with its rows from its footer (#135)
+        assert record["file_count"] == len(expected.files)
+        assert [(f["path"], f["size_bytes"], f["content_hash"]) for f in record["files"]] == [
+            (entry.path, entry.size_bytes, entry.content_hash) for entry in expected.files
+        ]
+        assert sum(f["row_count"] for f in record["files"]) == record["row_count"]
 
 
 class TestDeterminism:
@@ -850,6 +855,14 @@ class TestWhatTheWriterNeeds:
         (directory / "weights.bin").write_bytes(b"ww")  # rewritten in place
         os.utime(directory, (old, old))
         assert index._modified_at(str(directory)) > before
+
+    def test_a_file_in_a_folder_with_a_bracket_in_its_name_has_a_time(self, tmp_path):
+        """Found by a reviewer: in `Research [2026]/`, every path was read as a glob that matched nothing."""
+        folder = tmp_path / "Research [2026]" / "_data"
+        folder.mkdir(parents=True)
+        (folder / "rates.parquet").write_bytes(b"r")
+        assert index._modified_at(str(folder / "rates.parquet")).endswith("Z")
+        assert index._modified_at(str(folder / "*.parquet")) == index._modified_at(str(folder / "rates.parquet"))
 
     def test_code_changed_at_is_a_docs_builds_fact_only(self, project):
         """Found by a reviewer: a file's modification time was passed off as the code's history."""

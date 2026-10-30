@@ -58,6 +58,14 @@ cb/charts.md
 ```
 {% endif %}
 
+{% if files_file_list %}
+```{toctree}
+:maxdepth: 1
+:caption: Pipeline Files 🗂️
+{{files_file_list | sort | join("\n")}}
+```
+{% endif %}
+
 
 
 {% include "pipeline_dependencies.md" %}

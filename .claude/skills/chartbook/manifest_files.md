@@ -56,7 +56,7 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.2.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.3.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
@@ -488,10 +488,48 @@ path = "_output/my_notebook.ipynb"
 | `tags` | List of topic tags |
 | `date_col` | Date column name |
 | `path` | Path to Parquet file or glob pattern (e.g., `_data/**/*.parquet` for hive-partitioned data) |
-| `keep` | `true` for an output that cost money or compute to make: every version stays in the store, `chartbook restore` puts it back on disk, and `chartbook run` stops before remaking it. Also on notebooks, notes and models (a trained model's weights) |
+| `keep` | `true` for an output that cost money or compute to make: every version stays in the store, `chartbook restore` puts it back on disk, and `chartbook run` stops before remaking it. Also on notebooks, notes, models (a trained model's weights) and files assets |
 | `excel_path` | Path to Excel file |
 | `docs_path` | Path to documentation file (mutually exclusive with `docs`) |
 | `docs` | Inline markdown documentation (mutually exclusive with `docs_path`) |
+
+## Files Assets: `[files]`
+
+Files that are not tables, whatever is inside: an archive of gzipped JSON
+lines kept in its source's format, a corpus of text or HTML, PDFs, images,
+`.npy` arrays, a SQLite or DuckDB file, a vendor's zip kept byte for byte.
+ChartBook moves, versions and documents the bytes and never reads them, but
+for a short preview on the page. Do not declare such files under
+`[dataframes]`: a dataframe is a table `data.load` reads.
+
+```toml
+[files.earnings_releases]
+name = "Earnings Releases"
+description = "The API's earnings releases, one file a quarter, as it sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a file, a folder, or a glob
+sources = ["Vendor API"]
+providers = ["Vendor"]
+license = "Licensed to the department"
+restrictions = "Research use only"
+tags = ["Earnings"]
+docs_path = "./docs_src/files/earnings_releases.md"
+keep = true
+```
+
+| Field | Description |
+|-------|-------------|
+| `path` | Required. A file, a folder (every file under it) or a glob |
+| `docs_path` / `docs` | Its write-up: what is in the files and how to read them (one or the other) |
+| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | As for a dataframe |
+| `keep` | `true` keeps every version in the store, as for a dataframe |
+
+Its address is `file/<name>` (another pipeline's: `<dep>:file/<name>`).
+`assets.path("file/x")` is the path as declared; `assets.files("file/x")` the
+files, sorted; `assets.index("file/x")` a LazyFrame of them (`path`,
+`size_bytes`, `sha256`, and a column per `key=value` folder). Both work for a
+dataframe of many parts too. `chartbook path file/x --files` prints the
+files. `chartbook check` fails when the path matches no file (not with
+`--skip-outputs`).
 
 ## Site Directory (Custom Pages)
 
@@ -580,4 +618,23 @@ date_col = "date"
 docs = "Hive-partitioned dataset with year/month partitions."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Glob paths only support `format="polars"` (LazyFrame) — using `"pandas"` or `"polars_eager"` with a glob path raises a `ValueError`.
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Every `format=` of `data.load` reads a glob: `"pandas"` and `"polars_eager"` collect the LazyFrame. The dataframe's page lists its parts, each with its size and rows, and the partition keys and their values; `assets.files("partitioned_data")` gives the files, to read one at a time.
+
+## The File's Format
+
+A dataframe's file is parquet, CSV/TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The path's ending says which: `.parquet`; `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz`; `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz`; `.arrow`, `.feather`, `.ipc`. Anything else, a folder included, is parquet unless `format` says otherwise:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"
+format = "csv"                                   # "parquet" | "csv" | "jsonl" | "ipc"
+read_options = { separator = ";", schema_overrides = { zip = "String" } }
+docs = "The vendor's daily drop, kept as delivered."
+```
+
+- `read_options` are for CSV and JSON lines, by polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma` (CSV), and `schema_overrides`, `infer_schema_length` (both; 20480 rows by default in both engines). `data.sql` gives DuckDB the same ones under its own names, meaning the same; polars' `comment_prefix` and `skip_rows` are not taken. A parquet or Arrow IPC file takes none.
+- An unknown `format`, an option not in that list, or one of the wrong type stops the manifest from loading; an override of a column the file lacks is refused when it is read.
+- A JSON lines file's `schema_overrides` are cast by polars after the read, and `data.sql` hands DuckDB that frame (so `data.ref` of such a file, like an Arrow IPC one, raises). A CSV file with no header has columns `column_1`, `column_2`, … in both engines.
+- A folder's Hive keys are those below it that every file has; a file's own column of a key's name is kept. Each JSON lines file of a glob is inferred from its own lines, and the files read under all their columns. With `format` given, a folder whose files lack its endings is read as the files with its most common ending, a `README` or `schema.json` passed over.
+- `data.load` reads the schema when called: a file not built raises `FileNotFoundError`, and a file that is not its format raises `UnreadableTableError` naming the format and the reader's reason.
+- A file that is not a table belongs under `[files]`, not `[dataframes]`.

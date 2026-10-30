@@ -1,5 +1,5 @@
 [project]
-requires_chartbook = ">=0.2.0"
+requires_chartbook = ">=0.3.0"
 name = "Example Charts from FRED"
 description = "Example Charts from FRED"
 contributors = [

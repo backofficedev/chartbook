@@ -1,6 +1,6 @@
 """The provenance panel: what an asset is, where it is, what made it, from what.
 
-Every dataframe, chart and model page carries a panel that answers, from the
+Every dataframe, chart, model and files page carries a panel that answers, from the
 index alone: what this is and where it is; its content hash, size and rows;
 which pipeline built it and with what; what it was made from, at which
 hashes, and whether those have moved since; and what is made from it. It is
@@ -60,6 +60,8 @@ def _content(record: dict) -> str:
         parts.append("not built")
     if record.get("size_bytes") is not None:
         parts.append(f"{record['size_bytes']:,} bytes")
+    if record.get("kind") == "File" and record.get("file_count") is not None:
+        parts.append(f"{record['file_count']:,} file{'s' if record['file_count'] != 1 else ''}")
     if record.get("row_count") is not None:
         parts.append(f"{record['row_count']:,} rows")
     if record.get("columns"):
@@ -200,7 +202,7 @@ def digest(pipeline_id: str, records: dict) -> str:
     said = {
         record_id: panel(record_id, records, reversed_index)
         for record_id, record in sorted(records.items())
-        if record.get("pipeline") == pipeline_id and record.get("kind") in ("Dataframe", "Chart", "Model")
+        if record.get("pipeline") == pipeline_id and record.get("kind") in ("Dataframe", "Chart", "Model", "File")
     }
     # In a catalog a page links an input of another pipeline into a version's
     # site: which versions are shown and built, and what a model was trained

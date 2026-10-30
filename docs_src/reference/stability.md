@@ -7,7 +7,7 @@ Breaking changes are listed in the {doc}`changelog <../changelog>`, marked **bre
 If you depend on ChartBook for something that must keep working, pin the version you tested with:
 
 ```text
-chartbook==0.2.0
+chartbook==0.3.0
 ```
 
 A real stability promise will come with 1.0.

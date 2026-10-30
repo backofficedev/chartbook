@@ -129,7 +129,9 @@ class Cursor:
         warehouse = self.connection.warehouse
         warehouse.queries.append(operation)
         try:
-            self._table = self.connection.duck.execute(operation.replace("`", '"')).fetch_arrow_table()
+            # A relation's arrow table, on every DuckDB: from 2.0 a connection has none after execute
+            relation = self.connection.duck.sql(operation.replace("`", '"'))
+            self._table = relation.fetch_arrow_table() if relation is not None else pa.table({})
         except duckdb.Error as error:
             raise ServerOperationError(str(error)) from None
         self._at = 0

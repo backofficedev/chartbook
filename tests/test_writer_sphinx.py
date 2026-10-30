@@ -707,7 +707,7 @@ class TestWhatANewUserFound:
         )
         lines = glimpse_text(sample).splitlines()
         assert lines[2].startswith("$ x ") and lines[2].endswith("<f32> 1.1, 2.5")
-        assert lines[3].endswith("<f32> 0.3, null")
+        assert lines[3].endswith(("<f32> 0.3, null", "<f32> 0.3, None"))  # polars before 2.0 shows a null as None
         assert lines[4].endswith("<str> '<f64>', 'y'")
 
     def test_a_glimpse_rounds_only_the_noise(self):

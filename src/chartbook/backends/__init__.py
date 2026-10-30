@@ -18,9 +18,11 @@ and which dialect lives there, and it substitutes identifiers. The SQL is
 the user's (:func:`chartbook.data.sql`).
 
 Three backends are built. ``parquet`` is what a file-backed dataframe has
-always been: it reads the file, and in SQL it is ``read_parquet('…')``.
+always been: it reads the file, parquet, CSV, JSON lines or Arrow IPC
+(:mod:`chartbook.formats`), and in SQL it is DuckDB's reader of its format,
+``read_parquet('…')``, ``read_csv('…', …)`` or ``read_json('…', …)``.
 ``duckdb`` is the local engine: a file, or ``:memory:``, that holds tables
-and runs any SQL that mentions them, and reads parquet files too, so a
+and runs any SQL that mentions them, and reads those files too, so a
 query can join a table of one source with a file of this pipeline.
 ``databricks`` is a SQL warehouse (:mod:`chartbook.backends.databricks`),
 whose driver ``pip install chartbook[databricks]`` installs. A source's
@@ -391,7 +393,7 @@ class Backend:
     :class:`BackendError` itself, by Polars version.
 
     ``reads_files`` says whether SQL run in it may name a file of this
-    machine as :class:`ParquetBackend` writes one, ``read_parquet('…')``:
+    machine as :class:`ParquetBackend` writes one, ``read_parquet('…')`` say:
     so whether :func:`chartbook.data.sql` may join this engine's tables
     with a pipeline's files in one query.
     """
@@ -428,11 +430,16 @@ class Backend:
         """A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here."""
         raise NotImplementedError
 
-    def sql(self, query: str):
+    def sql(self, query: str, arrow: Optional[dict] = None):
         """Run SQL in this engine and return a Polars LazyFrame.
 
         The engine binds the query here, so a name it does not know is
-        refused at once; collecting the frame runs it.
+        refused at once; collecting the frame runs it. *arrow* is Arrow
+        data the query names, by the name it goes by, for an engine that
+        reads files (``reads_files``) and can scan Arrow data: an Arrow IPC
+        file, which DuckDB has no reader of its own for. A backend whose
+        ``sql()`` takes no such argument is handed none, and a query naming
+        such a file is refused before it reaches it.
         """
         raise NotImplementedError
 
@@ -450,10 +457,12 @@ class Backend:
 
 
 class ParquetBackend:
-    """What a file-backed dataframe has always been.
+    """What a file-backed dataframe has always been, in any format it is stored in.
 
-    In SQL a file is ``read_parquet('…')``, which DuckDB reads as a table,
-    partitions and all.
+    It reads through :mod:`chartbook.formats`, as everything that reads a
+    file does. In SQL a file is DuckDB's reader of its format:
+    ``read_parquet('…')``, which DuckDB reads as a table, partitions and
+    all; ``read_csv('…', …)``; or ``read_json('…', …)``.
     """
 
     name = "parquet"
@@ -461,34 +470,15 @@ class ParquetBackend:
     @staticmethod
     def ref(location: "FileLocation") -> str:
         """The file as a DuckDB table expression."""
-        from chartbook.utils import is_glob_pattern
+        from chartbook import formats
 
-        from chartbook.resolve import nothing_to_read
-
-        said = nothing_to_read(location)
-        if said:
-            raise ValueError(said)
-        # With / on every system: DuckDB reads it so on Windows too, and SQL
-        # with a path in it reads the same wherever it is pasted
-        text = Path(location.path).as_posix()
-        if location.files:
-            # A directory pinned from another pipeline: the files its record lists
-            listed = ", ".join(quote_literal(Path(file).as_posix()) for file in location.files)
-            return f"read_parquet([{listed}], hive_partitioning = true)"
-        if is_glob_pattern(text):
-            return f"read_parquet({quote_literal(text)}, hive_partitioning = true)"
-        return f"read_parquet({quote_literal(text)})"
+        return formats.sql(location)
 
     @staticmethod
     def scan(location: "FileLocation"):
-        import polars as pl
+        from chartbook import formats
 
-        from chartbook.resolve import nothing_to_read
-
-        said = nothing_to_read(location)
-        if said:
-            raise ValueError(said)
-        return pl.scan_parquet([str(file) for file in location.files] or location.path, hive_partitioning=True)
+        return formats.scan_location(location)
 
 
 class DuckDBBackend(Backend):
@@ -564,7 +554,7 @@ class DuckDBBackend(Backend):
             return subselect(location.sql)
         return ParquetBackend.ref(location)
 
-    def sql(self, query: str):
+    def sql(self, query: str, arrow: Optional[dict] = None):
         """Run SQL in this engine and return a Polars LazyFrame.
 
         The engine binds the query here, so a name it does not know or SQL
@@ -573,13 +563,20 @@ class DuckDBBackend(Backend):
         a value, is raised then with DuckDB's message: as Polars'
         ``ComputeError`` or as DuckDB's own exception, by Polars version.
 
+        :param arrow: Arrow data the query names, by the name it goes by:
+            an Arrow IPC file, which DuckDB has no reader of its own for
+            (:func:`chartbook.formats.arrow_dataset`). It is registered with
+            the connection the query runs in, for as long as that lives.
         :raises chartbook.backends.BackendError: If DuckDB refuses the query. The message is
             DuckDB's own; the SQL is the user's.
         """
         import duckdb
 
         try:
-            return self.connect().sql(query).pl(lazy=True)
+            connection = self.connect()
+            for name, table in (arrow or {}).items():
+                connection.register(name, table)
+            return connection.sql(query).pl(lazy=True)
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
 
@@ -589,8 +586,9 @@ class DuckDBBackend(Backend):
 
         try:
             connection = self.connect()
+            # Fetched whole: a relation has no fetchone from DuckDB 2.0, and a result read only in part keeps the connection busy
             described = connection.sql(f"describe select * from {self.ref(location)}").fetchall()
-            (rows,) = connection.sql(f"select count(*) from {self.ref(location)}").fetchone()
+            ((rows,),) = connection.sql(f"select count(*) from {self.ref(location)}").fetchall()
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
         return [{"name": row[0], "dtype": row[1]} for row in described], int(rows)
@@ -608,7 +606,7 @@ class DuckDBBackend(Backend):
             return self.connect().sql(
                 f"select min(try_cast({name} as timestamp)), max(try_cast({name} as timestamp)) "
                 f"from {self.ref(location)}"
-            ).fetchone()
+            ).fetchall()[0]
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
 

@@ -10,10 +10,11 @@ import os
 import pytest
 import tomli_w
 
+from chartbook.store import default_store
 from chartbook import config, data, lock, snapshot
 from chartbook.errors import AssetNotPinnedError
 from tests.test_dependencies_by_id import _commit, _forecast, _git
-from tests.fixtures import remove_tree
+from tests.fixtures import clear_keeping_its_bytes, remove_tree
 
 
 @pytest.fixture
@@ -95,6 +96,18 @@ class TestNoSnapshotSoItsRepository:
         assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
         assert not lock.verify(forecast).problems  # --frozen agrees it is pinned from where the manifest says
 
+    def test_it_records_the_pipeline_it_came_from_and_a_pin_leaves_one_from_before_as_it_is(self, host):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _entry(forecast)["pinned_from"] == "acme/rates"
+        locked = lock.read_lock(forecast / lock.LOCK_FILE)
+        del locked.dependencies[0]["pinned_from"]  # as a lockfile from before it
+        lock.write_lock(locked, forecast / lock.LOCK_FILE)
+        before = (forecast / lock.LOCK_FILE).read_bytes()
+        assert lock.pin(forecast).written is False  # kept at its commit: nothing to write
+        assert (forecast / lock.LOCK_FILE).read_bytes() == before
+
     def test_with_no_default_host_it_is_the_store_only(self, tmp_path):
         _upstream(tmp_path.resolve(), 4.0)
         forecast = _forecast(tmp_path.resolve() / "forecast", {"acme/rates": {}})
@@ -150,7 +163,7 @@ class TestNoSnapshotSoItsRepository:
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         assert _entry(forecast)["via"] == "store"
-        taken.path.unlink()  # gc, or another machine's store
+        clear_keeping_its_bytes(default_store(), taken)  # the record is gone; the bytes stay
         report = lock.pin(forecast)
         assert _entry(forecast)["via"] == "store" and not report.problems
         git_cache = Path(config.get_git_cache_path())
@@ -243,7 +256,7 @@ class TestWhatTheReviewFound:
         forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
         lock.pin(forecast)
         assert _entry(forecast)["via"] == "store"
-        taken.path.unlink()  # its snapshot record is gone from the store
+        clear_keeping_its_bytes(default_store(), taken)  # the record is gone; the bytes stay
         report = run.run(forecast, echo=lambda *a, **k: None)
         assert report.failed is None, report.reason
         assert [step.id for step in report.ran] == ["acme/forecast"]

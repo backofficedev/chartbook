@@ -404,6 +404,72 @@ class TestWhereTheCacheIs:
         assert Path.home() / ".chartbook" not in default_store().root.parents
 
 
+class TestThePipelineAPinIsFrom:
+    """A pin records the pipeline it came from by that pipeline's own ID (``pinned_from``).
+
+    A checkout is one commit's files in a folder named after the commit, so
+    the ID is not the folder's: it is the one a clone at the top of the
+    repository would derive.
+    """
+
+    def _checkout(self, work, project: dict) -> Path:
+        directory = work / "checkout" / ("0" * 40)
+        _write_manifest(directory, {"project": project} if project else {})
+        return directory
+
+    def test_its_project_id(self, work):
+        checkout = self._checkout(work, {"id": "acme/curve"})
+        entry = {"git": "https://github.com/someone/else.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/curve"
+
+    def test_else_the_id_it_is_named_by(self, work):
+        checkout = self._checkout(work, {})
+        entry = {"git": "https://github.com/acme/rates.git", "_from_id": "acme/rates"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/rates"
+
+    def test_else_its_repository_address(self, work):
+        checkout = self._checkout(work, {})
+        entry = {"git": "git@github.com:Acme/CRSP-Treasury.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "acme/crsp_treasury"
+
+    def test_a_repo_url_in_its_manifest_comes_before_where_it_was_fetched_from(self, work):
+        """As for any clone: a fork whose manifest names its upstream keeps the upstream's ID."""
+        checkout = self._checkout(work, {"repo_url": "https://github.com/ftsfr/rates"})
+        entry = {"git": "https://github.com/a-fork/rates.git"}
+        assert lock._pipeline_of_clone(checkout, entry, work) == "ftsfr/rates"
+
+    def test_a_repository_on_this_disk_is_named_as_its_folder_names_itself(self, work):
+        checkout = self._checkout(work, {})
+        (work / "ref_data").mkdir()
+        assert lock._pipeline_of_clone(checkout, {"git": "../ref_data"}, work / "downstream") == "ref_data"
+        assert lock._pipeline_of_clone(checkout, {"git": (work / "ref_data").as_uri()}, work) == "ref_data"
+
+    def test_a_bare_repository_is_named_as_its_clone_is(self, work):
+        checkout = self._checkout(work, {})
+        (work / "rates.git").mkdir()
+        assert lock._pipeline_of_clone(checkout, {"git": str(work / "rates.git")}, work) == "rates"
+
+    def test_a_pin_of_something_new_at_the_same_commit_records_it(self, downstream, upstream, cache):
+        """Found by a reviewer: a lockfile from 0.2.0 gained a pin, built since in the working copy, and not the field."""
+        lock.pin(downstream, git_cache=cache)
+        locked = lock.read_lock(downstream)
+        del locked.dependencies[0]["pinned_from"]
+        lock.write_lock(locked, downstream / LOCK_FILE)
+        entry = locked.dependencies[0]
+        copy = cache.work_copy(local_url("../upstream", downstream), entry["location"]["commit"])
+        (copy / "_data").mkdir(exist_ok=True)
+        (copy / "_data" / "ignored.parquet").write_bytes(b"built by a run")
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report)["ignored"] == "pinned"
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "upstream"
+
+    def test_nothing_to_name_it_by_is_none(self, work):
+        checkout = self._checkout(work, {})
+        assert lock._pipeline_of_clone(checkout, {"git": str(work / "not_here")}, work) is None
+        bad = self._checkout(work, {"id": "not/an/id"})
+        assert lock._pipeline_of_clone(bad, {"git": "https://github.com/acme/rates.git"}, work) is None
+
+
 class TestPinning:
     def test_a_git_dependency_is_fetched_and_pinned_from_its_checkout(
         self, downstream, upstream, cache
@@ -420,6 +486,8 @@ class TestPinning:
                 "id": "acme/upstream",
                 "via": "rev",
                 "location": {"kind": "git", "url": "../upstream", "commit": commit},
+                # The pipeline as its repository names it, in its [project] id, not by the key
+                "pinned_from": "upstream",
                 "pinned_hash": locked.dependencies[0]["pinned_hash"],
             }
         ]
@@ -575,7 +643,7 @@ class TestPinning:
         assert (downstream / LOCK_FILE).read_bytes() == before
 
     def test_two_assets_with_the_same_bytes_are_both_put_back(self, downstream, upstream, cache):
-        """The store lost one object that two assets share: put back for one, it lacked the other's name."""
+        """The store lost the one file two assets share: put back, each reads it under its own name."""
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
         (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -583,54 +651,16 @@ class TestPinning:
         _commit(upstream, "A twin")
         lock.pin(downstream, git_cache=cache)
         before = (downstream / LOCK_FILE).read_bytes()
+        assert len(default_store().files_of(HELLO)) == 1  # kept once
         assert default_store().delete(HELLO)
 
         store_module._found_whole.clear()  # this process may have found it whole before
         report = lock.pin(downstream, git_cache=cache)
         assert _statuses(report) == {"committed": "restored", "ignored": "not_built", "twin": "restored"}
         assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
-        held = Path(default_store().get(HELLO))
-        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
-
-    def _twin_with_one_name(self, downstream, upstream, cache) -> Path:
-        """Both twins pinned, and their shared object holds one name only, as another pipeline's pin of the same bytes leaves it."""
-        manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
-        manifest["dataframes"]["twin"] = {"path": "./data/twin.parquet", "docs": "d"}
-        (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
-        (upstream / "data" / "twin.parquet").write_bytes(b"hello")
-        _commit(upstream, "A twin")
-        lock.pin(downstream, git_cache=cache)
-        held = Path(default_store().get(HELLO))
-        os.chmod(held, stat.S_IRWXU)
-        os.chmod(held / "twin.parquet", 0o644)  # read-only, which Windows will not remove
-        (held / "twin.parquet").unlink()
-        store_module._found_whole.clear()
-        return held
-
-    def test_a_name_held_back_by_a_guarded_pin_is_said_restored_once_put(self, downstream, upstream, cache):
-        """`chartbook run` pins with a guard, which holds what it puts until the lockfile may be written."""
-        held = self._twin_with_one_name(downstream, upstream, cache)
-        report = lock.pin(downstream, git_cache=cache, before_writing=lambda would_be_written: None)
-        assert _statuses(report)["twin"] == "restored" and report.problems == []
-        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "twin.parquet"]
-
-    @pytest.mark.skipif(os.name == "nt", reason="chmod does not make a folder read-only on Windows")
-    def test_a_store_this_user_cannot_write_says_what_it_lacks(self, downstream, upstream, cache):
-        held = self._twin_with_one_name(downstream, upstream, cache)
-        root = Path(default_store().root)
-        everything = [root, *root.rglob("*")]
-        modes = {path: path.stat().st_mode for path in everything if not path.is_symlink()}
-        try:
-            for path in everything:
-                if path.is_dir() and not path.is_symlink():
-                    os.chmod(path, stat.S_IRUSR | stat.S_IXUSR)
-            for guard in (None, lambda would_be_written: None):
-                report = lock.pin(downstream, git_cache=cache, before_writing=guard)
-                assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]
-        finally:
-            for path, mode in modes.items():
-                os.chmod(path, mode)
-        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet"]
+        for name in ("committed.parquet", "twin.parquet"):
+            assert (Path(default_store().get(HELLO, name=name)) / name).read_bytes() == b"hello"
+        assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "upstream"
 
     def test_a_directory_still_arriving_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
         """A put adds no file to a directory's object in a folder store, so nothing is put while one is short."""
@@ -886,7 +916,7 @@ def _puts(monkeypatch) -> list:
 
 
 class TestWhatTheSecondReviewOfPuttingBackFound:
-    def test_a_directory_of_one_file_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
+    def test_a_directory_of_one_file_that_is_gone_is_put_back_where_it_was(self, downstream, upstream, cache, monkeypatch):
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
         manifest["dataframes"]["parts"] = {"path": "./data/parts/", "docs": "d"}
         (upstream / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
@@ -899,9 +929,12 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         os.chmod(held / "a.parquet", stat.S_IRUSR | stat.S_IWUSR)
         (held / "a.parquet").unlink()
         store_module._found_whole.clear()
-        puts = _puts(monkeypatch)
-        (problem,) = lock.pin(downstream, git_cache=cache).problems
-        assert problem.status == "unsynced" and puts == []
+        # None of its files is there, so it is not in the store: put back
+        # where its record says, and nowhere else, so nothing is kept twice
+        report = lock.pin(downstream, git_cache=cache)
+        assert report.problems == [] and _statuses(report)["parts"] == "restored"
+        assert (held / "a.parquet").read_bytes() == b"part a"
+        assert len(list(default_store().pipeline_path("upstream").iterdir())) == 1
 
     def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))
@@ -926,7 +959,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         lock.pin(downstream, git_cache=cache)
         assert puts == [] and short.read_bytes() == b"pa"
 
-    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache):
+    def test_two_dependencies_with_the_same_bytes(self, work, downstream, upstream, cache, monkeypatch):
         """Another repository commits the same bytes; downstream pins both, and the store keeps one object for the two."""
         other = work / "other"
         _write_manifest(other, {"project": {"id": "other"}, "dataframes": {"same": {"path": "./data/same.parquet", "docs": "d"}}})
@@ -939,13 +972,21 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
             {"project": {"id": "downstream"}, "dependencies": {"acme/upstream": {"git": "../upstream"}, "acme/other": {"git": "../other"}}},
         )
         lock.pin(downstream, git_cache=cache)
+        # Each repository's pipeline keeps its own: the store keeps the same bytes once in each pipeline's folder
+        assert len(default_store().files_of(HELLO)) == 2 and len(default_store()._held(HELLO)) == 2
         assert default_store().delete(HELLO)
         for guard in (None, lambda would_be_written: None):
             store_module._found_whole.clear()
             report = lock.pin(downstream, git_cache=cache, before_writing=guard)
             assert report.problems == [] and {"committed", "same"} <= set(_statuses(report))
-        held = Path(default_store().get(HELLO))
-        assert sorted(f.name for f in held.iterdir()) == ["committed.parquet", "same.parquet"]
+        for name in ("committed.parquet", "same.parquet"):
+            assert (Path(default_store().get(HELLO, name=name)) / name).read_bytes() == b"hello"
+        # Each read from its own pipeline's copy, which is the one kept while it is pinned
+        from chartbook import data
+
+        monkeypatch.chdir(downstream)
+        assert "/pipelines/other/" in Path(data.path("acme/other:same")).as_posix()
+        assert "/pipelines/upstream/" in Path(data.path("acme/upstream:committed")).as_posix()
 
 
 class TestPuttingBackInAnS3Store:
@@ -957,38 +998,45 @@ class TestPuttingBackInAnS3Store:
         with mocked_s3(monkeypatch) as client:
             yield client
 
-    def _twin_key_gone(self, work, upstream, downstream, cache, client):
+    def _kept_key_gone(self, work, upstream, downstream, cache, client):
+        """Both twins pinned, their bytes kept once in the bucket, and that one key lost."""
         from tests.mocked_s3 import BUCKET, URL
         from chartbook.stores.s3 import S3Store
 
         _twin(upstream)
         store = S3Store(URL, cache=work / "s3cache", client=client)
         lock.pin(downstream, store=store, git_cache=cache)
-        digest = HELLO.split(":")[1]
-        prefix = f"stores/one/objects/sha256/{digest[:2]}/{digest[2:]}/"
-        client.delete_object(Bucket=BUCKET, Key=prefix + "twin.parquet")
+        ((name, _),) = store.files_of(HELLO)
+        key = f"stores/one/{name}"
+        client.delete_object(Bucket=BUCKET, Key=key)
         store_module._found_whole.clear()
-        return prefix
+        return key
 
     @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
-    def test_a_key_the_object_lacks_is_uploaded(self, work, upstream, downstream, cache, client, guarded):
+    def test_a_key_the_bucket_lost_is_uploaded_where_its_record_says(self, work, upstream, downstream, cache, client, guarded):
         from tests.mocked_s3 import BUCKET, URL
         from chartbook.stores.s3 import S3Store
 
-        prefix = self._twin_key_gone(work, upstream, downstream, cache, client)
-        store = S3Store(URL, cache=work / "s3cache", client=client)
+        key = self._kept_key_gone(work, upstream, downstream, cache, client)
+        store = S3Store(URL, cache=work / "s3cache-2", client=client)
         report = lock.pin(downstream, store=store, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
-        assert report.problems == [] and _statuses(report)["twin"] == "restored"
-        keys = client.list_objects_v2(Bucket=BUCKET, Prefix=prefix).get("Contents", ())
-        assert sorted(entry["Key"][len(prefix):] for entry in keys) == ["committed.parquet", "twin.parquet"]
+        assert report.problems == [] and _statuses(report)["twin"] == "restored" and _statuses(report)["committed"] == "restored"
+        assert client.get_object(Bucket=BUCKET, Key=key)["Body"].read() == b"hello"
+        for name in ("committed.parquet", "twin.parquet"):
+            assert (Path(store.get(HELLO, name=name)) / name).read_bytes() == b"hello"
 
     @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
-    def test_a_bucket_this_user_cannot_write_says_what_it_lacks(self, work, upstream, downstream, cache, client, guarded):
+    def test_a_bucket_this_user_cannot_write_says_so(self, work, upstream, downstream, cache, client, guarded):
         from tests.mocked_s3 import URL
         from tests.test_store_s3 import _refusing
         from chartbook.stores.s3 import S3Store
 
-        self._twin_key_gone(work, upstream, downstream, cache, client)
-        reader = S3Store(URL, cache=work / "s3cache", client=_refusing(client))
-        report = lock.pin(downstream, store=reader, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
-        assert [(p.asset.split(":")[1], p.status) for p in report.problems] == [("twin", "unsynced")]
+        from chartbook.store import ReadOnlyStoreError
+
+        self._kept_key_gone(work, upstream, downstream, cache, client)
+        before = (downstream / LOCK_FILE).read_bytes()
+        reader = S3Store(URL, cache=work / "s3cache-2", client=_refusing(client))
+        # What it lost is to be put back, and the bucket says no: said, and nothing is written
+        with pytest.raises(ReadOnlyStoreError, match="refused to write.*read-only for you"):
+            lock.pin(downstream, store=reader, git_cache=cache, before_writing=(lambda a: None) if guarded else None)
+        assert (downstream / LOCK_FILE).read_bytes() == before

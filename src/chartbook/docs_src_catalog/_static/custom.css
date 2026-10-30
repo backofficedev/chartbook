@@ -127,3 +127,9 @@ body:has(.postlist) .bd-page-width {
 .cb-freshness time {
     cursor: help;
 }
+
+/* A files asset's preview image: a thumbnail, whatever its size */
+.cb-thumbnail {
+    max-width: 320px;
+    max-height: 320px;
+}

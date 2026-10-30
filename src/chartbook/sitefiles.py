@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from chartbook.config import untrusted_source
-from chartbook.utils import is_glob_pattern
 
 #: Files of the theme that are not copied to the root of the Sphinx tree:
 #: generated folders and pages the writer renders, and the theme's charts
@@ -32,6 +31,8 @@ THEME_FILES_NOT_AT_ROOT = (
     "dataframes.md",
     "models",
     "models.md",
+    "files",
+    "files.md",
     "diagnostics.md",
     "charts.md",
     "versions.md",
@@ -57,8 +58,10 @@ def copy_plan(
     ``_static/<slug>/<name>.html`` (the page embeds the latter); a notebook
     to ``cb/notebooks/<slug>/<its file name>``; a note to ``cb/<name>.md``;
     and, when downloads are enabled, a dataframe that is one file to
-    ``cb/download_dataframe/<slug>/<name>.parquet``. A table, a query or a
-    folder of parts has no file to offer.
+    ``cb/download_dataframe/<slug>/<name>.parquet``, or the ending of its
+    format (``<name>.csv.gz``; :func:`download_link`). A table, a query or
+    a folder of parts has no file to offer. A files asset's preview image
+    goes to ``_static/<slug>/files/<name>.<ending>``, where its page shows it.
 
     :param skip: Pipelines the build leaves out: nothing of theirs is copied.
     :param reused: Pipelines an incremental build keeps from an earlier one:
@@ -73,7 +76,7 @@ def copy_plan(
     plan: list[tuple[Path, Path]] = []
     for record in index.get("records", []):
         kind = record.get("kind")
-        if kind not in ("Chart", "Notebook", "Note", "Dataframe") or record.get("pipeline") in skipped:
+        if kind not in ("Chart", "Notebook", "Note", "Dataframe", "File") or record.get("pipeline") in skipped:
             continue
         if kind == "Note" and not with_notes:
             continue
@@ -93,9 +96,22 @@ def copy_plan(
             plan.append((Path(source), root / "cb" / "notebooks" / slug / Path(source).name))
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
+        elif kind == "File":
+            from chartbook.files import listing_root, preview_of
+
+            preview = preview_of(record.get("files") or [], listing_root(source))
+            if preview is not None and preview["kind"] == "image":
+                plan.append((preview["file"], root / thumbnail_path(record, preview)))
         elif enable_data_download and downloadable(record):
-            plan.append((Path(source), root / "cb" / "download_dataframe" / slug / f"{name}.parquet"))
+            plan.append((Path(source), root / "cb" / "download_dataframe" / slug / download_link(record)["download_file"]))
     return plan
+
+
+def thumbnail_path(record: dict, preview: dict) -> str:
+    """Where a files asset's preview image is copied, under the site's root, and its page shows it from."""
+    from chartbook.files import extension
+
+    return f"_static/{_slug(record['pipeline'])}/files/{record['ref']['name']}{extension(preview['path'])}"
 
 
 def downloadable(record: dict) -> bool:
@@ -108,7 +124,32 @@ def downloadable(record: dict) -> bool:
     source = location.get("resolved_path")
     if location.get("kind") != "file" or not source or not_built(record):
         return False
-    return not is_glob_pattern(source) and not Path(source).is_dir()
+    from chartbook import hashing
+
+    return not hashing.is_pattern(source) and not Path(source).is_dir()
+
+
+def download_link(record: dict) -> dict:
+    """What a dataframe's page offers for download: the file's name in the site, and its format's.
+
+    ``download_file`` is ``<name>`` with the ending of the file's format,
+    its own when it has one (``rates.csv.gz``) and the format's first
+    otherwise (``rates.parquet``); ``download_format`` is what the page
+    calls it, ``Parquet`` or ``CSV``.
+    """
+    from chartbook import formats
+
+    location = record.get("location") or {}
+    source = location.get("resolved_path") or location.get("path") or ""
+    format = formats.format_of(source, record.get("format"))
+    ending = formats.ending_of(Path(source).name)
+    if formats.format_of_name(Path(source).name) != format:
+        ending = formats.ENDINGS[format][0]
+    name = formats.NAMES[format]
+    return {
+        "download_file": f"{record['ref']['name']}{ending}",
+        "download_format": name[0].upper() + name[1:],
+    }
 
 
 def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
@@ -390,7 +431,7 @@ def write_site(
     )
     for record in built_index["records"]:
         kind = record.get("kind")
-        if kind not in ("Dataframe", "Chart", "Model", "Pipeline"):
+        if kind not in ("Dataframe", "Chart", "Model", "File", "Pipeline"):
             continue
         owner = record["id"] if kind == "Pipeline" else record.get("pipeline")
         # A pipeline site's front page is the site's, written whatever is reused

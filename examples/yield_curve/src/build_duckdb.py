@@ -17,5 +17,5 @@ con = duckdb.connect(str(DB))
 con.sql(
     f"create table fed_yield_curve as select * from read_parquet('{data.path('fed_yield_curve')}')"
 )
-print(f"{DB}: {con.sql('select count(*) from fed_yield_curve').fetchone()[0]} rows")
+print(f"{DB}: {con.sql('select count(*) from fed_yield_curve').fetchall()[0][0]} rows")
 con.close()

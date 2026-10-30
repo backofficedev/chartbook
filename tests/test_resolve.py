@@ -479,7 +479,7 @@ class TestAssetsPath:
         import chartbook
 
         assert chartbook.assets is assets
-        assert assets.KINDS == ("dataframe", "chart", "notebook", "note", "model")
+        assert assets.KINDS == ("dataframe", "chart", "notebook", "note", "model", "file")
 
     def test_raises_for_a_location_that_is_not_a_file(self, project, monkeypatch):
         class TableLocation(Location):

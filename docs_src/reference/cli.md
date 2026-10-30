@@ -25,6 +25,9 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
+| `chartbook store export` | Write one pipeline's snapshots into a folder, to send to someone |
+| `chartbook store import` | Copy the snapshots a folder holds into this machine's store |
+| `chartbook store migrate` | Move a store made by ChartBook 0.2 to the layout of 0.3 |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -176,6 +179,7 @@ Successfully generated documentation in /work/rate_forecast/docs
 Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
 ```
 
+(chartbook-check)=
 ## chartbook check
 
 ```console
@@ -185,7 +189,7 @@ chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-out
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
 - **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
-- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
+- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing), or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
 - **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
 - **a build tool's task that says `chartbook build`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook build` would run the build command, which runs that task again (see {ref}`chartbook build <chartbook-build>`).
@@ -245,9 +249,26 @@ chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found
 chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
 ```
 
+**One file of a set.** A dataframe whose `path` names one file, beside files named the same but for a number or a date, draws a warning that gives the glob that names them all:
+
+```console
+$ chartbook check
+warning: chartbook.toml: [dataframes.transcripts] path: _data/transcripts_2026.parquet may be one file of a set: no asset declares the 12 files beside it named the same but for a number or date (transcripts_2014.parquet … transcripts_2025.parquet). If they are one dataset, write path = "_data/transcripts_*.parquet".
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 0 charts, 0 notebooks)
+```
+
+It is meant to say nothing where nothing is wrong, so it asks a lot before it speaks:
+
+- Only the file's own folder is looked at.
+- A sibling's name differs from the file's only in its runs of digits (`2026`, `20261027`) or dates with `-` or `_` between their parts (`2026-10`, `2026_10`), each with as many digits in each part: `2026-10` stands beside `2025-12`, not beside `2025` or `2026-9`, and `yields_10y` beside `yields_30y`, not beside `yields_2y`.
+- At least one run that differs is a date or a number of two digits or more. `results_v2` beside `results_v1`, or `data.h5` beside `data.h4`, is more often a version or a format than a part, and is passed by; so is `part_1` beside `part_2`.
+- A file that a path of the manifest names already, a dataframe's, a model's or a glob's, is not counted, and there must be two or more that no path names.
+
+Where more than one run differs (`transcripts_2026_q4` beside the other quarters of 2024 to 2026), each is a `*` in the glob (`transcripts_*_q*.parquet`). Where a `*` would take in a file that is not one of them, such as `transcripts_sample.parquet`, the glob has a `[0-9]` for each digit instead (`transcripts_[0-9][0-9][0-9][0-9].parquet`). Models are not looked at: a model's path is a file or a folder, never a glob.
+
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Seven things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 
@@ -308,10 +329,10 @@ No prompt: a command that needs trust refuses and prints this command, so a scri
 ## chartbook path
 
 ```console
-chartbook path REF [--kind KIND] [--project-dir PATH]
+chartbook path REF [--kind KIND] [--project-dir PATH] [--files]
 ```
 
-Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note or model — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note, model or files asset — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
 
 `REF` names the asset. A dataframe is its key in `[dataframes]`; anything else has its kind in front:
 
@@ -322,6 +343,7 @@ Print the path that the enclosing `chartbook.toml` declares for an asset — a d
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
 | `model/rate_forecaster` | `[models.rate_forecaster]` |
+| `file/filings` | `[files.filings]` |
 | `model/rate_forecaster@7f3a9c2e41b0` | A {ref}`version <model-versions>` of that model, in the store |
 | `model/rate_forecaster@champion` | The version that label points at |
 | `forecasting:model/rate_forecaster@champion` | The version that label named when `forecasting` was pinned; `chartbook update` moves it |
@@ -339,6 +361,14 @@ $ chartbook path repo_rates --kind chart
 
 `--kind` is the same as writing the kind in front, for when the name comes from a variable. If `REF` already names a kind, `--kind` must agree with it.
 
+`--files` prints the asset's files instead, one per line, sorted by their path inside it: the file itself, every file under a folder, or every file a glob matches, the files its hash is made of. It is `chartbook.assets.files()` for a shell, and works for any asset with files, a dataframe of many parts included. An asset with no files there yet exits `1`.
+
+```console
+$ chartbook path file/filings --files
+/work/filings/_data/filings/year=2024/10-K.htm
+/work/filings/_data/filings/year=2025/10-K.htm
+```
+
 Another pipeline's asset, `rates:treasury`, is read as `data.load` reads it: its pinned copy in the store, and before anything is pinned, by the rules in {doc}`../guide/depending-on-pipelines`. A dependency declared and not pinned is pinned then, which writes `chartbook.lock` and says so on stderr.
 
 The path is absolute and is printed whether or not the file exists, so a build tool can use it for outputs as well as inputs. This is the command-line form of `chartbook.assets.path()` in Python: one rule for where things live, reachable from Make, a shell, R (`system2`) or Stata (`shell`).
@@ -353,11 +383,16 @@ A name the manifest does not declare exits `1` and says which table to add (or, 
 
 ```console
 $ chartbook path fed_yield_curve:treasury_rates
-/Users/x/.chartbook/store/objects/sha256/4b/1f…/treasury_rates.parquet
+/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-26T182205Z_9b1e22d7a0c4/_data/treasury_rates.parquet
 
 $ chartbook path fed_yield_curve:chart/curve_today
-/Users/x/.chartbook/store/objects/sha256/cc/71…/curve_today.html
+/Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html
 ```
+
+The path is into the store, where the snapshot that first had the file keeps it, under its own
+name. An asset whose files are kept in more than one snapshot's folder (a folder of files, some of
+them new in a later snapshot) is gathered into this machine's cache instead, as links where the
+disk allows, and the path is the cache's.
 
 This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, not to that pipeline's working directory (before a pin, by the rules in {doc}`../guide/depending-on-pipelines`). So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
 
@@ -1118,6 +1153,76 @@ What it is careful about:
 
 A note only ever adds to what is kept. A lockfile on this machine is read as it is now, and what its note recorded at its last pin (the objects, and the snapshots) is kept as well: check out an older commit and run `gc` without pinning, and the pins of the commit you left are kept, by the note, until the next `chartbook pin`, `chartbook update`, `--frozen` or read writes it again (a read, or `--frozen`, on the older commit writes it too, with that commit's pins). A note from before notes named their machine, in your own store, is read as it was then: its lockfile alone.
 
+
+
+### store export
+
+```console
+chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[@MADE_AT] ...]
+```
+
+Write one pipeline's snapshots into a folder, to send to a collaborator. The folder is laid out as
+a store is, `FOLDER/pipelines/<pipeline>/`: a folder for each snapshot, the pipeline's files at
+their own paths, each file once, and each snapshot's record. Every snapshot the pipeline's owner
+made is written; with `--latest`, the newest alone, which is then one complete snapshot, every
+file it needs in its own folder and readable without ChartBook; with `--snapshot`, each one named,
+by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
+a snapshot's record names goes: its data, its documents and its index, never anything that runs.
+
+### store import
+
+```console
+chartbook store import FOLDER
+```
+
+Copy the snapshots a folder holds into this machine's store: what `chartbook store export` wrote,
+a store, or one pipeline's folder copied by hand out of one. They go in oldest first, each file
+hashed as it is copied and checked against its record: a snapshot with a file that is not what its
+record says is refused, said, and the rest go in. A file the store holds already is not copied
+again, a snapshot it has already is left as it is, and nothing is written over. A pipeline then
+pins them by the pipeline's ID, as `"acme/rates" = {}` in `[dependencies]`, with `chartbook pin`
+and `chartbook update`.
+
+```console
+$ chartbook store import ~/Downloads/for-bob
+acme/rates at 4f2a91c, made 2026-10-01T10:00:00.000000Z
+acme/rates at 9b1e22d, made 2026-10-02T10:00:00.000000Z
+Imported 2 snapshot(s), 2.1 GB copied.
+```
+
+### store migrate
+
+```console
+chartbook store migrate [--dry-run] [--yes]
+```
+
+Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
+each pipeline in the store, a folder for each snapshot in it, named by when it was made and its
+commit, and each file once, under its own name ({doc}`../design/plan-0.3.0`). A store of 0.2 is
+refused until it is moved, with a message that says to run this.
+
+- **Upgrade every machine first.** A machine still on ChartBook 0.2 cannot read the store once it
+  is moved, and says so. Run this on one machine; in a store a sync service keeps, the others wait
+  for the sync.
+- **Files are moved, not copied,** so a store in a synced folder uploads nothing again. Bytes two
+  pipelines' snapshots share are copied for the second. The files of a glob, whose records give no
+  hash for each file, are read once to hash them; in a folder that streams its files, as Google
+  Drive's does, that downloads them. `--dry-run` says how much.
+- **Cut short, it goes on.** What is moved is noted before it is moved, and running it again goes
+  on where it stopped.
+- **What no snapshot names**, a `git` dependency's pins in 0.2, goes to `pipelines/+unowned/`,
+  where it is kept while a lockfile names it.
+- **A bucket** is moved as a folder: sync it to one (`aws s3 sync`), point `CHARTBOOK_STORE` at the
+  folder, run this, and sync it back.
+
+```console
+$ chartbook store migrate --dry-run
+The store at /Volumes/GoogleDrive/My Drive/chartbook_store has the layout of ChartBook 0.2.
+Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s), 2.3 GB.
+2.0 GB of globs and documents is read once, to hash each file.
+Nothing was moved (--dry-run).
+```
+
 ## chartbook config
 
 Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given.
@@ -1140,9 +1245,9 @@ chartbook install claude-skill -f           # overwrite files changed by hand wi
 
 ```yaml
 metadata:
-  chartbook-version: "0.2.0"
+  chartbook-version: "0.3.0"
 ```
 
-A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.1.1 to 0.2.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
+A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.2.0 to 0.3.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
 **Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.

@@ -362,7 +362,7 @@ def _refuse_unreadable(built: dict) -> None:
     unreadable = [
         record
         for record in built.get("records", [])
-        if record.get("kind") in ("Dataframe", "Chart", "Notebook", "Model")
+        if record.get("kind") in ("Dataframe", "Chart", "Notebook", "Model", "File")
         and (record.get("location") or {}).get("kind") == "file"
         and (record.get("location") or {}).get("resolved_path")
         and "content_hash" not in record

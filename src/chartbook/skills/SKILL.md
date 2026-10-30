@@ -2,7 +2,7 @@
 name: chartbook
 description: Help users work with ChartBook - a data science documentation platform for organizing pipelines, charts, and dataframes
 metadata:
-  chartbook-version: "0.2.0"
+  chartbook-version: "0.3.0"
 ---
 
 # ChartBook Assistant
@@ -36,7 +36,7 @@ chartbook docs generate -f --watch  # Incremental build, then rebuild on every f
 chartbook docs open         # Open project docs in default browser (was `chartbook browse`)
 # every build also writes docs/index.json: one record per pipeline, dataframe, column,
 # chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
-# and docs/llms.txt: one line per pipeline, dataframe, chart and model with its ID and a
+# and docs/llms.txt: one line per pipeline, dataframe, chart, model and files asset with its ID and a
 # link to its page (a catalog's also links every version's own llms.txt). To find your way
 # around a built site or catalog, read its llms.txt first
 chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
@@ -45,7 +45,8 @@ chartbook trust             # Say this folder's pipeline is yours to build (at a
 chartbook trust --render    # ...to render only: queries run and files it names are read, no build script
 chartbook trust --members   # In a catalog: the catalog's folder and each member folder here (a catalog builds only when all are trusted). --repository: this folder's origin repository, every clone of it. --list shows the record (~/.chartbook/trust.toml); --forget removes
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
-chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
+chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>, file/<name>)
+chartbook path file/<name> --files  # the asset's files, one per line, sorted: a folder's files, a glob's matches
 chartbook path model/<name>@<version>  # a version of a model, in the store: by the start of its hash (@7f3a9c2e41b0) or by a label (@champion)
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version: the label as pinned in chartbook.lock; `chartbook update` moves it
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
@@ -68,6 +69,9 @@ chartbook run --remake      # Build even though a `keep = true` asset is missing
 chartbook store info        # Which store this machine uses and what set it (CHARTBOOK_STORE, your settings, the organization's, or the default); check it on each machine that shares a store (a synced folder, a shared disk)
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder or s3://bucket/prefix with chartbook[s3]); exit 1 if an object changed
 chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags). Every version of a `keep = true` asset is kept, --aggressive too, and gc prints the bill per asset
+chartbook store migrate     # Move a store made by ChartBook 0.2 to 0.3's layout, once, after every machine that uses it has 0.3 (--dry-run first)
+chartbook store export ID --to DIR  # Write one pipeline's snapshots into DIR/pipelines/<pipeline>/ to send someone (--latest: the newest alone, complete; --snapshot COMMIT[@MADE_AT])
+chartbook store import DIR  # Copy the snapshots DIR holds (an export, or a pipeline's folder copied by hand) into this store, every file checked; nothing is copied twice or written over
 chartbook config            # Configure default catalog path (interactive)
 chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
 chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
@@ -120,6 +124,7 @@ Projects use `chartbook.toml` with these sections (all `[project]` keys are opti
 - `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`, `writer` (`"sphinx"` by default; `"mkdocs"` builds the site with MkDocs, `pip install chartbook[mkdocs]`). `build` here is the old place for `[scripts] build`, still read
 - `[scripts]`: Named commands, one string each; `build` is what `chartbook run` and `chartbook build` run
 - `[models]`: Trained models (`path`, `trained_on`, `metrics_path`, a write-up), with `[models.<id>.aliases]` for labelled versions
+- `[files]`: Files that are not tables, whatever is inside (gzipped JSON lines, text, HTML, PDFs, images, arrays, a SQLite file, a vendor's zip): `path` (a file, a folder or a glob) and a dataframe's governance fields (`description`, a write-up, `sources`, `providers`, `license`, `restrictions`, `tags`, `keep`). Addressed `file/<name>`
 - `[dependencies]`: Other pipelines this one reads from, by ID: `"acme/rates" = {}` (its snapshots in the store), `{ path = "../x" }` (a folder, for two pipelines in one repository) or `{ git = "…" }` (a repository)
 - `[sources]`: Named database connections (DuckDB; Databricks, experimental) that a dataframe's `table` or `query` is read from
 - `[charts]`: Chart definitions with metadata
@@ -192,6 +197,14 @@ joblib.dump(model, models.path("my_model"))
 # models.path("my_model@champion") is that version in the store (read-only);
 # models.versions("my_model") lists them with their scores and commits.
 
+# Files that are not tables (an archive of .jsonl.gz, a corpus of HTML, PDFs, images,
+# .npy arrays) are declared in [files.<id>] with a path (file, folder or glob) and get
+# a page: file count, sizes, types, a listing and a short preview. ChartBook never
+# reads them; your code does. NEVER declare them under [dataframes]: data.load reads tables.
+paths = assets.files("file/filings")          # the files, sorted (a folder's, a glob's matches)
+table = assets.index("file/filings")          # LazyFrame: path, size_bytes, sha256, key=value folder keys
+# assets.files() works for a dataframe of many parts too: read a big glob a file at a time.
+
 # Another pipeline this one reads from is declared in chartbook.toml:
 #   [dependencies]
 #   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
@@ -216,7 +229,8 @@ mine = data.load("my_data")                                   # this pipeline's 
 one = data.load("my_data").select("date", "DGS10")
 # SQL: name dataframes in braces; ChartBook substitutes names and the engine runs the rest
 # (DuckDB for files and DuckDB sources; the warehouse for a databricks source).
-# A file is read_parquet('…'), a [sources] table its identifier, a query a sub-select.
+# A file is read_parquet('…'), read_csv('…', …) or read_json('…', …) by its format, a [sources]
+# table its identifier, a query a sub-select. An Arrow IPC file is handed to DuckDB as a dataset.
 joined = data.sql("select a.date, a.x, b.y from {my_data} a join {other} b using (date)")
 # A literal brace is written twice: data.sql("select {{'a': 1}} s from {my_data}")
 data.ref("my_data")        # the name to paste into SQL you run yourself
@@ -231,7 +245,7 @@ data.connect("local")      # the raw connection to [sources.local]: read-only du
 # An output that cost money or compute to make (a paid API run over a corpus, a trained
 # PyTorch or language model, a vendor pull under a quota, a scrape that cannot be redone):
 #   [dataframes.embeddings]   path = "./_data/embeddings.parquet"   keep = true
-# keep = true (the only value) on any dataframe, chart, notebook, note or model: every
+# keep = true (the only value) on any dataframe, chart, notebook, note, model or files asset: every
 # version stays in the store; `chartbook restore` puts it back after a clean or a clone;
 # `chartbook run` stops before remaking it (`--remake` to go on). For doit, give the costly
 # task `targets` and `uptodate: [True]` and NO file_dep: it then runs only when its file is missing.
@@ -261,7 +275,9 @@ path = "./_data/hive_dataset/**/*.parquet"
 docs = "Hive-partitioned dataset."
 ```
 
-Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Glob paths only support `format="polars"` (LazyFrame).
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Every `format=` of `data.load` reads a glob (`"pandas"` and `"polars_eager"` collect the LazyFrame).
+
+A dataframe's file may be parquet, CSV/TSV, JSON lines (gzipped or not) or Arrow IPC. The path's ending says which (`.csv`, `.tsv`, `.csv.gz`, `.jsonl`, `.ndjson`, `.jsonl.gz`, `.arrow`, `.feather`, `.ipc`); anything else, a folder included, is parquet unless `format = "parquet" | "csv" | "jsonl" | "ipc"` says otherwise. `read_options` (polars' names: `separator`, `has_header`, `quote_char`, `skip_lines`, `null_values`, `decimal_comma`, `schema_overrides`, `infer_schema_length`) go to the CSV or JSON lines reader, in `data.load` and, under DuckDB's names and meaning the same, in `data.sql`; polars' `comment_prefix` and `skip_rows` are not taken. A file that is not a table belongs under `[files]`, not `[dataframes]`.
 
 ## Directory Structure
 
@@ -310,7 +326,7 @@ name = "My Pipeline"
 description = "Description"
 maintainer = "Your Name"
 # id = "myorg/my_pipeline"       # Optional: scoped ID (default derived from git remote + dirname)
-requires_chartbook = ">=0.2.0"   # Optional: an older ChartBook stops and says how to upgrade (`chartbook init` writes it)
+requires_chartbook = ">=0.3.0"   # Optional: an older ChartBook stops and says how to upgrade (`chartbook init` writes it)
 # site_dir = "./docs_src/site/"  # Optional: default when the directory exists
 # writer = "mkdocs"              # Optional: build the site with MkDocs instead of Sphinx (pip install chartbook[mkdocs])
 ```

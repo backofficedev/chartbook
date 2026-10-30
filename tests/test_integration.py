@@ -24,6 +24,24 @@ from tests.fixtures import remove_tree
 MOCK_DATA_DIR = Path(__file__).parent / "fixtures" / "mock_fred_data"
 
 
+@pytest.fixture(autouse=True)
+def _examples_lockfiles_kept():
+    """Put back each example's lockfile as it was before the test.
+
+    A test of an example removes its lockfile to start unpinned, and again
+    after, since it pins a scratch store. One its developer had, pinning the
+    store they use, is theirs: it was removed by a full run of the tests.
+    """
+    examples = Path(__file__).resolve().parent.parent / "examples"
+    before = {path: path.read_bytes() for path in examples.glob("*/chartbook.lock")}
+    yield
+    for path in examples.glob("*/chartbook.lock"):
+        if path not in before:
+            path.unlink()
+    for path, content in before.items():
+        path.write_bytes(content)
+
+
 class TestManifestToGeneratorPipelineWorkflow:
     """End-to-end tests for pipeline documentation workflow.
 

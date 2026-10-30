@@ -9,7 +9,7 @@ need nothing else.
 
 The format is specified in ``docs_src/design/index-schema.md``. This module
 writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
-``Notebook``, ``Note`` and ``Model`` records, and each pipeline's declared
+``Notebook``, ``Note``, ``Model`` and ``File`` records, and each pipeline's declared
 ``dependencies``, with what ``chartbook.lock`` pins of them. ``Build``
 records come with the part of the asset graph that produces them.
 
@@ -66,7 +66,11 @@ SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
 
 #: The kinds of asset this module writes records for, in the order a
 #: pipeline's assets are listed.
-ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
+ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model", "file")
+
+#: The most files a record of a files asset, or of a dataframe of many
+#: parts, lists; ``file_count`` says how many there are in all.
+FILES_LISTED = 1000
 
 # Manifest keys that the index states in another form, or not at all
 #: Manifest keys that become a record's structure (its location, its
@@ -76,6 +80,11 @@ ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
 _STRUCTURAL_KEYS = frozenset(
     {"path", "docs", "docs_path", "dataframe", "linked_charts", "source", "table", "query"}
 )
+
+#: Names a record uses for what is worked out of an asset's files. A field
+#: of the manifest by one of these names is not carried, so that a record
+#: says one thing under each (``files = ["raw.csv"]`` on a dataframe).
+_RESERVED_KEYS = frozenset({"files", "file_count", "extensions"})
 
 
 def record_kind(kind: str) -> str:
@@ -140,7 +149,7 @@ def _declared_fields(entry: dict, skip: Iterable[str] = ()) -> dict:
     Keys are sorted, so that reordering a ``chartbook.toml`` does not
     reorder the index.
     """
-    skip = _STRUCTURAL_KEYS | set(skip)
+    skip = _STRUCTURAL_KEYS | _RESERVED_KEYS | set(skip)
     return {
         key: _jsonable(entry[key])
         for key in sorted(entry)
@@ -177,10 +186,8 @@ def _modified_at(resolved: str) -> Optional[str]:
     """When a file, or the newest file a glob names, was last written, in UTC."""
     import glob as globbing
 
-    from chartbook.utils import is_glob_pattern
-
-    if is_glob_pattern(resolved):
-        paths = globbing.glob(resolved, recursive=True)
+    if hashing.is_pattern(resolved):
+        paths = globbing.glob(hashing.split_glob(resolved)[1], recursive=True)
     elif os.path.isdir(resolved):
         # A directory's own time moves only when an entry is added or
         # removed; the newest file inside says when it was last written.
@@ -200,20 +207,24 @@ def _modified_at(resolved: str) -> Optional[str]:
     return datetime.fromtimestamp(max(stamps), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _date_range(resolved: str, date_col: str) -> Optional[dict]:
+def _date_range(resolved: str, date_col: str, entry: Optional[dict] = None) -> Optional[dict]:
     """The first and last value of a dataframe's date column, in ISO 8601.
 
     A date or datetime column is read as it is. A text column is parsed as
     dates first, since its least and greatest text need not be its first
     and last date; what does not parse is left out, and a column with no
-    date in it gives nothing. One column is read, lazily, so a large file
-    costs one column and not the whole. None when the column is not there,
-    holds no dates, or cannot be read.
+    date in it gives nothing. One column is read, lazily, so a large
+    parquet file costs one column and not the whole. The file is read as
+    its entry's ``format`` and ``read_options`` say (:mod:`chartbook.formats`).
+    None when the column is not there, holds no dates, or cannot be read.
     """
     import polars as pl
 
+    from chartbook import formats
+
+    entry = entry or {}
     try:
-        frame = pl.scan_parquet(resolved, hive_partitioning=True)
+        frame = formats.scan(resolved, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
         if date_col not in schema.names():
             return None
@@ -225,7 +236,7 @@ def _date_range(resolved: str, date_col: str) -> Optional[dict]:
         first, last = (
             frame.select(column.min().alias("first"), column.max().alias("last")).collect().row(0)
         )
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     return _span_as_text(first, last)
 
@@ -250,8 +261,18 @@ def _file_facts(
     :param list_files: If True and the path is a directory, also list the
         files in it, each with its own size and hash.
     """
+    return _located_facts(base_dir, declared_path, cache, list_files)[0]
+
+
+def _located_facts(
+    base_dir: Path,
+    declared_path: Any,
+    cache: Optional[hashing.HashCache],
+    list_files: bool = False,
+) -> tuple[dict, Optional[hashing.ContentHash]]:
+    """:func:`_file_facts`, and the hash it worked out, with each file's when there are several; None when not built."""
     if not isinstance(declared_path, str) or not declared_path.strip():
-        return {}
+        return {}, None
     resolved = os.path.normpath(base_dir / declared_path)
     facts: dict = {
         "location": {
@@ -280,7 +301,59 @@ def _file_facts(
                 }
                 for file in content.files
             ]
-    return facts
+    return facts, content
+
+
+def _listed_files(content: hashing.ContentHash, resolved: str, rows: bool = False) -> dict:
+    """What a record says of the files an asset is made of: how many, and the first :data:`FILES_LISTED`.
+
+    Each file with its path inside the asset, its size and its hash, and
+    the keys of the ``key=value`` folders it is in (``partitions``). With
+    *rows*, a parquet file's rows too, from its footer: no data is read.
+    A path that names one file lists that file, under its own name.
+    """
+    from chartbook.files import listing_root, partitions
+
+    if content.files:
+        entries = list(content.files)
+    elif _names_one_file(resolved):
+        entries = [hashing.FileEntry(Path(resolved).name, content.size_bytes, content.content_hash)]
+    else:
+        entries = []  # a folder with no file in it
+    root = listing_root(resolved)
+    listed = []
+    for entry in entries[:FILES_LISTED]:
+        item: dict = {"path": entry.path, "size_bytes": entry.size_bytes, "content_hash": entry.content_hash}
+        if rows:
+            count = _parquet_rows(root.joinpath(*entry.path.split("/")))
+            if count is not None:
+                item["row_count"] = count
+        keys = partitions(entry.path)
+        if keys:
+            item["partitions"] = keys
+        listed.append(item)
+    return {"file_count": len(entries), "files": listed}
+
+
+def _names_one_file(resolved: str) -> bool:
+    """Whether a declared path names one file, hashed as its bytes, and not a folder or a glob (:func:`chartbook.hashing.find_files`)."""
+    from chartbook.utils import is_glob_pattern
+
+    return not is_glob_pattern(resolved) and os.path.isfile(resolved)
+
+
+def _parquet_rows(file: Path) -> Optional[int]:
+    """A parquet file's rows, from its footer alone; None for a file that is not parquet, or cannot be read."""
+    from chartbook.resolve import _is_parquet
+
+    if not (file.name.lower().endswith((".parquet", ".pq")) or _is_parquet(file)):
+        return None
+    try:
+        import pyarrow.parquet as pq
+
+        return int(pq.read_metadata(file).num_rows)
+    except Exception:  # noqa: BLE001 - pyarrow raises many types for "not readable"
+        return None
 
 
 def _source_facts(entry: dict) -> dict:
@@ -388,19 +461,23 @@ def _definition_hash(location: dict, columns: list[dict], url: Optional[str]) ->
     return hashing.format_hash(hashlib.sha256(text.encode("utf-8")).hexdigest())
 
 
-def _describe_parquet(resolved_path: str) -> Optional[tuple[list[dict], int]]:
+def _describe_file(resolved_path: str, entry: dict) -> Optional[tuple[list[dict], int]]:
     """A dataframe's columns and row count, read the way ``data.load()`` reads it.
 
-    Only the parquet footers are read. Returns None when there is nothing
-    readable there, which includes "not built yet".
+    By the shared reader, as its entry's ``format`` and ``read_options`` say
+    (:mod:`chartbook.formats`). For parquet only the footers are read; a
+    CSV or JSON lines file is read through to count its rows. Returns None
+    when there is nothing readable there, which includes "not built yet".
     """
     import polars as pl
 
+    from chartbook import formats
+
     try:
-        frame = pl.scan_parquet(resolved_path, hive_partitioning=True)
+        frame = formats.scan(resolved_path, entry.get("format"), entry.get("read_options"))
         schema = frame.collect_schema()
         rows = frame.select(pl.len()).collect().item()
-    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - polars raises many types for "not readable", and panics
         return None
     columns = [
         {"name": name, "dtype": dtype_name(dtype)} for name, dtype in schema.items()
@@ -666,12 +743,36 @@ def _asset_records(
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
     record = _head(kind, ref, pipeline_id, entry)
-    facts = _file_facts(
+    facts, content = _located_facts(
         base_dir, entry.get("path"), cache, list_files=(kind == "model")
     )
     record.update(facts)
     series: list[dict] = []
     skip: tuple = ()
+    resolved = (facts.get("location") or {}).get("resolved_path")
+    for key in sorted(_RESERVED_KEYS & set(entry)):
+        warnings.warn(
+            f"{base_dir / 'chartbook.toml'}: [{KIND_TABLES[kind]}.{name}] {key}: left out of the index, which "
+            f"uses that name for the files an asset is made of. Rename the field to keep it.",
+            stacklevel=2,
+        )
+    if kind == "file" and content is not None and not content.files and not _names_one_file(resolved):
+        # A folder with no file in it, or none but what the system writes:
+        # not built, as check and a snapshot have it, and no hash of nothing
+        for key in ("content_hash", "size_bytes"):
+            record.pop(key, None)
+        record["location"].pop("modified_at", None)
+    elif kind == "file" and content is not None:
+        # What the page lists and counts: the files, and how many of each type
+        from chartbook.files import count_by_extension
+
+        listed = _listed_files(content, resolved)
+        record["file_count"] = listed["file_count"]
+        record["extensions"] = count_by_extension([entry.path for entry in content.files] or [Path(resolved).name])
+        record["files"] = listed["files"]
+    elif kind == "dataframe" and content is not None and content.files:
+        # A dataframe of many parts: each, with its rows, for its page
+        record.update(_listed_files(content, resolved, rows=True))
 
     if kind == "dataframe":
         skip = ("series",)  # they become Series records below
@@ -686,7 +787,7 @@ def _asset_records(
                     record["location"], described[0], (entry.get("_source") or {}).get("url")
                 )
         elif "content_hash" in facts:
-            described = _describe_parquet(facts["location"]["resolved_path"])
+            described = _describe_file(facts["location"]["resolved_path"], entry)
         columns = None
         where = f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]"
         if described is not None:
@@ -704,7 +805,7 @@ def _asset_records(
         series = _series_records(ref, entry, columns, where)
         date_col = entry.get("date_col")
         if date_col and "content_hash" in facts and columns and date_col in {c["name"] for c in columns}:
-            span = _date_range(facts["location"]["resolved_path"], date_col)
+            span = _date_range(facts["location"]["resolved_path"], date_col, entry)
             if span:
                 record["date_range"] = span
         elif date_col and record.get("location", {}).get("kind") in ("table", "query") and columns:
@@ -794,7 +895,7 @@ def pipeline_records(
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
-    Assets come in the order dataframes, charts, notebooks, notes, models,
+    Assets come in the order dataframes, charts, notebooks, notes, models, files,
     each by name, and each dataframe is followed by its series.
 
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).

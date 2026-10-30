@@ -1020,6 +1020,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     :param build_kwargs: Passed to ``generate_docs``.
     """
     from chartbook.build_docs import generate_docs
+    from chartbook.store import StoreError
 
     if watch_interval is not None and not watch:
         raise click.UsageError("--watch-interval only applies with --watch.")
@@ -1030,7 +1031,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     if not watch:
         try:
             summary = generate_docs(incremental=incremental, **build_kwargs)
-        except (ValueError, FileNotFoundError) as e:
+        except (ValueError, FileNotFoundError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         if summary is not None:
@@ -1043,7 +1044,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     def build_once():
         try:
             summary = generate_docs(incremental=True, **build_kwargs)
-        except (ValueError, FileNotFoundError) as e:
+        except (ValueError, FileNotFoundError, StoreError) as e:
             report(e)
             raise SystemExit(1)
         click.echo(summary.describe())
@@ -1310,14 +1311,14 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     pipelines = [
         get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
     ]
-    # Models and dependencies are counted only where there are some, so that
-    # the line for a project without them reads as it always has
+    # Models, files and dependencies are counted only where there are some,
+    # so that the line for a project without them reads as it always has
     sections = ["dataframes", "charts", "notebooks"]
-    for optional in ("models", "dependencies"):
+    for optional in ("models", "files", "dependencies"):
         if any(p.get(optional) for p in pipelines):
             sections.append(optional)
     counts = ", ".join(
-        f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
+        f"{sum(len(p.get(section) or {}) for p in pipelines)} {'files assets' if section == 'files' else section}"
         for section in sections
     )
     shown = display_path(manifest_path, relative_to=Path.cwd())
@@ -1366,7 +1367,7 @@ def _say_trust_level(manifest, project_dir):
 @click.argument("ref")
 @click.option(
     "--kind",
-    type=click.Choice(["dataframe", "chart", "notebook", "note", "model"]),
+    type=click.Choice(["dataframe", "chart", "notebook", "note", "model", "file"]),
     help="The kind of asset REF names, when REF does not say "
     "(default: dataframe). The same as writing KIND/REF.",
 )
@@ -1376,7 +1377,15 @@ def _say_trust_level(manifest, project_dir):
     help="Where to look for the pipeline: its chartbook.toml is found by "
     "walking up from here (default: the current directory)",
 )
-def path_command(ref, kind, project_dir):
+@click.option(
+    "--files",
+    "list_files",
+    is_flag=True,
+    default=False,
+    help="Print the asset's files, one per line, sorted: the file, a "
+    "folder's files or a glob's matches",
+)
+def path_command(ref, kind, project_dir, list_files):
     """Print the path of an asset: this pipeline's, or a pinned copy of another's.
 
     REF names an asset declared in the enclosing chartbook.toml. A dataframe
@@ -1388,6 +1397,7 @@ def path_command(ref, kind, project_dir):
         notebook/analysis       [notebooks.analysis]
         note/methodology        [notes.methodology]
         model/rate_forecaster   [models.rate_forecaster]
+        file/filings            [files.filings]
 
     The path is printed absolute, whether or not the file exists yet, so a
     build tool can use it for inputs and outputs alike. This is
@@ -1409,24 +1419,30 @@ def path_command(ref, kind, project_dir):
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
     it is until `chartbook update`.
 
+    With --files, the asset's files are printed instead, one per line: the
+    file, a folder's files, or a glob's matches, as
+    `chartbook.assets.files()` gives them.
+
     Examples:
         chartbook path repo_public
         chartbook path chart/repo_rates
         chartbook path repo_rates --kind chart --project-dir ../yield_curve
         chartbook path fed_yield_curve:treasury_rates
+        chartbook path file/filings --files
     """
+    from chartbook.assets import files as resolve_files
     from chartbook.assets import path as resolve_path
     from chartbook.store import StoreError
 
+    resolver = resolve_files if list_files else resolve_path
     try:
-        asset_path = resolve_path(
-            ref, kind=kind, project_dir=project_dir or Path.cwd()
-        )
+        found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
     except (LookupError, FileNotFoundError, ValueError, TypeError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    # Nothing but the path on stdout: this output gets captured
-    click.echo(str(asset_path))
+    # Nothing but the paths on stdout: this output gets captured
+    for asset_path in found if list_files else [found]:
+        click.echo(str(asset_path))
 
 
 @main.command()
@@ -2709,6 +2725,7 @@ def _echo_pin_report(report):
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
             "outside": "outside the repository",
+            "glob_name": "named like a pattern",
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
@@ -2744,7 +2761,7 @@ def _echo_pin_report(report):
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":
                 click.echo(f"  let go: {event.asset} ({event.detail})")
-            elif event.status == "outside":
+            elif event.status in ("outside", "glob_name"):
                 click.echo(f"  not pinned: {event.asset}: {event.detail}")
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
@@ -3544,6 +3561,217 @@ def store_info():
         raise SystemExit(1)
     click.echo(f"Cache: {shown_store_url(str(cache))}")
     click.echo("  where what is read from a remote store is kept on this machine")
+    _say_how_long_paths_are(folder)
+
+
+def _say_how_long_paths_are(folder) -> None:
+    """On Windows, say when the store's folder leaves its paths too little room (#136)."""
+    from chartbook import store as stores
+
+    if folder is None or not stores._ON_WINDOWS or stores.long_paths_enabled():
+        return
+    try:
+        longest, made = stores.FolderStore(folder).longest_paths()
+    except (stores.StoreError, OSError):
+        return
+    # Before any snapshot: an ID of 34 characters, and an ordinary file 30 deep in its pipeline
+    expected = max(longest, made, len(str(folder)) + len("\\pipelines\\") + 34 + 33 + 30)
+    if expected < stores.WINDOWS_PATH_LIMIT - 20:
+        return
+    click.echo(
+        click.style("Warning: ", fg="yellow", bold=True)
+        + f"the store's folder is {len(str(folder))} characters long, and its paths reach about {expected}: Windows "
+        f"refuses a path of {stores.WINDOWS_PATH_LIMIT} or more on this machine, where long paths are not turned on. "
+        f"{stores.LONG_PATHS_REMEDY}.",
+        err=True,
+    )
+
+
+@store.command("migrate")
+@click.option("--dry-run", is_flag=True, help="Say what would be moved, and move nothing")
+@click.option("--yes", "-y", is_flag=True, help="Do not ask")
+def store_migrate(dry_run, yes):
+    """Move a store made by ChartBook 0.2 to the layout of 0.3.
+
+    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder
+    for each snapshot in it named by when it was made and its commit, and
+    each file once, under its own name. A store of 0.2 is refused until it
+    is moved, once, on one machine.
+
+    Upgrade every machine that uses the store to ChartBook 0.3 first: a
+    machine still on 0.2 cannot read the store once it is moved, and says
+    so. Then run this on one of them; in a store a sync service keeps, the
+    others wait for the sync.
+
+    Files are moved by renaming, so a store in a synced folder uploads
+    nothing again; bytes two pipelines' snapshots share are copied for the
+    second. The files of a glob, whose records give no hash for each file,
+    are read once to hash them: in a folder that streams its files (Google
+    Drive's), that downloads them. A migrate cut short is run again and
+    goes on where it stopped. A store in a bucket is moved by syncing it to
+    a folder (`aws s3 sync`), moving that, and syncing it back.
+
+    \b
+    Examples:
+        chartbook store migrate --dry-run
+        chartbook store migrate
+    """
+    from chartbook import migrate
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        the_store = default_store()
+    except (StoreError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not isinstance(the_store, FolderStore):
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"The store at {the_store} is not a folder. Sync it to one (`aws s3 sync`), set CHARTBOOK_STORE to "
+            f"that folder, run this, and sync it back.",
+            err=True,
+        )
+        raise SystemExit(1)
+    try:
+        plan = migrate.plan(the_store.root)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not plan.needed:
+        click.echo(f"The store at {the_store} has the layout of this version already: nothing to move.")
+        return
+    left = len(plan.records) - plan.done
+    if plan.layout == "chartbook/store/v2" and not plan.unfinished:
+        click.echo(f"The store at {the_store} says it has the layout of ChartBook 0.3, and holds 0.2's folders too.")
+    elif not plan.unfinished:
+        click.echo(f"The store at {the_store} has the layout of ChartBook 0.2.")
+    if not plan.unfinished:
+        click.echo(
+            f"Would move {left} snapshot(s) of {len(plan.records)} into their pipelines' folders, from "
+            f"{plan.objects} object(s), {_format_bytes(plan.size_bytes)}"
+            + (f"; {plan.done} were moved by a migrate cut short" if plan.done else "")
+            + "."
+        )
+    if plan.unowned:
+        click.echo(f"{len(plan.unowned)} object(s) no snapshot names go to pipelines/+unowned/, until no lockfile names them.")
+    if plan.shared:
+        click.echo(f"{plan.shared} object(s) two pipelines' snapshots share are copied for the second.")
+    if plan.to_read:
+        click.echo(f"{_format_bytes(plan.to_read)} of globs and documents is read once, to hash each file.")
+    if plan.lost:
+        click.echo(f"{plan.lost} asset(s) the store had lost already, in 0.2, are named by their records still, as they were.")
+    if plan.unfinished:
+        click.echo(f"A migrate was cut short after it switched the store at {the_store}; what is left of the old layout is to go.")
+    if dry_run:
+        click.echo("Nothing was moved (--dry-run).")
+        return
+    if not yes and not click.confirm("Move it now? Every machine that uses this store must have ChartBook 0.3 first", default=False):
+        click.echo("Nothing was moved.")
+        return
+    try:
+        migrate.run(the_store.root, echo=click.echo)
+    except (StoreError, OSError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        click.echo("What was moved stays moved: run this again to go on.", err=True)
+        raise SystemExit(1)
+    click.echo(f"Moved. The store at {the_store} has the layout of ChartBook 0.3; `chartbook store verify` checks it.")
+
+
+def _folder_store_or_exit():
+    """This machine's store, if it is a folder; else the command stops, saying so."""
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        the_store = default_store()
+    except (StoreError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    if not isinstance(the_store, FolderStore):
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"The store at {the_store} is not a folder: this works on a folder store.", err=True)
+        raise SystemExit(1)
+    return the_store
+
+
+def _say_copied(done, verb: str) -> None:
+    click.echo(f"{verb} {len(done.copied)} snapshot(s), {_format_bytes(done.size_bytes)} copied.")
+    if done.there:
+        click.echo(f"{len(done.there)} snapshot(s) were there already, and were left as they are.")
+    for what, why in done.refused:
+        click.echo(click.style("Refused: ", fg="red", bold=True) + f"{what}: {why}", err=True)
+    if done.refused:
+        raise SystemExit(1)
+
+
+@store.command("export")
+@click.argument("pipeline")
+@click.option("--to", "to", required=True, type=click.Path(file_okay=False), help="The folder to write the export into")
+@click.option("--latest", is_flag=True, help="Only the newest snapshot, every file it needs in its own folder")
+@click.option("--snapshot", "snapshots", multiple=True, metavar="COMMIT[@MADE_AT]", help="Only this snapshot (more than one may be given)")
+def store_export(pipeline, to, latest, snapshots):
+    """Write one pipeline's snapshots into a folder, to send to someone.
+
+    The folder is laid out as a store is: TO/pipelines/PIPELINE/, a folder
+    for each snapshot, each file once, with its record. Send that folder;
+    whoever receives it runs `chartbook store import` on it, or copies it
+    into their store's pipelines/ by hand.
+
+    Every snapshot its owner made is written, or with --latest the newest
+    alone (one complete snapshot, readable without ChartBook), or each
+    --snapshot named. Only what a snapshot's record names is written: its
+    data, its documents and its index, never anything that runs.
+
+    \b
+    Examples:
+        chartbook store export ftsfr/fed_yield_curve --to ~/Desktop/for-alice
+        chartbook store export ftsfr/fed_yield_curve --latest --to ~/Desktop/for-alice
+        chartbook store export ftsfr/fed_yield_curve --snapshot 4f2a91c --to ./out
+    """
+    from chartbook import sharing
+    from chartbook.store import StoreError
+
+    the_store = _folder_store_or_exit()
+    if latest and snapshots:
+        click.echo(click.style("Error: ", fg="red", bold=True) + "Give --latest or --snapshot, not both.", err=True)
+        raise SystemExit(1)
+    try:
+        done = sharing.export(the_store, pipeline, to, "latest" if latest else list(snapshots) or None, echo=click.echo)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    _say_copied(done, "Exported")
+    click.echo(f"Send {Path(to).expanduser().resolve() / 'pipelines'}; `chartbook store import` there takes it in.")
+
+
+@store.command("import")
+@click.argument("folder", type=click.Path(exists=True, file_okay=False))
+def store_import(folder):
+    """Copy the snapshots a folder holds into this machine's store.
+
+    FOLDER is what `chartbook store export` wrote, a store, or one
+    pipeline's folder from a store (its snapshots' folders, each with
+    _chartbook/snapshot.json). Every file is hashed as it is copied and
+    checked against its record: a snapshot with a file that is not what its
+    record says is refused, and said. A file the store holds already is
+    not copied again, a snapshot it has already is left as it is, and
+    nothing in the store is written over. A pipeline in this store then
+    pins the snapshots by the pipeline's ID, with `chartbook pin` and
+    `chartbook update`.
+
+    \b
+    Examples:
+        chartbook store import ~/Downloads/for-alice
+        chartbook store import ~/Downloads/ftsfr+fed_yield_curve
+    """
+    from chartbook import sharing
+    from chartbook.store import StoreError
+
+    the_store = _folder_store_or_exit()
+    try:
+        done = sharing.import_snapshots(the_store, folder, echo=click.echo)
+    except StoreError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    _say_copied(done, "Imported")
 
 
 @store.command("verify")

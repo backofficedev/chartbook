@@ -13,6 +13,7 @@ A **pipeline** manifest has one metadata table plus entity sections:
 [notebooks]        # Jupyter notebook references
 [notes]            # Additional documentation notes
 [models]           # Trained models
+[files]            # Files that are not tables: archives, text, PDFs, images
 [dependencies]     # Other pipelines this one reads from
 ```
 
@@ -53,7 +54,7 @@ Every field is optional. Types and defaults:
 | `favicon` | path | bundled default |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed). The same as `build` in {ref}`[scripts] <scripts>` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name: `">=0.2.0"`, `">=0.3,<0.5"`. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member's stops the catalog, and the message names `chartbook catalog disable` to leave it out meanwhile. `chartbook trust`, `store gc` and `init` do not read it. A bare version (`"0.3.0"`) or the whole requirement (`"chartbook>=0.3"`) is refused with the specifier to write. `chartbook init` writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name: `">=0.3.0"`, `">=0.3,<0.5"`. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member's stops the catalog, and the message names `chartbook catalog disable` to leave it out meanwhile. `chartbook trust`, `store gc` and `init` do not read it. A bare version (`"0.3.0"`) or the whole requirement (`"chartbook>=0.3"`) is refused with the specifier to write. `chartbook init` writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key | `""` (any) |
 | `site_dir` | path | `"./docs_src/site/"` when that directory exists |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool the pages are written for. MkDocs needs `pip install chartbook[mkdocs]`; the build says so when it is missing | `"sphinx"` |
@@ -199,6 +200,7 @@ project    = ["description", "maintainer", "repo_url"]
 dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 models     = ["name", "trained_on", "docs"]
+files      = ["description", "license", "docs"]
 ```
 
 Without a `[policy]` section, chartbook's default recommended-field lists apply, warn-only. A kind you leave out of `[policy.required]` keeps its default list. Each list is a list of field names, in brackets; `project = "description"` is refused, not read as one name (nor as its letters), and the error shows the form to write. In a list, `docs` means "a write-up", and is satisfied by either `docs` or `docs_path`. In the `project` list, `build` means the build script: `[scripts] build`, or `[project] build`, the old place, which is still read. A missing one is named `[scripts] build`.
@@ -237,11 +239,11 @@ docs_path = "./docs_src/charts/revenue_trend.md"
 
 Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually a multi-line string) is required per chart.
 
-`keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note or model: {doc}`../guide/keeping-costly-outputs`.
+`keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note, model or files asset: {doc}`../guide/keeping-costly-outputs`.
 
 ## `[dataframes]` — Dataframe Definitions
 
-A dataframe is in one place: a parquet file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
+A dataframe is in one place: a file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the file — a single file, a folder of parts, or a glob pattern for hive-partitioned data — stored as parquet, CSV, JSON lines or Arrow IPC ({ref}`formats`):
 
 ```toml
 [dataframes.revenue_data]
@@ -271,7 +273,57 @@ Hive-partitioned data:
 path = "./_data/revenue_data/**/*.parquet"
 ```
 
-Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
+A dataset kept as one file a period is a glob too, so that a new year's file is part of it:
+
+```toml
+path = "./_data/transcripts_*.parquet"
+```
+
+`chartbook check` warns when a `path` names one such file (`transcripts_2026.parquet`) and no asset declares the rest ({ref}`chartbook check <chartbook-check>`, "One file of a set").
+
+A glob, like a folder, is one dataframe, and `data.load` reads it in every `format=` it offers. As with charts, exactly one of `docs_path` / `docs` is required.
+
+(formats)=
+### The file's format: `format` and `read_options`
+
+A dataframe's file is parquet, CSV or TSV, JSON lines (NDJSON, gzipped or not) or Arrow IPC (Feather). The ending of its `path` says which:
+
+| `format` | Endings |
+|---|---|
+| `"parquet"` | `.parquet` |
+| `"csv"` | `.csv`, `.tsv`, `.csv.gz`, `.tsv.gz` |
+| `"jsonl"` | `.jsonl`, `.ndjson`, `.jsonl.gz`, `.ndjson.gz` |
+| `"ipc"` | `.arrow`, `.feather`, `.ipc` |
+
+A path whose ending names none (a folder, Hive's `000000_0`, a `.txt`) is parquet, unless `format` says otherwise. A folder is read as the files in it of its format, passing over any named with a leading `.` or `_`. When its entry gives `format` and none of its files has that format's ending, it is read as the files with the ending most of its files have, passing over what is plainly not a table (a `README`, a `schema.json`, a `.md`): a folder of `.dat` files is read as CSV. A folder of parquet with nothing else in it is handed to polars whole, as it always was. A folder's Hive `key=value` folders become columns for parquet and Arrow IPC: those below it that every file has, and none above it, with the types and values polars gives them (`year=2024` a whole number, `date=2024-01-01` a date), in both engines. A filter on a key reads only the files it names, unless a `key=value` folder is above the one declared: its files are then read whole and given their keys one by one, and a file's own column of that key's name is kept as it is. A file or folder below a declared path is itself, whatever its name holds: a `[`, `*` or `?` in it (`tag=[draft]`, `a[1].parquet`) is not a glob. A declared path whose own parts name one (`./_data/[raw]`) is refused: `chartbook check` fails it, and `chartbook snapshot` stops on it, each saying to rename it. Polars reads no such columns from CSV or JSON lines, and DuckDB is told to read none either.
+
+`read_options` gives the reader of a CSV or JSON lines file its options. `data.load()`, the page and the index pass them to polars (`pl.scan_csv`, `pl.scan_ndjson`) by these names, and `data.sql()` passes them to DuckDB under its own, each so that it means the same there:
+
+```toml
+[dataframes.vendor_prices]
+path = "./_data/vendor/prices.txt"     # delivered as it is, with an ending that says nothing
+format = "csv"
+read_options = { separator = ";", skip_lines = 1, schema_overrides = { zip = "String" }, null_values = ["NA"] }
+docs = "The vendor's daily drop, kept as delivered, with a line about the delivery above its header."
+
+[dataframes.earnings_releases]
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"   # a field a later quarter brings is kept
+read_options = { schema_overrides = { event_id = "String" } }
+docs = "One nested record per event, a file per quarter."
+```
+
+| Option | For | What it is |
+|---|---|---|
+| `separator` | CSV | One character; `,` by default, a tab for `.tsv` |
+| `has_header` | CSV | `true` (the default) or `false`; with none, the columns are `column_1`, `column_2`, …, in both engines and in every polars (an empty name in a header is named so too) |
+| `quote_char` | CSV | One character, `"` by default; written twice inside a quoted field, it stands for itself |
+| `skip_lines` | CSV | Lines to skip before the header, as lines: a quote in them is not read as one |
+| `null_values` | CSV | A string, or a list of strings, read as null besides an empty field; a quoted empty field (`""`) is empty text. One of them in quotes (`"NA"`) is null to polars and text to DuckDB |
+| `decimal_comma` | CSV | `true` for `1,5` meaning one and a half |
+| `schema_overrides` | CSV, JSON lines | A table of columns and their types: `String`, `Boolean`, `Int8` to `Int64`, `UInt8` to `UInt64`, `Float32`, `Float64`, `Date`, `Datetime`, `Time`. A CSV file's columns are read as these types by both engines, `true` or `false` from the same words (`yes`, `t`, `1`, …). A JSON lines file's are cast to them by polars after the read (text trimmed, a date as `YYYY-MM-DD`, a time with an offset made UTC; a struct or a list is refused), and `data.sql()` hands DuckDB that frame, so that they mean the same there; such a file has no text for `data.ref()`, and DuckDB reads it whole, into memory, for each query, however little the query asks for. A column the file does not have is refused |
+| `infer_schema_length` | CSV, JSON lines | How many rows the types are inferred from, in both engines; 20480 by default, DuckDB's own |
+
+A parquet or Arrow IPC file keeps its own schema and takes none. Polars' `comment_prefix` and `skip_rows` are not taken: DuckDB reads a comment, and skips rows, otherwise than polars does. A `format` ChartBook does not read, an option it does not pass on, or one of the wrong type stops the manifest from loading, and `chartbook check` says which. Each JSON lines file of a glob or a folder has its types inferred from its own lines, and the files are joined by their columns' names, so a field the later ones bring is kept. What is left to inference is each engine's own: DuckDB finds dates and times in text, keeps the zeros of `00123` as text, and reads a JSON field of numbers and text as JSON, where polars leaves text, reads a number and reads text; give a column its type with `schema_overrides` where the two must agree. A gzipped file is decompressed whole, in memory, each time it is read. A file that is not a table at all is not a dataframe: `[files]`, planned for this release ({doc}`../design/plan-0.3.0`), is for it.
 
 `keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 
@@ -536,6 +588,53 @@ Not yet:
 - **Versions that travel.** A version is in the store of the machine that made its snapshot, or in a store a team shares (see {doc}`cli`, "A store a team shares"). A label pinned across pipelines needs the version's bytes in the store; one whose version is not there is pinned without them, and `--frozen` reports it.
 - **Versions of anything but a model.** A dataframe has snapshots, and no version names.
 - One file inside a directory model (`model/x#weights.pt`).
+
+(files)=
+## `[files]` — Files That Are Not Tables
+
+A files asset is a file, a folder of files or a glob of them that the pipeline keeps whatever is inside: gzipped JSON lines, text or HTML, PDFs, images, NumPy arrays, a SQLite or DuckDB file, a vendor's zip kept byte for byte. ChartBook moves, versions and documents the bytes, as for a model, and never treats them as a table. Reading them is one line of your own code.
+
+```toml
+[files.earnings_releases]
+name = "Earnings Releases"
+description = "The data API's earnings releases since 2014, one file a quarter, as the API sends them."
+path = "./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"
+sources = ["Vendor API"]
+providers = ["Vendor"]
+license = "Licensed to the department"
+restrictions = "Research use only"
+tags = ["Earnings", "Raw"]
+docs_path = "./docs_src/files/earnings_releases.md"
+keep = true
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `path` | yes | A file, a folder (every file under it), or a glob (`*`, `?`, `[...]`, `**` for any depth) |
+| `docs_path` or `docs` | no | Its write-up: what is in the files, and how to read them. Recommended by the default policy |
+| `keep` | no | `true` keeps every version of it in the store, as for a dataframe ({doc}`../guide/keeping-costly-outputs`): an archive that cost an API budget to build, or embeddings that cost GPU hours |
+| `name`, `description`, `tags`, `sources`, `providers`, `provider_links`, `license`, `license_expiration`, `restrictions`, `pull_method` | no | As for a dataframe. You may add fields of your own, but for `files`, `file_count` and `extensions`, which the index uses for what it says of the files, and leaves out of the record with a warning |
+
+The key (`earnings_releases`) is its address, `file/earnings_releases`, and another pipeline's is `pipeline:file/earnings_releases`. A file's own name may be anything; a folder's or glob's files are those its hash is made of, so `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*` files are never among them.
+
+**Reading them.**
+
+```python
+from chartbook import assets
+import polars as pl
+
+assets.path("file/earnings_releases")      # the path as declared (a glob stays a glob)
+assets.files("file/earnings_releases")     # the files, sorted: [Path(".../EARNINGS_RELEASE_2014Q1.jsonl.gz"), ...]
+index = assets.index("file/earnings_releases")   # a LazyFrame: path, size_bytes, sha256, and a column per key=value folder
+
+recent = index.filter(pl.col("path").str.contains("2025")).collect()
+```
+
+`assets.files` returns the file itself, a folder's files, or a glob's matches, sorted by their path inside the asset; it works for a dataframe of many parts and a model that is a folder too, so a large dataset can be read a file at a time. `assets.index` has one row per file, in the same order: `path` (the file), `size_bytes`, `sha256` (the file's hash, in hex), and, for files in `key=value` folders (`year=2024/q=1/x.htm`), a column for each key, as text. Pick files with polars before opening any. Of another pipeline's files, every size and hash comes from the record the store keeps, and nothing is read; of your own, the files are hashed, and a file is read again only when it has changed. On the command line, `chartbook path file/earnings_releases --files` prints the files, one per line.
+
+**What you get.** A page for it with its write-up, how many files it has and how large they are, how many of each type, a list of the first 50 with their sizes, the keys of any `key=value` folders, and a preview: the first lines of a text or JSON-lines file, gzip included (at most 4 KB is decompressed and shown, a line of JSON pretty-printed), or a thumbnail of an image (PNG, JPEG, GIF or WebP, up to 2 MB). A `File` record in `index.json` with its content hash, its file count, its count by type and its first 1000 files. `chartbook snapshot`, `pin`, `update`, `restore`, `lineage` and `store gc` treat it as any other asset. `chartbook check` reports a path that matches no file (a folder with nothing in it included), unless `--skip-outputs` is given, a write-up that is not there, and a license that has expired or soon will.
+
+Nothing reads the files beyond the preview: there is no `files.load()`, and no format of yours is ever parsed. A `#part` of a files asset (`file/x#one.pdf`) is not an address; use `assets.files` and pick the one you want.
 
 (dependencies)=
 ## `[dependencies]` — Other Pipelines This One Reads From
