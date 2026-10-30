@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Design — 0.4.0: the catalog as its stores
+
+The plan for 0.4.0 is written ({doc}`design/plan-0.4.0`): a catalog lists stores and shows every snapshot in them, from the store alone; a machine may have several stores, with new snapshots routed to the ones that should hold them and a dependency able to name a public store by URL; the catalog's pages become hubs over every version of a pipeline and of each of its dataframes; `chartbook.links.toml` points a pipeline's dependencies at working folders while two pipelines are fixed together; and `chartbook build` gives way to `chartbook run` and `chartbook docs build`. Nothing is built yet.
+
 ## [0.3.0] - 2026-10-29
 
 ### Read this first: upgrading from 0.2.0

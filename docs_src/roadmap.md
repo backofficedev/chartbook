@@ -32,6 +32,18 @@ With it come files that are not tables, tables stored as CSV, JSON lines or Arro
 datasets of many files, and a clear message about long paths on Windows. A store made by 0.2 is
 moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read this first").
 
+## 0.4.0
+
+0.4.0 is planned in {doc}`design/plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
+every pipeline with a snapshot in any of them, every version of each rendered from the store alone,
+with the data dictionary as it was then and what changed between versions, and a page for the
+stores themselves. A machine may have several stores, one Drive folder per collaborator, say, with
+each pipeline's new snapshots routed to the stores that should hold it, and a dependency may name a
+public store by URL so that a stranger who clones a downstream repository can fetch what its
+lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` beside a pipeline's
+manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
+the build script, `chartbook docs build` renders the site.
+
 ## Experimental: Databricks
 
 A dataframe can be a table or a query in a Databricks SQL warehouse
