@@ -42,7 +42,7 @@ disguise.
 |---|---|---|---|---|
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
 | **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its assets | `chartbook pin`, `chartbook update` (and `chartbook run`, for a first pin) | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
-| **snapshot** | `<store>/snapshots/<commit>/…/<time>.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
+| **snapshot** | `<store>/pipelines/<pipeline>/<time>_<commit>/_chartbook/snapshot.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
 | **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs generate`, `chartbook build` | Beside the site, so it travels with it |
 
 Three rules follow, and they settle arguments:
@@ -83,14 +83,15 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/version
 | **pipeline** | One project with a `chartbook.toml`: code that produces assets. Identified as `scope/name`, e.g. `ftsfr/fed_yield_curve` |
 | **scope** | The organization or owner half of a pipeline's ID. Taken from the git remote's owner |
 | **catalog** | A `chartbook.toml` that lists pipelines and builds one site over all of them. It declares no assets of its own |
-| **asset** | Something a pipeline declares: a dataframe, chart, notebook, note or model |
+| **asset** | Something a pipeline declares: a dataframe, chart, notebook, note, model or files asset |
 | **kind** | Which of those five an asset is. Written singular: `chart` |
 | **dataframe** | A table of data: a parquet file (or a glob of them), or a table or query in a source |
 | **series** | One column of a dataframe, given its own address and documentation |
 | **part** | Something inside an asset, addressed with `#`. A series is a dataframe's part; a file is a model's part |
 | **reference** | The address of an asset: `[registry/][scope/]pipeline:[kind/]name[#part][@rev]` |
 | **local reference** | A reference with no `pipeline:` in front: "in the pipeline I am in" |
-| **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.assets` for any kind |
+| **files asset** | A file, a folder or a glob of files that a pipeline keeps whatever is inside, declared in `[files]`: `file/name`. ChartBook does not read it, but for a short preview on its page |
+| **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.files` for files assets, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is: a file, or a table or query in a source |
 | **record** | One entry in the index, a lockfile or a snapshot. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
 | **store** | A folder of files named by their hash: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Holds snapshots and the pinned copies pipelines read |

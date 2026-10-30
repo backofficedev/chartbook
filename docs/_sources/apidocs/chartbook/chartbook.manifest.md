@@ -111,6 +111,10 @@
   - ```{autodoc2-docstring} chartbook.manifest.validate_doc_fields
     :summary:
     ```
+* - {py:obj}`validate_files <chartbook.manifest.validate_files>`
+  - ```{autodoc2-docstring} chartbook.manifest.validate_files
+    :summary:
+    ```
 * - {py:obj}`validate_manifest_file <chartbook.manifest.validate_manifest_file>`
   - ```{autodoc2-docstring} chartbook.manifest.validate_manifest_file
     :summary:
@@ -310,7 +314,7 @@
 ````{py:data} ENTITY_SECTIONS
 :canonical: chartbook.manifest.ENTITY_SECTIONS
 :value: >
-   ('charts', 'dataframes', 'notebooks', 'notes', 'models')
+   ('charts', 'dataframes', 'notebooks', 'notes', 'models', 'files')
 
 ```{autodoc2-docstring} chartbook.manifest.ENTITY_SECTIONS
 ```
@@ -624,6 +628,13 @@ Bases: {py:obj}`ValueError`
 :canonical: chartbook.manifest.validate_doc_fields
 
 ```{autodoc2-docstring} chartbook.manifest.validate_doc_fields
+```
+````
+
+````{py:function} validate_files(manifest: dict, base_dir: pathlib.Path) -> dict
+:canonical: chartbook.manifest.validate_files
+
+```{autodoc2-docstring} chartbook.manifest.validate_files
 ```
 ````
 

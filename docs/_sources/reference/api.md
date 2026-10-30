@@ -10,10 +10,12 @@ chartbook
 :maxdepth: 2
 
 ../apidocs/chartbook/chartbook.data
+../apidocs/chartbook/chartbook.formats
 ../apidocs/chartbook/chartbook.backends
 ../apidocs/chartbook/chartbook.backends.databricks
 ../apidocs/chartbook/chartbook.assets
 ../apidocs/chartbook/chartbook.models
+../apidocs/chartbook/chartbook.files
 ../apidocs/chartbook/chartbook.env
 ../apidocs/chartbook/chartbook.plotting
 ../apidocs/chartbook/chartbook.cli
@@ -31,6 +33,8 @@ chartbook
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.stores
 ../apidocs/chartbook/chartbook.stores.s3
+../apidocs/chartbook/chartbook.migrate
+../apidocs/chartbook/chartbook.sharing
 ../apidocs/chartbook/chartbook.snapshot
 ../apidocs/chartbook/chartbook.versions
 ../apidocs/chartbook/chartbook.lock

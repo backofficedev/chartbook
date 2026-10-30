@@ -47,6 +47,10 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`FILES_SHOWN <chartbook.writers.sphinx.FILES_SHOWN>`
+  - ```{autodoc2-docstring} chartbook.writers.sphinx.FILES_SHOWN
+    :summary:
+    ```
 * - {py:obj}`OVERRIDABLE_TEMPLATES <chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES>`
   - ```{autodoc2-docstring} chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES
     :summary:
@@ -54,6 +58,16 @@
 ````
 
 ### API
+
+````{py:data} FILES_SHOWN
+:canonical: chartbook.writers.sphinx.FILES_SHOWN
+:value: >
+   50
+
+```{autodoc2-docstring} chartbook.writers.sphinx.FILES_SHOWN
+```
+
+````
 
 ````{py:data} OVERRIDABLE_TEMPLATES
 :canonical: chartbook.writers.sphinx.OVERRIDABLE_TEMPLATES
@@ -84,7 +98,7 @@
 ````{py:attribute} ASSISTANT_SECTIONS
 :canonical: chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS
 :value: >
-   (('Pipeline', 'Pipelines'), ('Dataframe', 'Dataframes'), ('Chart', 'Charts'), ('Model', 'Models'))
+   (('Pipeline', 'Pipelines'), ('Dataframe', 'Dataframes'), ('Chart', 'Charts'), ('Model', 'Models'), (...
 
 ```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.ASSISTANT_SECTIONS
 ```
@@ -104,7 +118,7 @@
 ````{py:attribute} CATALOG_PAGES
 :canonical: chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES
 :value: >
-   ('index.md', 'cb/dataframes.md', 'cb/models.md', 'cb/pipelines.md', 'cb/diagnostics.md', 'cb/version...
+   ('index.md', 'cb/dataframes.md', 'cb/models.md', 'cb/files.md', 'cb/pipelines.md', 'cb/diagnostics.m...
 
 ```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.CATALOG_PAGES
 ```
@@ -195,6 +209,30 @@
    False
 
 ```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.enable_data_download
+```
+
+````
+
+````{py:method} files_page(record_id: str) -> str
+:canonical: chartbook.writers.sphinx.SphinxWriter.files_page
+
+```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.files_page
+```
+
+````
+
+````{py:method} files_page_path(record: dict) -> str
+:canonical: chartbook.writers.sphinx.SphinxWriter.files_page_path
+
+```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.files_page_path
+```
+
+````
+
+````{py:method} files_preview(record: dict) -> typing.Optional[dict]
+:canonical: chartbook.writers.sphinx.SphinxWriter.files_preview
+
+```{autodoc2-docstring} chartbook.writers.sphinx.SphinxWriter.files_preview
 ```
 
 ````

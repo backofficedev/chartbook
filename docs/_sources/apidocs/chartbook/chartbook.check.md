@@ -39,6 +39,10 @@
   - ```{autodoc2-docstring} chartbook.check.check_dependency_cycles
     :summary:
     ```
+* - {py:obj}`check_glob_names <chartbook.check.check_glob_names>`
+  - ```{autodoc2-docstring} chartbook.check.check_glob_names
+    :summary:
+    ```
 * - {py:obj}`check_ids <chartbook.check.check_ids>`
   - ```{autodoc2-docstring} chartbook.check.check_ids
     :summary:
@@ -69,6 +73,10 @@
     ```
 * - {py:obj}`check_required_fields <chartbook.check.check_required_fields>`
   - ```{autodoc2-docstring} chartbook.check.check_required_fields
+    :summary:
+    ```
+* - {py:obj}`check_siblings <chartbook.check.check_siblings>`
+  - ```{autodoc2-docstring} chartbook.check.check_siblings
     :summary:
     ```
 * - {py:obj}`check_sources <chartbook.check.check_sources>`
@@ -248,6 +256,13 @@
 ```
 ````
 
+````{py:function} check_glob_names(manifest: dict, base_dir: pathlib.Path) -> list[chartbook.check.Problem]
+:canonical: chartbook.check.check_glob_names
+
+```{autodoc2-docstring} chartbook.check.check_glob_names
+```
+````
+
 ````{py:function} check_ids(manifest: dict, base_dir: pathlib.Path) -> list[chartbook.check.Problem]
 :canonical: chartbook.check.check_ids
 
@@ -301,6 +316,13 @@
 :canonical: chartbook.check.check_required_fields
 
 ```{autodoc2-docstring} chartbook.check.check_required_fields
+```
+````
+
+````{py:function} check_siblings(manifest: dict, base_dir: pathlib.Path) -> list[chartbook.check.Problem]
+:canonical: chartbook.check.check_siblings
+
+```{autodoc2-docstring} chartbook.check.check_siblings
 ```
 ````
 

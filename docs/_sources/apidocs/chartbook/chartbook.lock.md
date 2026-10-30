@@ -338,6 +338,17 @@ Bases: {py:obj}`chartbook.lock.LockError`
 
 ````
 
+````{py:attribute} files
+:canonical: chartbook.lock.GcPlan.files
+:type: dict
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lock.GcPlan.files
+```
+
+````
+
 ````{py:attribute} forget
 :canonical: chartbook.lock.GcPlan.forget
 :type: list[pathlib.Path]
@@ -437,6 +448,28 @@ Bases: {py:obj}`chartbook.lock.LockError`
 
 ````
 
+````{py:attribute} pinned_delete
+:canonical: chartbook.lock.GcPlan.pinned_delete
+:type: list
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lock.GcPlan.pinned_delete
+```
+
+````
+
+````{py:attribute} pinned_kept
+:canonical: chartbook.lock.GcPlan.pinned_kept
+:type: list
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lock.GcPlan.pinned_kept
+```
+
+````
+
 ````{py:attribute} read_here
 :canonical: chartbook.lock.GcPlan.read_here
 :type: list[pathlib.Path]
@@ -455,6 +488,17 @@ Bases: {py:obj}`chartbook.lock.LockError`
    'field(...)'
 
 ```{autodoc2-docstring} chartbook.lock.GcPlan.recent
+```
+
+````
+
+````{py:attribute} recent_files
+:canonical: chartbook.lock.GcPlan.recent_files
+:type: set
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lock.GcPlan.recent_files
 ```
 
 ````
@@ -508,6 +552,17 @@ Bases: {py:obj}`chartbook.lock.LockError`
    'field(...)'
 
 ```{autodoc2-docstring} chartbook.lock.GcPlan.snapshots_kept
+```
+
+````
+
+````{py:attribute} unused
+:canonical: chartbook.lock.GcPlan.unused
+:type: list
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.lock.GcPlan.unused
 ```
 
 ````

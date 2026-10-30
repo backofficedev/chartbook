@@ -55,6 +55,14 @@
   - ```{autodoc2-docstring} chartbook.hashing.format_hash
     :summary:
     ```
+* - {py:obj}`glob_named <chartbook.hashing.glob_named>`
+  - ```{autodoc2-docstring} chartbook.hashing.glob_named
+    :summary:
+    ```
+* - {py:obj}`glob_named_said <chartbook.hashing.glob_named_said>`
+  - ```{autodoc2-docstring} chartbook.hashing.glob_named_said
+    :summary:
+    ```
 * - {py:obj}`glob_root <chartbook.hashing.glob_root>`
   - ```{autodoc2-docstring} chartbook.hashing.glob_root
     :summary:
@@ -71,12 +79,24 @@
   - ```{autodoc2-docstring} chartbook.hashing.hash_files
     :summary:
     ```
+* - {py:obj}`hash_listing <chartbook.hashing.hash_listing>`
+  - ```{autodoc2-docstring} chartbook.hashing.hash_listing
+    :summary:
+    ```
 * - {py:obj}`hash_path <chartbook.hashing.hash_path>`
   - ```{autodoc2-docstring} chartbook.hashing.hash_path
     :summary:
     ```
 * - {py:obj}`is_ignored <chartbook.hashing.is_ignored>`
   - ```{autodoc2-docstring} chartbook.hashing.is_ignored
+    :summary:
+    ```
+* - {py:obj}`is_pattern <chartbook.hashing.is_pattern>`
+  - ```{autodoc2-docstring} chartbook.hashing.is_pattern
+    :summary:
+    ```
+* - {py:obj}`split_glob <chartbook.hashing.split_glob>`
+  - ```{autodoc2-docstring} chartbook.hashing.split_glob
     :summary:
     ```
 ````
@@ -342,6 +362,20 @@
 ```
 ````
 
+````{py:function} glob_named(declared: str, absolute: typing.Union[str, pathlib.Path]) -> typing.Optional[str]
+:canonical: chartbook.hashing.glob_named
+
+```{autodoc2-docstring} chartbook.hashing.glob_named
+```
+````
+
+````{py:function} glob_named_said(declared: str, part: str) -> str
+:canonical: chartbook.hashing.glob_named_said
+
+```{autodoc2-docstring} chartbook.hashing.glob_named_said
+```
+````
+
 ````{py:function} glob_root(pattern: typing.Union[str, pathlib.Path]) -> pathlib.Path
 :canonical: chartbook.hashing.glob_root
 
@@ -370,6 +404,13 @@
 ```
 ````
 
+````{py:function} hash_listing(entries: typing.Iterable[chartbook.hashing.FileEntry]) -> chartbook.hashing.ContentHash
+:canonical: chartbook.hashing.hash_listing
+
+```{autodoc2-docstring} chartbook.hashing.hash_listing
+```
+````
+
 ````{py:function} hash_path(path: typing.Union[str, pathlib.Path], cache: typing.Optional[chartbook.hashing.HashCache] = None) -> typing.Optional[chartbook.hashing.ContentHash]
 :canonical: chartbook.hashing.hash_path
 
@@ -381,5 +422,19 @@
 :canonical: chartbook.hashing.is_ignored
 
 ```{autodoc2-docstring} chartbook.hashing.is_ignored
+```
+````
+
+````{py:function} is_pattern(path: typing.Union[str, pathlib.Path]) -> bool
+:canonical: chartbook.hashing.is_pattern
+
+```{autodoc2-docstring} chartbook.hashing.is_pattern
+```
+````
+
+````{py:function} split_glob(pattern: typing.Union[str, pathlib.Path]) -> tuple[pathlib.Path, str]
+:canonical: chartbook.hashing.split_glob
+
+```{autodoc2-docstring} chartbook.hashing.split_glob
 ```
 ````

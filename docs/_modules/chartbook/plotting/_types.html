@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../../../_static/documentation_options.js?v=06af8975"></script>
-    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/plotting/_types';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../../_static/searchtools.js"></script>
-    <script src="../../../_static/language_data.js"></script>
-    <script src="../../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -284,7 +284,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
@@ -352,14 +351,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -408,23 +402,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -451,28 +446,28 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.plotting._types</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Type definitions for chartbook.plotting."""</span>
+<span></span><span class="sd">&quot;&quot;&quot;Type definitions for chartbook.plotting.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.axes</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.figure</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">plotly.graph_objects</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">go</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.axes</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.figure</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+    <span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
 
 
 <div class="viewcode-block" id="ChartConfig">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ChartConfig</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Configuration for a single chart."""</span>
+<span class="k">class</span> <span class="nc">ChartConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configuration for a single chart.&quot;&quot;&quot;</span>
 
-    <span class="n">chart_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"line"</span><span class="p">,</span> <span class="s2">"bar"</span><span class="p">,</span> <span class="s2">"scatter"</span><span class="p">,</span> <span class="s2">"pie"</span><span class="p">,</span> <span class="s2">"area"</span><span class="p">]</span>
+    <span class="n">chart_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="s2">&quot;scatter&quot;</span><span class="p">,</span> <span class="s2">&quot;pie&quot;</span><span class="p">,</span> <span class="s2">&quot;area&quot;</span><span class="p">]</span>
     <span class="n">x</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">y</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
 
@@ -516,8 +511,8 @@
 <div class="viewcode-block" id="OverlayConfig">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">OverlayConfig</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Configuration for chart overlays."""</span>
+<span class="k">class</span> <span class="nc">OverlayConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configuration for chart overlays.&quot;&quot;&quot;</span>
 
     <span class="n">nber_recessions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">hlines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
@@ -531,14 +526,14 @@
 <div class="viewcode-block" id="DualAxisConfig">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">DualAxisConfig</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Configuration for dual-axis charts."""</span>
+<span class="k">class</span> <span class="nc">DualAxisConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configuration for dual-axis charts.&quot;&quot;&quot;</span>
 
     <span class="n">x</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">left_y</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
     <span class="n">right_y</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-    <span class="n">left_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"line"</span><span class="p">,</span> <span class="s2">"bar"</span><span class="p">,</span> <span class="s2">"scatter"</span><span class="p">,</span> <span class="s2">"area"</span><span class="p">]</span>
-    <span class="n">right_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"line"</span><span class="p">,</span> <span class="s2">"bar"</span><span class="p">,</span> <span class="s2">"scatter"</span><span class="p">,</span> <span class="s2">"area"</span><span class="p">]</span>
+    <span class="n">left_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="s2">&quot;scatter&quot;</span><span class="p">,</span> <span class="s2">&quot;area&quot;</span><span class="p">]</span>
+    <span class="n">right_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="s2">&quot;scatter&quot;</span><span class="p">,</span> <span class="s2">&quot;area&quot;</span><span class="p">]</span>
 
     <span class="c1"># chart_id is optional until save</span>
     <span class="n">chart_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -574,8 +569,8 @@
 <div class="viewcode-block" id="ChartResult">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ChartResult</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Result of creating a chart.</span>
+<span class="k">class</span> <span class="nc">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Result of creating a chart.</span>
 
 <span class="sd">    This object holds the generated figure and provides methods to display</span>
 <span class="sd">    and save the chart. Call `.show()` to display inline, or `.save(chart_id)`</span>
@@ -596,20 +591,20 @@
 <span class="sd">    --------</span>
 
 <span class="sd">    ```python</span>
-<span class="sd">    result = chartbook.plotting.line(df, x="date", y="gdp")</span>
+<span class="sd">    result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
 <span class="sd">    result.show()  # Display inline</span>
-<span class="sd">    result.save(chart_id="gdp_chart")  # Save to files</span>
+<span class="sd">    result.save(chart_id=&quot;gdp_chart&quot;)  # Save to files</span>
 <span class="sd">    print(result.html_path)  # Access saved file path</span>
 <span class="sd">    ```</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">figure</span><span class="p">:</span> <span class="s2">"go.Figure"</span>
+    <span class="n">figure</span><span class="p">:</span> <span class="s2">&quot;go.Figure&quot;</span>
     <span class="n">chart_type</span><span class="p">:</span> <span class="nb">str</span>
 
     <span class="c1"># Internal state for saving (not shown in repr)</span>
     <span class="n">_config</span><span class="p">:</span> <span class="n">ChartConfig</span> <span class="o">|</span> <span class="n">DualAxisConfig</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">_overlay</span><span class="p">:</span> <span class="n">OverlayConfig</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">_df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">_df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="c1"># Populated after .save()</span>
     <span class="n">chart_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
@@ -621,12 +616,12 @@
     <span class="n">pdf_wide_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
     <span class="c1"># Lazy matplotlib objects (private)</span>
-    <span class="n">_mpl_figure</span><span class="p">:</span> <span class="s2">"matplotlib.figure.Figure | None"</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">_mpl_axes</span><span class="p">:</span> <span class="s2">"matplotlib.axes.Axes | None"</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">_mpl_figure</span><span class="p">:</span> <span class="s2">&quot;matplotlib.figure.Figure | None&quot;</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">_mpl_axes</span><span class="p">:</span> <span class="s2">&quot;matplotlib.axes.Axes | None&quot;</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">mpl_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"matplotlib.figure.Figure"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Access matplotlib Figure for fine-grained control.</span>
+    <span class="k">def</span> <span class="nf">mpl_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;matplotlib.figure.Figure&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Access matplotlib Figure for fine-grained control.</span>
 
 <span class="sd">        The matplotlib figure is lazily created on first access. You can</span>
 <span class="sd">        customize it and then call `.save()` to export with your changes.</span>
@@ -638,19 +633,19 @@
 <span class="sd">        --------</span>
 
 <span class="sd">        ```python</span>
-<span class="sd">        result = chartbook.plotting.line(df, x="date", y="gdp")</span>
+<span class="sd">        result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
 <span class="sd">        fig = result.mpl_figure</span>
-<span class="sd">        fig.suptitle("Custom Title", fontsize=16)</span>
-<span class="sd">        result.save(chart_id="custom_chart")</span>
+<span class="sd">        fig.suptitle(&quot;Custom Title&quot;, fontsize=16)</span>
+<span class="sd">        result.save(chart_id=&quot;custom_chart&quot;)</span>
 <span class="sd">        ```</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_figure</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_create_mpl_objects</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_figure</span>  <span class="c1"># type: ignore[return-value]</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">mpl_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"matplotlib.axes.Axes"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Access matplotlib Axes for fine-grained control.</span>
+    <span class="k">def</span> <span class="nf">mpl_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;matplotlib.axes.Axes&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Access matplotlib Axes for fine-grained control.</span>
 
 <span class="sd">        The matplotlib axes is lazily created on first access. You can</span>
 <span class="sd">        customize it and then call `.save()` to export with your changes.</span>
@@ -662,36 +657,36 @@
 <span class="sd">        --------</span>
 
 <span class="sd">        ```python</span>
-<span class="sd">        result = chartbook.plotting.line(df, x="date", y="gdp")</span>
+<span class="sd">        result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
 <span class="sd">        ax = result.mpl_axes</span>
-<span class="sd">        ax.axhline(y=100, color='red', linestyle='--', label='Target')</span>
+<span class="sd">        ax.axhline(y=100, color=&#39;red&#39;, linestyle=&#39;--&#39;, label=&#39;Target&#39;)</span>
 <span class="sd">        ax.legend()</span>
-<span class="sd">        result.save(chart_id="annotated_chart")</span>
+<span class="sd">        result.save(chart_id=&quot;annotated_chart&quot;)</span>
 <span class="sd">        ```</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_create_mpl_objects</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_axes</span>  <span class="c1"># type: ignore[return-value]</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_create_mpl_objects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Lazily create matplotlib figure and axes.</span>
+    <span class="k">def</span> <span class="nf">_create_mpl_objects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Lazily create matplotlib figure and axes.</span>
 
 <span class="sd">        This method is called internally when accessing mpl_figure or mpl_axes</span>
 <span class="sd">        for the first time.</span>
-<span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_backend</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">chartbook.plotting.backends</span> <span class="kn">import</span> <span class="n">get_backend</span>
 
-        <span class="n">backend</span> <span class="o">=</span> <span class="n">get_backend</span><span class="p">(</span><span class="s2">"matplotlib"</span><span class="p">)</span>
+        <span class="n">backend</span> <span class="o">=</span> <span class="n">get_backend</span><span class="p">(</span><span class="s2">&quot;matplotlib&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_figure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mpl_axes</span> <span class="o">=</span> <span class="n">backend</span><span class="o">.</span><span class="n">build_figure</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_overlay</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="ChartResult.show">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.show">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"ChartResult"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Display the figure inline.</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ChartResult&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Display the figure inline.</span>
 
-<span class="sd">        Uses Plotly's interactive display. In Jupyter notebooks, this will</span>
+<span class="sd">        Uses Plotly&#39;s interactive display. In Jupyter notebooks, this will</span>
 <span class="sd">        render the chart directly in the output cell.</span>
 
 <span class="sd">        :returns: Self, for method chaining and Jupyter display.</span>
@@ -701,41 +696,41 @@
 <span class="sd">        --------</span>
 
 <span class="sd">        ```python</span>
-<span class="sd">        result = chartbook.plotting.line(df, x="date", y="gdp")</span>
+<span class="sd">        result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
 <span class="sd">        result.show()</span>
 <span class="sd">        ```</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_repr_html_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return HTML representation for Jupyter notebook display.</span>
+    <span class="k">def</span> <span class="nf">_repr_html_</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return HTML representation for Jupyter notebook display.</span>
 
 <span class="sd">        This method is called automatically by Jupyter when displaying</span>
 <span class="sd">        the object, enabling inline rendering of the Plotly figure.</span>
 
 <span class="sd">        :returns: HTML representation of the Plotly figure.</span>
 <span class="sd">        :rtype: str</span>
-<span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">include_plotlyjs</span><span class="o">=</span><span class="s2">"cdn"</span><span class="p">,</span> <span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">div_id</span><span class="o">=</span><span class="s2">"chartbook-figure"</span><span class="p">)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">to_html</span><span class="p">(</span><span class="n">include_plotlyjs</span><span class="o">=</span><span class="s2">&quot;cdn&quot;</span><span class="p">,</span> <span class="n">full_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">div_id</span><span class="o">=</span><span class="s2">&quot;chartbook-figure&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ChartResult.save">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.save">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">chart_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"ChartResult"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Save the chart to multiple formats.</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ChartResult&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save the chart to multiple formats.</span>
 
 <span class="sd">        Generates up to 5 files:</span>
 <span class="sd">        - `{chart_id}.html` - Interactive Plotly chart (if interactive=True)</span>
-<span class="sd">        - `{chart_id}.png` - Static PNG (8×6")</span>
-<span class="sd">        - `{chart_id}_wide.png` - Static PNG wide format (12×6")</span>
-<span class="sd">        - `{chart_id}.pdf` - Static PDF (8×6")</span>
-<span class="sd">        - `{chart_id}_wide.pdf` - Static PDF wide format (12×6")</span>
+<span class="sd">        - `{chart_id}.png` - Static PNG (8×6&quot;)</span>
+<span class="sd">        - `{chart_id}_wide.png` - Static PNG wide format (12×6&quot;)</span>
+<span class="sd">        - `{chart_id}.pdf` - Static PDF (8×6&quot;)</span>
+<span class="sd">        - `{chart_id}_wide.pdf` - Static PDF wide format (12×6&quot;)</span>
 
 <span class="sd">        :param chart_id: Unique identifier for the chart. Used in filenames and for</span>
 <span class="sd">            linking to chartbook.toml.</span>
@@ -751,17 +746,17 @@
 <span class="sd">        --------</span>
 
 <span class="sd">        ```python</span>
-<span class="sd">        result = chartbook.plotting.line(df, x="date", y="gdp")</span>
-<span class="sd">        result.save(chart_id="gdp_chart")</span>
+<span class="sd">        result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
+<span class="sd">        result.save(chart_id=&quot;gdp_chart&quot;)</span>
 <span class="sd">        print(result.html_path)</span>
 <span class="sd">        # Output: ./_output/gdp_chart.html</span>
 
 <span class="sd">        # Method chaining</span>
-<span class="sd">        paths = chartbook.plotting.line(df, x="date", y="gdp").save("gdp").paths</span>
+<span class="sd">        paths = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;).save(&quot;gdp&quot;).paths</span>
 <span class="sd">        ```</span>
-<span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._output</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_chart_from_result</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_chart_id</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">chartbook.plotting._output</span> <span class="kn">import</span> <span class="n">save_chart_from_result</span>
+        <span class="kn">from</span> <span class="nn">chartbook.plotting._validation</span> <span class="kn">import</span> <span class="n">validate_chart_id</span>
 
         <span class="n">validate_chart_id</span><span class="p">(</span><span class="n">chart_id</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">chart_id</span> <span class="o">=</span> <span class="n">chart_id</span>
@@ -771,47 +766,47 @@
 
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Get all saved file paths as a dictionary.</span>
+    <span class="k">def</span> <span class="nf">paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all saved file paths as a dictionary.</span>
 
 <span class="sd">        Returns an empty dict if `.save()` has not been called yet.</span>
 
 <span class="sd">        :returns: Mapping of format name to file path.</span>
-<span class="sd">            Keys: 'html', 'png', 'png_wide', 'pdf', 'pdf_wide'</span>
+<span class="sd">            Keys: &#39;html&#39;, &#39;png&#39;, &#39;png_wide&#39;, &#39;pdf&#39;, &#39;pdf_wide&#39;</span>
 <span class="sd">        :rtype: dict[str, Path]</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
 
 <span class="sd">        ```python</span>
-<span class="sd">        result = chartbook.plotting.line(df, x="date", y="gdp")</span>
+<span class="sd">        result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;)</span>
 <span class="sd">        result.paths  # Empty before save</span>
 <span class="sd">        # Output: {}</span>
-<span class="sd">        result.save(chart_id="gdp")</span>
+<span class="sd">        result.save(chart_id=&quot;gdp&quot;)</span>
 <span class="sd">        result.paths</span>
-<span class="sd">        # Output: {'html': Path('./_output/gdp.html'), 'png': Path('./_output/gdp.png'), ...}</span>
+<span class="sd">        # Output: {&#39;html&#39;: Path(&#39;./_output/gdp.html&#39;), &#39;png&#39;: Path(&#39;./_output/gdp.png&#39;), ...}</span>
 <span class="sd">        ```</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span>
         <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">html_path</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">"html"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">html_path</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">html_path</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_path</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">"png"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_path</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;png&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_path</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_wide_path</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">"png_wide"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_wide_path</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;png_wide&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">png_wide_path</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_path</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">"pdf"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_path</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;pdf&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_path</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_wide_path</span><span class="p">:</span>
-            <span class="n">result</span><span class="p">[</span><span class="s2">"pdf_wide"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_wide_path</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;pdf_wide&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pdf_wide_path</span>
         <span class="k">return</span> <span class="n">result</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_id</span><span class="p">:</span>
-            <span class="n">paths_str</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"ChartResult(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">paths_str</span><span class="si">}</span><span class="s2">)"</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"ChartResult(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chart_type</span><span class="si">}</span><span class="s2">, unsaved)"</span></div>
+            <span class="n">paths_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ChartResult(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">paths_str</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ChartResult(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">chart_type</span><span class="si">}</span><span class="s2">, unsaved)&quot;</span></div>
 
 </pre></div>
 
@@ -875,8 +870,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -171,12 +171,24 @@
   - ```{autodoc2-docstring} chartbook.cli.store
     :summary:
     ```
+* - {py:obj}`store_export <chartbook.cli.store_export>`
+  - ```{autodoc2-docstring} chartbook.cli.store_export
+    :summary:
+    ```
 * - {py:obj}`store_gc <chartbook.cli.store_gc>`
   - ```{autodoc2-docstring} chartbook.cli.store_gc
     :summary:
     ```
+* - {py:obj}`store_import <chartbook.cli.store_import>`
+  - ```{autodoc2-docstring} chartbook.cli.store_import
+    :summary:
+    ```
 * - {py:obj}`store_info <chartbook.cli.store_info>`
   - ```{autodoc2-docstring} chartbook.cli.store_info
+    :summary:
+    ```
+* - {py:obj}`store_migrate <chartbook.cli.store_migrate>`
+  - ```{autodoc2-docstring} chartbook.cli.store_migrate
     :summary:
     ```
 * - {py:obj}`store_verify <chartbook.cli.store_verify>`
@@ -427,7 +439,7 @@
 ```
 ````
 
-````{py:function} path_command(ref, kind, project_dir)
+````{py:function} path_command(ref, kind, project_dir, list_files)
 :canonical: chartbook.cli.path_command
 
 ```{autodoc2-docstring} chartbook.cli.path_command
@@ -490,6 +502,13 @@
 ```
 ````
 
+````{py:function} store_export(pipeline, to, latest, snapshots)
+:canonical: chartbook.cli.store_export
+
+```{autodoc2-docstring} chartbook.cli.store_export
+```
+````
+
 ````{py:function} store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive)
 :canonical: chartbook.cli.store_gc
 
@@ -497,10 +516,24 @@
 ```
 ````
 
+````{py:function} store_import(folder)
+:canonical: chartbook.cli.store_import
+
+```{autodoc2-docstring} chartbook.cli.store_import
+```
+````
+
 ````{py:function} store_info()
 :canonical: chartbook.cli.store_info
 
 ```{autodoc2-docstring} chartbook.cli.store_info
+```
+````
+
+````{py:function} store_migrate(dry_run, yes)
+:canonical: chartbook.cli.store_migrate
+
+```{autodoc2-docstring} chartbook.cli.store_migrate
 ```
 ````
 

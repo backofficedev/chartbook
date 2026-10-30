@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -276,6 +276,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -283,6 +284,7 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -310,6 +312,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -349,6 +353,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -503,7 +508,11 @@
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.INDEX_COLUMNS"><code class="docutils literal notranslate"><span class="pre">INDEX_COLUMNS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.files"><code class="docutils literal notranslate"><span class="pre">files()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.index"><code class="docutils literal notranslate"><span class="pre">index()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.path"><code class="docutils literal notranslate"><span class="pre">path()</span></code></a></li>
 </ul>
 </li>
@@ -524,9 +533,9 @@
 <span id="chartbook-assets"></span><h1><a class="reference internal" href="#module-chartbook.assets" title="chartbook.assets"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a><a class="headerlink" href="#module-chartbook.assets" title="Link to this heading">#</a></h1>
 <p>Assets: everything a pipeline declares, addressed one way.</p>
 <p>An asset is something <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> declares: a dataframe, a chart, a
-notebook, a note or a model. Each is addressed by a <em>reference</em>. Within the pipeline
-you are in, that is the asset’s name, with its kind in front unless it is a
-dataframe::</p>
+notebook, a note, a model or a files asset. Each is addressed by a
+<em>reference</em>. Within the pipeline you are in, that is the asset’s name, with
+its kind in front unless it is a dataframe::</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>from chartbook import assets
 
 assets.path("treasury_rates")        # [dataframes.treasury_rates]
@@ -534,6 +543,14 @@ assets.path("chart/yield_curve")     # [charts.yield_curve]
 assets.path("notebook/analysis")     # [notebooks.analysis]
 assets.path("note/methodology")      # [notes.methodology]
 assets.path("model/rate_forecaster") # [models.rate_forecaster]
+assets.path("file/filings")          # [files.filings]
+</pre></div>
+</div>
+<p>An asset’s path may be a folder or a glob. :func:<code class="docutils literal notranslate"><span class="pre">files</span></code> gives the files
+themselves, sorted, and :func:<code class="docutils literal notranslate"><span class="pre">index</span></code> a table of them, with their sizes and
+hashes, to choose from before opening any::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>assets.files("file/filings")         # [Path(".../2024/10-K.htm"), ...]
+assets.index("file/filings")         # a LazyFrame: path, size_bytes, sha256
 </pre></div>
 </div>
 <p>The kind may be given as an argument instead, which reads better when the
@@ -572,6 +589,12 @@ registry parse, and are refused as not yet supported.</p>
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.assets.files" title="chartbook.assets.files"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files</span></code></a></p></td>
+<td><p>Get the files of an asset: the file, a folder’s files, or a glob’s matches, sorted.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.assets.index" title="chartbook.assets.index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">index</span></code></a></p></td>
+<td><p>Get a table of an asset’s files, one row per file, to choose from before opening any.</p></td>
+</tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.assets.path" title="chartbook.assets.path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">path</span></code></a></p></td>
 <td><p>Get the path of an asset: this pipeline’s own, or a pinned copy of another’s.</p></td>
 </tr>
@@ -579,8 +602,115 @@ registry parse, and are refused as not yet supported.</p>
 </table>
 </div>
 </section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.assets.INDEX_COLUMNS" title="chartbook.assets.INDEX_COLUMNS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">INDEX_COLUMNS</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.assets.INDEX_COLUMNS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.assets.</span></span><span class="sig-name descname"><span class="pre">INDEX_COLUMNS</span></span><a class="headerlink" href="#chartbook.assets.INDEX_COLUMNS" title="Link to this definition">#</a></dt>
+<dd><p>(‘path’, ‘size_bytes’, ‘sha256’)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.assets.files">
+<span class="sig-prename descclassname"><span class="pre">chartbook.assets.</span></span><span class="sig-name descname"><span class="pre">files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/assets.html#files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.assets.files" title="Link to this definition">#</a></dt>
+<dd><p>Get the files of an asset: the file, a folder’s files, or a glob’s matches, sorted.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>from chartbook import assets
+for path in assets.files(“filings:file/earnings_releases”):  # doctest: +SKIP
+…     records = read_one(path)</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>The asset is found as :func:<code class="docutils literal notranslate"><span class="pre">path</span></code> finds it, and its files are the
+ones its content hash is made of (:mod:<code class="docutils literal notranslate"><span class="pre">chartbook.hashing</span></code>): every file
+under a folder or matched by a glob, but <code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code> and the few
+others operating systems write by themselves. Of another pipeline’s
+asset they are the files of the pinned copy, as its record lists them.
+They are sorted by their path inside the asset, so a dataset of a file
+a year is read in order of the years.</p>
+<p>It works for every asset with files: a files asset, a dataframe of
+many parts (to read one at a time), a model that is a folder.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> – A reference to the asset, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+<li><p><strong>kind</strong> – The kind of asset expected, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+<li><p><strong>project_dir</strong> – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The absolute path of each file.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If nothing is there: the asset is not built.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If the asset is a table or a query in a source.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – As for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>, and the rest of its errors.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.assets.index">
+<span class="sig-prename descclassname"><span class="pre">chartbook.assets.</span></span><span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/assets.html#index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.assets.index" title="Link to this definition">#</a></dt>
+<dd><p>Get a table of an asset’s files, one row per file, to choose from before opening any.</p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>import polars as pl
+from chartbook import assets
+chosen = (
+…     assets.index(“filings:file/earnings_releases”)
+…     .filter(pl.col(“year”) &gt;= “2020”)
+…     .collect()
+… )  # doctest: +SKIP</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+<p>The columns are <code class="docutils literal notranslate"><span class="pre">path</span></code> (the file, as :func:<code class="docutils literal notranslate"><span class="pre">files</span></code> gives it),
+<code class="docutils literal notranslate"><span class="pre">size_bytes</span></code>, <code class="docutils literal notranslate"><span class="pre">sha256</span></code> (the file’s hash, in hex), and then the key
+of each <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folder the files are in, as text:
+<code class="docutils literal notranslate"><span class="pre">filings/year=2024/q=1/x.htm</span></code> has <code class="docutils literal notranslate"><span class="pre">year</span></code> <code class="docutils literal notranslate"><span class="pre">&quot;2024&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">q</span></code>
+<code class="docutils literal notranslate"><span class="pre">&quot;1&quot;</span></code>. The rows are in the order :func:<code class="docutils literal notranslate"><span class="pre">files</span></code> gives.</p>
+<p>Of another pipeline’s asset, every file’s size and hash come from the
+record the store keeps of it, and nothing is read. Of this pipeline’s,
+the files are hashed, and a file is read again only when it has changed
+(a hash cache in this machine’s cache, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/hashes</span></code>).</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref</strong> – A reference to the asset, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+<li><p><strong>kind</strong> – The kind of asset expected, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+<li><p><strong>project_dir</strong> – Where to look for the pipeline, as for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">polars.LazyFrame</span></code>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If nothing is there: the asset is not built.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.15)"><strong>TypeError</strong></a> – If the asset is a table or a query in a source.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.AssetNotDeclaredError" title="chartbook.errors.AssetNotDeclaredError"><strong>AssetNotDeclaredError</strong></a> – As for :func:<code class="docutils literal notranslate"><span class="pre">path</span></code>, and the rest of its errors.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.assets.path">
 <span class="sig-prename descclassname"><span class="pre">chartbook.assets.</span></span><span class="sig-name descname"><span class="pre">path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/assets.html#path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.assets.path" title="Link to this definition">#</a></dt>
@@ -627,7 +757,7 @@ moves only when you run <code class="docutils literal notranslate"><span class="
 <code class="docutils literal notranslate"><span class="pre">&quot;kind/name&quot;</span></code> for anything else, <code class="docutils literal notranslate"><span class="pre">&quot;pipeline:name&quot;</span></code> for another
 pipeline’s, or an :class:<code class="docutils literal notranslate"><span class="pre">AssetRef</span></code>.</p></li>
 <li><p><strong>kind</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>]</em>) – The kind of asset expected: <code class="docutils literal notranslate"><span class="pre">&quot;dataframe&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;chart&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;notebook&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;note&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;model&quot;</span></code>. A reference that names no kind takes
+<code class="docutils literal notranslate"><span class="pre">&quot;notebook&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;note&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;model&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;file&quot;</span></code>. A reference that names no kind takes
 this one. By default, a reference that names no kind is a dataframe.</p></li>
 <li><p><strong>project_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><em>Path</em><em>]</em><em>]</em>) – Where to look for the pipeline. The enclosing
 <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is found by walking up from here. By default the
@@ -637,7 +767,7 @@ current working directory.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The absolute path of the asset (it may contain glob
-characters for partitioned data).</p>
+characters for partitioned data; :func:<code class="docutils literal notranslate"><span class="pre">files</span></code> gives the files).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Path</p>
@@ -712,7 +842,11 @@ syntax that is reserved and not yet supported, or the entry has no
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.INDEX_COLUMNS"><code class="docutils literal notranslate"><span class="pre">INDEX_COLUMNS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.files"><code class="docutils literal notranslate"><span class="pre">files()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.index"><code class="docutils literal notranslate"><span class="pre">index()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.assets.path"><code class="docutils literal notranslate"><span class="pre">path()</span></code></a></li>
 </ul>
 </li>

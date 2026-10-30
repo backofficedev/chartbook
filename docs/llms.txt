@@ -12,7 +12,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## Guides
 
-- [Documenting a Pipeline](guide/documenting-a-pipeline.html): Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`
+- [Documenting a Pipeline](guide/documenting-a-pipeline.html): Describe charts, dataframes, notebooks, notes, models and files in `chartbook.toml`; `[files]` for files that are not tables (archives, text, PDFs, images, arrays)
 - [Depending on Another Pipeline](guide/depending-on-pipelines.html): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
 - [Keeping Costly Outputs](guide/keeping-costly-outputs.html): `keep = true` on an output that cost money or compute (a paid API run's output, a trained model): every version stays in the store, `chartbook restore` puts it back, `chartbook run` stops before remaking it (`--remake`); the doit recipe
 - [Catalogs and Data Access](guide/catalogs-and-data.html): Aggregate pipelines; load any cataloged dataset with `data.load()`; every snapshot of every pipeline is its own site under `versions/`, listed on the catalog's Versions page; a `[pipelines]` entry with no path shows a pipeline from the store alone
@@ -40,11 +40,12 @@ chartbook docs generate -f --watch  # Rebuild incrementally on every file change
 chartbook docs open          # Open the generated site (was `chartbook browse`)
 chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 # every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
-# notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
-# and docs/llms.txt: a line per pipeline, dataframe, chart and model with its ID and page link
+# notebook, note, model and files asset, each with an ID (scope/pipeline:kind/name) and a content hash,
+# and docs/llms.txt: a line per pipeline, dataframe, chart, model and files asset with its ID and page link
 # (a catalog's also links each version's own llms.txt); read it first to find your way around a site
 chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
-chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
+chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>, model/<name>, file/<name>)
+chartbook path file/<name> --files  # the asset's files, one per line, sorted: a folder's files, a glob's matches
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store (a first read pins it)
 chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
@@ -69,6 +70,9 @@ chartbook trust              # Say this folder's pipeline is yours to build (at 
 chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)
+chartbook store migrate      # Move a store made by ChartBook 0.2 to 0.3's layout (a folder per pipeline, a folder per snapshot, each file once); once, after every machine has 0.3; --dry-run first
+chartbook store export ID --to DIR   # One pipeline's snapshots into DIR/pipelines/<pipeline>/, to send (--latest, --snapshot COMMIT[@MADE_AT])
+chartbook store import DIR    # Copy the snapshots in DIR (an export, or a pipeline's folder) into this store, each file checked against its record
 chartbook config             # Configure default catalog path
 chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
 chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
@@ -91,6 +95,10 @@ lf = data.load(pipeline="acme/markets", dataframe="market_data")       # through
 df = data.load(pipeline="markets", dataframe="market_data", format="pandas")  # a bare name when only one matches
 rates = data.load("fed_yield_curve:treasury_rates")                    # inside a pipeline: a dependency's pinned copy, by reference
 path = data.path("my_dataframe")                                        # inside a pipeline: where its own chartbook.toml puts it
+
+from chartbook import assets
+paths = assets.files("file/filings")             # a [files] asset's files, sorted (works for a dataframe of many parts too)
+table = assets.index("dep:file/filings")         # LazyFrame: path, size_bytes, sha256, a column per key=value folder; a dependency's from the store's record
 docs = data.get_docs(pipeline="markets", dataframe="market_data")       # the write-up, as text
 ```
 

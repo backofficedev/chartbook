@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/documentation_options.js?v=6512192e"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -271,6 +271,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -278,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -305,6 +307,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -344,6 +348,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -464,6 +469,8 @@
 <li><a href="chartbook/diagnostics.html">chartbook.diagnostics</a></li>
 <li><a href="chartbook/env.html">chartbook.env</a></li>
 <li><a href="chartbook/errors.html">chartbook.errors</a></li>
+<li><a href="chartbook/files.html">chartbook.files</a></li>
+<li><a href="chartbook/formats.html">chartbook.formats</a></li>
 <li><a href="chartbook/gitcache.html">chartbook.gitcache</a></li>
 <li><a href="chartbook/hashing.html">chartbook.hashing</a></li>
 <li><a href="chartbook/identity.html">chartbook.identity</a></li>
@@ -473,6 +480,7 @@
 <li><a href="chartbook/lineage.html">chartbook.lineage</a></li>
 <li><a href="chartbook/lock.html">chartbook.lock</a></li>
 <li><a href="chartbook/manifest.html">chartbook.manifest</a></li>
+<li><a href="chartbook/migrate.html">chartbook.migrate</a></li>
 <li><a href="chartbook/models.html">chartbook.models</a></li>
 <li><a href="chartbook/path_validation.html">chartbook.path_validation</a></li>
 <li><a href="chartbook/plotting/_api.html">chartbook.plotting._api</a></li>
@@ -492,6 +500,7 @@
 <li><a href="chartbook/resolve.html">chartbook.resolve</a></li>
 <li><a href="chartbook/run.html">chartbook.run</a></li>
 <li><a href="chartbook/scaffold.html">chartbook.scaffold</a></li>
+<li><a href="chartbook/sharing.html">chartbook.sharing</a></li>
 <li><a href="chartbook/sitefiles.html">chartbook.sitefiles</a></li>
 <li><a href="chartbook/snapshot.html">chartbook.snapshot</a></li>
 <li><a href="chartbook/store.html">chartbook.store</a></li>

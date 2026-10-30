@@ -67,6 +67,10 @@
   - ```{autodoc2-docstring} chartbook.snapshot.by_repository
     :summary:
     ```
+* - {py:obj}`check_own_name <chartbook.snapshot.check_own_name>`
+  - ```{autodoc2-docstring} chartbook.snapshot.check_own_name
+    :summary:
+    ```
 * - {py:obj}`check_within <chartbook.snapshot.check_within>`
   - ```{autodoc2-docstring} chartbook.snapshot.check_within
     :summary:
@@ -97,6 +101,10 @@
     ```
 * - {py:obj}`improper_path <chartbook.snapshot.improper_path>`
   - ```{autodoc2-docstring} chartbook.snapshot.improper_path
+    :summary:
+    ```
+* - {py:obj}`is_at <chartbook.snapshot.is_at>`
+  - ```{autodoc2-docstring} chartbook.snapshot.is_at
     :summary:
     ```
 * - {py:obj}`keeps_of <chartbook.snapshot.keeps_of>`
@@ -293,6 +301,10 @@
     ```
 * - {py:obj}`NOT_TRACKED <chartbook.snapshot.NOT_TRACKED>`
   - ```{autodoc2-docstring} chartbook.snapshot.NOT_TRACKED
+    :summary:
+    ```
+* - {py:obj}`READS <chartbook.snapshot.READS>`
+  - ```{autodoc2-docstring} chartbook.snapshot.READS
     :summary:
     ```
 * - {py:obj}`SCHEMA <chartbook.snapshot.SCHEMA>`
@@ -565,6 +577,16 @@
 
 ````
 
+````{py:data} READS
+:canonical: chartbook.snapshot.READS
+:value: >
+   ('chartbook/snapshot/v1',)
+
+```{autodoc2-docstring} chartbook.snapshot.READS
+```
+
+````
+
 `````{py:class} Restored
 :canonical: chartbook.snapshot.Restored
 
@@ -598,7 +620,7 @@
 ````{py:data} SCHEMA
 :canonical: chartbook.snapshot.SCHEMA
 :value: >
-   'chartbook/snapshot/v1'
+   'chartbook/snapshot/v2'
 
 ```{autodoc2-docstring} chartbook.snapshot.SCHEMA
 ```
@@ -800,6 +822,17 @@
 :canonical: chartbook.snapshot.Snapshot.same_moment
 
 ```{autodoc2-docstring} chartbook.snapshot.Snapshot.same_moment
+```
+
+````
+
+````{py:attribute} stored
+:canonical: chartbook.snapshot.Snapshot.stored
+:type: dict
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.snapshot.Snapshot.stored
 ```
 
 ````
@@ -1036,7 +1069,7 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 ```
 ````
 
-````{py:function} asset_record(ref: chartbook.refs.AssetRef, pipeline: str, declared_path: str, content, single: bool, keep: bool = False) -> dict
+````{py:function} asset_record(ref: chartbook.refs.AssetRef, pipeline: str, declared_path: str, content, single: bool, keep: bool = False, reading: typing.Optional[dict] = None) -> dict
 :canonical: chartbook.snapshot.asset_record
 
 ```{autodoc2-docstring} chartbook.snapshot.asset_record
@@ -1047,6 +1080,13 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 :canonical: chartbook.snapshot.by_repository
 
 ```{autodoc2-docstring} chartbook.snapshot.by_repository
+```
+````
+
+````{py:function} check_own_name(directory: pathlib.Path, pipeline: str, raw: dict) -> None
+:canonical: chartbook.snapshot.check_own_name
+
+```{autodoc2-docstring} chartbook.snapshot.check_own_name
 ```
 ````
 
@@ -1103,6 +1143,13 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 :canonical: chartbook.snapshot.improper_path
 
 ```{autodoc2-docstring} chartbook.snapshot.improper_path
+```
+````
+
+````{py:function} is_at(path: typing.Union[str, pathlib.Path], commit: str) -> bool
+:canonical: chartbook.snapshot.is_at
+
+```{autodoc2-docstring} chartbook.snapshot.is_at
 ```
 ````
 
@@ -1169,7 +1216,7 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 ```
 ````
 
-````{py:function} materialize_in_source(directory: pathlib.Path, pipeline: str, raw: dict, store: chartbook.store.Store) -> list[tuple[chartbook.refs.AssetRef, dict, typing.Optional[str]]]
+````{py:function} materialize_in_source(directory: pathlib.Path, pipeline: str, raw: dict, store: typing.Union[chartbook.store.Store, chartbook.store.PendingSnapshot]) -> list[tuple[chartbook.refs.AssetRef, dict, typing.Optional[str]]]
 :canonical: chartbook.snapshot.materialize_in_source
 
 ```{autodoc2-docstring} chartbook.snapshot.materialize_in_source

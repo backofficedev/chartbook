@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../../../_static/documentation_options.js?v=06af8975"></script>
-    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/plotting/_validation';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../../_static/searchtools.js"></script>
-    <script src="../../../_static/language_data.js"></script>
-    <script src="../../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -284,7 +284,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
@@ -352,14 +351,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -408,23 +402,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -451,31 +446,31 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.plotting._validation</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Input validation utilities for chartbook.plotting."""</span>
+<span></span><span class="sd">&quot;&quot;&quot;Input validation utilities for chartbook.plotting.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Sequence</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.plotting._exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataValidationError</span>
+<span class="kn">from</span> <span class="nn">chartbook.plotting._exceptions</span> <span class="kn">import</span> <span class="n">DataValidationError</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
 
 <div class="viewcode-block" id="validate_dataframe">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_dataframe">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"pd.DataFrame"</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate df and return it as a pandas DataFrame.</span>
+<span class="k">def</span> <span class="nf">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate df and return it as a pandas DataFrame.</span>
 
 <span class="sd">    A polars DataFrame or LazyFrame, which is what ``data.load()`` returns,</span>
 <span class="sd">    is collected and converted here: the plotting backends work on pandas.</span>
-<span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
     <span class="c1"># Checked by module so that polars is imported only when it is passed</span>
-    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"polars"</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__module__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;polars&quot;</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)):</span>
             <span class="c1"># What pandas would make of these the backends cannot draw: an</span>
@@ -497,13 +492,13 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Expected a pandas or polars DataFrame, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Expected a pandas or polars DataFrame, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="s2">"DataFrame is empty"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;DataFrame is empty&quot;</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">df</span></div>
 
@@ -511,25 +506,25 @@
 
 <div class="viewcode-block" id="validate_columns_exist">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_columns_exist">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_columns_exist</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">context</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+<span class="k">def</span> <span class="nf">validate_columns_exist</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">context</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate that all specified columns exist in the DataFrame."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that all specified columns exist in the DataFrame.&quot;&quot;&quot;</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-        <span class="n">ctx</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" for </span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">context</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; for </span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">context</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Missing columns</span><span class="si">{</span><span class="n">ctx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. Available columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Missing columns</span><span class="si">{</span><span class="n">ctx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">. Available columns: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_numeric_columns">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_numeric_columns">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_numeric_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate that columns contain numeric data."""</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="k">def</span> <span class="nf">validate_numeric_columns</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that columns contain numeric data.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
@@ -537,16 +532,16 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]):</span>
             <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
                 <span class="n">column</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Expected numeric column, got </span><span class="si">{</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Expected numeric column, got </span><span class="si">{</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_datetime_column">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_datetime_column">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_datetime_column</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate that a column is datetime-like or can be converted."""</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="k">def</span> <span class="nf">validate_datetime_column</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that a column is datetime-like or can be converted.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
     <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
         <span class="k">return</span>  <span class="c1"># Will be caught by validate_columns_exist</span>
@@ -560,52 +555,52 @@
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="n">column</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Cannot convert to datetime: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Cannot convert to datetime: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_chart_id">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_chart_id">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_chart_id</span><span class="p">(</span><span class="n">chart_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate chart_id names the saved files well: ``&lt;chart_id&gt;.html``, ``&lt;chart_id&gt;_wide.pdf`` and so on.</span>
+<span class="k">def</span> <span class="nf">validate_chart_id</span><span class="p">(</span><span class="n">chart_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate chart_id names the saved files well: ``&lt;chart_id&gt;.html``, ``&lt;chart_id&gt;_wide.pdf`` and so on.</span>
 
 <span class="sd">    Refused: an empty id; a character no filename may hold on every</span>
 <span class="sd">    platform; ``.`` and ``..``, which are not names; and a leading ``-`` or</span>
 <span class="sd">    ``.``, which would make a file read as an option or hidden. Anything</span>
 <span class="sd">    else is a name as written.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">chart_id</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="s2">"chart_id cannot be empty"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;chart_id cannot be empty&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="c1"># Check for invalid characters (should be valid for filenames)</span>
-    <span class="n">invalid_chars</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="s1">'&lt;&gt;:"/</span><span class="se">\\</span><span class="s1">|?*'</span><span class="p">)</span>
+    <span class="n">invalid_chars</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="s1">&#39;&lt;&gt;:&quot;/</span><span class="se">\\</span><span class="s1">|?*&#39;</span><span class="p">)</span>
     <span class="n">found_invalid</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">chart_id</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">invalid_chars</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">found_invalid</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"chart_id contains invalid characters: </span><span class="si">{</span><span class="n">found_invalid</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;chart_id contains invalid characters: </span><span class="si">{</span><span class="n">found_invalid</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"."</span><span class="p">,</span> <span class="s2">".."</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">message</span><span class="o">=</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"chart_id </span><span class="si">{</span><span class="n">chart_id</span><span class="si">!r}</span><span class="s2"> is not a name: the saved files are named "</span>
-                <span class="sa">f</span><span class="s2">"&lt;chart_id&gt;.html, &lt;chart_id&gt;.png and so on, so '.' and '..' are refused"</span>
+                <span class="sa">f</span><span class="s2">&quot;chart_id </span><span class="si">{</span><span class="n">chart_id</span><span class="si">!r}</span><span class="s2"> is not a name: the saved files are named &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&lt;chart_id&gt;.html, &lt;chart_id&gt;.png and so on, so &#39;.&#39; and &#39;..&#39; are refused&quot;</span>
             <span class="p">),</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">chart_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">"-."</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">chart_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">&quot;-.&quot;</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
             <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">message</span><span class="o">=</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"chart_id </span><span class="si">{</span><span class="n">chart_id</span><span class="si">!r}</span><span class="s2"> starts with </span><span class="si">{</span><span class="n">chart_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">: a chart id may not start with "</span>
-                <span class="sa">f</span><span class="s2">"'-' or '.', since it names the saved files (&lt;chart_id&gt;.html, &lt;chart_id&gt;_wide.pdf) "</span>
-                <span class="sa">f</span><span class="s2">"and one so named is read as an option or hidden"</span>
+                <span class="sa">f</span><span class="s2">&quot;chart_id </span><span class="si">{</span><span class="n">chart_id</span><span class="si">!r}</span><span class="s2"> starts with </span><span class="si">{</span><span class="n">chart_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">: a chart id may not start with &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;-&#39; or &#39;.&#39;, since it names the saved files (&lt;chart_id&gt;.html, &lt;chart_id&gt;_wide.pdf) &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;and one so named is read as an option or hidden&quot;</span>
             <span class="p">),</span>
         <span class="p">)</span></div>
 
@@ -613,56 +608,56 @@
 
 <div class="viewcode-block" id="validate_overlay_hlines">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_overlay_hlines">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_overlay_hlines</span><span class="p">(</span><span class="n">hlines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate horizontal line overlay configuration."""</span>
+<span class="k">def</span> <span class="nf">validate_overlay_hlines</span><span class="p">(</span><span class="n">hlines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate horizontal line overlay configuration.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">hline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hlines</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s2">"y"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hline</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;y&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hline</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
                 <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"hlines[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required 'y' value"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;hlines[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required &#39;y&#39; value&quot;</span><span class="p">,</span>
             <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_overlay_vlines">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_overlay_vlines">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_overlay_vlines</span><span class="p">(</span><span class="n">vlines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate vertical line overlay configuration."""</span>
+<span class="k">def</span> <span class="nf">validate_overlay_vlines</span><span class="p">(</span><span class="n">vlines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate vertical line overlay configuration.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">vline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">vlines</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s2">"x"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">vline</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;x&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">vline</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
                 <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"vlines[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required 'x' value"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;vlines[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required &#39;x&#39; value&quot;</span><span class="p">,</span>
             <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_overlay_shaded_regions">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_overlay_shaded_regions">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_overlay_shaded_regions</span><span class="p">(</span><span class="n">regions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate shaded region overlay configuration."""</span>
+<span class="k">def</span> <span class="nf">validate_overlay_shaded_regions</span><span class="p">(</span><span class="n">regions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate shaded region overlay configuration.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">region</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">regions</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s2">"x0"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span> <span class="ow">or</span> <span class="s2">"x1"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;x0&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span> <span class="ow">or</span> <span class="s2">&quot;x1&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">region</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
                 <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"shaded_regions[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required 'x0' and/or 'x1' values"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;shaded_regions[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required &#39;x0&#39; and/or &#39;x1&#39; values&quot;</span><span class="p">,</span>
             <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="validate_overlay_bands">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_overlay_bands">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_overlay_bands</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">"pd.DataFrame"</span><span class="p">,</span> <span class="n">bands</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate band overlay configuration."""</span>
+<span class="k">def</span> <span class="nf">validate_overlay_bands</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span> <span class="n">bands</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate band overlay configuration.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">band</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bands</span><span class="p">):</span>
-        <span class="k">if</span> <span class="s2">"y_upper"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">band</span> <span class="ow">or</span> <span class="s2">"y_lower"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">band</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;y_upper&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">band</span> <span class="ow">or</span> <span class="s2">&quot;y_lower&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">band</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">DataValidationError</span><span class="p">(</span>
                 <span class="n">column</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"bands[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required 'y_upper' and/or 'y_lower' column names"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;bands[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] missing required &#39;y_upper&#39; and/or &#39;y_lower&#39; column names&quot;</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="c1"># Check that referenced columns exist</span>
         <span class="n">validate_columns_exist</span><span class="p">(</span>
-            <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">band</span><span class="p">[</span><span class="s2">"y_upper"</span><span class="p">],</span> <span class="n">band</span><span class="p">[</span><span class="s2">"y_lower"</span><span class="p">]],</span> <span class="n">context</span><span class="o">=</span><span class="sa">f</span><span class="s2">"bands[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]"</span>
+            <span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">band</span><span class="p">[</span><span class="s2">&quot;y_upper&quot;</span><span class="p">],</span> <span class="n">band</span><span class="p">[</span><span class="s2">&quot;y_lower&quot;</span><span class="p">]],</span> <span class="n">context</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;bands[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]&quot;</span>
         <span class="p">)</span></div>
 
 </pre></div>
@@ -727,8 +722,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

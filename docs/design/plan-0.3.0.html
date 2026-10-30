@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: the plan for 0.3.0 &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../_static/documentation_options.js?v=6512192e"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/plan-0.3.0';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Design: reading another pipeline while you work" href="reading-other-pipelines.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the plan for 0.3.0</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/plan-0.3.0.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: the plan for 0.3.0</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-0-3-0-is-for">What 0.3.0 is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-hashes-kept">The two hashes, kept</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#store-v2">Store v2</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-top-layer">The top layer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inside-a-pipelines-folder">Inside a pipeline’s folder</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#later-a-snapshot-with-its-code">Later: a snapshot with its code</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-does-not-change">What does not change</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-in-place-or-gathered">Reading: in place, or gathered</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-a-snapshot">Finding a snapshot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#clearing-old-snapshots">Clearing old snapshots</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-and-long-paths-136">Windows and long paths (#136)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sharing-one-pipeline">Sharing one pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#moving-a-store-from-v1-to-v2">Moving a store from v1 to v2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-rest-of-0-3-0">The rest of 0.3.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-2026-10-28">As built (2026-10-28)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-files-2026-10-29">As built: <code class="docutils literal notranslate"><span class="pre">[files]</span></code> (2026-10-29)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#breaking-changes-for-the-changelog">Breaking changes, for the changelog</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-in-0-3-0">Not in 0.3.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-the-plan-for-0-3-0">
+<h1>Design: the plan for 0.3.0<a class="headerlink" href="#design-the-plan-for-0-3-0" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A plan, written 2026-10-28, two days after 0.2.0 was released. It says what 0.3.0 is for, the new
+layout of the store at its centre, and the order of the work. Status: <strong>built</strong> (2026-10-29), but
+for what “The order of work” says is not; what was built is marked there, and “As built” says where it differs. What the maintainer decided on 2026-10-28 is marked <em>decided</em>; the rest is <em>proposed</em>, and
+much of it comes from a review of an earlier draft against the code, which is cited where it
+matters. The layout inside a pipeline’s folder was revised the same day, on the maintainer’s
+proposal.</p>
+</div>
+<section id="what-0-3-0-is-for">
+<h2>What 0.3.0 is for<a class="headerlink" href="#what-0-3-0-is-for" title="Link to this heading">#</a></h2>
+<p>Two things came out of using 0.2.0.</p>
+<p><strong>A person cannot find their way around the store.</strong> Everything in it is named by a hash or a
+commit: <code class="docutils literal notranslate"><span class="pre">objects/sha256/7f/3a9c…/</span></code> and <code class="docutils literal notranslate"><span class="pre">snapshots/4f2a91c0…/_top/</span></code>. Nothing at its top says which
+pipelines it holds, and one pipeline’s data is spread among folders that every other pipeline’s
+data shares, so there is no one folder of it to send. The maintainer sends collaborators folders
+for the projects they work on, and wants them able to add those to their own store by hand. The
+wish, in the maintainer’s words: <em>look in the store and see a short list of folders, one for each
+pipeline</em>. Doing it with a command can come later.</p>
+<p><strong>The store copies too much.</strong> An asset of many files is stored whole for every version of it
+(#135). In <code class="docutils literal notranslate"><span class="pre">finm-33200/explaining_markets_data</span></code>, thirteen yearly files of transcripts, 2.0 GB, are
+one object, and the first snapshot after a new year makes another full copy, uploaded again to the
+store in Google Drive. The 2026 file is in the store twice already, byte for byte. <em>Decided
+2026-10-28: the store never holds a file twice.</em></p>
+<p>Both are about how the store lays out what it holds, so they are one change: <strong>store v2</strong>. The
+rest of 0.3.0 is the issues that came in after the release (#133 to #136), most of which build on
+it.</p>
+</section>
+<section id="the-two-hashes-kept">
+<h2>The two hashes, kept<a class="headerlink" href="#the-two-hashes-kept" title="Link to this heading">#</a></h2>
+<p>The store was designed around two hashes (<a class="reference internal" href="asset-graph.html"><span class="doc">Design: the asset graph</span></a>, “The store needs two indexes”). The
+maintainer, on 2026-10-28:</p>
+<ul class="simple">
+<li><p><strong>Before</strong>: a hash of the code that makes a dataset. If the code has not changed, the data
+should not have, so you can ask <em>do I already have the data I need?</em> without computing anything.</p></li>
+<li><p><strong>After</strong>: the hash of the data itself, which answers <em>is the data I received the right data?</em>.
+It costs a build to know, and it is what proves the bytes.</p></li>
+</ul>
+<p><em>Decided 2026-10-28: the “before” hash is the git commit.</em> “That’s honestly the simplest way and
+probably the best way … I don’t want to overcomplicate things.” There is no input hash and no
+build key. This is what 0.2.0 already does (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “4b, as built”, under “Where the
+design was wrong”): a snapshot maps a commit to what that commit built. What changes is that the
+store now shows it. Every snapshot’s folder is named by its commit, so “do I have this commit’s
+data?” is answered from a listing of folder names. <code class="docutils literal notranslate"><span class="pre">builds/</span></code>, the folder kept free for an
+input-hash index, is not part of v2.</p>
+<p>The “after” hash is unchanged. Every file’s hash is written down in its snapshot, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">verify</span></code>
+and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">import</span></code> check the files against it, and a lockfile pins what it pinned before. What a
+snapshot was pinned to (its <code class="docutils literal notranslate"><span class="pre">inputs</span></code>) and which lockfiles pin it (the roots) are kept as they are,
+so lineage still runs both ways.</p>
+</section>
+<section id="store-v2">
+<h2>Store v2<a class="headerlink" href="#store-v2" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em> This revises a decision of 2026-10-12, “one directory per asset, named by its hash,
+holding the asset’s files under their own names” (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Answers to the open
+questions”, 1).</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&lt;store&gt;/
+  store.json                              which layout this is: chartbook/store/v2
+  pipelines/
+    ftsfr+fed_yield_curve/                one folder per pipeline
+      2026-10-12T091500Z_4f2a91c0e1b2/    a snapshot: when it was made _ its commit
+        _data/treasury_rates.parquet      the pipeline's files, in their own places
+        _data/scraped_articles/article01.txt
+        _data/scraped_articles/article02.txt
+        _chartbook/                       ChartBook's own, the one name it reserves
+          snapshot.json                   the dictionary: every file, its hash, its size,
+                                          and which snapshot's folder keeps it
+          index.json                      the pipeline's index at this commit
+      2026-10-26T182205Z_9b1e22d7a0c4/    two weeks later: only what is new or changed
+        _data/treasury_rates.parquet          changed
+        _data/scraped_articles/article03.txt  new
+        _chartbook/
+          snapshot.json                   lists all four files; article01 and article02
+          index.json                      are kept in 2026-10-12T091500Z_4f2a91c0e1b2
+    finm-33200+explaining_markets_data/
+    local_scratch/                        an ID with no scope
+  origins/                                which folder, on which machine, a pipeline's
+                                          snapshots were made from
+  roots/                                  which lockfiles, on which machines, pin what
+  tmp/                                    what is being written
+</pre></div>
+</div>
+<p>Read from the top: the store’s marker, the list of pipelines, and the store’s bookkeeping. Inside a
+pipeline’s folder, its snapshots in the order they were made. Inside a snapshot’s folder, the
+pipeline’s own files where the pipeline keeps them, as in a checkout of it, and one folder of
+ChartBook’s.</p>
+<section id="the-top-layer">
+<h3>The top layer<a class="headerlink" href="#the-top-layer" title="Link to this heading">#</a></h3>
+<p><em>Decided 2026-10-28: flat, under <code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>.</em> One folder per pipeline, named by its ID with <code class="docutils literal notranslate"><span class="pre">/</span></code>
+written as <code class="docutils literal notranslate"><span class="pre">+</span></code>: <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve</span></code> is <code class="docutils literal notranslate"><span class="pre">ftsfr+fed_yield_curve</span></code>. No part of an ID may contain
+<code class="docutils literal notranslate"><span class="pre">+</span></code> (<a class="reference internal" href="toml-format-v2.html"><span class="doc">Design: chartbook.toml Format v2</span></a>; <code class="docutils literal notranslate"><span class="pre">identity.validate_pipeline_id</span></code>), so no two IDs share a name, and no
+ID can be the name of one of the store’s own folders. A folder sent alone goes straight back into
+<code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>, with nowhere else it could belong.</p>
+<p>Nesting by scope (<code class="docutils literal notranslate"><span class="pre">pipelines/ftsfr/fed_yield_curve/</span></code>) was considered and set aside. A folder sent
+alone would have to be put back under its scope, and a bare ID such as <code class="docutils literal notranslate"><span class="pre">rates</span></code> would collide with a
+scope named <code class="docutils literal notranslate"><span class="pre">rates</span></code>.</p>
+<p><strong>A folder’s name is for people; what the folder is comes from inside it.</strong> Each snapshot’s
+<code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code> says which pipeline it is. The name alone cannot be trusted, for three reasons:</p>
+<ul class="simple">
+<li><p>IDs are case-sensitive, and the disks of macOS and Windows are not. <code class="docutils literal notranslate"><span class="pre">Acme/rates</span></code> and
+<code class="docutils literal notranslate"><span class="pre">acme/rates</span></code> would be one folder. So the name is the ID in lower case, and a name that is already
+another ID’s folder gets <code class="docutils literal notranslate"><span class="pre">~</span></code> and eight hex digits of the ID’s hash, as
+<code class="docutils literal notranslate"><span class="pre">snapshot.record_name</span></code> already does for subdirectories.</p></li>
+<li><p>Windows reserves some names (<code class="docutils literal notranslate"><span class="pre">con</span></code>, <code class="docutils literal notranslate"><span class="pre">nul</span></code>, <code class="docutils literal notranslate"><span class="pre">com1</span></code>, …) and drops a trailing <code class="docutils literal notranslate"><span class="pre">.</span></code>; such a name gets
+the same suffix.</p></li>
+<li><p>A sync service that meets two changes at once makes <code class="docutils literal notranslate"><span class="pre">acme+rates</span> <span class="pre">(1)</span></code>.</p></li>
+</ul>
+<p>A snapshot whose <code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code> names another pipeline than its folder is reported, by <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">verify</span></code> and wherever it is met, and is not read. (<code class="docutils literal notranslate"><span class="pre">versions.slug</span></code> cannot be reused for these names:
+it writes <code class="docutils literal notranslate"><span class="pre">/</span></code> as <code class="docutils literal notranslate"><span class="pre">--</span></code>, which an ID may contain, so <code class="docutils literal notranslate"><span class="pre">a--b/c</span></code> and <code class="docutils literal notranslate"><span class="pre">a/b--c</span></code> come out the same.) One ID
+can come from more than one repository, a fork or a repository that moved
+(<code class="docutils literal notranslate"><span class="pre">snapshot.repository_groups</span></code>), so each snapshot keeps its repository and first commit, as now.</p>
+</section>
+<section id="inside-a-pipelines-folder">
+<h3>Inside a pipeline’s folder<a class="headerlink" href="#inside-a-pipelines-folder" title="Link to this heading">#</a></h3>
+<p><em>Decided 2026-10-28, on the maintainer’s proposal: a folder for each snapshot, holding the
+pipeline’s files under their own names, in their own places, and each file once.</em> A file is kept in
+the first snapshot that had it. A later snapshot’s folder holds only what is new or has changed
+since, and its dictionary says where the rest is kept.</p>
+<p>That is the only way to have both real names and no copies on every kind of store. A file in ten
+snapshots can appear in ten folders at no cost only by hard links. Google Drive has none (Drive for
+desktop reports FAT32), and neither has a bucket. There, a file’s bytes can be in one place only,
+and the choice is which place. Two others were weighed the same day:</p>
+<ul class="simple">
+<li><p><strong>A pool of files named by their hashes</strong> (<code class="docutils literal notranslate"><span class="pre">files/sha256/7f/3a9c…</span></code>), with the names in the
+records. It was simpler to write and stored each file once, but a person looking in the store
+saw only hashes.</p></li>
+<li><p><strong>A complete folder for every snapshot.</strong> Readable, and a folder could be sent alone, but every
+snapshot copied every file again: #135’s problem.</p></li>
+</ul>
+<p><strong>A snapshot’s folder</strong> is named <code class="docutils literal notranslate"><span class="pre">&lt;time&gt;_&lt;commit&gt;</span></code>: <code class="docutils literal notranslate"><span class="pre">2026-10-26T182205Z_9b1e22d7a0c4</span></code>. The time
+comes first, in UTC, so that sorting the folders sorts them by when they were made. Then the first
+12 hex digits of the commit. <code class="docutils literal notranslate"><span class="pre">_</span></code> appears in neither part, so the name splits in two at it, and a
+program needs nothing else to tell them apart. One pattern describes the name, and everything that
+reads one (<code class="docutils literal notranslate"><span class="pre">snapshot._count</span></code>, <code class="docutils literal notranslate"><span class="pre">store._RECORD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">lineage</span></code>’s search for a missing record) uses
+it. The full commit and the time to the microsecond are in <code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code>, and a lookup confirms
+them there. A second snapshot of the same commit in the same second takes the next second’s name.</p>
+<p><em>Decided 2026-10-28: the time is in the name, first.</em> A snapshot is not one to one with a commit.
+The same commit can have several snapshots (decided 2026-10-13, <a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “The snapshot
+model”): a pipeline that pulls data from outside, FRED or a vendor’s API, gives other bytes next
+week with no file changed in git, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> after a <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> records new
+pins with no new commit. The newest is the one a pin moves to.</p>
+<ul>
+<li><p><strong>The pipeline’s files</strong> that are new in this snapshot are at the snapshot folder’s top, at the
+paths they have in the pipeline’s folder: <code class="docutils literal notranslate"><span class="pre">_data/treasury_rates.parquet</span></code>,
+<code class="docutils literal notranslate"><span class="pre">_data/scraped_articles/article01.txt</span></code>. A snapshot’s folder reads as the pipeline’s folder does.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_chartbook/</span></code></strong> is ChartBook’s, and the one name in a snapshot’s folder it reserves. Everything
+of ChartBook’s in a snapshot is in it, and it is where anything ChartBook keeps with a snapshot
+later goes. <em>Decided 2026-10-28: <code class="docutils literal notranslate"><span class="pre">_chartbook</span></code>, which every system shows</em>, so a person finds the
+dictionary without showing hidden files. A pipeline whose own folder has a <code class="docutils literal notranslate"><span class="pre">_chartbook</span></code> at its top
+cannot be snapshotted; the message says to rename it. ChartBook writes nothing by that name in a
+pipeline’s folder (its files there are named <code class="docutils literal notranslate"><span class="pre">.chartbook-…</span></code>, such as
+<code class="docutils literal notranslate"><span class="pre">.chartbook-hash-cache.json</span></code>), and a pipeline is unlikely to. The name is fixed by the layout: a
+later layout, with a new <code class="docutils literal notranslate"><span class="pre">store.json</span></code>, could change it for every snapshot at once, but it does not
+vary from one snapshot to another, so ChartBook never has to search for it.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_chartbook/tables/</span></code></strong> holds a table or a query pinned as parquet (<code class="docutils literal notranslate"><span class="pre">&lt;name&gt;.parquet</span></code>). It has no
+place among the pipeline’s files, because it was never a file there.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code></strong> is the dictionary, and it is the snapshot’s record: the pipeline,
+the commit, the time, what it was pinned to, every asset with its content hash, and <strong>every file
+of every asset</strong>, with its hash, its size and the snapshot that keeps it:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"_data/scraped_articles/article01.txt"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:7f3a9c…"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">5120</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"kept_in"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-12T091500Z_4f2a91c0e1b2"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The record format grows to <code class="docutils literal notranslate"><span class="pre">chartbook/snapshot/v2</span></code>, since in v1 only a folder’s record lists its
+files. An asset’s own hash, which a lockfile pins, does not change: one file’s hash, or the hash
+of its files’ <code class="docutils literal notranslate"><span class="pre">sha256sum</span></code> listing (<a class="reference internal" href="index-schema.html"><span class="doc">Design: the index</span></a>), which can be rebuilt from the dictionary
+and checked against it.</p>
+</li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_chartbook/index.json</span></code></strong> is the pipeline’s index at this commit, which 0.2.0 keeps as an object
+so that any version’s site can be rendered from the store alone (<a class="reference internal" href="versioned-catalog.html"><span class="doc">Design: the versioned catalog</span></a>). A
+version’s documents are the pipeline’s own files, so they are among them.</p></li>
+</ul>
+<p><strong><code class="docutils literal notranslate"><span class="pre">kept_in</span></code> is where to look; the hash is what is trusted.</strong> A file found anywhere in the
+pipeline’s folder with the right hash is as good, which matters when two copies of a folder are
+merged by hand (below).</p>
+<p><strong>Nothing in the store is moved or rewritten once it is written.</strong> A snapshot adds a new folder,
+and only <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> removes anything. That is what makes a store in a synced folder, a bucket, and
+a folder copied by hand safe.</p>
+<p><strong>An object belongs to the pipeline that made it.</strong> Ten projects that pin one upstream share one
+copy, in the upstream’s folder. The same bytes made by two different pipelines are stored twice.
+That is rare, and it is the price of a folder that can be sent alone. A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s files,
+which <code class="docutils literal notranslate"><span class="pre">pin</span></code> puts in the store from a clone rather than from a snapshot its owner made, are a
+snapshot of the same shape in the dependency’s folder. Its <code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code> says it was pinned from
+a clone, not made by the owner, and a pin by ID from the store chooses only snapshots their owners
+made, as today.</p>
+<p><em>Decided 2026-10-28:</em> <strong>the store keeps only its own bytes.</strong> A file goes in by a copy-on-write
+clone or a copy, never by a hard link or a symlink to a file outside the store. In practice nothing
+changes: every caller of <code class="docutils literal notranslate"><span class="pre">put</span></code> already asks for exactly those two (<code class="docutils literal notranslate"><span class="pre">snapshot.LINKS</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">lock.PIN_LINKS</span></code>, which is the same). The ladder of four (reflink, hard link, symlink, copy)
+moves to reading (below). This revises “the store keeps all four kinds” (2026-10-12).</p>
+<p><strong>Writes are ordered, so that a half-made snapshot is never taken for a whole one.</strong> The files go
+first and <code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code> last: a folder without it is not a snapshot yet. A snapshot that reuses
+files kept in earlier folders first leaves a note of them in <code class="docutils literal notranslate"><span class="pre">tmp/</span></code>, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> keeps what such
+a note names for an hour (<code class="docutils literal notranslate"><span class="pre">RECENT_SECONDS</span></code>). The note does what v1 does by updating an object’s
+time (<code class="docutils literal notranslate"><span class="pre">os.utime</span></code> in <code class="docutils literal notranslate"><span class="pre">FolderStore._move_into_place</span></code>), without changing a file a sync service would
+then carry to every machine.</p>
+</section>
+<section id="later-a-snapshot-with-its-code">
+<h3>Later: a snapshot with its code<a class="headerlink" href="#later-a-snapshot-with-its-code" title="Link to this heading">#</a></h3>
+<p><em>Decided 2026-10-28: this waits; it is not in 0.3.0.</em> It is written down here because the layout is
+made to leave room for it. From the maintainer’s idea, the same day: because a snapshot’s folder
+holds the pipeline’s files in their own places, it can hold the pipeline’s code as well as its data,
+and be the whole pipeline at that commit. Or it can hold the data alone. Which one would be the
+owner’s choice:</p>
+<ul class="simple">
+<li><p><strong>A snapshot an owner makes would hold the data alone</strong>, as now, unless the owner asks for the code
+too (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span> <span class="pre">--with-code</span></code>, or a setting in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>). A pipeline whose code is
+not to be shared shares its data and nothing else.</p></li>
+<li><p><strong>A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s snapshot would hold its code</strong>, since it is made from a clone of code the
+pipeline that pinned it can already read.</p></li>
+<li><p><strong>The code is what git has committed at the commit, and nothing else.</strong> So never a <code class="docutils literal notranslate"><span class="pre">.env</span></code>
+(<code class="docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code> already keeps nothing of it), and never a file git ignores. It is kept once,
+in the first snapshot that had it, as data is.</p></li>
+<li><p><strong>Code in the store is never run there.</strong> Reading a snapshot, or rendering a version’s site from
+it, runs nothing (<a class="reference internal" href="trust.html"><span class="doc">Design: trust, for a build of files on this machine</span></a>).</p></li>
+</ul>
+<p>The maintainer also asked whether a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency could be cloned into its snapshot’s folder and
+built there, leaving the data in place. The result would be the same folder, but built elsewhere
+and then put in the store:</p>
+<ul class="simple">
+<li><p>A build writes scratch (caches, logs, an environment) and can fail half-way. In the store, all of
+that would be in a snapshot’s folder, and a store in a synced folder would upload it as it was
+written.</p></li>
+<li><p>Until the build was done, another machine, or a pin, could take the folder for a snapshot.</p></li>
+<li><p>Code run inside a store that a team shares could change anything else in it.</p></li>
+<li><p>A clone’s <code class="docutils literal notranslate"><span class="pre">.git</span></code> folder is thousands of small files that hold the code a second time.</p></li>
+</ul>
+<p>So ChartBook would build where it builds today, in its own working copy of the commit
+(<code class="docutils literal notranslate"><span class="pre">gitcache.work_copy</span></code>, under <code class="docutils literal notranslate"><span class="pre">~/.chartbook/git/</span></code>). When the build had succeeded, the committed
+files and the data it made would go into a new snapshot’s folder, in their places, and nothing in
+the store would be written by the build itself. To run a pipeline from a snapshot that holds its code, a person copies
+the folder out of the store first.</p>
+</section>
+<section id="what-does-not-change">
+<h3>What does not change<a class="headerlink" href="#what-does-not-change" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>How anything is hashed. Every content hash in a record, a lockfile or a root means what it meant.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code>, the settings layers, and pipeline IDs.</p></li>
+<li><p>A bucket holds the same layout as a folder.</p></li>
+<li><p>A lockfile still has no path into the store. It gains one field: each dependency records the
+pipeline whose folder holds what it pinned, so a reader knows where to look. Today only a
+dependency pinned from the store, or named by its ID, records it. For a lockfile without the
+field, the pipeline is found once per dependency, from the snapshot it is pinned to, or else by
+looking in each pipeline’s folder.</p></li>
+</ul>
+</section>
+<section id="reading-in-place-or-gathered">
+<h3>Reading: in place, or gathered<a class="headerlink" href="#reading-in-place-or-gathered" title="Link to this heading">#</a></h3>
+<p>A file in the store now has its real name in its real place, so it can often be read right where
+it is. <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> then answers with a path into the store that ends in <code class="docutils literal notranslate"><span class="pre">.parquet</span></code>. That happens
+when an asset’s files are exactly what one snapshot’s folder holds for it: a single file, or every
+file of a folder in the snapshot that first had them.</p>
+<p>An asset whose files are kept in more than one snapshot’s folder is <strong>gathered</strong>. Its files are laid
+out together in the machine’s cache, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/views/&lt;hash&gt;/</span></code>, by reflink, then hard
+link, then symlink, then copy. That is what <code class="docutils literal notranslate"><span class="pre">data.load</span></code> needs to read a partitioned dataset through
+its <code class="docutils literal notranslate"><span class="pre">year=2024/</span></code> folders, and what a model loader needs to open a folder of named files. On this
+machine’s own disk a gathered asset costs nothing, by hard link. From Google Drive or a bucket it
+costs one copy, in the cache and not in the store, as an S3 store’s reads do today. On Windows
+nothing is gathered by symlink, which needs rights a user may not have.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Store.get</span></code> is handed the asset’s entry from the dictionary, so it knows every file’s name and
+place, and never guesses from a bare hash.</p></li>
+<li><p>A gathered asset is laid out in a temporary folder and renamed into place, so a reader never
+meets half of one.</p></li>
+<li><p>An S3 store downloads each file into the cache and checks its hash as it arrives. That replaces
+the notes of verified names it keeps today.</p></li>
+<li><p><strong>The promise of <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span></code> holds.</strong> It says the path it prints “stays as it is until
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>”, and other tools (Make, R, Stata) keep that path. A file in the store is never
+moved, and a gathered asset that this machine’s lockfiles pin is never cleared from the cache.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot.materialize</span></code>, which lays out a version for its site, links the files straight into
+place.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Store.lacks</span></code>, and pinning’s “the same bytes under another name”, go away. A name is a fact of
+the dictionary.</p></li>
+</ul>
+<p><strong>A half-synced store.</strong> A sync service may show a file before all of its bytes have arrived, and
+<code class="docutils literal notranslate"><span class="pre">Store.incomplete</span></code> is how ChartBook says “not fully synced yet” instead of reading a cut-off file.
+Every file’s size is in the dictionary now, so it is one comparison per file. A snapshot whose
+<code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code> has not arrived is not there yet.</p>
+</section>
+<section id="finding-a-snapshot">
+<h3>Finding a snapshot<a class="headerlink" href="#finding-a-snapshot" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><strong>By pipeline</strong>: list that pipeline’s folder. Today every record in the store is read and then
+filtered by pipeline (<code class="docutils literal notranslate"><span class="pre">lock._newest_in_store</span></code>, <code class="docutils literal notranslate"><span class="pre">resolve._snapshots_in</span></code>, the catalog,
+<code class="docutils literal notranslate"><span class="pre">chartbook.versions</span></code>), so this gets faster.</p></li>
+<li><p><strong>By commit and subdirectory</strong>, for a dependency that is a folder on this machine: look in the
+folder of that folder’s ID first. Then look across every pipeline by folder name (<code class="docutils literal notranslate"><span class="pre">*_&lt;commit12&gt;</span></code>,
+one listing per pipeline and no file read), and confirm the full commit and the subdirectory in
+<code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code>. This search must not depend on the ID. The ID worked out from a
+folder changes with no new commit, when a remote is added or a clone is renamed
+(<code class="docutils literal notranslate"><span class="pre">identity.derive_pipeline_id</span></code>), and an older snapshot would otherwise be lost to every pin,
+model version and <code class="docutils literal notranslate"><span class="pre">restore</span></code> that looks for it.</p></li>
+<li><p><strong>By commit and time</strong>, which lineage and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> do: the same search by folder name.</p></li>
+<li><p><strong>A pipeline whose ID changed</strong> (<code class="docutils literal notranslate"><span class="pre">lock._under_another_id</span></code>, <code class="docutils literal notranslate"><span class="pre">_repointed</span></code>) is still found by the
+repository and first commit in its snapshots.</p></li>
+</ul>
+</section>
+<section id="clearing-old-snapshots">
+<h3>Clearing old snapshots<a class="headerlink" href="#clearing-old-snapshots" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> keeps the same snapshots it keeps now, by the same rules (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Clearing
+old snapshots”), worked out within each pipeline’s folder. What changes is how files are kept:</p>
+<ul class="simple">
+<li><p>A file is removed only when no kept snapshot’s dictionary names it and no root names its hash.
+If any kept snapshot’s dictionary cannot be read, nothing is removed.</p></li>
+<li><p><strong>A cleared snapshot’s folder keeps the files that later snapshots use.</strong> Its
+<code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code> goes, a <code class="docutils literal notranslate"><span class="pre">_chartbook/CLEARED.txt</span></code> says when it was cleared and why files
+are left in it, and the folder goes once nothing in it is used. Nothing is moved, so no other snapshot’s dictionary goes out of date.</p></li>
+<li><p>A second copy of a file in one pipeline’s folder, which a merge by hand can leave, is removed,
+and the first is kept.</p></li>
+<li><p>Files a note in <code class="docutils literal notranslate"><span class="pre">tmp/</span></code> names are kept, as above.</p></li>
+<li><p><em>Decided 2026-10-28:</em> <code class="docutils literal notranslate"><span class="pre">pipelines/+unowned/</span></code> (from migration, below) is cleared once no root
+names what is in it.</p></li>
+<li><p>What <code class="docutils literal notranslate"><span class="pre">gc</span></code> says it will free counts each file once, and says which files are shared between
+snapshots.</p></li>
+<li><p>Names that are neither a pipeline’s files nor ChartBook’s, such as the <code class="docutils literal notranslate"><span class="pre">(1)</span></code> copies a sync
+service makes of <code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code>, are removed once they are an hour old.</p></li>
+<li><p>A pipeline’s folder deleted by hand is not an error to <code class="docutils literal notranslate"><span class="pre">gc</span></code>. A lockfile that pinned it says “not
+in the store”, and what to do, as it does today for a missing object.</p></li>
+</ul>
+</section>
+<section id="windows-and-long-paths-136">
+<h3>Windows and long paths (#136)<a class="headerlink" href="#windows-and-long-paths-136" title="Link to this heading">#</a></h3>
+<p>Windows refuses a path longer than 260 characters unless long paths are turned on, which is off by
+default and needs an administrator. The error it gives, “No such file or directory”, points the
+wrong way (#136). Every name in the layout spends from that limit. The flat top layer puts the
+pipeline’s ID in every path, so the maintainer asked that this be weighed before it was chosen.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>The longest paths in the store</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>v1</p></td>
+<td><p>the root + 82 + the asset’s own path, for a file. A record’s temporary file is the root + 93: #136’s root of 174 made 267</p></td>
+</tr>
+<tr class="row-odd"><td><p>v2</p></td>
+<td><p>the root + 44 + the folder’s name + the file’s path in its pipeline. <code class="docutils literal notranslate"><span class="pre">snapshot.json</span></code> is the root + 68 + the folder’s name</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The pipeline’s own paths are back in the store, because that is what makes it readable: they are
+the paths the pipeline already has in its own folder. For an ordinary file, v2’s paths are shorter
+than v1’s. A deep partitioned dataset is where the room goes. With a folder name of 34 characters
+(<code class="docutils literal notranslate"><span class="pre">finm-33200+explaining_markets_data</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Store root</p></th>
+<th class="head"><p>Length</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">_data\treasury_rates.parquet</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">_data\trades\exchange=XNAS\symbol=ABCD\date=2026-10-27\part-0.parquet</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">C:\Users\&lt;name&gt;\.chartbook\store</span></code>, the default</p></td>
+<td><p>~35</p></td>
+<td><p>141</p></td>
+<td><p>182</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">G:\My</span> <span class="pre">Drive\chartbook_store</span></code></p></td>
+<td><p>~27</p></td>
+<td><p>133</p></td>
+<td><p>174</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">C:\Users\&lt;name&gt;\OneDrive</span> <span class="pre">-</span> <span class="pre">The</span> <span class="pre">University</span> <span class="pre">of</span> <span class="pre">Chicago\chartbook_store</span></code></p></td>
+<td><p>~70</p></td>
+<td><p>177</p></td>
+<td><p>218</p></td>
+</tr>
+<tr class="row-odd"><td><p>#136’s temporary folder</p></td>
+<td><p>174</p></td>
+<td><p>280: too long</p></td>
+<td><p>321: too long</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>So the root can be up to about 153 characters for a pipeline of ordinary files, and about 112 for
+one with folders that deep. What 0.3.0 does about it:</p>
+<ol class="arabic simple">
+<li><p><strong>On Windows the store’s own paths are extended-length.</strong> <code class="docutils literal notranslate"><span class="pre">FolderStore</span></code> keeps its root in the
+<code class="docutils literal notranslate"><span class="pre">\\?\</span></code> form, which Windows exempts from the limit without the registry setting. One helper strips
+the prefix for messages, and the check that a file stays inside the store compares paths in the
+same form. It is tested on the Windows CI, under a long root.</p></li>
+<li><p><strong>A reader is handed a path in the store only when it fits.</strong> Polars, DuckDB and a user’s code
+may not take <code class="docutils literal notranslate"><span class="pre">\\?\</span></code> paths, so on Windows an asset whose paths in the store are too long is
+gathered into the cache, under the home directory, instead.</p></li>
+<li><p><strong>Internal names are short</strong>: temporary names of 12 hex digits, and a snapshot’s folder name of
+31 characters.</p></li>
+<li><p><strong>The error says what happened</strong>: the path’s length, the limit, and the two ways out (turn on
+long paths, or use a shorter store folder).</p></li>
+<li><p><strong>ChartBook checks before it writes</strong>, since it knows every path a snapshot will make, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">info</span></code> warns when a pipeline’s longest path leaves too little room.</p></li>
+</ol>
+<p>One thing this does not fix: File Explorer is not long-path aware. A person who copies a pipeline’s
+folder by hand out of a store whose paths pass 260 characters can still be stopped by Explorer.
+Keep the store’s root short.</p>
+</section>
+</section>
+<section id="sharing-one-pipeline">
+<h2>Sharing one pipeline<a class="headerlink" href="#sharing-one-pipeline" title="Link to this heading">#</a></h2>
+<p><strong>By hand</strong>, as the maintainer does now: copy <code class="docutils literal notranslate"><span class="pre">pipelines/&lt;folder&gt;/</span></code> into the other store’s
+<code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>. The collaborator gets the pipeline’s files under their own names. Nothing in the
+folder changes once written, so copying it into a folder of the same pipeline that is already there
+is a merge: snapshot folders that are new are added, and those that were there are the same. The
+other person’s pipelines then pin it by its ID, with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>, as a
+dependency named by its ID alone already works.</p>
+<p><em>Proposed:</em> <strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span> <span class="pre">&lt;id&gt;</span> <span class="pre">--to</span> <span class="pre">&lt;folder&gt;</span></code></strong> writes the pipeline’s folder as a store
+holds it. With <code class="docutils literal notranslate"><span class="pre">--latest</span></code> it writes the newest alone, every file it needs in its own folder: one
+complete snapshot, readable without ChartBook, that can be dropped into a store like any other.
+With <code class="docutils literal notranslate"><span class="pre">--snapshot</span> <span class="pre">…</span></code> it writes those named, each file once among them, in the first that has it. <em>Decided 2026-10-28 (“we should never duplicate files”):</em> there is no
+<code class="docutils literal notranslate"><span class="pre">--readable</span></code> copy beside it, since the export is readable already.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">import</span> <span class="pre">&lt;folder&gt;</span></code></strong> checks every file against its dictionary, copies in what the
+store does not have, and copies no file it already holds; nothing is overwritten. A folder copied in
+by hand is read as it is, as a shared store is; <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">verify</span></code> checks it.</p>
+<p>What a pipeline’s folder carries is data, the dictionary, and the documents a version’s site is made
+from. It carries no code that runs.</p>
+</section>
+<section id="moving-a-store-from-v1-to-v2">
+<h2>Moving a store from v1 to v2<a class="headerlink" href="#moving-a-store-from-v1-to-v2" title="Link to this heading">#</a></h2>
+<p><em>Proposed.</em> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code>, once, on one machine.</p>
+<ol class="arabic simple">
+<li><p><strong>Every machine that uses the store is upgraded to 0.3.0 first.</strong> 0.3.0 refuses a v1 store and
+says to run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code>.</p></li>
+<li><p><strong>0.2.0 does not refuse a v2 store by itself.</strong> It reads snapshot records without checking
+<code class="docutils literal notranslate"><span class="pre">store.json</span></code> (<code class="docutils literal notranslate"><span class="pre">FolderStore.snapshot_files</span></code> and its neighbours), so it would say that there is no
+snapshot. <code class="docutils literal notranslate"><span class="pre">migrate</span></code> therefore leaves a record under v1’s <code class="docutils literal notranslate"><span class="pre">snapshots/</span></code> that 0.2.0 reports as
+unreadable: a warning in a catalog, a refusal in <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>. This is to be tried against an
+installed 0.2.0.</p></li>
+<li><p><strong>Each file goes to the first snapshot of its pipeline that had it</strong>, at its place in the
+pipeline. Snapshots are taken in the order they were made.</p></li>
+<li><p><strong>Files are moved by renaming</strong>, so a store in a synced folder uploads nothing again. Where two
+pipelines’ snapshots name one v1 object, the second gets a copy. In a bucket, a move is a copy on
+the server followed by a delete.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pipelines/</span></code> is built beside <code class="docutils literal notranslate"><span class="pre">objects/</span></code>; <code class="docutils literal notranslate"><span class="pre">store.json</span></code> is switched; the v1 folders go last.</strong>
+An interrupted <code class="docutils literal notranslate"><span class="pre">migrate</span></code> is run again and goes on. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> says what it would move and how
+much it would read.</p></li>
+<li><p><strong>What it costs.</strong> A v1 record of a glob has no hash for each file, so those files are read and
+hashed once. In a Drive that streams its files, that downloads them. <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> says how much.</p></li>
+<li><p><strong>Where each object goes.</strong> To the pipeline of the records that name it. Else to the pipeline a
+lockfile on this machine says it is. Else to <code class="docutils literal notranslate"><span class="pre">pipelines/+unowned/&lt;hash&gt;/</span></code>, with its files under
+their names. <code class="docutils literal notranslate"><span class="pre">+unowned</span></code> is a name no ID can have. A <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s files there are put in
+their own pipeline’s folder by its next <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, as 0.2.0 already puts them back from a
+clone, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> then clears them.</p></li>
+<li><p><strong>v1’s notes of origins</strong> go to <code class="docutils literal notranslate"><span class="pre">origins/&lt;folder&gt;/legacy.txt</span></code>, which every machine reads.</p></li>
+</ol>
+</section>
+<section id="the-rest-of-0-3-0">
+<h2>The rest of 0.3.0<a class="headerlink" href="#the-rest-of-0-3-0" title="Link to this heading">#</a></h2>
+<p><em>Decided 2026-10-28: these are in 0.3.0.</em> Each issue has its own “Done when”; what is here is how
+it meets store v2.</p>
+<p><strong>#135, multi-file datasets, the rest.</strong> Storing each file once is store v2. Besides that:
+<code class="docutils literal notranslate"><span class="pre">data.load(format=&quot;pandas&quot;)</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;polars_eager&quot;</span></code> read a glob, as <code class="docutils literal notranslate"><span class="pre">&quot;polars&quot;</span></code> does. A dataset’s page
+lists its files, with sizes, and its partition keys. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns about a path that names
+one file of a set (<code class="docutils literal notranslate"><span class="pre">transcripts_2026.parquet</span></code> beside 2014 to 2025). <code class="docutils literal notranslate"><span class="pre">assets.files()</span></code> returns an
+asset’s files, read from the dictionary.</p>
+<p><strong>#134, tables stored as CSV, JSON lines or Arrow IPC.</strong> One reader, shared by <code class="docutils literal notranslate"><span class="pre">data.load</span></code>,
+<code class="docutils literal notranslate"><span class="pre">data.sql</span></code>, the glimpse and the data dictionary, which choose a reader separately today. <code class="docutils literal notranslate"><span class="pre">format</span></code>
+and <code class="docutils literal notranslate"><span class="pre">read_options</span></code> on a dataframe. Hashing and the store do not change: they never cared what the
+bytes are.</p>
+<p><strong>#133, files that are not tables.</strong> A <code class="docutils literal notranslate"><span class="pre">[files.&lt;name&gt;]</span></code> kind, with <code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code> as the
+pattern: ChartBook moves, versions and documents the bytes, and never opens them except for a
+bounded preview. <code class="docutils literal notranslate"><span class="pre">assets.files()</span></code> and <code class="docutils literal notranslate"><span class="pre">assets.index()</span></code>, the second a table of the files with their
+sizes and hashes, which the dictionary already holds. A <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> path that is not a table
+ChartBook reads fails <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> with “declare it under <code class="docutils literal notranslate"><span class="pre">[files]</span></code>”. It comes after #134 for
+that reason.</p>
+<p><strong>#136, long paths on Windows.</strong> The section above.</p>
+<p><strong>Housekeeping.</strong></p>
+<ul class="simple">
+<li><p>#9 (<code class="docutils literal notranslate"><span class="pre">data.load</span></code> over SQL) was built and released in 0.2.0, and was closed on 2026-10-28.</p></li>
+<li><p>The project template’s CI runs <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span> <span class="pre">--skip-outputs</span></code>. This was waiting on 0.2.0
+being on PyPI (<a class="reference internal" href="overview.html"><span class="doc">Design: start here</span></a>, “Open questions”), and it is.</p></li>
+</ul>
+</section>
+<section id="the-order-of-work">
+<h2>The order of work<a class="headerlink" href="#the-order-of-work" title="Link to this heading">#</a></h2>
+<p>One pull request each, stacked, as step 4 was. Each adds its entry to <code class="docutils literal notranslate"><span class="pre">[Unreleased]</span></code> in the
+changelog. The contract tests (<code class="docutils literal notranslate"><span class="pre">tests/test_store_contract.py</span></code>) run every part against both kinds of
+store, and the Windows CI runs the tests under a long root.</p>
+<ol class="arabic simple">
+<li><p>Lockfiles record each dependency’s pipeline (<code class="docutils literal notranslate"><span class="pre">pinned_from</span></code>). The layout is still v1, so nothing
+else moves. <em>Built 2026-10-28.</em></p></li>
+<li><p>The v2 layout: <code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>, a folder for each snapshot, the dictionary, reading in place or
+gathered, <code class="docutils literal notranslate"><span class="pre">incomplete</span></code>, for the folder store and the S3 store; and <code class="docutils literal notranslate"><span class="pre">Store</span></code>’s methods take the
+pipeline. <em>(Moved here from step 1 on 2026-10-28: in a v1 store an argument naming the pipeline
+would be passed everywhere and read nowhere, and nothing could test it. Step 2 is where it is
+used.)</em> <em>Built 2026-10-28.</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> on snapshot folders. <em>Built 2026-10-28, with step 2.</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code>. <em>Built 2026-10-28, with step 2: a store is never left in a layout
+nothing can move.</em></p></li>
+<li><p>Long paths on Windows (#136). <em>Built 2026-10-29: measures 3 to 5 (short names, the message, the
+check before writing, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">info</span></code>’s warning); not measure 1 or 2, the <code class="docutils literal notranslate"><span class="pre">\\?\</span></code> form, which
+needs a Windows machine to try readers against.</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">export</span></code> and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">import</span></code>. <em>Built 2026-10-29, for a folder store.</em></p></li>
+<li><p>#135, the rest. <em>Its second item, a glob in every <code class="docutils literal notranslate"><span class="pre">data.load</span></code> format, was built 2026-10-28
+with step 8; items 3 and 5 on 2026-10-29, with step 9: a dataframe of many parts lists its
+parts on its page, and <code class="docutils literal notranslate"><span class="pre">assets.files()</span></code> gives a dataframe’s files. Item 4, the warning about
+missed siblings, was its own pull request.</em></p></li>
+<li><p>#134, the shared reader (<code class="docutils literal notranslate"><span class="pre">chartbook.formats</span></code>). <em>Built 2026-10-28.</em> DuckDB has no reader of
+Arrow IPC of its own, so <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> hands it such a file as an Arrow dataset.</p></li>
+<li><p>#133, <code class="docutils literal notranslate"><span class="pre">[files]</span></code>. <em>Built 2026-10-29</em> (“As built: <code class="docutils literal notranslate"><span class="pre">[files]</span></code>”, below). A dataframe that cannot be
+read as a table says to declare it under <code class="docutils literal notranslate"><span class="pre">[files]</span></code>; the rule in <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> that would
+say so before it is read is not built.</p></li>
+<li><p>The template’s CI.</p></li>
+</ol>
+</section>
+<section id="as-built-2026-10-28">
+<h2>As built (2026-10-28)<a class="headerlink" href="#as-built-2026-10-28" title="Link to this heading">#</a></h2>
+<p>Steps 2 to 4 were built together. Where what was built differs from the plan above, or settles
+what it left open:</p>
+<ul class="simple">
+<li><p><strong>A folder’s name is fixed by the ID alone.</strong> An ID in lower case, that Windows takes as a name,
+is its own folder’s name (<code class="docutils literal notranslate"><span class="pre">/</span></code> as <code class="docutils literal notranslate"><span class="pre">+</span></code>). One with a capital letter, or a name Windows keeps
+(<code class="docutils literal notranslate"><span class="pre">con</span></code>, a trailing <code class="docutils literal notranslate"><span class="pre">.</span></code>), always gets <code class="docutils literal notranslate"><span class="pre">~</span></code> and eight hex digits of its hash, not only when another
+ID has the folder: no record need be read to name it, and two machines name it alike.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">_chartbook</span></code> is refused only where it would be used.</strong> A snapshot is refused when a declared
+file or a document is under <code class="docutils literal notranslate"><span class="pre">_chartbook/</span></code>, not when the pipeline merely has such a folder.</p></li>
+<li><p><strong>An object no pipeline owns</strong> is what <code class="docutils literal notranslate"><span class="pre">Store.put</span></code> keeps when there is no snapshot to put it in,
+as well as what migration finds no record for: <code class="docutils literal notranslate"><span class="pre">pipelines/+unowned/&lt;hex&gt;/</span></code>, its files under
+their names, as a 0.2 object was. <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> clears one once nothing names it.</p></li>
+<li><p><strong>A snapshot a pin makes</strong> from a clone is in the dependency’s pipeline’s folder and says
+<code class="docutils literal notranslate"><span class="pre">&quot;made_by&quot;:</span> <span class="pre">&quot;pin&quot;</span></code>. It is written only when it holds something the store did not, and <code class="docutils literal notranslate"><span class="pre">gc</span></code>
+keeps it, whole, while a lockfile pins what it alone holds.</p></li>
+<li><p><strong>What is trusted of a record.</strong> Its dictionary is followed only where the files’ hashes make
+the asset’s hash (one file’s, or the listing’s), so a record cannot point a hash at other bytes.
+A record whose pipeline or commit is not its folder’s is one that cannot be read.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">has</span></code></strong> is true once any file of an asset is there, as a 0.2 object was once its folder was;
+an asset with some of its files is not whole (<code class="docutils literal notranslate"><span class="pre">incomplete</span></code>), a sync to wait for, and one with
+none is not in the store, whose message says a sync may explain it.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">get(hash,</span> <span class="pre">pipeline,</span> <span class="pre">name)</span></code></strong>: a one-file asset is asked for by the name it is read by, since
+the same bytes may be two assets’, kept once.</p></li>
+<li><p><strong>The notes of origins</strong> are <code class="docutils literal notranslate"><span class="pre">origins/&lt;commit&gt;/&lt;name&gt;.txt</span></code>, keyed as they were in 0.2.</p></li>
+<li><p><strong>gc</strong> clears a snapshot’s record first; <code class="docutils literal notranslate"><span class="pre">Store.tidy</span></code> then removes, file by file, what no
+snapshot uses (a snapshot never written, an hour on; a sync service’s copy beside a snapshot’s
+files, an hour on), and says what it could not remove. A snapshot whose pinned bytes no kept
+snapshot holds is kept.</p></li>
+<li><p><strong>Migration</strong> sends every object no 0.2 record names to <code class="docutils literal notranslate"><span class="pre">+unowned/</span></code>, rather than to the
+pipeline a lockfile names; a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s pin moves into its pipeline’s folder at its
+next update. It trusts the hashes 0.2 records give and reads only a glob’s files and the
+documents. A bucket is migrated as a folder, synced down and back.</p></li>
+</ul>
+</section>
+<section id="as-built-files-2026-10-29">
+<h2>As built: <code class="docutils literal notranslate"><span class="pre">[files]</span></code> (2026-10-29)<a class="headerlink" href="#as-built-files-2026-10-29" title="Link to this heading">#</a></h2>
+<p>Step 9, with items 3 and 5 of #135. Where it settles what the plan left open:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook.files</span></code></strong> is the kind’s front door, as <code class="docutils literal notranslate"><span class="pre">chartbook.models</span></code> is a model’s: <code class="docutils literal notranslate"><span class="pre">path()</span></code>
+with the kind fixed, and the bounded preview. <code class="docutils literal notranslate"><span class="pre">assets.files()</span></code> and <code class="docutils literal notranslate"><span class="pre">assets.index()</span></code> are in
+<code class="docutils literal notranslate"><span class="pre">chartbook.assets</span></code>, since they work for every kind with files.</p></li>
+<li><p><strong>A pinned asset’s files</strong> are the ones its record lists, under the folder the store hands a
+reader; <code class="docutils literal notranslate"><span class="pre">assets.index()</span></code> takes each one’s size and hash from a snapshot’s dictionary
+(<code class="docutils literal notranslate"><span class="pre">Store.listing</span></code>), so nothing is read. A location the store holds carries the asset’s hash
+(<code class="docutils literal notranslate"><span class="pre">FileLocation.content_hash</span></code>) for this. A local asset is hashed, with a hash cache of its own
+in this machine’s cache (<code class="docutils literal notranslate"><span class="pre">hashes/</span></code>), so a second call reads only what changed.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">assets.index()</span></code>’s <code class="docutils literal notranslate"><span class="pre">path</span></code></strong> is the file, as <code class="docutils literal notranslate"><span class="pre">assets.files()</span></code> gives it, so a row can be opened
+as it is; a <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folder’s value is text, as the folder names it.</p></li>
+<li><p><strong>The <code class="docutils literal notranslate"><span class="pre">File</span></code> record</strong> lists the first 1000 files (<code class="docutils literal notranslate"><span class="pre">file_count</span></code> says how many there are), so
+that a corpus of many thousand files does not swell <code class="docutils literal notranslate"><span class="pre">index.json</span></code> past what a snapshot keeps of
+it. A dataframe of many parts lists its parts the same way, each with its rows from its parquet
+footer. The page shows the first 50.</p></li>
+<li><p><strong>The preview</strong> is of the first file the record lists that is text (by its ending, gzip
+included) or an image a browser shows (PNG, JPEG, GIF, WebP; not SVG, which can run a script).
+At most 4 KB is decompressed, from at most 16 KB read; bytes that are not UTF-8 are not shown.
+An image over 2 MB is not copied into the site.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code></strong> takes a folder with no file in it as a path that matches nothing. The
+default policy recommends what it does for a dataframe, and a write-up, as for a model.</p></li>
+</ul>
+<p>After a review the same day: <code class="docutils literal notranslate"><span class="pre">files</span></code>, <code class="docutils literal notranslate"><span class="pre">file_count</span></code> and <code class="docutils literal notranslate"><span class="pre">extensions</span></code> are names a record keeps for
+itself, and a manifest’s field by one of them is left out, with a warning. A folder with no file
+in it has no hash in the index either. A file’s type is an ending with a letter in it (<code class="docutils literal notranslate"><span class="pre">app.log.1</span></code>
+is a <code class="docutils literal notranslate"><span class="pre">.log</span></code>), and a record names the 20 most common. The store’s <code class="docutils literal notranslate"><span class="pre">listing</span></code> and <code class="docutils literal notranslate"><span class="pre">get</span></code> take a hold
+of the shape asked for, since one file’s hash and a listing’s are written alike (a <code class="docutils literal notranslate"><span class="pre">SHA256SUMS</span></code>
+beside the files it lists). A folder’s named pipe or socket is no file of it, which moves no hash:
+neither could be hashed.</p>
+</section>
+<section id="breaking-changes-for-the-changelog">
+<h2>Breaking changes, for the changelog<a class="headerlink" href="#breaking-changes-for-the-changelog" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><strong>The store’s layout.</strong> Upgrade every machine that shares a store, then run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code> on one of them.</p></li>
+<li><p><strong>A snapshot’s record</strong> is <code class="docutils literal notranslate"><span class="pre">chartbook/snapshot/v2</span></code>, and lists every file.</p></li>
+<li><p><strong>A store plugin’s methods</strong> take the pipeline, and <code class="docutils literal notranslate"><span class="pre">get</span></code> takes the asset’s entry.</p></li>
+<li><p><strong>A lockfile gains a field</strong> on its next <code class="docutils literal notranslate"><span class="pre">pin</span></code> or <code class="docutils literal notranslate"><span class="pre">update</span></code>: each dependency’s pipeline.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">builds/</span></code> is no longer kept free</strong> in the store.</p></li>
+</ul>
+</section>
+<section id="not-in-0-3-0">
+<h2>Not in 0.3.0<a class="headerlink" href="#not-in-0-3-0" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>An input hash, or a build skipped because its inputs are in the store. The commit is the
+“before” hash.</p></li>
+<li><p>The same bytes kept once across two pipelines.</p></li>
+<li><p>A snapshot with its code (“Later: a snapshot with its code”, above).</p></li>
+<li><p>An MCP server (#54).</p></li>
+<li><p>Pins of a Delta table by its version (pull request 90), which waits on a test in a real
+Databricks workspace (<a class="reference internal" href="../roadmap.html"><span class="doc">Roadmap</span></a>).</p></li>
+<li><p>Excel files as tables.</p></li>
+<li><p>Sending a pipeline’s folder automatically, beyond <code class="docutils literal notranslate"><span class="pre">export</span></code> and <code class="docutils literal notranslate"><span class="pre">import</span></code>.</p></li>
+</ul>
+</section>
+<section id="open-questions">
+<h2>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">#</a></h2>
+<p>None, as of 2026-10-28. Answered that day, besides the four decisions at the top of the store’s
+section:</p>
+<ul class="simple">
+<li><p>The store keeps only its own bytes, by reflink or copy; the four ways of linking are for reading.</p></li>
+<li><p>A snapshot’s folder is named by its time and then its commit, split by <code class="docutils literal notranslate"><span class="pre">_</span></code>.</p></li>
+<li><p>ChartBook keeps what is its own in a snapshot in one folder whose name it reserves, <code class="docutils literal notranslate"><span class="pre">_chartbook</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">export</span></code> writes no readable copy beside the store’s, since it never duplicates a file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> clears <code class="docutils literal notranslate"><span class="pre">pipelines/+unowned/</span></code> once no root names what is in it.</p></li>
+<li><p>A snapshot with its code waits.</p></li>
+<li><p>#9 was closed, built in 0.2.0.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="reading-other-pipelines.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Design: reading another pipeline while you work</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-0-3-0-is-for">What 0.3.0 is for</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-hashes-kept">The two hashes, kept</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#store-v2">Store v2</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-top-layer">The top layer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#inside-a-pipelines-folder">Inside a pipeline’s folder</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#later-a-snapshot-with-its-code">Later: a snapshot with its code</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-does-not-change">What does not change</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-in-place-or-gathered">Reading: in place, or gathered</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-a-snapshot">Finding a snapshot</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#clearing-old-snapshots">Clearing old snapshots</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#windows-and-long-paths-136">Windows and long paths (#136)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sharing-one-pipeline">Sharing one pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#moving-a-store-from-v1-to-v2">Moving a store from v1 to v2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-rest-of-0-3-0">The rest of 0.3.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-order-of-work">The order of work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-2026-10-28">As built (2026-10-28)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#as-built-files-2026-10-29">As built: <code class="docutils literal notranslate"><span class="pre">[files]</span></code> (2026-10-29)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#breaking-changes-for-the-changelog">Breaking changes, for the changelog</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#not-in-0-3-0">Not in 0.3.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

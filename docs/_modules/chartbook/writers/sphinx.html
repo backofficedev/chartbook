@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -271,6 +271,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -278,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -305,6 +307,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -344,6 +348,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -453,7 +458,7 @@
   <h1>Source code for chartbook.writers.sphinx</h1><div class="highlight"><pre>
 <span></span><span class="sd">"""The Sphinx writer: pages for Sphinx, from the index and the files it names.</span>
 
-<span class="sd">The slices so far are the dataframe, chart, model and pipeline pages. Each</span>
+<span class="sd">The slices so far are the dataframe, chart, model, files and pipeline pages. Each</span>
 <span class="sd">renders today's templates with a context built from the record, its</span>
 <span class="sd">pipeline's record, the records of its inputs or assets and the files the</span>
 <span class="sd">records name, and writes the same page the generator writes, which a</span>
@@ -494,6 +499,18 @@
 <span class="sd">```</span>
 <span class="sd">{{dataframe_glimpse}}</span>
 <span class="sd">```</span>
+<span class="sd">{% if parts %}</span>
+<span class="sd">## Parts</span>
+
+<span class="sd">{{ parts.summary }}</span>
+
+<span class="sd">| File | Size | Rows |{% for key in parts.partition_keys %} {{key}} |{% endfor %}</span>
+<span class="sd">|------|------|------|{% for key in parts.partition_keys %}------|{% endfor %}</span>
+<span class="sd">{% for part in parts.rows %}| {{part.path | literal}} | {{part.size}} | {{part.rows}} |{% for value in part.partition_values %} {{value | literal}} |{% endfor %}</span>
+<span class="sd">{% endfor %}{% if parts.more %}</span>
+<span class="sd">And {{parts.more}} more: `assets.files("{{dataframe_id}}")` gives every file.</span>
+<span class="sd">{% endif %}</span>
+<span class="sd">{% endif %}</span>
 
 <span class="sd">{% include "provenance.md" %}</span>
 
@@ -589,6 +606,73 @@
 <span class="s2">{</span><span class="si">% i</span><span class="s2">nclude "pipeline_manifest.md" %}</span>
 
 <span class="s2">"""</span>
+
+
+<span class="c1">#: The sections of a files asset's page: title and freshness, the write-up,</span>
+<span class="c1">#: then its files, a preview, how to read it, the panel and the manifests.</span>
+<span class="n">_FILES_PAGE_HEAD</span> <span class="o">=</span> <span class="s2">"""# Files: `{{pipeline_id}}:file/{{files_id}}` - {{files_name}}</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude "freshness.md" %}</span>
+
+<span class="s2">"""</span>
+
+<span class="n">_FILES_PAGE_TAIL</span> <span class="o">=</span> <span class="s2">"""</span>
+
+<span class="s2">## Files</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">f listing %}</span>
+<span class="s2">{{ listing.summary }}</span>
+
+<span class="s2">| File | Size |</span>
+<span class="s2">|------|------|</span>
+<span class="s2">{</span><span class="si">% f</span><span class="s2">or file in listing.rows %}| {{file.path | literal}} | {{file.size}} |</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndfor %}{</span><span class="si">% i</span><span class="s2">f listing.more %}</span>
+<span class="s2">And {{listing.more}} more: `assets.index("file/{{files_id}}")` lists every one.</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">lse %}</span>
+<span class="s2">{{ not_built }}</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">{</span><span class="si">% i</span><span class="s2">f preview %}</span>
+<span class="s2">## Preview</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">f preview.kind == "image" %}{{ preview.path }}:</span>
+
+<span class="s2">&lt;img src="{{preview.src}}" alt="{{preview.alt}}" class="cb-thumbnail"&gt;</span>
+
+<span class="s2">{</span><span class="si">% e</span><span class="s2">lse %}The first lines of {{ preview.path }}:</span>
+
+<span class="s2">{{preview.fence}}text</span>
+<span class="s2">{{preview.text}}</span>
+<span class="s2">{{preview.fence}}</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">{</span><span class="si">% e</span><span class="s2">ndif %}</span>
+<span class="s2">## Reading Them</span>
+
+<span class="s2">ChartBook keeps these files as they are and does not read them. In this pipeline:</span>
+
+<span class="s2">```python</span>
+<span class="s2">from chartbook import assets</span>
+
+<span class="s2">paths = assets.files("file/{{files_id}}")      # every file, sorted</span>
+<span class="s2">table = assets.index("file/{{files_id}}")      # path, size_bytes, sha256{</span><span class="si">% i</span><span class="s2">f listing and listing.partition_keys %} and the folders' keys{</span><span class="si">% e</span><span class="s2">ndif %}: a LazyFrame</span>
+<span class="s2">```</span>
+
+<span class="s2">In a pipeline that depends on this one, name it `&lt;dependency&gt;:file/{{files_id}}`.</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude "provenance.md" %}</span>
+
+<span class="s2">## Files Manifest</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude "file_manifest.md" %}</span>
+
+<span class="s2">## Pipeline Manifest</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude "pipeline_manifest.md" %}</span>
+
+<span class="s2">"""</span>
+
+<span class="c1">#: The most files a page lists; the index lists more (``chartbook.index.FILES_LISTED``), and `assets.index` all.</span>
+<span class="n">FILES_SHOWN</span> <span class="o">=</span> <span class="mi">50</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_is_from_the_store</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
@@ -822,6 +906,7 @@
             <span class="s2">"Dataframe"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe_page_path</span><span class="p">,</span>
             <span class="s2">"Chart"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_page_path</span><span class="p">,</span>
             <span class="s2">"Model"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_page_path</span><span class="p">,</span>
+            <span class="s2">"File"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_page_path</span><span class="p">,</span>
             <span class="s2">"Pipeline"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">,</span>
         <span class="p">}[</span><span class="n">record</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]](</span><span class="n">record</span><span class="p">)</span></div>
 
@@ -856,6 +941,13 @@
         <span class="k">return</span> <span class="sa">f</span><span class="s2">"cb/models/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">'pipeline'</span><span class="p">])</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">record</span><span class="p">)</span><span class="si">}</span><span class="s2">.md"</span></div>
 
 
+<div class="viewcode-block" id="SphinxWriter.files_page_path">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.files_page_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">files_page_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Where a files asset's page is, under the pages folder."""</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"cb/files/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">'pipeline'</span><span class="p">])</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">record</span><span class="p">)</span><span class="si">}</span><span class="s2">.md"</span></div>
+
+
 <div class="viewcode-block" id="SphinxWriter.link_to_dataframe">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">link_to_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">from_kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"Dataframe"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -879,7 +971,7 @@
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.dataframe_page">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">dataframe_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""The Markdown page of one dataframe, from its record and the files it names."""</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.sitefiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">downloadable</span><span class="p">,</span> <span class="n">not_built</span><span class="p">,</span> <span class="n">not_built_text</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.sitefiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_link</span><span class="p">,</span> <span class="n">downloadable</span><span class="p">,</span> <span class="n">not_built</span><span class="p">,</span> <span class="n">not_built_text</span>
 
         <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record_id</span><span class="p">]</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">]]</span>
@@ -902,12 +994,17 @@
             <span class="n">freshness</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">resolved</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved_path"</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
-            <span class="n">glimpse</span> <span class="o">=</span> <span class="n">get_dataframe_glimpse</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">))</span>
+            <span class="c1"># Read as data.load() reads it: its format and the reader's options are the record's</span>
+            <span class="n">glimpse</span> <span class="o">=</span> <span class="n">get_dataframe_glimpse</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">),</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format"</span><span class="p">),</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"read_options"</span><span class="p">))</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">_most_recent_valid_datapoints</span><span class="p">(</span>
-                    <span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">),</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"date_col"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="n">size_threshold_mb</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">size_threshold</span>
+                    <span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">),</span>
+                    <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"date_col"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
+                    <span class="n">size_threshold_mb</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">size_threshold</span><span class="p">,</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"format"</span><span class="p">),</span>
+                    <span class="n">read_options</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"read_options"</span><span class="p">),</span>
                 <span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - as the generator does: a page, not a crash</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">Exception</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">PanicException</span><span class="p">):</span>  <span class="c1"># noqa: BLE001 - as the generator does: a page, not a crash</span>
                 <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
             <span class="n">freshness</span> <span class="o">=</span> <span class="p">[</span><span class="n">_freshness</span><span class="p">(</span><span class="s2">"Data updated"</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"modified_at"</span><span class="p">))]</span>
         <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">_DATAFRAME_PAGE</span><span class="p">)</span>
@@ -926,8 +1023,10 @@
             <span class="n">most_recent_data_max</span><span class="o">=</span><span class="s2">""</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">last</span><span class="p">,</span>
             <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">"../.."</span><span class="p">,</span>
             <span class="n">dataframe_glimpse</span><span class="o">=</span><span class="n">glimpse</span><span class="p">,</span>
+            <span class="n">parts</span><span class="o">=</span><span class="n">_parts</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
             <span class="c1"># Only a file the build copies for download is linked</span>
             <span class="n">enable_data_download</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enable_data_download</span> <span class="ow">and</span> <span class="n">downloadable</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">download_link</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
             <span class="n">freshness</span><span class="o">=</span><span class="p">[</span><span class="n">fact</span> <span class="k">for</span> <span class="n">fact</span> <span class="ow">in</span> <span class="n">freshness</span> <span class="k">if</span> <span class="n">fact</span><span class="p">],</span>
         <span class="p">)</span></div>
 
@@ -942,7 +1041,7 @@
 <span class="sd">        the chart file's ``modified_at``; "Data updated" is its dataframe's,</span>
 <span class="sd">        which for a table or query is the engine file's.</span>
 <span class="sd">        """</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.sitefiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">downloadable</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.sitefiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_link</span><span class="p">,</span> <span class="n">downloadable</span>
 
         <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record_id</span><span class="p">]</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">]]</span>
@@ -992,6 +1091,7 @@
             <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">".."</span><span class="p">,</span>
             <span class="c1"># Its dataframe's manifest is on the page, with a download only of a file the build copies</span>
             <span class="n">enable_data_download</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">enable_data_download</span> <span class="ow">and</span> <span class="n">dataframe</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">downloadable</span><span class="p">(</span><span class="n">dataframe</span><span class="p">),</span>
+            <span class="o">**</span><span class="p">(</span><span class="n">download_link</span><span class="p">(</span><span class="n">dataframe</span><span class="p">)</span> <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}),</span>
         <span class="p">)</span></div>
 
 
@@ -1050,6 +1150,74 @@
         <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="SphinxWriter.files_page">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.files_page">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">files_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The Markdown page of one files asset, from its record and the write-up.</span>
+
+<span class="sd">        Its files are as the record lists them: how many, how large, of</span>
+<span class="sd">        which types, and the first :data:`FILES_SHOWN`. The one file read is</span>
+<span class="sd">        the one previewed, the first the record lists that a preview can</span>
+<span class="sd">        show, and only its first few KB (:func:`chartbook.files.preview_of`).</span>
+<span class="sd">        """</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.sitefiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">not_built_text</span><span class="p">,</span> <span class="n">thumbnail_path</span>
+
+        <span class="n">record</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record_id</span><span class="p">]</span>
+        <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">record</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">]]</span>
+        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">"location"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">])</span>
+        <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+        <span class="n">preview</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_preview</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">preview</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="s2">"../"</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_page_path</span><span class="p">(</span><span class="n">record</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span> <span class="o">+</span> <span class="n">thumbnail_path</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">preview</span><span class="p">)</span>
+            <span class="n">preview</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">preview</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">_code</span><span class="p">(</span><span class="n">preview</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">preview</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"image"</span><span class="p">:</span>
+                <span class="n">preview</span><span class="p">[</span><span class="s2">"src"</span><span class="p">]</span> <span class="o">=</span> <span class="n">src</span>
+                <span class="n">preview</span><span class="p">[</span><span class="s2">"alt"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_as_text</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">preview</span><span class="p">[</span><span class="s2">"file"</span><span class="p">])</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">longest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">run</span><span class="p">)</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">"`+"</span><span class="p">,</span> <span class="n">preview</span><span class="p">[</span><span class="s2">"text"</span><span class="p">])),</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">preview</span><span class="p">[</span><span class="s2">"fence"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"`"</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">longest</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">_FILES_PAGE_HEAD</span> <span class="o">+</span> <span class="s2">"{{ write_up }}"</span> <span class="o">+</span> <span class="n">_FILES_PAGE_TAIL</span><span class="p">)</span>
+        <span class="n">files_manifest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_files_manifest</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">files_manifest</span><span class="o">=</span><span class="n">files_manifest</span><span class="p">,</span>
+            <span class="n">write_up</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_write_up</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">environment</span><span class="p">),</span>
+            <span class="n">provenance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_panel</span><span class="p">(</span><span class="n">record_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_path</span><span class="p">(</span><span class="n">record</span><span class="p">)),</span>
+            <span class="n">files_id</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">files_name</span><span class="o">=</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+            <span class="n">link_to_files_docs</span><span class="o">=</span><span class="sa">f</span><span class="s2">"../../files/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s1">'pipeline'</span><span class="p">])</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.md"</span><span class="p">,</span>
+            <span class="n">pipeline_id</span><span class="o">=</span><span class="n">record</span><span class="p">[</span><span class="s2">"pipeline"</span><span class="p">],</span>
+            <span class="n">pipeline_manifest</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>
+            <span class="n">pipeline_page_link</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_link</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
+            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">"../.."</span><span class="p">,</span>
+            <span class="n">listing</span><span class="o">=</span><span class="n">_listing</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
+            <span class="n">not_built</span><span class="o">=</span><span class="n">not_built_text</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">_code</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)),</span> <span class="n">command</span><span class="o">=</span><span class="s2">"`chartbook build`"</span><span class="p">),</span>
+            <span class="n">preview</span><span class="o">=</span><span class="n">preview</span><span class="p">,</span>
+            <span class="n">freshness</span><span class="o">=</span><span class="p">[</span><span class="n">fact</span> <span class="k">for</span> <span class="n">fact</span> <span class="ow">in</span> <span class="p">[</span><span class="n">_freshness</span><span class="p">(</span><span class="s2">"Files updated"</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"modified_at"</span><span class="p">))]</span> <span class="k">if</span> <span class="n">fact</span><span class="p">],</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SphinxWriter.files_preview">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.files_preview">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">files_preview</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""What a files asset's page previews, from the files its record lists (:func:`chartbook.files.preview_of`)."""</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">listing_root</span><span class="p">,</span> <span class="n">preview_of</span>
+
+        <span class="n">resolved</span> <span class="o">=</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved_path"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">resolved</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">preview_of</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">listing_root</span><span class="p">(</span><span class="n">resolved</span><span class="p">))</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_files_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The files asset as the templates read it: its declared fields and its path."""</span>
+        <span class="n">skip</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"ref"</span><span class="p">,</span> <span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">"location"</span><span class="p">,</span> <span class="s2">"content_hash"</span><span class="p">,</span> <span class="s2">"size_bytes"</span><span class="p">,</span>
+                <span class="s2">"file_count"</span><span class="p">,</span> <span class="s2">"extensions"</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">,</span> <span class="s2">"docs"</span><span class="p">}</span>
+        <span class="n">shown</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">}</span>
+        <span class="n">shown</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">shown</span>
+
 <div class="viewcode-block" id="SphinxWriter.pipeline_page">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.pipeline_page">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">pipeline_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -1094,6 +1262,7 @@
             <span class="n">pipeline_manifest</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>
             <span class="n">dataframe_file_list</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dataframe_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Dataframe"</span><span class="p">],</span>
             <span class="n">model_file_list</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Model"</span><span class="p">],</span>
+            <span class="n">files_file_list</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">files_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"File"</span><span class="p">],</span>
             <span class="n">readme_text</span><span class="o">=</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readme</span><span class="p">[</span><span class="mi">2</span><span class="p">:]),</span>
             <span class="n">pipeline_page_link</span><span class="o">=</span><span class="s2">"./index.md"</span><span class="p">,</span>
             <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">"cb"</span><span class="p">,</span>
@@ -1120,7 +1289,9 @@
     <span class="n">ASSISTANT_FILE</span> <span class="o">=</span> <span class="n">ASSISTANT_FILE</span>
 
     <span class="c1">#: The kinds the assistant file lists, under these headings, in this order</span>
-    <span class="n">ASSISTANT_SECTIONS</span> <span class="o">=</span> <span class="p">((</span><span class="s2">"Pipeline"</span><span class="p">,</span> <span class="s2">"Pipelines"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">,</span> <span class="s2">"Dataframes"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Chart"</span><span class="p">,</span> <span class="s2">"Charts"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Model"</span><span class="p">,</span> <span class="s2">"Models"</span><span class="p">))</span>
+    <span class="n">ASSISTANT_SECTIONS</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="s2">"Pipeline"</span><span class="p">,</span> <span class="s2">"Pipelines"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">,</span> <span class="s2">"Dataframes"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Chart"</span><span class="p">,</span> <span class="s2">"Charts"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"Model"</span><span class="p">,</span> <span class="s2">"Models"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"File"</span><span class="p">,</span> <span class="s2">"Files"</span><span class="p">)</span>
+    <span class="p">)</span>
 
     <span class="c1">#: How many versions of a pipeline the assistant file lists, newest first;</span>
     <span class="c1">#: the versions page lists them all</span>
@@ -1129,7 +1300,7 @@
 <div class="viewcode-block" id="SphinxWriter.assistant_file">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.assistant_file">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">assistant_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The site as an assistant reads it: one line per pipeline, dataframe, chart and model, with where its page is.</span>
+<span class="w">        </span><span class="sd">"""The site as an assistant reads it: one line per pipeline, dataframe, chart, model and files asset, with where its page is.</span>
 
 <span class="sd">        In the llms.txt form: the site's name as the title, what it is as the</span>
 <span class="sd">        summary, then a list per kind, each line ``- [name](page): `ID`.</span>
@@ -1180,9 +1351,10 @@
             <span class="s2">"quotation marks, what its owner wrote of it. Every record, with its fields, inputs and content "</span>
             <span class="s2">"hashes, is in [index.json](index.json)."</span><span class="p">,</span>
             <span class="s2">""</span><span class="p">,</span>
-            <span class="s2">"An ID is `pipeline:name` for a dataframe, `pipeline:chart/name` for a chart and "</span>
-            <span class="s2">"`pipeline:model/name` for a model. Inside that pipeline, an asset is named without the pipeline "</span>
-            <span class="s2">"(`chartbook path name`, `chartbook path model/name`, `data.load(</span><span class="se">\"</span><span class="s2">name</span><span class="se">\"</span><span class="s2">)`); in another pipeline "</span>
+            <span class="s2">"An ID is `pipeline:name` for a dataframe, `pipeline:chart/name` for a chart, "</span>
+            <span class="s2">"`pipeline:model/name` for a model and `pipeline:file/name` for files. Inside that pipeline, an asset is "</span>
+            <span class="s2">"named without the pipeline (`chartbook path name`, `chartbook path model/name`, `data.load(</span><span class="se">\"</span><span class="s2">name</span><span class="se">\"</span><span class="s2">)`, "</span>
+            <span class="s2">"`assets.files(</span><span class="se">\"</span><span class="s2">file/name</span><span class="se">\"</span><span class="s2">)`); in another pipeline "</span>
             <span class="s2">"that declares it in `[dependencies]` and has pinned it, by the dependency's key, a colon and the "</span>
             <span class="s2">"name. Through a catalog that lists it: "</span>
             <span class="s2">"`data.load(pipeline=</span><span class="se">\"</span><span class="s2">pipeline</span><span class="se">\"</span><span class="s2">, dataframe=</span><span class="se">\"</span><span class="s2">name</span><span class="se">\"</span><span class="s2">, catalog_path=</span><span class="se">\"</span><span class="s2">...</span><span class="se">\"</span><span class="s2">)`."</span><span class="p">,</span>
@@ -1235,7 +1407,9 @@
     <span class="c1">#: The pages a catalog renders from its records, by path under the pages</span>
     <span class="c1">#: folder. `charts.md` and `contributing.md` are static files of the</span>
     <span class="c1">#: theme that the build copies; they are not rendered.</span>
-    <span class="n">CATALOG_PAGES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"index.md"</span><span class="p">,</span> <span class="s2">"cb/dataframes.md"</span><span class="p">,</span> <span class="s2">"cb/models.md"</span><span class="p">,</span> <span class="s2">"cb/pipelines.md"</span><span class="p">,</span> <span class="s2">"cb/diagnostics.md"</span><span class="p">,</span> <span class="s2">"cb/versions.md"</span><span class="p">)</span>
+    <span class="n">CATALOG_PAGES</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">"index.md"</span><span class="p">,</span> <span class="s2">"cb/dataframes.md"</span><span class="p">,</span> <span class="s2">"cb/models.md"</span><span class="p">,</span> <span class="s2">"cb/files.md"</span><span class="p">,</span> <span class="s2">"cb/pipelines.md"</span><span class="p">,</span> <span class="s2">"cb/diagnostics.md"</span><span class="p">,</span> <span class="s2">"cb/versions.md"</span>
+    <span class="p">)</span>
 
 <div class="viewcode-block" id="SphinxWriter.own_page_paths">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.own_page_paths">[docs]</a>
@@ -1255,12 +1429,15 @@
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.catalog_page_paths">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">catalog_page_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""The catalog pages this index has: `cb/models.md` only when some pipeline declares a model,</span>
-<span class="sd">        `cb/versions.md` only when some pipeline has a snapshot in the store."""</span>
+<span class="sd">        `cb/files.md` only when some pipeline declares files, `cb/versions.md` only when some pipeline</span>
+<span class="sd">        has a snapshot in the store."""</span>
         <span class="n">has_models</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Model"</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">has_files</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"File"</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
         <span class="n">has_versions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_versions</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">[</span>
             <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">CATALOG_PAGES</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">has_models</span> <span class="ow">or</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">"cb/models.md"</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">has_versions</span> <span class="ow">or</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">"cb/versions.md"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">has_models</span> <span class="ow">or</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">"cb/models.md"</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">has_files</span> <span class="ow">or</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">"cb/files.md"</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="p">(</span><span class="n">has_versions</span> <span class="ow">or</span> <span class="n">p</span> <span class="o">!=</span> <span class="s2">"cb/versions.md"</span><span class="p">)</span>
         <span class="p">]</span></div>
 
 
@@ -1299,7 +1476,9 @@
                 <span class="sa">f</span><span class="s1">'The newest snapshot: &lt;a href="../../</span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s1">/index.html"&gt;`</span><span class="si">{</span><span class="n">newest</span><span class="p">[</span><span class="s2">"commit"</span><span class="p">][:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s1">`, made </span><span class="si">{</span><span class="n">made</span><span class="si">}</span><span class="s1">&lt;/a&gt;. '</span>
                 <span class="sa">f</span><span class="s2">"[Every version](../versions.md)."</span>
             <span class="p">)</span>
-            <span class="n">assets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_the_store_assets</span><span class="p">((</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+            <span class="n">assets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">from_the_store_assets</span><span class="p">(</span>
+                <span class="p">(</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span> <span class="n">pipeline</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+            <span class="p">)</span>
             <span class="k">if</span> <span class="n">assets</span><span class="p">:</span>
                 <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"What its newest snapshot holds, each linked to its page there:"</span><span class="p">,</span> <span class="s2">""</span><span class="p">]</span>
                 <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span>
@@ -1327,7 +1506,7 @@
 <span class="sd">        are; then one entry with ``more``, how many are not, linked to the</span>
 <span class="sd">        snapshot's site.</span>
 
-<span class="sd">        :param kinds: The kinds to list, as a reference names them: ``dataframe``, ``chart``, ``model``.</span>
+<span class="sd">        :param kinds: The kinds to list, as a reference names them: ``dataframe``, ``chart``, ``model``, ``file``.</span>
 <span class="sd">        :param pipeline_id: Only this pipeline's; every one's by default.</span>
 <span class="sd">        :returns: Each as ``{"kind", "id", "title", "pipeline", "link"}``, by pipeline, then kind, then name.</span>
 <span class="sd">        """</span>
@@ -1414,11 +1593,13 @@
         <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
         <span class="n">dataframes</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataframe_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Dataframe"</span><span class="p">)</span>
         <span class="n">models</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Model"</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"File"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"index.md"</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"index.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
                 <span class="n">manifest</span><span class="o">=</span><span class="p">{</span><span class="s2">"project"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)}},</span>
                 <span class="n">dataframe_file_list</span><span class="o">=</span><span class="n">dataframes</span><span class="p">,</span>
                 <span class="n">model_file_list</span><span class="o">=</span><span class="n">models</span><span class="p">,</span>
+                <span class="n">files_file_list</span><span class="o">=</span><span class="n">files</span><span class="p">,</span>
                 <span class="n">readme_text</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
                 <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">"cb"</span><span class="p">,</span>
                 <span class="n">has_versions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_has_versions</span><span class="p">(),</span>
@@ -1434,6 +1615,8 @@
             <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"models.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
                 <span class="n">model_file_list</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"cb/"</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">models</span><span class="p">]</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/files.md"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"files.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">files_file_list</span><span class="o">=</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"cb/"</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">files</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/pipelines.md"</span><span class="p">:</span>
             <span class="n">pipelines</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="n">r</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Pipeline"</span>
@@ -1488,7 +1671,7 @@
 
         <span class="n">required</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_fields</span><span class="p">(</span><span class="n">catalog</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">kinds</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Dataframe"</span><span class="p">:</span> <span class="s2">"dataframes"</span><span class="p">,</span> <span class="s2">"Chart"</span><span class="p">:</span> <span class="s2">"charts"</span><span class="p">,</span> <span class="s2">"Model"</span><span class="p">:</span> <span class="s2">"models"</span><span class="p">,</span> <span class="s2">"Notebook"</span><span class="p">:</span> <span class="s2">"notebooks"</span><span class="p">}</span>
+        <span class="n">kinds</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Dataframe"</span><span class="p">:</span> <span class="s2">"dataframes"</span><span class="p">,</span> <span class="s2">"Chart"</span><span class="p">:</span> <span class="s2">"charts"</span><span class="p">,</span> <span class="s2">"Model"</span><span class="p">:</span> <span class="s2">"models"</span><span class="p">,</span> <span class="s2">"File"</span><span class="p">:</span> <span class="s2">"files"</span><span class="p">,</span> <span class="s2">"Notebook"</span><span class="p">:</span> <span class="s2">"notebooks"</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipelines"</span><span class="p">,</span> <span class="p">[]):</span>
             <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">pipeline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1522,6 +1705,7 @@
                         <span class="s2">"Dataframe"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"./dataframes/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.html"</span><span class="p">,</span>
                         <span class="s2">"Chart"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"./charts/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.html"</span><span class="p">,</span>
                         <span class="s2">"Model"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"./models/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.html"</span><span class="p">,</span>
+                        <span class="s2">"File"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"./files/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.html"</span><span class="p">,</span>
                         <span class="s2">"Notebook"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
                     <span class="p">}[</span><span class="n">kind</span><span class="p">]</span>
                     <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_row</span><span class="p">(</span><span class="n">kind</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">name</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">missing</span><span class="p">,</span> <span class="n">link</span><span class="p">))</span>
@@ -1540,7 +1724,8 @@
 <span class="sd">        """</span>
         <span class="n">skip</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"ref"</span><span class="p">,</span> <span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">"location"</span><span class="p">,</span> <span class="s2">"content_hash"</span><span class="p">,</span> <span class="s2">"size_bytes"</span><span class="p">,</span> <span class="s2">"row_count"</span><span class="p">,</span>
                 <span class="s2">"columns"</span><span class="p">,</span> <span class="s2">"definition_hash"</span><span class="p">,</span> <span class="s2">"date_range"</span><span class="p">,</span> <span class="s2">"docs"</span><span class="p">,</span> <span class="s2">"inputs"</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">,</span> <span class="s2">"pinned_inputs"</span><span class="p">,</span>
-                <span class="s2">"trained_with"</span><span class="p">,</span> <span class="s2">"trained_from"</span><span class="p">,</span> <span class="s2">"inputs_now"</span><span class="p">,</span> <span class="s2">"stale_inputs"</span><span class="p">,</span> <span class="s2">"metrics"</span><span class="p">,</span> <span class="s2">"versions"</span><span class="p">}</span>
+                <span class="s2">"trained_with"</span><span class="p">,</span> <span class="s2">"trained_from"</span><span class="p">,</span> <span class="s2">"inputs_now"</span><span class="p">,</span> <span class="s2">"stale_inputs"</span><span class="p">,</span> <span class="s2">"metrics"</span><span class="p">,</span> <span class="s2">"versions"</span><span class="p">,</span>
+                <span class="s2">"file_count"</span><span class="p">,</span> <span class="s2">"extensions"</span><span class="p">}</span>
         <span class="n">spec</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">}</span>
         <span class="n">location</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
@@ -1632,6 +1817,7 @@
             <span class="s2">"dataframe"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/dataframes/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">owner</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="s2">"chart"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/charts/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">owner</span><span class="p">)</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="s2">"model"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/models/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">owner</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="s2">"file"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/files/</span><span class="si">{</span><span class="n">_slug</span><span class="p">(</span><span class="n">owner</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pages</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">asset</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">asset</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="s2">"#@"</span><span class="p">):</span>
             <span class="k">return</span> <span class="s2">""</span>
@@ -1795,7 +1981,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_dataframe_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""The dataframe as the templates read it: its declared fields, and where it is."""</span>
         <span class="n">skip</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"version"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"ref"</span><span class="p">,</span> <span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">"location"</span><span class="p">,</span> <span class="s2">"content_hash"</span><span class="p">,</span> <span class="s2">"size_bytes"</span><span class="p">,</span>
-                <span class="s2">"row_count"</span><span class="p">,</span> <span class="s2">"columns"</span><span class="p">,</span> <span class="s2">"definition_hash"</span><span class="p">,</span> <span class="s2">"date_range"</span><span class="p">,</span> <span class="s2">"docs"</span><span class="p">,</span> <span class="s2">"inputs"</span><span class="p">}</span>
+                <span class="s2">"row_count"</span><span class="p">,</span> <span class="s2">"columns"</span><span class="p">,</span> <span class="s2">"definition_hash"</span><span class="p">,</span> <span class="s2">"date_range"</span><span class="p">,</span> <span class="s2">"docs"</span><span class="p">,</span> <span class="s2">"inputs"</span><span class="p">,</span> <span class="s2">"file_count"</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">}</span>
         <span class="n">shown</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">}</span>
         <span class="n">location</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="c1"># The charts made from this dataframe, by their local names</span>
@@ -1887,11 +2073,12 @@
 <div class="viewcode-block" id="SphinxWriter.page">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.page">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The page of any record that has one: dataframe, chart, model or pipeline."""</span>
+<span class="w">        </span><span class="sd">"""The page of any record that has one: dataframe, chart, model, files or pipeline."""</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">"Dataframe"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataframe_page</span><span class="p">,</span>
             <span class="s2">"Chart"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_page</span><span class="p">,</span>
             <span class="s2">"Model"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_page</span><span class="p">,</span>
+            <span class="s2">"File"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">files_page</span><span class="p">,</span>
             <span class="s2">"Pipeline"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page</span><span class="p">,</span>
         <span class="p">}[</span><span class="n">record</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]](</span><span class="n">record</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span></div>
 </div>
@@ -1914,6 +2101,7 @@
         <span class="s2">"dataframe_manifest.md"</span><span class="p">,</span>
         <span class="s2">"pipeline_manifest.md"</span><span class="p">,</span>
         <span class="s2">"model_manifest.md"</span><span class="p">,</span>
+        <span class="s2">"file_manifest.md"</span><span class="p">,</span>
         <span class="s2">"provenance.md"</span><span class="p">,</span>
         <span class="s2">"pipeline_dependencies.md"</span><span class="p">,</span>
         <span class="s2">"index.md"</span><span class="p">,</span>
@@ -2052,6 +2240,98 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">size</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> GB"</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_listed</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The files a record lists, each as the index writes one: a table with a path and a size. Anything else is passed over."""</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">listed</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">listed</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">),</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"size_bytes"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+    <span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_by_type</span><span class="p">(</span><span class="n">extensions</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""How many files there are of each type, as a page says it: ``2 `.pdf`, 1 with no type, 3 of other types``."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">OTHER_TYPES</span>
+
+    <span class="n">said</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">number</span> <span class="ow">in</span> <span class="p">(</span><span class="n">extensions</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">extensions</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">number</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="n">OTHER_TYPES</span><span class="p">:</span>
+            <span class="n">said</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> of other types"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">said</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">_code</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">kind</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'with no type'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_listing</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A files asset's files as its page lists them: a line that sums them up, and the first :data:`FILES_SHOWN`."""</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">_listed</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">listed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_count"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_count"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
+    <span class="n">by_type</span> <span class="o">=</span> <span class="n">_by_type</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"extensions"</span><span class="p">))</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"**</span><span class="si">{</span><span class="n">count</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> file</span><span class="si">{</span><span class="s1">'s'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">**, </span><span class="si">{</span><span class="n">_format_size</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'size_bytes'</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> in all"</span>
+    <span class="n">summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">": </span><span class="si">{</span><span class="n">by_type</span><span class="si">}</span><span class="s2">."</span> <span class="k">if</span> <span class="n">by_type</span> <span class="k">else</span> <span class="s2">"."</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="n">_keys_of</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">summary</span> <span class="o">+=</span> <span class="s2">" "</span> <span class="o">+</span> <span class="n">_keys_line</span><span class="p">(</span><span class="n">listed</span><span class="p">,</span> <span class="n">keys</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="s2">"path"</span><span class="p">],</span> <span class="s2">"size"</span><span class="p">:</span> <span class="n">_format_size</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">"size_bytes"</span><span class="p">])}</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">[:</span><span class="n">FILES_SHOWN</span><span class="p">]]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"summary"</span><span class="p">:</span> <span class="n">summary</span><span class="p">,</span> <span class="s2">"rows"</span><span class="p">:</span> <span class="n">rows</span><span class="p">,</span> <span class="s2">"more"</span><span class="p">:</span> <span class="n">count</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="s2">"partition_keys"</span><span class="p">:</span> <span class="n">keys</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_keys_of</span><span class="p">(</span><span class="n">listed</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The keys of the ``key=value`` folders some listed file is in, in the order first met."""</span>
+    <span class="n">keys</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_partitions_of</span><span class="p">(</span><span class="n">entry</span><span class="p">):</span>
+            <span class="n">keys</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_partitions_of</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A listed file's ``key=value`` folders, as text; empty if the entry has none it can say."""</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"partitions"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">):</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">found</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_keys_line</span><span class="p">(</span><span class="n">listed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""One sentence on the ``key=value`` folders: each key, and its values among the files listed."""</span>
+    <span class="n">said</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">_partitions_of</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">}</span> <span class="o">-</span> <span class="p">{</span><span class="kc">None</span><span class="p">})</span>
+        <span class="n">shown</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_code</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[:</span><span class="mi">6</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">", … (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2"> values)"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">6</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="n">said</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_code</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"In `key=value` folders, by </span><span class="si">{</span><span class="s1">'; '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">said</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parts</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""A dataframe of many parts as its page lists them: each file with its size, its rows and its partition keys."""</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">_listed</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">listed</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_count"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_count"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="n">_keys_of</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"**</span><span class="si">{</span><span class="n">count</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> file</span><span class="si">{</span><span class="s1">'s'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">**, </span><span class="si">{</span><span class="n">_format_size</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'size_bytes'</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> in all"</span>
+    <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"row_count"</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">summary</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">", </span><span class="si">{</span><span class="n">record</span><span class="p">[</span><span class="s1">'row_count'</span><span class="p">]</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> rows"</span>
+    <span class="n">summary</span> <span class="o">+=</span> <span class="s2">"."</span>
+    <span class="k">if</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">summary</span> <span class="o">+=</span> <span class="s2">" "</span> <span class="o">+</span> <span class="n">_keys_line</span><span class="p">(</span><span class="n">listed</span><span class="p">,</span> <span class="n">keys</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">"path"</span><span class="p">:</span> <span class="n">f</span><span class="p">[</span><span class="s2">"path"</span><span class="p">],</span>
+            <span class="s2">"size"</span><span class="p">:</span> <span class="n">_format_size</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">"size_bytes"</span><span class="p">]),</span>
+            <span class="s2">"rows"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">f</span><span class="p">[</span><span class="s1">'row_count'</span><span class="p">]</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"row_count"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
+            <span class="s2">"partition_values"</span><span class="p">:</span> <span class="p">[</span><span class="n">_partitions_of</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">[:</span><span class="n">FILES_SHOWN</span><span class="p">]</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"summary"</span><span class="p">:</span> <span class="n">summary</span><span class="p">,</span> <span class="s2">"rows"</span><span class="p">:</span> <span class="n">rows</span><span class="p">,</span> <span class="s2">"more"</span><span class="p">:</span> <span class="n">count</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="s2">"partition_keys"</span><span class="p">:</span> <span class="p">[</span><span class="n">_code</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">]}</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_metric</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""A score for a table: whole numbers whole, others to six significant digits."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
@@ -2061,19 +2341,28 @@
     <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">"</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_most_recent_valid_datapoints</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">date_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"date"</span><span class="p">,</span> <span class="n">size_threshold_mb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">50</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_most_recent_valid_datapoints</span><span class="p">(</span>
+    <span class="n">parquet_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">date_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"date"</span><span class="p">,</span>
+    <span class="n">size_threshold_mb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="nb">format</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">read_options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">"""The least and greatest of each column's last non-null date, as text, for the dataframe table.</span>
 
 <span class="sd">    "N/A" without a date column or for a folder of parts; "N/A (large file)"</span>
-<span class="sd">    over the size threshold, so a big file is not read for two dates.</span>
+<span class="sd">    over the size threshold, so a big file is not read for two dates. The</span>
+<span class="sd">    file is read as ``data.load()`` reads it (:mod:`chartbook.formats`).</span>
 <span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">formats</span>
+
     <span class="k">if</span> <span class="n">date_col</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"NA"</span><span class="p">,</span> <span class="s2">"N/A"</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">"N/A"</span><span class="p">,</span> <span class="s2">"N/A"</span>
     <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)):</span>
         <span class="k">return</span> <span class="s2">"N/A"</span><span class="p">,</span> <span class="s2">"N/A"</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">size_threshold_mb</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">"N/A (large file)"</span><span class="p">,</span> <span class="s2">"N/A (large file)"</span>
-    <span class="n">frame</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">,</span> <span class="nb">format</span><span class="p">,</span> <span class="n">read_options</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">frame</span><span class="p">[</span><span class="n">date_col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">:</span>
         <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">date_col</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
     <span class="n">latest</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>

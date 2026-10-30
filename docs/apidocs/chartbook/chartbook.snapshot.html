@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -55,7 +55,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="chartbook.versions" href="chartbook.versions.html" />
-    <link rel="prev" title="chartbook.stores.s3" href="chartbook.stores.s3.html" />
+    <link rel="prev" title="chartbook.sharing" href="chartbook.sharing.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
@@ -276,6 +276,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -283,6 +284,7 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -310,6 +312,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -349,6 +353,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -536,6 +541,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_A_FILE"><code class="docutils literal notranslate"><span class="pre">NOT_A_FILE</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_A_PLAIN_PATH"><code class="docutils literal notranslate"><span class="pre">NOT_A_PLAIN_PATH</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_TRACKED"><code class="docutils literal notranslate"><span class="pre">NOT_TRACKED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.READS"><code class="docutils literal notranslate"><span class="pre">READS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored"><code class="docutils literal notranslate"><span class="pre">Restored</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored.left"><code class="docutils literal notranslate"><span class="pre">Restored.left</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored.put_back"><code class="docutils literal notranslate"><span class="pre">Restored.put_back</span></code></a></li>
@@ -562,6 +568,7 @@
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.pipeline"><code class="docutils literal notranslate"><span class="pre">Snapshot.pipeline</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.repository"><code class="docutils literal notranslate"><span class="pre">Snapshot.repository</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.same_moment"><code class="docutils literal notranslate"><span class="pre">Snapshot.same_moment()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.stored"><code class="docutils literal notranslate"><span class="pre">Snapshot.stored</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.subdirectory"><code class="docutils literal notranslate"><span class="pre">Snapshot.subdirectory</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.tags"><code class="docutils literal notranslate"><span class="pre">Snapshot.tags</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.to_document"><code class="docutils literal notranslate"><span class="pre">Snapshot.to_document()</span></code></a></li>
@@ -592,6 +599,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.all_snapshots"><code class="docutils literal notranslate"><span class="pre">all_snapshots()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.asset_record"><code class="docutils literal notranslate"><span class="pre">asset_record()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.by_repository"><code class="docutils literal notranslate"><span class="pre">by_repository()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.check_own_name"><code class="docutils literal notranslate"><span class="pre">check_own_name()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.check_within"><code class="docutils literal notranslate"><span class="pre">check_within()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.code_of"><code class="docutils literal notranslate"><span class="pre">code_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.document_paths"><code class="docutils literal notranslate"><span class="pre">document_paths()</span></code></a></li>
@@ -600,6 +608,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.history"><code class="docutils literal notranslate"><span class="pre">history()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.identity_keys"><code class="docutils literal notranslate"><span class="pre">identity_keys()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.improper_path"><code class="docutils literal notranslate"><span class="pre">improper_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.is_at"><code class="docutils literal notranslate"><span class="pre">is_at()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.keeps_of"><code class="docutils literal notranslate"><span class="pre">keeps_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.label_records"><code class="docutils literal notranslate"><span class="pre">label_records()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.labels_of"><code class="docutils literal notranslate"><span class="pre">labels_of()</span></code></a></li>
@@ -684,18 +693,19 @@ snapshot has the time it was made, and the newest is the one a pin moves
 to. A snapshot that would be the same as the one before it is not made.</p>
 <p>Where they are kept::</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>~/.chartbook/store/
-  snapshots/
-    4f2a91c0…/                       the commit
-      _top/                          a pipeline at the repository's top
-        20261013T182205.123456Z.json
-      examples--yield_curve/         one in a folder of the repository
-        20261013T182205.123456Z.json
+  pipelines/
+    ftsfr+fed_yield_curve/                 the pipeline
+      2026-10-13T182205Z_4f2a91c0e1b2/     when it was made _ its commit
+        _data/treasury_rates.parquet       what is new in it, in its place
+        _chartbook/snapshot.json           the record
 </pre></div>
 </div>
 <p>A record is JSON in the index’s format, like a lockfile: an envelope and
-one record for each asset, each with its content hash. The bytes are
-objects in the store like any other, and a snapshot keeps them from being
-cleared (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.lock.plan_gc</span></code>).</p>
+one record for each asset, each with its content hash, and, for each of
+its files, where the store keeps it (<code class="docutils literal notranslate"><span class="pre">stored</span></code>): each file is kept once in
+the pipeline’s folder, in the first snapshot that had it
+(:class:<code class="docutils literal notranslate"><span class="pre">chartbook.store.PendingSnapshot</span></code>). A snapshot keeps what it names
+from being cleared (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.lock.plan_gc</span></code>).</p>
 <p><strong>Clearing old ones.</strong> Every snapshot is kept until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">gc</span></code>
 is run, and then one is kept if a lockfile pins it, if it is the newest of
 its pipeline, if a label in that pipeline’s manifest points at a model
@@ -764,29 +774,35 @@ secrets, and a store is something to share.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.by_repository" title="chartbook.snapshot.by_repository"><code class="xref py py-obj docutils literal notranslate"><span class="pre">by_repository</span></code></a></p></td>
 <td><p>Snapshots of one pipeline, a list for each repository; those that name none go with the one repository there is, if one.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.check_within" title="chartbook.snapshot.check_within"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_within</span></code></a></p></td>
-<td><p>Refuse a manifest whose declared paths reach outside the pipeline’s folder.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.check_own_name" title="chartbook.snapshot.check_own_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_own_name</span></code></a></p></td>
+<td><p>Refuse a pipeline that keeps a file a snapshot would hold under <code class="docutils literal notranslate"><span class="pre">_chartbook/</span></code>, the one name a snapshot’s folder keeps for ChartBook.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.code_of" title="chartbook.snapshot.code_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">code_of</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.check_within" title="chartbook.snapshot.check_within"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_within</span></code></a></p></td>
+<td><p>Refuse a manifest whose declared paths reach outside the pipeline’s folder, or name a file with a glob character.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.code_of" title="chartbook.snapshot.code_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">code_of</span></code></a></p></td>
 <td><p>Say where a pipeline’s folder is in git, and at which commit.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.document_paths" title="chartbook.snapshot.document_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">document_paths</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.document_paths" title="chartbook.snapshot.document_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">document_paths</span></code></a></p></td>
 <td><p>The files of a pipeline a writer needs that are not assets, as git tracks them.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.files_read" title="chartbook.snapshot.files_read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_read</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.files_read" title="chartbook.snapshot.files_read"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_read</span></code></a></p></td>
 <td><p>The files a reader opens of an asset’s object, by their path in it, each with its size, as the record gives them.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.find" title="chartbook.snapshot.find"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.find" title="chartbook.snapshot.find"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find</span></code></a></p></td>
 <td><p>The snapshots of one pipeline at one commit, newest first.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.history" title="chartbook.snapshot.history"><code class="xref py py-obj docutils literal notranslate"><span class="pre">history</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.history" title="chartbook.snapshot.history"><code class="xref py py-obj docutils literal notranslate"><span class="pre">history</span></code></a></p></td>
 <td><p>Every snapshot of the pipeline in a folder, oldest first.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.identity_keys" title="chartbook.snapshot.identity_keys"><code class="xref py py-obj docutils literal notranslate"><span class="pre">identity_keys</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.identity_keys" title="chartbook.snapshot.identity_keys"><code class="xref py py-obj docutils literal notranslate"><span class="pre">identity_keys</span></code></a></p></td>
 <td><p>What names the repository a snapshot was made in: its address and its first commit, those it records.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.improper_path" title="chartbook.snapshot.improper_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">improper_path</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.improper_path" title="chartbook.snapshot.improper_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">improper_path</span></code></a></p></td>
 <td><p>Why a reader of this record would reach outside its object, or None.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.is_at" title="chartbook.snapshot.is_at"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_at</span></code></a></p></td>
+<td><p>Whether a record’s file is of a snapshot at <em>commit</em>, by where it is: in a folder named <code class="docutils literal notranslate"><span class="pre">&lt;time&gt;_&lt;first</span> <span class="pre">12</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">commit&gt;</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.keeps_of" title="chartbook.snapshot.keeps_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">keeps_of</span></code></a></p></td>
 <td><p>The assets a manifest marks <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code>, by their reference within the pipeline.</p></td>
@@ -816,7 +832,7 @@ secrets, and a store is something to share.</p>
 <td><p>Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.materialize_in_source" title="chartbook.snapshot.materialize_in_source"><code class="xref py py-obj docutils literal notranslate"><span class="pre">materialize_in_source</span></code></a></p></td>
-<td><p>Write each table or query dataframe out as parquet, into the store.</p></td>
+<td><p>Write each table or query dataframe out as parquet, into the store: a snapshot being made, at <code class="docutils literal notranslate"><span class="pre">_chartbook/tables/&lt;name&gt;.parquet</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.materialized_name" title="chartbook.snapshot.materialized_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">materialized_name</span></code></a></p></td>
 <td><p>The file a table or query is written out as, inside its store object: <code class="docutils literal notranslate"><span class="pre">&lt;name&gt;.parquet</span></code>.</p></td>
@@ -937,19 +953,22 @@ secrets, and a store is something to share.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.NOT_TRACKED" title="chartbook.snapshot.NOT_TRACKED"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NOT_TRACKED</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.SCHEMA" title="chartbook.snapshot.SCHEMA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SCHEMA</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.READS" title="chartbook.snapshot.READS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">READS</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.STORED_ASSETS_SHOWN" title="chartbook.snapshot.STORED_ASSETS_SHOWN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">STORED_ASSETS_SHOWN</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.SCHEMA" title="chartbook.snapshot.SCHEMA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SCHEMA</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.STORED_INDEX_LIMIT" title="chartbook.snapshot.STORED_INDEX_LIMIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">STORED_INDEX_LIMIT</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.STORED_ASSETS_SHOWN" title="chartbook.snapshot.STORED_ASSETS_SHOWN"><code class="xref py py-obj docutils literal notranslate"><span class="pre">STORED_ASSETS_SHOWN</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.TOP" title="chartbook.snapshot.TOP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TOP</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.STORED_INDEX_LIMIT" title="chartbook.snapshot.STORED_INDEX_LIMIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">STORED_INDEX_LIMIT</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.VERSION_DIGITS" title="chartbook.snapshot.VERSION_DIGITS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VERSION_DIGITS</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.snapshot.TOP" title="chartbook.snapshot.TOP"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TOP</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.snapshot.VERSION_DIGITS" title="chartbook.snapshot.VERSION_DIGITS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VERSION_DIGITS</span></code></a></p></td>
 <td></td>
 </tr>
 </tbody>
@@ -1118,6 +1137,12 @@ left_out: The assets and documents not written, each with why.</p>
 <dd><p>‘not tracked by git’</p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.snapshot.READS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">READS</span></span><a class="headerlink" href="#chartbook.snapshot.READS" title="Link to this definition">#</a></dt>
+<dd><p>(‘chartbook/snapshot/v1’,)</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.snapshot.Restored">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">Restored</span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#Restored"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.Restored" title="Link to this definition">#</a></dt>
@@ -1147,7 +1172,7 @@ manifest does not declare it.</p>
 <dl class="py data">
 <dt class="sig sig-object py" id="chartbook.snapshot.SCHEMA">
 <span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">SCHEMA</span></span><a class="headerlink" href="#chartbook.snapshot.SCHEMA" title="Link to this definition">#</a></dt>
-<dd><p>‘chartbook/snapshot/v1’</p>
+<dd><p>‘chartbook/snapshot/v2’</p>
 </dd></dl>
 
 <dl class="py data">
@@ -1216,7 +1241,10 @@ the write-ups, the pipeline’s own site pages, its logo and
 favicon, each under its path in the pipeline’s folder, and only
 those git tracks. <code class="docutils literal notranslate"><span class="pre">{&quot;content_hash&quot;:</span> <span class="pre">…,</span> <span class="pre">&quot;size_bytes&quot;:</span> <span class="pre">…,</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">&quot;files&quot;:</span> <span class="pre">[...]}</span></code>. With the assets, they are enough to lay the
 version out as a folder and build its site
-(:func:<code class="docutils literal notranslate"><span class="pre">materialize</span></code>). None for a snapshot made before.</p>
+(:func:<code class="docutils literal notranslate"><span class="pre">materialize</span></code>). None for a snapshot made before.
+stored: Where the store keeps the files of what it holds, as its
+record says: <code class="docutils literal notranslate"><span class="pre">{&quot;records&quot;:</span> <span class="pre">{name:</span> <span class="pre">…},</span> <span class="pre">&quot;index&quot;:</span> <span class="pre">…,</span> <span class="pre">&quot;documents&quot;:</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">…}</span></code>, each as :attr:<code class="docutils literal notranslate"><span class="pre">chartbook.store.StoredObject.stored</span></code> has
+it. Kept apart from the records, which a lockfile copies.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.snapshot.Snapshot.asset_hashes">
 <span class="sig-name descname"><span class="pre">asset_hashes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#Snapshot.asset_hashes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.Snapshot.asset_hashes" title="Link to this definition">#</a></dt>
@@ -1317,6 +1345,12 @@ version out as a folder and build its site
 <dt class="sig sig-object py" id="chartbook.snapshot.Snapshot.same_moment">
 <span class="sig-name descname"><span class="pre">same_moment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">made_at</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#Snapshot.same_moment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.Snapshot.same_moment" title="Link to this definition">#</a></dt>
 <dd><p>Whether this is the snapshot a lockfile names.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.snapshot.Snapshot.stored">
+<span class="sig-name descname"><span class="pre">stored</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span><a class="headerlink" href="#chartbook.snapshot.Snapshot.stored" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -1492,7 +1526,7 @@ removed from a store that cannot say what it is keeping.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.snapshot.asset_record">
-<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">asset_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">declared_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#asset_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.asset_record" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">asset_record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">declared_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reading</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#asset_record"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.asset_record" title="Link to this definition">#</a></dt>
 <dd><p>An asset as a snapshot and a lockfile record it; with its hash if stored.</p>
 <p>This is the one place that shape is written.</p>
 <dl class="myst field-list simple">
@@ -1509,6 +1543,10 @@ has its files listed, as the index lists a directory model’s:
 <li><p><strong>keep</strong> – Whether the manifest marks the asset <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code>: every
 version of it is kept in the store (<code class="docutils literal notranslate"><span class="pre">docs_src/design/keep.md</span></code>).
 Written only when it does.</p></li>
+<li><p><strong>reading</strong> – A dataframe’s <code class="docutils literal notranslate"><span class="pre">format</span></code> and <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, as its
+manifest gives them (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.formats.declared</span></code>), kept in
+its <code class="docutils literal notranslate"><span class="pre">location</span></code> so that a pipeline that reads the pin reads the
+bytes as their owner said to. Written only when given.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1525,9 +1563,20 @@ is taken as the named repository’s when there is only one.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="chartbook.snapshot.check_own_name">
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">check_own_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#check_own_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.check_own_name" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a pipeline that keeps a file a snapshot would hold under <code class="docutils literal notranslate"><span class="pre">_chartbook/</span></code>, the one name a snapshot’s folder keeps for ChartBook.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#chartbook.snapshot.SnapshotError" title="chartbook.snapshot.SnapshotError"><strong>SnapshotError</strong></a> – Naming the first such file and what to do.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="chartbook.snapshot.check_within">
 <span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">check_within</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#check_within"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.check_within" title="Link to this definition">#</a></dt>
-<dd><p>Refuse a manifest whose declared paths reach outside the pipeline’s folder.</p>
+<dd><p>Refuse a manifest whose declared paths reach outside the pipeline’s folder, or name a file with a glob character.</p>
 <p>What :func:<code class="docutils literal notranslate"><span class="pre">make</span></code> checks when it stores; here, so that it can be found
 out before a build, not after one.</p>
 <dl class="myst field-list simple">
@@ -1633,6 +1682,13 @@ write to a store, so each must be a plain relative path: no <code class="docutil
 absolute part (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.store.plain_parts</span></code>). A file’s record is
 read by its name alone, and a table’s or a query’s by the asset’s name,
 so neither can reach outside.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.snapshot.is_at">
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">is_at</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#is_at"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.is_at" title="Link to this definition">#</a></dt>
+<dd><p>Whether a record’s file is of a snapshot at <em>commit</em>, by where it is: in a folder named <code class="docutils literal notranslate"><span class="pre">&lt;time&gt;_&lt;first</span> <span class="pre">12</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">commit&gt;</span></code>.</p>
+<p>For a record that cannot be read, which says nothing of itself.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1834,8 +1890,8 @@ before snapshots did), or <em>into</em> is a file or has something in it.</p></l
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.snapshot.materialize_in_source">
-<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">materialize_in_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.store.html#chartbook.store.Store" title="chartbook.store.Store"><span class="pre">chartbook.store.Store</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#materialize_in_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.materialize_in_source" title="Link to this definition">#</a></dt>
-<dd><p>Write each table or query dataframe out as parquet, into the store.</p>
+<span class="sig-prename descclassname"><span class="pre">chartbook.snapshot.</span></span><span class="sig-name descname"><span class="pre">materialize_in_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">store</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.Store" title="chartbook.store.Store"><span class="pre">chartbook.store.Store</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="chartbook.store.html#chartbook.store.PendingSnapshot" title="chartbook.store.PendingSnapshot"><span class="pre">chartbook.store.PendingSnapshot</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.refs.html#chartbook.refs.AssetRef" title="chartbook.refs.AssetRef"><span class="pre">chartbook.refs.AssetRef</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/snapshot.html#materialize_in_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.snapshot.materialize_in_source" title="Link to this definition">#</a></dt>
+<dd><p>Write each table or query dataframe out as parquet, into the store: a snapshot being made, at <code class="docutils literal notranslate"><span class="pre">_chartbook/tables/&lt;name&gt;.parquet</span></code>.</p>
 <p>A table in a DuckDB file is what the pipeline made, as much as a parquet
 file is; a snapshot holds files, so the table is written out as one.
 The record’s location stays the source’s, and its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code> is
@@ -2339,12 +2395,12 @@ oldest first.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="chartbook.stores.s3.html"
+       href="chartbook.sharing.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></p>
       </div>
     </a>
     <a class="right-next"
@@ -2408,6 +2464,7 @@ oldest first.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_A_FILE"><code class="docutils literal notranslate"><span class="pre">NOT_A_FILE</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_A_PLAIN_PATH"><code class="docutils literal notranslate"><span class="pre">NOT_A_PLAIN_PATH</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.NOT_TRACKED"><code class="docutils literal notranslate"><span class="pre">NOT_TRACKED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.READS"><code class="docutils literal notranslate"><span class="pre">READS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored"><code class="docutils literal notranslate"><span class="pre">Restored</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored.left"><code class="docutils literal notranslate"><span class="pre">Restored.left</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Restored.put_back"><code class="docutils literal notranslate"><span class="pre">Restored.put_back</span></code></a></li>
@@ -2434,6 +2491,7 @@ oldest first.</p>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.pipeline"><code class="docutils literal notranslate"><span class="pre">Snapshot.pipeline</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.repository"><code class="docutils literal notranslate"><span class="pre">Snapshot.repository</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.same_moment"><code class="docutils literal notranslate"><span class="pre">Snapshot.same_moment()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.stored"><code class="docutils literal notranslate"><span class="pre">Snapshot.stored</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.subdirectory"><code class="docutils literal notranslate"><span class="pre">Snapshot.subdirectory</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.tags"><code class="docutils literal notranslate"><span class="pre">Snapshot.tags</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.Snapshot.to_document"><code class="docutils literal notranslate"><span class="pre">Snapshot.to_document()</span></code></a></li>
@@ -2464,6 +2522,7 @@ oldest first.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.all_snapshots"><code class="docutils literal notranslate"><span class="pre">all_snapshots()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.asset_record"><code class="docutils literal notranslate"><span class="pre">asset_record()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.by_repository"><code class="docutils literal notranslate"><span class="pre">by_repository()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.check_own_name"><code class="docutils literal notranslate"><span class="pre">check_own_name()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.check_within"><code class="docutils literal notranslate"><span class="pre">check_within()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.code_of"><code class="docutils literal notranslate"><span class="pre">code_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.document_paths"><code class="docutils literal notranslate"><span class="pre">document_paths()</span></code></a></li>
@@ -2472,6 +2531,7 @@ oldest first.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.history"><code class="docutils literal notranslate"><span class="pre">history()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.identity_keys"><code class="docutils literal notranslate"><span class="pre">identity_keys()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.improper_path"><code class="docutils literal notranslate"><span class="pre">improper_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.is_at"><code class="docutils literal notranslate"><span class="pre">is_at()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.keeps_of"><code class="docutils literal notranslate"><span class="pre">keeps_of()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.label_records"><code class="docutils literal notranslate"><span class="pre">label_records()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.snapshot.labels_of"><code class="docutils literal notranslate"><span class="pre">labels_of()</span></code></a></li>

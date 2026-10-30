@@ -93,7 +93,10 @@ Decided by the maintainer, 2026-10-12.
 - **0.2.0 is the release.** The asset graph, the store, the versioned catalog and the review
   before the release ship together as 0.2.0, the first release since 0.1.1 (decided 2026-10-18;
   the 0.2.0 prepared on 2026-10-12 was never published). Until it is published, what lands goes
-  under "Unreleased" in the changelog.
+  under "Unreleased" in the changelog. *It was published on 2026-10-26.*
+- **0.3.0 is next** ({doc}`plan-0.3.0`, proposed 2026-10-28): the store laid out by pipeline,
+  with each file stored once, and the issues that came in after 0.2.0. What lands goes under
+  "Unreleased" until it is published. *Built by 2026-10-29, and staged as 0.3.0 in the changelog.*
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 
@@ -111,6 +114,7 @@ Decided by the maintainer, 2026-10-12.
 | 8 | {doc}`stores-and-backends` | The store as a setting of the machine; stores and backends as plugins | Settings layers, the store interface and the S3 store built 2026-10-16 |
 | 9 | {doc}`versioned-catalog` | Index and snapshot settled; a catalog of every version of every pipeline | Step 1, the self-sufficient snapshot, built 2026-10-16 |
 | 10 | {doc}`trust` | What a build of a folder on this machine may do before you have trusted the pipeline, and how you say so | Built 2026-10-18: `chartbook trust`, `~/.chartbook/trust.toml`, the gates in `docs`, `build`, `run` and `catalog build` |
+| 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
@@ -1118,6 +1122,8 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
 16. **Looking at a repository takes no lock** (`GIT_OPTIONAL_LOCKS=0`), so finding a
     snapshot never gets in the way of whoever is working in that folder.
 17. **`builds/` in the store stays a name that is kept free.** Records go in `snapshots/`.
+    *(2026-10-28: the maintainer decided that the "before" hash is the git commit, with no input
+    hash, so store v2 keeps no `builds/` ({doc}`plan-0.3.0`).)*
 
 **Known gaps in 4b.**
 
@@ -2193,6 +2199,7 @@ maintainer.
 | 2026-10-16 | The S3 store is built behind `chartbook[s3]` (#68): the bucket laid out as a folder store, read through a cache on the machine so readers take paths as before; `data.path()` is the cached copy. A URL-returning `get()` is left open, not built | me |
 | 2026-10-16 | Index and snapshot stay two documents sharing one record format; a snapshot holds the index of its version and the files a writer needs, so any version renders from the store alone. A catalog shows every snapshot in the store of every pipeline plus each pipeline's working version (never "latest"); links follow pins; a version list on each pipeline page. Written up in `versioned-catalog.md`; the self-sufficient snapshot first | Jeremy, me |
 | 2026-10-25 | Dependencies between pipelines must form a directed acyclic graph. `chartbook run`, `chartbook build` and `chartbook snapshot` refuse a cycle (a run before it pins or builds anything, with the pins it would make worked out first and not written, `lock.would_pin`; a pin is held back until it is let through, so a refused one writes nothing), and `chartbook check` reports one, naming who depends on whom and where it was read. The graph is read from the folders on this machine first (a cycle is found as soon as it is declared) and through the pins and snapshots in the store otherwise (`chartbook.lineage.cycle`) | Jeremy, me; {doc}`../guide/depending-on-pipelines` |
+| 2026-10-28 | For 0.3.0: the store's top layer is one folder per pipeline, flat, under `pipelines/`, its name the ID with `+` for `/`, with Windows path lengths weighed; inside it, a folder for each snapshot, named `<time>_<commit>` so that a sort is by time and the two split at `_` (one commit can have several snapshots), holding the pipeline's files under their own names in their own places and ChartBook's own in one reserved folder, `_chartbook/`, each file kept once, in the first snapshot that had it, with a dictionary of every file's hash, size and place; a snapshot that holds the pipeline's code as well waits for a later release; the store never holds a file twice, and keeps only its own bytes (reflink or copy); the "before" hash stays the git commit, with no input hash or build key; `store export` writes no readable copy beside the store's; `store gc` clears what migration could not assign; 0.3.0 also holds `store export` and `store import`, #133, #134, the rest of #135, and #136; #9 closed, built in 0.2.0 | Jeremy, me; {doc}`plan-0.3.0` |
 
 ## Open questions, collected
 
@@ -2230,3 +2237,5 @@ Each is explained where it lives.
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
   parties can register others. ({doc}`../guide/plotting-backends`)
 - The project template's CI should run `chartbook check --skip-outputs`, once 0.2.0 is on PyPI.
+  *Done 2026-10-28:* 0.2.0 is on PyPI, and the template's workflow runs it after the tests, in
+  the environment it installs, where the project has a `chartbook.toml`.

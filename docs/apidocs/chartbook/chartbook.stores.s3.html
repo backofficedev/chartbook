@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -54,7 +54,7 @@
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="chartbook.snapshot" href="chartbook.snapshot.html" />
+    <link rel="next" title="chartbook.migrate" href="chartbook.migrate.html" />
     <link rel="prev" title="chartbook.stores" href="chartbook.stores.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="color-scheme" content="light dark"/>
@@ -276,6 +276,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -283,6 +284,7 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -310,6 +312,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -349,6 +353,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -505,33 +510,47 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.ALIVE_SECONDS"><code class="docutils literal notranslate"><span class="pre">ALIVE_SECONDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.CHECKED_DIR"><code class="docutils literal notranslate"><span class="pre">CHECKED_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.CLAIMED_FILE"><code class="docutils literal notranslate"><span class="pre">CLAIMED_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.COPY_LIMIT"><code class="docutils literal notranslate"><span class="pre">COPY_LIMIT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.LISTING_SECONDS"><code class="docutils literal notranslate"><span class="pre">LISTING_SECONDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store"><code class="docutils literal notranslate"><span class="pre">S3Store</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.add_root"><code class="docutils literal notranslate"><span class="pre">S3Store.add_root()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.age_of"><code class="docutils literal notranslate"><span class="pre">S3Store.age_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.all_snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.all_snapshot_files()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.begin"><code class="docutils literal notranslate"><span class="pre">S3Store.begin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.cache"><code class="docutils literal notranslate"><span class="pre">S3Store.cache</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.delete"><code class="docutils literal notranslate"><span class="pre">S3Store.delete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.delete_unowned"><code class="docutils literal notranslate"><span class="pre">S3Store.delete_unowned()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.files_of"><code class="docutils literal notranslate"><span class="pre">S3Store.files_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.get"><code class="docutils literal notranslate"><span class="pre">S3Store.get()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.has"><code class="docutils literal notranslate"><span class="pre">S3Store.has()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.hashes"><code class="docutils literal notranslate"><span class="pre">S3Store.hashes()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.held_hashes"><code class="docutils literal notranslate"><span class="pre">S3Store.held_hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.incomplete"><code class="docutils literal notranslate"><span class="pre">S3Store.incomplete()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.lacks"><code class="docutils literal notranslate"><span class="pre">S3Store.lacks()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.listing"><code class="docutils literal notranslate"><span class="pre">S3Store.listing()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.note_origin"><code class="docutils literal notranslate"><span class="pre">S3Store.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.origins"><code class="docutils literal notranslate"><span class="pre">S3Store.origins()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.pinned_snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.pinned_snapshot_files()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.put"><code class="docutils literal notranslate"><span class="pre">S3Store.put()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.reading"><code class="docutils literal notranslate"><span class="pre">S3Store.reading()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.records"><code class="docutils literal notranslate"><span class="pre">S3Store.records()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.remove_root"><code class="docutils literal notranslate"><span class="pre">S3Store.remove_root()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.remove_snapshot"><code class="docutils literal notranslate"><span class="pre">S3Store.remove_snapshot()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.root_of"><code class="docutils literal notranslate"><span class="pre">S3Store.root_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.roots"><code class="docutils literal notranslate"><span class="pre">S3Store.roots()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.size_of"><code class="docutils literal notranslate"><span class="pre">S3Store.size_of()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_commit_prefixes"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_commit_prefixes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_commits"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_commits()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_files()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.tidy"><code class="docutils literal notranslate"><span class="pre">S3Store.tidy()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.verify"><code class="docutils literal notranslate"><span class="pre">S3Store.verify()</span></code></a></li>
-<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.write_snapshot"><code class="docutils literal notranslate"><span class="pre">S3Store.write_snapshot()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.views"><code class="docutils literal notranslate"><span class="pre">S3Store.views</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.URL_OPTIONS"><code class="docutils literal notranslate"><span class="pre">URL_OPTIONS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.VERIFIED_DIR"><code class="docutils literal notranslate"><span class="pre">VERIFIED_DIR</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -550,19 +569,35 @@
   <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.stores.s3">
 <span id="chartbook-stores-s3"></span><h1><a class="reference internal" href="#module-chartbook.stores.s3" title="chartbook.stores.s3"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a><a class="headerlink" href="#module-chartbook.stores.s3" title="Link to this heading">#</a></h1>
 <p>A store in an S3 bucket: <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span> <span class="pre">=</span> <span class="pre">&quot;s3://bucket/prefix&quot;</span></code>.</p>
-<p>Needs boto3, which <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code> installs. The bucket is
-laid out exactly as a folder store is, under the prefix: <code class="docutils literal notranslate"><span class="pre">store.json</span></code>,
-<code class="docutils literal notranslate"><span class="pre">objects/sha256/&lt;2&gt;/&lt;62&gt;/&lt;file&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">roots/&lt;note&gt;.json</span></code> and
-<code class="docutils literal notranslate"><span class="pre">snapshots/&lt;commit&gt;/&lt;pipeline&gt;/&lt;stamp&gt;.json</span></code>. So <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">s3</span> <span class="pre">sync</span></code> of a
-folder store into a bucket is this store, and back.</p>
-<p>Readers open files, so what they read is a local copy: :meth:<code class="docutils literal notranslate"><span class="pre">S3Store.get</span></code>
-downloads an object’s files once into a cache folder on this machine, laid
-out as a folder store too, checks that they hash to the object’s name, and
-returns that folder. Each read while online is one listing request, which
-is how a name another pipeline added for the same bytes is seen; offline,
-an object that was read and checked before is served from the cache.
-Nothing else in ChartBook changes for a store that is remote;
-<code class="docutils literal notranslate"><span class="pre">data.path()</span></code> gives the path of the cached copy.</p>
+<p>Needs boto3 1.35 or newer, which <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code> installs.
+The bucket is laid out exactly as a folder store is (:mod:<code class="docutils literal notranslate"><span class="pre">chartbook.store</span></code>),
+under the prefix: <code class="docutils literal notranslate"><span class="pre">store.json</span></code>; <code class="docutils literal notranslate"><span class="pre">pipelines/&lt;pipeline&gt;/&lt;snapshot&gt;/</span></code>
+with the pipeline’s files at their own paths and
+<code class="docutils literal notranslate"><span class="pre">_chartbook/snapshot.json</span></code>, the record, written last;
+<code class="docutils literal notranslate"><span class="pre">pipelines/+unowned/&lt;hash&gt;/</span></code> for an object put with no pipeline;
+<code class="docutils literal notranslate"><span class="pre">origins/</span></code>, <code class="docutils literal notranslate"><span class="pre">roots/</span></code> and <code class="docutils literal notranslate"><span class="pre">tmp/</span></code>. So <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">s3</span> <span class="pre">sync</span></code> of a folder
+store into a bucket is this store, and back. A bucket of ChartBook 0.2’s
+layout is refused, as a folder of it is, until <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">migrate</span></code> has moved it.</p>
+<p>Readers open files, so what they read is a copy on this machine, in a
+cache folder for the bucket. The records are downloaded into it at their
+own names, each with the ETag the bucket gave it. Each file a reader asks
+for is downloaded once, into the cache’s <code class="docutils literal notranslate"><span class="pre">files/</span></code>, named by its hash and
+checked against it as it arrives: a file there is one whose bytes were
+checked, whichever record names it now. :meth:<code class="docutils literal notranslate"><span class="pre">S3Store.get</span></code> hands over a
+view in the cache that lays an asset’s files out under their own names
+(:func:<code class="docutils literal notranslate"><span class="pre">chartbook.store.gather</span></code>). Offline, what was downloaded and checked
+before is served from the cache. Nothing else in ChartBook changes for a
+store that is remote; <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> gives the path in the cache.</p>
+<p>A question of the store is one listing of <code class="docutils literal notranslate"><span class="pre">pipelines/</span></code>, or of one
+pipeline’s folder when the pipeline is known, and the records are read
+from it once. One listing serves the few questions a pin or a read asks
+at once, for a moment, and the many that <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> asks within</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">meth<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">S3Store.reading</span></code>; what this store writes meanwhile is written into
+it, not listed again.</p>
+</dd>
+</dl>
 <p>Credentials are the AWS SDK’s own: the environment, <code class="docutils literal notranslate"><span class="pre">~/.aws</span></code>, an
 instance role. The URL never carries them. It may say where the service
 is, for a bucket that is not at AWS::</p>
@@ -572,18 +607,28 @@ is, for a bucket that is not at AWS::</p>
 <p>A store that is read-only for this machine (<code class="docutils literal notranslate"><span class="pre">s3:ListBucket</span></code> and
 <code class="docutils literal notranslate"><span class="pre">s3:GetObject</span></code>) serves <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--frozen</span></code> and
 <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>; what would write raises :class:<code class="docutils literal notranslate"><span class="pre">~chartbook.store.ReadOnlyStoreError</span></code>
-and says what was refused. Writing needs <code class="docutils literal notranslate"><span class="pre">s3:PutObject</span></code>, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>
-<code class="docutils literal notranslate"><span class="pre">s3:DeleteObject</span></code>.</p>
-<p>One thing the folder store does that this one cannot: make an object
-appear whole or not at all. Files are uploaded one by one, so a snapshot
-interrupted while uploading an object of several files leaves a partial
-one, which <code class="docutils literal notranslate"><span class="pre">has()</span></code> reports (a listing cannot tell). What tells is the
-record: :meth:<code class="docutils literal notranslate"><span class="pre">S3Store.incomplete</span></code> compares the keys under the object and
-their sizes with the files and sizes the record gives, as the folder
-store compares a synced folder’s files, so <code class="docutils literal notranslate"><span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">update</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pin</span> <span class="pre">--frozen</span></code> and a read all say the object is not fully uploaded yet;
-<code class="docutils literal notranslate"><span class="pre">get()</span></code> refuses one whose files do not hash to its name. Making the
-snapshot again uploads what is missing and completes it.</p>
+and says what was refused. Writing needs <code class="docutils literal notranslate"><span class="pre">s3:PutObject</span></code> (and
+<code class="docutils literal notranslate"><span class="pre">s3:DeleteObject</span></code> to tidy after itself, which it does without if it
+must), and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> <code class="docutils literal notranslate"><span class="pre">s3:DeleteObject</span></code>.</p>
+<p><strong>Two machines, one bucket.</strong> A bucket has no folder to make whole or
+not at all, so a snapshot claims its folder by writing
+<code class="docutils literal notranslate"><span class="pre">_chartbook/CLAIMED.txt</span></code> there only if nothing is there yet (a write
+with <code class="docutils literal notranslate"><span class="pre">If-None-Match</span></code>); one that finds the folder claimed takes the next
+second’s name. Its record is written the same way. A write the SDK tried
+again, its first answer lost, may meet itself there: what is there is read,
+and the same bytes are taken for its own. As in a folder store, a snapshot
+being made keeps a note under <code class="docutils literal notranslate"><span class="pre">tmp/</span></code> of its folder and of the files of
+earlier snapshots it uses, written again as it goes on, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>
+keeps what a note names.</p>
+<p><strong>Half a snapshot.</strong> Files are uploaded one by one, and the record last,
+so a snapshot interrupted while uploading leaves files and no record:
+that is no snapshot, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> clears it a day after anything in
+it last changed. A record whose files are not all there (some removed
+since, or a copy of a folder store into the bucket that has not finished)
+is said by :meth:<code class="docutils literal notranslate"><span class="pre">S3Store.incomplete</span></code>, which compares the sizes in a
+listing with the record’s, so <code class="docutils literal notranslate"><span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">update</span></code>, <code class="docutils literal notranslate"><span class="pre">pin</span> <span class="pre">--frozen</span></code> and a
+read all say the snapshot is not fully uploaded yet. Making the snapshot
+again puts back what is missing.</p>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
 <section id="classes">
@@ -601,10 +646,22 @@ snapshot again uploads what is missing and completes it.</p>
 <h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.stores.s3.URL_OPTIONS" title="chartbook.stores.s3.URL_OPTIONS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">URL_OPTIONS</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.stores.s3.ALIVE_SECONDS" title="chartbook.stores.s3.ALIVE_SECONDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ALIVE_SECONDS</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.stores.s3.VERIFIED_DIR" title="chartbook.stores.s3.VERIFIED_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VERIFIED_DIR</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.stores.s3.CHECKED_DIR" title="chartbook.stores.s3.CHECKED_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CHECKED_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.stores.s3.CLAIMED_FILE" title="chartbook.stores.s3.CLAIMED_FILE"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CLAIMED_FILE</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.stores.s3.COPY_LIMIT" title="chartbook.stores.s3.COPY_LIMIT"><code class="xref py py-obj docutils literal notranslate"><span class="pre">COPY_LIMIT</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.stores.s3.LISTING_SECONDS" title="chartbook.stores.s3.LISTING_SECONDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LISTING_SECONDS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.stores.s3.URL_OPTIONS" title="chartbook.stores.s3.URL_OPTIONS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">URL_OPTIONS</span></code></a></p></td>
 <td></td>
 </tr>
 </tbody>
@@ -613,6 +670,36 @@ snapshot again uploads what is missing and completes it.</p>
 </section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.stores.s3.ALIVE_SECONDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">ALIVE_SECONDS</span></span><a class="headerlink" href="#chartbook.stores.s3.ALIVE_SECONDS" title="Link to this definition">#</a></dt>
+<dd><p>300</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.stores.s3.CHECKED_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">CHECKED_DIR</span></span><a class="headerlink" href="#chartbook.stores.s3.CHECKED_DIR" title="Link to this definition">#</a></dt>
+<dd><p>‘files’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.stores.s3.CLAIMED_FILE">
+<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">CLAIMED_FILE</span></span><a class="headerlink" href="#chartbook.stores.s3.CLAIMED_FILE" title="Link to this definition">#</a></dt>
+<dd><p>‘CLAIMED.txt’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.stores.s3.COPY_LIMIT">
+<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">COPY_LIMIT</span></span><a class="headerlink" href="#chartbook.stores.s3.COPY_LIMIT" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.stores.s3.LISTING_SECONDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">LISTING_SECONDS</span></span><a class="headerlink" href="#chartbook.stores.s3.LISTING_SECONDS" title="Link to this definition">#</a></dt>
+<dd><p>2.0</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">S3Store</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store" title="Link to this definition">#</a></dt>
@@ -623,14 +710,9 @@ snapshot again uploads what is missing and completes it.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>url</strong> – <code class="docutils literal notranslate"><span class="pre">s3://bucket/prefix</span></code>, with <code class="docutils literal notranslate"><span class="pre">?endpoint=</span></code> and <code class="docutils literal notranslate"><span class="pre">?region=</span></code>
 allowed; see the module.</p></li>
-<li><p><strong>cache</strong> – <p>The folder the downloaded objects and records are kept
-in. By default a folder for this bucket and prefix under</p>
-<dl class="myst field-list simple">
-<dt class="field-odd">func<span class="colon">:</span></dt>
-<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">chartbook.config.get_cache_path</span></code>.</p>
-</dd>
-</dl>
-</p></li>
+<li><p><strong>cache</strong> – The folder the downloaded records and files are kept
+in. By default a folder for this bucket and prefix (and service, if
+it is not AWS) under :func:<code class="docutils literal notranslate"><span class="pre">chartbook.config.get_cache_path</span></code>.</p></li>
 <li><p><strong>client</strong> – A boto3 S3 client to use instead of making one; for
 tests, and for a program that has one already. It must be a
 boto3 client or behave as one, <code class="docutils literal notranslate"><span class="pre">exceptions.NoSuchKey</span></code> included.</p></li>
@@ -650,12 +732,23 @@ store URL.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.age_of">
 <span class="sig-name descname"><span class="pre">age_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">now</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.age_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.age_of" title="Link to this definition">#</a></dt>
-<dd><p>Seconds since anything under the object’s prefix was written to the bucket.</p>
+<dd><p>Seconds since an asset was put in the bucket: its newest record was written, or a key of its object.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="chartbook.store.html#chartbook.store.ObjectNotFoundError" title="chartbook.store.ObjectNotFoundError"><strong>ObjectNotFoundError</strong></a> – If the store has no such asset: one
+removed since it was listed, by another <code class="docutils literal notranslate"><span class="pre">gc</span></code>.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.all_snapshot_files">
 <span class="sig-name descname"><span class="pre">all_snapshot_files</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.all_snapshot_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.all_snapshot_files" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.begin">
+<span class="sig-name descname"><span class="pre">begin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">made_at</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">made_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'snapshot'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="chartbook.store.html#chartbook.store.PendingSnapshot" title="chartbook.store.PendingSnapshot"><span class="pre">chartbook.store.PendingSnapshot</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.begin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.begin" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -667,42 +760,88 @@ store URL.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.delete">
 <span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.delete" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Remove the asset with this hash from the bucket and from the cache: its files, and its object if no pipeline owns it.</p>
+<p>As in a folder store, a record that held it then names it without
+holding it, and a file another asset has too goes with it.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.delete_unowned">
+<span class="sig-name descname"><span class="pre">delete_unowned</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.delete_unowned"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.delete_unowned" title="Link to this definition">#</a></dt>
+<dd><p>Remove the object no pipeline owns with this hash, every key under it, and nothing a snapshot’s record names; True if there was one.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.files_of">
+<span class="sig-name descname"><span class="pre">files_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.files_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.files_of" title="Link to this definition">#</a></dt>
+<dd><p>Where the bucket keeps an asset’s files, every copy any record names, each as its name in the store and its size.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.get">
-<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.get" title="Link to this definition">#</a></dt>
-<dd><p>The folder on this machine with the object’s files, downloaded if they were not yet.</p>
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.get" title="Link to this definition">#</a></dt>
+<dd><p>A folder on this machine with the asset’s files under their own names, downloaded if they were not yet.</p>
+<p>Each file is downloaded once into the cache, and its hash checked
+against its record’s as it arrives; a copy whose sizes in the
+bucket are not its record’s, or whose bytes are not, is passed over
+for the next. Offline, what the cache has whole is served.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> – The pipeline the asset is of, whose folder is
+looked in first.</p></li>
+<li><p><strong>name</strong> – For an asset of one file, the name it is read by.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="chartbook.store.html#chartbook.store.ObjectNotFoundError" title="chartbook.store.ObjectNotFoundError"><strong>ObjectNotFoundError</strong></a> – If the store has no such asset.</p></li>
+<li><p><a class="reference internal" href="chartbook.store.html#chartbook.store.StoreError" title="chartbook.store.StoreError"><strong>StoreError</strong></a> – If no copy of it is all in the bucket yet, or
+none is what its record says; nothing of such a file is kept.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.has">
-<span class="sig-name descname"><span class="pre">has</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.has"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.has" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">has</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.has"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.has" title="Link to this definition">#</a></dt>
+<dd><p>Whether the bucket holds an asset with this hash: a record names it and one of its files is there, or no pipeline owns it.</p>
+<p>Offline, whether the cache has it whole, as it was downloaded and checked.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.hashes">
 <span class="sig-name descname"><span class="pre">hashes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.15)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.hashes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.hashes" title="Link to this definition">#</a></dt>
+<dd><p>The hash of every asset in the bucket, in order: what its records hold, and the objects no pipeline owns.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.held_hashes">
+<span class="sig-name descname"><span class="pre">held_hashes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.held_hashes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.held_hashes" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.incomplete">
 <span class="sig-name descname"><span class="pre">incomplete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">every</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.incomplete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.incomplete" title="Link to this definition">#</a></dt>
-<dd><p>Why an object is not whole as its record has it, by the keys under it and their sizes; None if it is.</p>
-<p>Files are uploaded one at a time, so a snapshot interrupted while
-uploading an object of several files leaves some of its keys
-missing, and one being made now has them arriving. The sizes the
-listing gives are compared with the record’s, as the folder store
-compares a synced folder’s files (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.store.unsynced_part</span></code>);
-one listing request, and nothing is downloaded. Offline, an object
-this machine downloaded and checked before is whole.</p>
+<dd><p>Why an asset is not whole as its record has it, by the keys a listing gives and their sizes; None if it is.</p>
+<p>Nothing is downloaded. Each file a snapshot’s record names is
+compared with its key; an object no pipeline owns, with what
+<em>size_bytes</em> and <em>files</em> say. Offline, an asset this machine
+downloaded and checked before is whole.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.lacks">
 <span class="sig-name descname"><span class="pre">lacks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.lacks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.lacks" title="Link to this definition">#</a></dt>
-<dd><p>Whether the bucket’s object lacks a key under one of these names: a put uploads the keys an object lacks.</p>
+<dd><p>Whether an object no pipeline owns, of one file, lacks a key under this name: a put of the same bytes uploads it.</p>
+<p>What a snapshot holds lacks nothing: its record names each file.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.listing">
+<span class="sig-name descname"><span class="pre">listing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">single</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.listing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.listing" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.note_origin">
@@ -712,17 +851,40 @@ this machine downloaded and checked before is whole.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.origins">
 <span class="sig-name descname"><span class="pre">origins</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.origins"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.origins" title="Link to this definition">#</a></dt>
+<dd><p>The repository folders a pipeline’s snapshots at a commit were made from, as noted.</p>
+<p>Within a :meth:<code class="docutils literal notranslate"><span class="pre">reading</span></code> block, the notes there are are listed once,
+and each is read once.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.pinned_snapshot_files">
+<span class="sig-name descname"><span class="pre">pinned_snapshot_files</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.pinned_snapshot_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.pinned_snapshot_files" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.put">
 <span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">links</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">LINKS</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="chartbook.store.html#chartbook.store.StoredObject" title="chartbook.store.StoredObject"><span class="pre">chartbook.store.StoredObject</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.put"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.put" title="Link to this definition">#</a></dt>
-<dd><p>Copy what a declared <code class="docutils literal notranslate"><span class="pre">path</span></code> names into the cache, hash it, and upload it.</p>
-<p><em>links</em> is read for its errors only: a remote store holds copies,
-whatever was asked for, so the object never changes when the
-original does. An object the bucket already has is written again
-in metadata only, so that it counts as stored now and <code class="docutils literal notranslate"><span class="pre">gc</span></code> does
+<dd><p>Copy what a declared <code class="docutils literal notranslate"><span class="pre">path</span></code> names into the cache, hash it, and upload it as an object no pipeline owns.</p>
+<p>What a snapshot holds is put by :meth:<code class="docutils literal notranslate"><span class="pre">begin</span></code> instead, into the
+pipeline’s folder. <em>links</em> is read for its errors only: a remote
+store holds copies, whatever was asked for. An object the bucket
+already has is written again (one key of it, its metadata only where
+the service allows), so that it counts as stored now and <code class="docutils literal notranslate"><span class="pre">gc</span></code> does
 not take it from under a pin in progress.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.reading">
+<span class="sig-name descname"><span class="pre">reading</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.reading"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.reading" title="Link to this definition">#</a></dt>
+<dd><p>Go by one listing of the bucket until the block ends, and what this store writes meanwhile.</p>
+<p>For what asks the store many times over at once, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>’s plan:
+the records are read from it once, and so are the notes of origins.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.records">
+<span class="sig-name descname"><span class="pre">records</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.KeptRecord" title="chartbook.store.KeptRecord"><span class="pre">chartbook.store.KeptRecord</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.records" title="Link to this definition">#</a></dt>
+<dd><p>Every snapshot’s record in the bucket, made by an owner or by a pin, as the folder store reads its own.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -733,7 +895,21 @@ not take it from under a pin in progress.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.remove_snapshot">
 <span class="sig-name descname"><span class="pre">remove_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.remove_snapshot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.remove_snapshot" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dd><p>Clear one snapshot: its record goes, and <code class="docutils literal notranslate"><span class="pre">_chartbook/CLEARED.txt</span></code> says so.</p>
+<p>Its files go with :meth:<code class="docutils literal notranslate"><span class="pre">tidy</span></code>, as in a folder store, but those a
+later snapshot uses; the folder goes once nothing in it is used. So
+does the note of origins of the last snapshot of a pipeline at a
+commit: :meth:<code class="docutils literal notranslate"><span class="pre">tidy</span></code> lists the bucket once for all a gc clears.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If <em>path</em> is not a record in this store’s cache.</p></li>
+<li><p><a class="reference internal" href="chartbook.store.html#chartbook.store.ReadOnlyStoreError" title="chartbook.store.ReadOnlyStoreError"><strong>ReadOnlyStoreError</strong></a> – If the bucket refused to remove the
+record, which is then left as it was, with nothing beside it.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.root_of">
@@ -748,6 +924,12 @@ not take it from under a pin in progress.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.size_of">
 <span class="sig-name descname"><span class="pre">size_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hash</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.size_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.size_of" title="Link to this definition">#</a></dt>
+<dd><p>The total size in bytes of an asset’s files, as its newest record gives them, or of every key of its object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.snapshot_commit_prefixes">
+<span class="sig-name descname"><span class="pre">snapshot_commit_prefixes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.snapshot_commit_prefixes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.snapshot_commit_prefixes" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -761,19 +943,42 @@ not take it from under a pin in progress.</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.verify">
-<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hashes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.StoreProblem" title="chartbook.store.StoreProblem"><span class="pre">chartbook.store.StoreProblem</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.verify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.verify" title="Link to this definition">#</a></dt>
-<dd><p>Download every object again, into a temporary folder, and report each that does not hash to its name.</p>
-<p>The cache is left as it is: what this machine read and checked
-stays readable, and the problems are the bucket’s. The folder each
-object is downloaded into is removed after it is checked, so the
-disk holds one object at a time.</p>
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.tidy">
+<span class="sig-name descname"><span class="pre">tidy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.tidy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.tidy" title="Link to this definition">#</a></dt>
+<dd><p>Remove what no snapshot uses from every pipeline’s folder; what was removed, or with <em>dry_run</em> would be, each with its size.</p>
+<p>The notes of snapshots being made are read first, then the records
+as they are now, and the notes once more just before anything goes:
+a snapshot written between the first two is in the records, and one
+begun meanwhile is in the last. A note of origins no snapshot of its
+commit is left to use goes too, an hour after it was written; and
+first, what a writer that died left under <code class="docutils literal notranslate"><span class="pre">tmp/</span></code>.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>keep</strong> – Names in the store not to remove: what <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>
+spares for being new.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="chartbook.store.html#chartbook.store.TidyError" title="chartbook.store.TidyError"><strong>TidyError</strong></a> – Once the rest is removed, if some of it could not
+be, naming each with what the service said and what to do.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.write_snapshot">
-<span class="sig-name descname"><span class="pre">write_snapshot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">stamp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">document</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.write_snapshot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.write_snapshot" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.verify">
+<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content_hashes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="chartbook.store.html#chartbook.store.StoreProblem" title="chartbook.store.StoreProblem"><span class="pre">chartbook.store.StoreProblem</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/stores/s3.html#S3Store.verify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.stores.s3.S3Store.verify" title="Link to this definition">#</a></dt>
+<dd><p>Download every asset again, into a temporary folder, and report each that is not what its record or name says.</p>
+<p>The cache is left as it is: what this machine read and checked
+stays readable, and the problems are the bucket’s. What is
+downloaded is removed once it is checked, so the disk holds one
+asset at a time.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="chartbook.stores.s3.S3Store.views">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">views</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.stores.s3.S3Store.views" title="Link to this definition">#</a></dt>
+<dd><p>Where assets are laid out for readers, their files under their own names: <code class="docutils literal notranslate"><span class="pre">views/</span></code> in the cache.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -781,12 +986,6 @@ disk holds one object at a time.</p>
 <dt class="sig sig-object py" id="chartbook.stores.s3.URL_OPTIONS">
 <span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">URL_OPTIONS</span></span><a class="headerlink" href="#chartbook.stores.s3.URL_OPTIONS" title="Link to this definition">#</a></dt>
 <dd><p>(‘endpoint’, ‘region’)</p>
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="chartbook.stores.s3.VERIFIED_DIR">
-<span class="sig-prename descclassname"><span class="pre">chartbook.stores.s3.</span></span><span class="sig-name descname"><span class="pre">VERIFIED_DIR</span></span><a class="headerlink" href="#chartbook.stores.s3.VERIFIED_DIR" title="Link to this definition">#</a></dt>
-<dd><p>‘verified’</p>
 </dd></dl>
 
 </section>
@@ -814,11 +1013,11 @@ disk holds one object at a time.</p>
       </div>
     </a>
     <a class="right-next"
-       href="chartbook.snapshot.html"
+       href="chartbook.migrate.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -843,33 +1042,47 @@ disk holds one object at a time.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.ALIVE_SECONDS"><code class="docutils literal notranslate"><span class="pre">ALIVE_SECONDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.CHECKED_DIR"><code class="docutils literal notranslate"><span class="pre">CHECKED_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.CLAIMED_FILE"><code class="docutils literal notranslate"><span class="pre">CLAIMED_FILE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.COPY_LIMIT"><code class="docutils literal notranslate"><span class="pre">COPY_LIMIT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.LISTING_SECONDS"><code class="docutils literal notranslate"><span class="pre">LISTING_SECONDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store"><code class="docutils literal notranslate"><span class="pre">S3Store</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.add_root"><code class="docutils literal notranslate"><span class="pre">S3Store.add_root()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.age_of"><code class="docutils literal notranslate"><span class="pre">S3Store.age_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.all_snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.all_snapshot_files()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.begin"><code class="docutils literal notranslate"><span class="pre">S3Store.begin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.cache"><code class="docutils literal notranslate"><span class="pre">S3Store.cache</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.delete"><code class="docutils literal notranslate"><span class="pre">S3Store.delete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.delete_unowned"><code class="docutils literal notranslate"><span class="pre">S3Store.delete_unowned()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.files_of"><code class="docutils literal notranslate"><span class="pre">S3Store.files_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.get"><code class="docutils literal notranslate"><span class="pre">S3Store.get()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.has"><code class="docutils literal notranslate"><span class="pre">S3Store.has()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.hashes"><code class="docutils literal notranslate"><span class="pre">S3Store.hashes()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.held_hashes"><code class="docutils literal notranslate"><span class="pre">S3Store.held_hashes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.incomplete"><code class="docutils literal notranslate"><span class="pre">S3Store.incomplete()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.lacks"><code class="docutils literal notranslate"><span class="pre">S3Store.lacks()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.listing"><code class="docutils literal notranslate"><span class="pre">S3Store.listing()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.note_origin"><code class="docutils literal notranslate"><span class="pre">S3Store.note_origin()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.origins"><code class="docutils literal notranslate"><span class="pre">S3Store.origins()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.pinned_snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.pinned_snapshot_files()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.put"><code class="docutils literal notranslate"><span class="pre">S3Store.put()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.reading"><code class="docutils literal notranslate"><span class="pre">S3Store.reading()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.records"><code class="docutils literal notranslate"><span class="pre">S3Store.records()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.remove_root"><code class="docutils literal notranslate"><span class="pre">S3Store.remove_root()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.remove_snapshot"><code class="docutils literal notranslate"><span class="pre">S3Store.remove_snapshot()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.root_of"><code class="docutils literal notranslate"><span class="pre">S3Store.root_of()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.roots"><code class="docutils literal notranslate"><span class="pre">S3Store.roots()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.size_of"><code class="docutils literal notranslate"><span class="pre">S3Store.size_of()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_commit_prefixes"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_commit_prefixes()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_commits"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_commits()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.snapshot_files"><code class="docutils literal notranslate"><span class="pre">S3Store.snapshot_files()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.tidy"><code class="docutils literal notranslate"><span class="pre">S3Store.tidy()</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.verify"><code class="docutils literal notranslate"><span class="pre">S3Store.verify()</span></code></a></li>
-<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.write_snapshot"><code class="docutils literal notranslate"><span class="pre">S3Store.write_snapshot()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.S3Store.views"><code class="docutils literal notranslate"><span class="pre">S3Store.views</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.URL_OPTIONS"><code class="docutils literal notranslate"><span class="pre">URL_OPTIONS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.stores.s3.VERIFIED_DIR"><code class="docutils literal notranslate"><span class="pre">VERIFIED_DIR</span></code></a></li>
 </ul>
 </li>
 </ul>

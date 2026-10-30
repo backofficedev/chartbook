@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>chartbook.formats &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.formats';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="chartbook.backends" href="chartbook.backends.html" />
+    <link rel="prev" title="chartbook.data" href="chartbook.data.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../_static/searchtools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script src="../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/apidocs/chartbook/chartbook.formats.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div>
+
+
+<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>chartbook.formats</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.ENDINGS"><code class="docutils literal notranslate"><span class="pre">ENDINGS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.FORMATS"><code class="docutils literal notranslate"><span class="pre">FORMATS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.NAMES"><code class="docutils literal notranslate"><span class="pre">NAMES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.READ_ERRORS"><code class="docutils literal notranslate"><span class="pre">READ_ERRORS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.READ_OPTIONS"><code class="docutils literal notranslate"><span class="pre">READ_OPTIONS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading"><code class="docutils literal notranslate"><span class="pre">Reading</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.format"><code class="docutils literal notranslate"><span class="pre">Reading.format</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.options"><code class="docutils literal notranslate"><span class="pre">Reading.options</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.said_by"><code class="docutils literal notranslate"><span class="pre">Reading.said_by</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.SAMPLE_ROWS"><code class="docutils literal notranslate"><span class="pre">SAMPLE_ROWS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.TYPES"><code class="docutils literal notranslate"><span class="pre">TYPES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.arrow_dataset"><code class="docutils literal notranslate"><span class="pre">arrow_dataset()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.check_entry"><code class="docutils literal notranslate"><span class="pre">check_entry()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.declared"><code class="docutils literal notranslate"><span class="pre">declared()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.ending_of"><code class="docutils literal notranslate"><span class="pre">ending_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.files_of"><code class="docutils literal notranslate"><span class="pre">files_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.format_of"><code class="docutils literal notranslate"><span class="pre">format_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.format_of_name"><code class="docutils literal notranslate"><span class="pre">format_of_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.handed"><code class="docutils literal notranslate"><span class="pre">handed()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.handed_name"><code class="docutils literal notranslate"><span class="pre">handed_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.kept"><code class="docutils literal notranslate"><span class="pre">kept()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.reading"><code class="docutils literal notranslate"><span class="pre">reading()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.reading_of"><code class="docutils literal notranslate"><span class="pre">reading_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.scan"><code class="docutils literal notranslate"><span class="pre">scan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.scan_location"><code class="docutils literal notranslate"><span class="pre">scan_location()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.sql"><code class="docutils literal notranslate"><span class="pre">sql()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.to_pandas"><code class="docutils literal notranslate"><span class="pre">to_pandas()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.formats">
+<span id="chartbook-formats"></span><h1><a class="reference internal" href="#module-chartbook.formats" title="chartbook.formats"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a><a class="headerlink" href="#module-chartbook.formats" title="Link to this heading">#</a></h1>
+<p>The formats a dataframe’s file can be in, and the one reader of them.</p>
+<p>A dataframe that is a file is stored as parquet, CSV (or TSV), JSON lines
+(NDJSON, gzipped or not) or Arrow IPC (Feather). Its entry may say which::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[dataframes.releases]
+path = "./_data/releases/*.jsonl.gz"
+format = "jsonl"                                # else the path's ending says
+read_options = { schema_overrides = { id = "String" } }
+</pre></div>
+</div>
+<p>With no <code class="docutils literal notranslate"><span class="pre">format</span></code>, the ending of the path says it (:data:<code class="docutils literal notranslate"><span class="pre">ENDINGS</span></code>), and a
+path whose ending names none, a folder among them, is parquet. A glob is
+read as its ending says, and a folder as the files in it of its format.
+<code class="docutils literal notranslate"><span class="pre">read_options</span></code> go to the reader of a CSV or JSON lines file, by polars’
+names; :data:<code class="docutils literal notranslate"><span class="pre">READ_OPTIONS</span></code> lists the ones taken, each of which DuckDB is
+given too, under its own name and so that it means the same, so that
+<code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> reads a file as <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> does.</p>
+<p>This module is where a file becomes a table. <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> in every
+<code class="docutils literal notranslate"><span class="pre">format=</span></code> it offers, <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> and <code class="docutils literal notranslate"><span class="pre">data.ref()</span></code>, the dataframe’s
+page, the data glimpses and the data dictionary all read through it, so
+each reads a file as the others do. Hashing, snapshots and pins do not come
+into it: they keep bytes, whatever the bytes are.</p>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.Reading" title="chartbook.formats.Reading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Reading</span></code></a></p></td>
+<td><p>How a dataframe’s file is read.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.arrow_dataset" title="chartbook.formats.arrow_dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">arrow_dataset</span></code></a></p></td>
+<td><p>An Arrow IPC file, glob or folder as a pyarrow dataset, for DuckDB to scan.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.check_entry" title="chartbook.formats.check_entry"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_entry</span></code></a></p></td>
+<td><p>Refuse a dataframe’s <code class="docutils literal notranslate"><span class="pre">format</span></code> or <code class="docutils literal notranslate"><span class="pre">read_options</span></code> that cannot be read, before anything reads them.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.declared" title="chartbook.formats.declared"><code class="xref py py-obj docutils literal notranslate"><span class="pre">declared</span></code></a></p></td>
+<td><p>An entry’s <code class="docutils literal notranslate"><span class="pre">format</span></code> and <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, as it gives them: what a record of its location keeps.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.ending_of" title="chartbook.formats.ending_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ending_of</span></code></a></p></td>
+<td><p>The ending of a file’s name that says its format, <code class="docutils literal notranslate"><span class="pre">.csv.gz</span></code> say; None if it has none.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.files_of" title="chartbook.formats.files_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">files_of</span></code></a></p></td>
+<td><p>The files a read of a path opens: the file, the glob’s matches, or a folder’s files of its format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.format_of" title="chartbook.formats.format_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_of</span></code></a></p></td>
+<td><p>The format a path is read in: <em>declared</em>, else its ending’s, else parquet. Nothing is checked.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.format_of_name" title="chartbook.formats.format_of_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_of_name</span></code></a></p></td>
+<td><p>The format a file’s name says by its ending, or None.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.handed" title="chartbook.formats.handed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">handed</span></code></a></p></td>
+<td><p>What DuckDB is handed of a file it is given no reader of, or None: what <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> registers in its place.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.handed_name" title="chartbook.formats.handed_name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">handed_name</span></code></a></p></td>
+<td><p>The name what DuckDB is handed of a file goes by in SQL.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.kept" title="chartbook.formats.kept"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kept</span></code></a></p></td>
+<td><p>How a pin is read, from its record’s location: what :func:<code class="docutils literal notranslate"><span class="pre">declared</span></code> kept, else what its path’s ending says.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.reading" title="chartbook.formats.reading"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reading</span></code></a></p></td>
+<td><p>How a dataframe’s file is read, from its path and what its entry says.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.reading_of" title="chartbook.formats.reading_of"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reading_of</span></code></a></p></td>
+<td><p>How a file location is read (:class:<code class="docutils literal notranslate"><span class="pre">chartbook.resolve.FileLocation</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.scan" title="chartbook.formats.scan"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scan</span></code></a></p></td>
+<td><p>A dataframe’s file as a polars LazyFrame, read as its format is.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.scan_location" title="chartbook.formats.scan_location"><code class="xref py py-obj docutils literal notranslate"><span class="pre">scan_location</span></code></a></p></td>
+<td><p>A file location as a polars LazyFrame (:func:<code class="docutils literal notranslate"><span class="pre">scan</span></code>).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.sql" title="chartbook.formats.sql"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sql</span></code></a></p></td>
+<td><p>A file as DuckDB reads it in SQL: <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>, <code class="docutils literal notranslate"><span class="pre">read_csv('…',</span> <span class="pre">…)</span></code> or <code class="docutils literal notranslate"><span class="pre">read_json('…',</span> <span class="pre">…)</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.to_pandas" title="chartbook.formats.to_pandas"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_pandas</span></code></a></p></td>
+<td><p>A file location as a pandas DataFrame.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.ENDINGS" title="chartbook.formats.ENDINGS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENDINGS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.FORMATS" title="chartbook.formats.FORMATS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FORMATS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.NAMES" title="chartbook.formats.NAMES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NAMES</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.READ_ERRORS" title="chartbook.formats.READ_ERRORS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">READ_ERRORS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.READ_OPTIONS" title="chartbook.formats.READ_OPTIONS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">READ_OPTIONS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.formats.SAMPLE_ROWS" title="chartbook.formats.SAMPLE_ROWS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SAMPLE_ROWS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.formats.TYPES" title="chartbook.formats.TYPES"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TYPES</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.ENDINGS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">ENDINGS</span></span><a class="headerlink" href="#chartbook.formats.ENDINGS" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.FORMATS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">FORMATS</span></span><a class="headerlink" href="#chartbook.formats.FORMATS" title="Link to this definition">#</a></dt>
+<dd><p>(‘parquet’, ‘csv’, ‘jsonl’, ‘ipc’)</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.NAMES">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">NAMES</span></span><a class="headerlink" href="#chartbook.formats.NAMES" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.READ_ERRORS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">READ_ERRORS</span></span><a class="headerlink" href="#chartbook.formats.READ_ERRORS" title="Link to this definition">#</a></dt>
+<dd><p>()</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.READ_OPTIONS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">READ_OPTIONS</span></span><a class="headerlink" href="#chartbook.formats.READ_OPTIONS" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="chartbook.formats.Reading">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">Reading</span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#Reading"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.Reading" title="Link to this definition">#</a></dt>
+<dd><p>How a dataframe’s file is read.</p>
+<p>Attributes:
+format: One of :data:<code class="docutils literal notranslate"><span class="pre">FORMATS</span></code>.
+options: Its <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, checked, as the entry gives them.
+said_by: What gave the format: <code class="docutils literal notranslate"><span class="pre">&quot;format&quot;</span></code> (the entry’s key),
+<code class="docutils literal notranslate"><span class="pre">&quot;ending&quot;</span></code> (the path’s), or <code class="docutils literal notranslate"><span class="pre">&quot;default&quot;</span></code> (nothing did, so
+parquet).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.formats.Reading.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.formats.Reading.format" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.formats.Reading.options">
+<span class="sig-name descname"><span class="pre">options</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a></span><a class="headerlink" href="#chartbook.formats.Reading.options" title="Link to this definition">#</a></dt>
+<dd><p>‘field(…)’</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="chartbook.formats.Reading.said_by">
+<span class="sig-name descname"><span class="pre">said_by</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.formats.Reading.said_by" title="Link to this definition">#</a></dt>
+<dd><p>‘default’</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.SAMPLE_ROWS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">SAMPLE_ROWS</span></span><a class="headerlink" href="#chartbook.formats.SAMPLE_ROWS" title="Link to this definition">#</a></dt>
+<dd><p>20480</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.formats.TYPES">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">TYPES</span></span><a class="headerlink" href="#chartbook.formats.TYPES" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.arrow_dataset">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">arrow_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/formats.html#arrow_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.arrow_dataset" title="Link to this definition">#</a></dt>
+<dd><p>An Arrow IPC file, glob or folder as a pyarrow dataset, for DuckDB to scan.</p>
+<p>DuckDB has no reader of Arrow IPC files of its own; it reads a dataset
+lazily, as it would a file, taking only the columns and rows a query
+asks for. A glob’s or a folder’s Hive keys below it are columns
+(:func:<code class="docutils literal notranslate"><span class="pre">_partitions</span></code>), of the types and in the places <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>
+gives them; a key’s value is in place of a file’s own column of its
+name, as it is in polars’ Hive read. A file’s path gives none.
+Text is plain <code class="docutils literal notranslate"><span class="pre">string</span></code>, a dictionary’s too: polars writes
+<code class="docutils literal notranslate"><span class="pre">string_view</span></code>, and the filter DuckDB hands a dataset in a join has no
+kernel for it.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If there is no file to read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.check_entry">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">check_entry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#check_entry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.check_entry" title="Link to this definition">#</a></dt>
+<dd><p>Refuse a dataframe’s <code class="docutils literal notranslate"><span class="pre">format</span></code> or <code class="docutils literal notranslate"><span class="pre">read_options</span></code> that cannot be read, before anything reads them.</p>
+<p>They go with a <code class="docutils literal notranslate"><span class="pre">path</span></code>: a table or a query in a source is read by its
+engine. The format is the entry’s, else its path’s ending’s, as</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">reading</span></code> has it.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>entry</strong> – The <code class="docutils literal notranslate"><span class="pre">[dataframes.&lt;name&gt;]</span></code> table.</p></li>
+<li><p><strong>where</strong> – The entry, for the message.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – Saying what is wrong and what to write.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.declared">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">declared</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#declared"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.declared" title="Link to this definition">#</a></dt>
+<dd><p>An entry’s <code class="docutils literal notranslate"><span class="pre">format</span></code> and <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, as it gives them: what a record of its location keeps.</p>
+<p>A pipeline that reads another’s pin has none of the owner’s manifest to
+look in, and reads the bytes as their owner said to.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.ending_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">ending_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#ending_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.ending_of" title="Link to this definition">#</a></dt>
+<dd><p>The ending of a file’s name that says its format, <code class="docutils literal notranslate"><span class="pre">.csv.gz</span></code> say; None if it has none.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.files_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">files_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#chartbook.formats.Reading" title="chartbook.formats.Reading"><span class="pre">chartbook.formats.Reading</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#files_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.files_of" title="Link to this definition">#</a></dt>
+<dd><p>The files a read of a path opens: the file, the glob’s matches, or a folder’s files of its format.</p>
+<p>Empty when there are none yet: nothing built, or a folder with no file
+of its format.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.format_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">format_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">declared</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#format_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.format_of" title="Link to this definition">#</a></dt>
+<dd><p>The format a path is read in: <em>declared</em>, else its ending’s, else parquet. Nothing is checked.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.format_of_name">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">format_of_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#format_of_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.format_of_name" title="Link to this definition">#</a></dt>
+<dd><p>The format a file’s name says by its ending, or None.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.handed">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">handed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/formats.html#handed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.handed" title="Link to this definition">#</a></dt>
+<dd><p>What DuckDB is handed of a file it is given no reader of, or None: what <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> registers in its place.</p>
+<p>An Arrow IPC file, which DuckDB has no reader of its own for, is a
+pyarrow dataset (:func:<code class="docutils literal notranslate"><span class="pre">arrow_dataset</span></code>). A JSON lines file with
+<code class="docutils literal notranslate"><span class="pre">schema_overrides</span></code> is the frame polars reads of it: DuckDB’s casts
+round, trim and parse text otherwise than polars’, and its reader finds
+dates in text that an override to String would then give back
+rewritten, so it is handed the values <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> gives.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.handed_name">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">handed_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#handed_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.handed_name" title="Link to this definition">#</a></dt>
+<dd><p>The name what DuckDB is handed of a file goes by in SQL.</p>
+<p>One per file and its reading, the same each call, so that a source’s
+engine keeps one view of it and not one a call.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.kept">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">kept</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#kept"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.kept" title="Link to this definition">#</a></dt>
+<dd><p>How a pin is read, from its record’s location: what :func:<code class="docutils literal notranslate"><span class="pre">declared</span></code> kept, else what its path’s ending says.</p>
+<p>The store holds a folder under a name of its own, with no ending, so a
+folder declared as <code class="docutils literal notranslate"><span class="pre">prices.csv</span></code> is read as CSV by the ending of the
+path its record keeps.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.reading">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">reading</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.formats.Reading" title="chartbook.formats.Reading"><span class="pre">chartbook.formats.Reading</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#reading"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.reading" title="Link to this definition">#</a></dt>
+<dd><p>How a dataframe’s file is read, from its path and what its entry says.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – Its <code class="docutils literal notranslate"><span class="pre">path</span></code>: a file, a glob or a folder.</p></li>
+<li><p><strong>format</strong> – Its <code class="docutils literal notranslate"><span class="pre">format</span></code>, if it has one.</p></li>
+<li><p><strong>read_options</strong> – Its <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, if it has them.</p></li>
+<li><p><strong>where</strong> – What a message names: the entry, <code class="docutils literal notranslate"><span class="pre">[dataframes.x]</span></code>; the path by default.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the format is not one of :data:<code class="docutils literal notranslate"><span class="pre">FORMATS</span></code>, or an
+option is not one the format takes, or not of its type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.reading_of">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">reading_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#chartbook.formats.Reading" title="chartbook.formats.Reading"><span class="pre">chartbook.formats.Reading</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#reading_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.reading_of" title="Link to this definition">#</a></dt>
+<dd><p>How a file location is read (:class:<code class="docutils literal notranslate"><span class="pre">chartbook.resolve.FileLocation</span></code>).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.scan">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">scan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_options</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Mapping" title="(in Python v3.15)"><span class="pre">Mapping</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">files</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">listed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">public</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/formats.html#scan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.scan" title="Link to this definition">#</a></dt>
+<dd><p>A dataframe’s file as a polars LazyFrame, read as its format is.</p>
+<p>Parquet with <code class="docutils literal notranslate"><span class="pre">pl.scan_parquet</span></code>, CSV with <code class="docutils literal notranslate"><span class="pre">pl.scan_csv</span></code>, JSON lines
+with <code class="docutils literal notranslate"><span class="pre">pl.scan_ndjson</span></code> and Arrow IPC with <code class="docutils literal notranslate"><span class="pre">pl.scan_ipc</span></code>; a glob or a
+folder as one frame. Hive’s <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folders are columns for
+parquet and Arrow IPC, those below a folder and not above it; polars
+reads no such columns from CSV or JSON lines, and DuckDB is told not to
+either. The types of a CSV or JSON lines file are inferred from its
+first :data:<code class="docutils literal notranslate"><span class="pre">SAMPLE_ROWS</span></code> rows, as DuckDB infers them, or
+<code class="docutils literal notranslate"><span class="pre">infer_schema_length</span></code>; each JSON lines file of a glob or a folder from
+its own, so that a field the later ones bring is kept. A CSV file’s
+<code class="docutils literal notranslate"><span class="pre">schema_overrides</span></code> are the types it is parsed as, in DuckDB too; a
+JSON lines file’s are cast to after it is read (:func:<code class="docutils literal notranslate"><span class="pre">_cast</span></code>), and
+DuckDB is handed what is read here (:func:<code class="docutils literal notranslate"><span class="pre">handed</span></code>). A CSV file with no
+header has its columns named <code class="docutils literal notranslate"><span class="pre">column_1</span></code>, <code class="docutils literal notranslate"><span class="pre">column_2</span></code>, …</p>
+<p>The schema is read here, so that a file that is not of its format is
+said now, by name: the footer of a parquet or Arrow IPC file, the first
+rows of a CSV or JSON lines one. A gzipped file is decompressed whole,
+in memory, each time it is read, here included.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file, glob or folder.</p></li>
+<li><p><strong>format</strong> – The entry’s <code class="docutils literal notranslate"><span class="pre">format</span></code>, if it has one.</p></li>
+<li><p><strong>read_options</strong> – The entry’s <code class="docutils literal notranslate"><span class="pre">read_options</span></code>, if it has them.</p></li>
+<li><p><strong>files</strong> – For a folder pinned from another pipeline, the parquet
+files its record lists (:class:<code class="docutils literal notranslate"><span class="pre">chartbook.resolve.FileLocation</span></code>).</p></li>
+<li><p><strong>listed</strong> – And every file it lists, by its path in the folder.</p></li>
+<li><p><strong>where</strong> – What a message names first: <code class="docutils literal notranslate"><span class="pre">&quot;Dataframe</span> <span class="pre">'rates'&quot;</span></code>.</p></li>
+<li><p><strong>public</strong> – Whether a message is for a page, which names the file by
+its name alone: a machine’s paths belong on no page.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#FileNotFoundError" title="(in Python v3.15)"><strong>FileNotFoundError</strong></a> – If the file is not there, or a glob matches no file.</p></li>
+<li><p><a class="reference internal" href="chartbook.errors.html#chartbook.errors.UnreadableTableError" title="chartbook.errors.UnreadableTableError"><strong>UnreadableTableError</strong></a> – If it cannot be read as its format, a
+folder holds no file of it, or <code class="docutils literal notranslate"><span class="pre">schema_overrides</span></code> names a column
+the file does not have.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – If the format or an option is not one ChartBook reads.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError" title="(in Python v3.15)"><strong>RuntimeError</strong></a> – If a folder’s Hive keys are to be read and no
+temporary folder can be written to (:func:<code class="docutils literal notranslate"><span class="pre">_partitions</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.scan_location">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">scan_location</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/formats.html#scan_location"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.scan_location" title="Link to this definition">#</a></dt>
+<dd><p>A file location as a polars LazyFrame (:func:<code class="docutils literal notranslate"><span class="pre">scan</span></code>).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.sql">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">sql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/formats.html#sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.sql" title="Link to this definition">#</a></dt>
+<dd><p>A file as DuckDB reads it in SQL: <code class="docutils literal notranslate"><span class="pre">read_parquet('…')</span></code>, <code class="docutils literal notranslate"><span class="pre">read_csv('…',</span> <span class="pre">…)</span></code> or <code class="docutils literal notranslate"><span class="pre">read_json('…',</span> <span class="pre">…)</span></code>.</p>
+<p>A folder of parquet is its parts, with the Hive keys below it as polars
+reads them. A CSV or JSON lines file is given its <code class="docutils literal notranslate"><span class="pre">read_options</span></code> under
+DuckDB’s names, and what DuckDB would otherwise guess is said as polars
+reads it: the separator, the header, the columns’ names where polars’
+are not DuckDB’s, the quote and its escape, an empty field as null and a
+quoted empty one as empty, and the rows its types are inferred from
+(:data:<code class="docutils literal notranslate"><span class="pre">SAMPLE_ROWS</span></code>). It has no Hive columns, as polars reads none, and
+the files of a JSON lines glob or folder are joined by name. What is
+left to inference is DuckDB’s: it finds dates in text, where polars
+leaves text.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.15)"><strong>ValueError</strong></a> – For a file DuckDB is handed rather than given a
+reader of (:func:<code class="docutils literal notranslate"><span class="pre">handed</span></code>): an Arrow IPC file, which DuckDB has no
+reader of its own for, or a JSON lines file with
+<code class="docutils literal notranslate"><span class="pre">schema_overrides</span></code>; or a folder with no file of its format.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.formats.to_pandas">
+<span class="sig-prename descclassname"><span class="pre">chartbook.formats.</span></span><span class="sig-name descname"><span class="pre">to_pandas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">location</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/formats.html#to_pandas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.formats.to_pandas" title="Link to this definition">#</a></dt>
+<dd><p>A file location as a pandas DataFrame.</p>
+<p>A parquet file or folder is read as pandas reads one, with a folder’s
+Hive keys, from below it, as categories, and the folder as the parts</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Func<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">scan</span></code> reads of it. Everything else, a glob among them, is read as</p>
+</dd>
+<dt class="field-even">Func<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">scan</span></code> reads it and collected.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chartbook.data.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="chartbook.backends.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.ENDINGS"><code class="docutils literal notranslate"><span class="pre">ENDINGS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.FORMATS"><code class="docutils literal notranslate"><span class="pre">FORMATS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.NAMES"><code class="docutils literal notranslate"><span class="pre">NAMES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.READ_ERRORS"><code class="docutils literal notranslate"><span class="pre">READ_ERRORS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.READ_OPTIONS"><code class="docutils literal notranslate"><span class="pre">READ_OPTIONS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading"><code class="docutils literal notranslate"><span class="pre">Reading</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.format"><code class="docutils literal notranslate"><span class="pre">Reading.format</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.options"><code class="docutils literal notranslate"><span class="pre">Reading.options</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.Reading.said_by"><code class="docutils literal notranslate"><span class="pre">Reading.said_by</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.SAMPLE_ROWS"><code class="docutils literal notranslate"><span class="pre">SAMPLE_ROWS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.TYPES"><code class="docutils literal notranslate"><span class="pre">TYPES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.arrow_dataset"><code class="docutils literal notranslate"><span class="pre">arrow_dataset()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.check_entry"><code class="docutils literal notranslate"><span class="pre">check_entry()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.declared"><code class="docutils literal notranslate"><span class="pre">declared()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.ending_of"><code class="docutils literal notranslate"><span class="pre">ending_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.files_of"><code class="docutils literal notranslate"><span class="pre">files_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.format_of"><code class="docutils literal notranslate"><span class="pre">format_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.format_of_name"><code class="docutils literal notranslate"><span class="pre">format_of_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.handed"><code class="docutils literal notranslate"><span class="pre">handed()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.handed_name"><code class="docutils literal notranslate"><span class="pre">handed_name()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.kept"><code class="docutils literal notranslate"><span class="pre">kept()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.reading"><code class="docutils literal notranslate"><span class="pre">reading()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.reading_of"><code class="docutils literal notranslate"><span class="pre">reading_of()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.scan"><code class="docutils literal notranslate"><span class="pre">scan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.scan_location"><code class="docutils literal notranslate"><span class="pre">scan_location()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.sql"><code class="docutils literal notranslate"><span class="pre">sql()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.formats.to_pandas"><code class="docutils literal notranslate"><span class="pre">to_pandas()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

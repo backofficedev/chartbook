@@ -332,6 +332,22 @@ Bases: {py:obj}`Exception`
 
 ````
 
+````{py:exception} UnreadableTableError(path, format: str, message: str)
+:canonical: chartbook.errors.UnreadableTableError
+
+Bases: {py:obj}`ValueError`
+
+```{autodoc2-docstring} chartbook.errors.UnreadableTableError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.errors.UnreadableTableError.__init__
+```
+
+````
+
 `````{py:exception} ValidationError(message: str, field_name: typing.Optional[str] = None, invalid_value: typing.Optional[str] = None, hint: typing.Optional[str] = None)
 :canonical: chartbook.errors.ValidationError
 

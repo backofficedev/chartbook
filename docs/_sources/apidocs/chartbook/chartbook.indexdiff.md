@@ -134,7 +134,7 @@
 ````{py:data} DATA_FIELDS
 :canonical: chartbook.indexdiff.DATA_FIELDS
 :value: >
-   ('content_hash', 'definition_hash', 'size_bytes', 'row_count', 'columns', 'files')
+   ('content_hash', 'definition_hash', 'size_bytes', 'row_count', 'columns', 'files', 'file_count', 'ex...
 
 ```{autodoc2-docstring} chartbook.indexdiff.DATA_FIELDS
 ```

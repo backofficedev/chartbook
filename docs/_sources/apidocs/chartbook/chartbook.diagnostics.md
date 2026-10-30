@@ -67,6 +67,10 @@
   - ```{autodoc2-docstring} chartbook.diagnostics.DOCS_FIELDS
     :summary:
     ```
+* - {py:obj}`FILES_FIELDS <chartbook.diagnostics.FILES_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.FILES_FIELDS
+    :summary:
+    ```
 * - {py:obj}`MODEL_FIELDS <chartbook.diagnostics.MODEL_FIELDS>`
   - ```{autodoc2-docstring} chartbook.diagnostics.MODEL_FIELDS
     :summary:
@@ -223,6 +227,17 @@
 ````
 
 `````
+
+````{py:data} FILES_FIELDS
+:canonical: chartbook.diagnostics.FILES_FIELDS
+:type: list[str]
+:value: >
+   ['name', 'description', 'sources', 'providers', 'tags', 'docs', 'path']
+
+```{autodoc2-docstring} chartbook.diagnostics.FILES_FIELDS
+```
+
+````
 
 ````{py:data} MODEL_FIELDS
 :canonical: chartbook.diagnostics.MODEL_FIELDS

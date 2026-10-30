@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -271,6 +271,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -278,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -305,6 +307,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -344,6 +348,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -511,10 +516,8 @@
     <span class="n">locate_in_catalog</span><span class="p">,</span>
     <span class="n">require_file</span><span class="p">,</span>
     <span class="n">resolve</span><span class="p">,</span>
-    <span class="n">nothing_to_read</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_catalog_path</span> <span class="k">as</span> <span class="n">_resolve_catalog_path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span>
 
 
 <div class="viewcode-block" id="path">
@@ -683,7 +686,7 @@
     <span class="o">*</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the resolved path to a dataframe's parquet file, through a catalog.</span>
+<span class="w">    </span><span class="sd">"""Get the resolved path to a dataframe's file, through a catalog.</span>
 
 <span class="sd">    For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing</span>
 <span class="sd">    the glob pattern characters.</span>
@@ -714,7 +717,7 @@
 <span class="sd">    :param project_dir: Where to look for the pipeline the call is made</span>
 <span class="sd">        from, as for :func:`path`.</span>
 <span class="sd">    :type project_dir: Optional[Union[str, Path]]</span>
-<span class="sd">    :returns: The resolved path to the parquet file (may contain glob characters).</span>
+<span class="sd">    :returns: The resolved path to the file (may contain glob characters).</span>
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured, and the</span>
 <span class="sd">        store has no snapshot of the pipeline.</span>
@@ -825,9 +828,9 @@
 <span class="w">    </span><span class="sd">"""Load a dataframe: by reference, or from a pipeline in a catalog.</span>
 
 <span class="sd">    **By reference**, with one argument. A dataframe of the pipeline you</span>
-<span class="sd">    are in is loaded from where its manifest says it is: a parquet file, or</span>
-<span class="sd">    a table or query in one of its ``[sources]``, in which case the source's</span>
-<span class="sd">    engine runs it and the frame is fetched whole when it is collected. A</span>
+<span class="sd">    are in is loaded from where its manifest says it is: a file, or a table</span>
+<span class="sd">    or query in one of its ``[sources]``, in which case the source's engine</span>
+<span class="sd">    runs it and the frame is fetched whole when it is collected. A</span>
 <span class="sd">    dataframe of another pipeline is loaded from the copy that</span>
 <span class="sd">    ``chartbook.lock`` pins, so it does not change until you run</span>
 <span class="sd">    ``chartbook update``:</span>
@@ -866,8 +869,9 @@
 <span class="sd">    :type dataframe: Optional[str]</span>
 <span class="sd">    :param format: Output format — ``"polars"`` (default, returns LazyFrame),</span>
 <span class="sd">        ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated</span>
-<span class="sd">        alias for ``"polars"``).  Glob patterns in a dataframe's ``path`` only</span>
-<span class="sd">        support ``"polars"`` (LazyFrame).</span>
+<span class="sd">        alias for ``"polars"``). Every one reads a file, a glob or a folder.</span>
+<span class="sd">        This is what is returned, not what the file is: that is the entry's</span>
+<span class="sd">        ``format``, or its path's ending (see below).</span>
 <span class="sd">    :type format: str</span>
 <span class="sd">    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent</span>
 <span class="sd">        directory, to load through.  If ``None``, the global default from</span>
@@ -898,8 +902,27 @@
 <span class="sd">        nor the catalog.</span>
 <span class="sd">    :raises TypeError: If the arguments are neither one reference nor a</span>
 <span class="sd">        pipeline and a dataframe.</span>
-<span class="sd">    :raises ValueError: If *format* is not one of the supported values, or if</span>
-<span class="sd">        a glob path is used with a non-LazyFrame format.</span>
+<span class="sd">    :raises UnreadableTableError: If a file cannot be read as its format.</span>
+<span class="sd">        The message names the format and what said it, the entry's</span>
+<span class="sd">        ``format`` or the path's ending.</span>
+<span class="sd">    :raises FileNotFoundError: If the file is not there, or a glob matches</span>
+<span class="sd">        no file.</span>
+<span class="sd">    :raises ValueError: If *format* is not one of the supported values, or</span>
+<span class="sd">        the entry's ``format`` or ``read_options`` is not one ChartBook reads.</span>
+
+<span class="sd">    **The file's format.** A dataframe's file is parquet, CSV or TSV, JSON</span>
+<span class="sd">    lines (gzipped or not) or Arrow IPC (Feather), as its entry's ``format``</span>
+<span class="sd">    says, or else the ending of its ``path`` (``.parquet``, ``.csv``,</span>
+<span class="sd">    ``.tsv``, ``.csv.gz``, ``.jsonl``, ``.ndjson``, ``.jsonl.gz``,</span>
+<span class="sd">    ``.arrow``, ``.feather``, ``.ipc``); a path whose ending names none, a</span>
+<span class="sd">    folder say, is parquet. It is read with ``pl.scan_parquet``,</span>
+<span class="sd">    ``pl.scan_csv``, ``pl.scan_ndjson`` or ``pl.scan_ipc``, given the</span>
+<span class="sd">    entry's ``read_options``, and its schema is read at once, so a file that</span>
+<span class="sd">    is not what it is taken to be is said here and not when the frame is</span>
+<span class="sd">    collected. A gzipped file is decompressed whole, in memory, each time it</span>
+<span class="sd">    is read. ``"pandas"`` reads a parquet file or folder as pandas does, Hive</span>
+<span class="sd">    keys as categories, and anything else, a glob among them, as</span>
+<span class="sd">    ``"polars"`` does, collected. See :mod:`chartbook.formats`.</span>
 
 <span class="sd">    **Examples**</span>
 
@@ -969,54 +992,19 @@
             <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"pandas"</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be 'polars', 'polars_eager', "</span>
-            <span class="sa">f</span><span class="s2">"'pandas', or 'polars-lazyframe'."</span>
-        <span class="p">)</span>
-    <span class="n">file_path</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">path</span>
-    <span class="n">_is_glob</span> <span class="o">=</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="c1"># A directory pinned from another pipeline: the files its record lists, and</span>
-    <span class="c1"># nothing else its folder holds (a Finder .DS_Store, a sync service's copy)</span>
-    <span class="n">listed</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">location</span><span class="o">.</span><span class="n">files</span><span class="p">]</span>
-    <span class="n">said</span> <span class="o">=</span> <span class="n">nothing_to_read</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">said</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">said</span><span class="p">)</span>
-    <span class="n">source</span> <span class="o">=</span> <span class="n">listed</span> <span class="ow">or</span> <span class="n">file_path</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"polars"</span><span class="p">,</span> <span class="s2">"polars_eager"</span><span class="p">,</span> <span class="s2">"pandas"</span><span class="p">,</span> <span class="s2">"polars-lazyframe"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">))</span>
+    <span class="c1"># A file, read as its format is: parquet, CSV, JSON lines or Arrow IPC</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">formats</span>
 
+    <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2">"</span>
     <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"pandas"</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">_is_glob</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"Glob patterns in a dataframe's path only support format='polars' "</span>
-                <span class="s2">"(LazyFrame). Use data.load(..., format='polars') and call .collect() "</span>
-                <span class="s2">"to materialize, then .to_pandas() if needed."</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="n">listed</span><span class="p">:</span>
-            <span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.dataset</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ds</span>
-
-            <span class="c1"># As pandas reads a folder: hive partitions as categories</span>
-            <span class="n">partitioning</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">HivePartitioning</span><span class="o">.</span><span class="n">discover</span><span class="p">(</span><span class="n">infer_dictionary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">ds</span><span class="o">.</span><span class="n">dataset</span><span class="p">(</span><span class="n">listed</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"parquet"</span><span class="p">,</span> <span class="n">partitioning</span><span class="o">=</span><span class="n">partitioning</span><span class="p">,</span> <span class="n">partition_base_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">file_path</span><span class="p">))</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars"</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-
-        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars_eager"</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">_is_glob</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"Glob patterns in a dataframe's path only support format='polars' "</span>
-                <span class="s2">"(LazyFrame). Use data.load(..., format='polars') and call .collect() "</span>
-                <span class="s2">"to materialize."</span>
-            <span class="p">)</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
-
-        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars-lazyframe"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">formats</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars_eager"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">formats</span><span class="o">.</span><span class="n">scan_location</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars-lazyframe"</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-
-        <span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
 
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
             <span class="s2">"format='polars-lazyframe' is deprecated. Use format='polars' instead "</span>
@@ -1024,13 +1012,24 @@
             <span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be 'polars', 'polars_eager', "</span>
-            <span class="sa">f</span><span class="s2">"'pandas', or 'polars-lazyframe'."</span>
-        <span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">formats</span><span class="o">.</span><span class="n">scan_location</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""What to say of a ``format=`` that data.load() does not return."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">FORMATS</span>
+
+    <span class="n">said</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be 'polars', 'polars_eager', "</span>
+        <span class="sa">f</span><span class="s2">"'pandas', or 'polars-lazyframe'."</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="n">FORMATS</span><span class="p">:</span>
+        <span class="n">said</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="s2">" That is what data.load() returns. The format a dataframe's file is stored in "</span>
+            <span class="sa">f</span><span class="s1">'is said in its entry in [dataframes]: format = "</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s1">".'</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">said</span>
 
 
 <span class="c1"># A {reference} in SQL: anything between braces that is not itself a brace.</span>
@@ -1054,10 +1053,17 @@
 <span class="sd">    &gt;&gt;&gt; data.ref("slopes")  # doctest: +SKIP</span>
 <span class="sd">    '(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)'</span>
 
-<span class="sd">    A file is ``read_parquet('…')``, which DuckDB reads as a table. A table</span>
-<span class="sd">    in a source is its quoted identifier. A query in a source is the query,</span>
-<span class="sd">    in parentheses, so it stands where a table would. Paste it into SQL you</span>
-<span class="sd">    run with :func:`connect`, or with your own tooling.</span>
+<span class="sd">    A file is DuckDB's reader of its format, ``read_parquet('…')``,</span>
+<span class="sd">    ``read_csv('…', …)`` or ``read_json('…', …)``, given the entry's</span>
+<span class="sd">    ``read_options`` (:func:`chartbook.formats.sql`). A table in a source is</span>
+<span class="sd">    its quoted identifier. A query in a source is the query, in</span>
+<span class="sd">    parentheses, so it stands where a table would. Paste it into SQL you</span>
+<span class="sd">    run with :func:`connect`, or with your own tooling. A folder of parquet</span>
+<span class="sd">    is the list of its parts, with its Hive keys put on by file. An Arrow</span>
+<span class="sd">    IPC file has none, since DuckDB reads one with no function of its own,</span>
+<span class="sd">    and nor has a JSON lines file with ``schema_overrides``, which polars</span>
+<span class="sd">    applies: :func:`sql` hands DuckDB what :func:`load` reads of each</span>
+<span class="sd">    (:func:`chartbook.formats.handed`).</span>
 
 <span class="sd">    :param reference: The dataframe: a name of this pipeline's, or</span>
 <span class="sd">        ``pipeline:name`` for a pinned one of another's.</span>
@@ -1065,6 +1071,8 @@
 <span class="sd">    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.</span>
 <span class="sd">    :raises AssetNotPinnedError: If another pipeline's dataframe has no</span>
 <span class="sd">        pinned copy.</span>
+<span class="sd">    :raises ValueError: For an Arrow IPC file, or a JSON lines file with</span>
+<span class="sd">        ``schema_overrides``.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">backend_for</span>
 
@@ -1092,7 +1100,12 @@
 <span class="sd">    Each ``{reference}`` is replaced by what :func:`ref` gives for it, and</span>
 <span class="sd">    the SQL runs in one engine: the source that the tables and queries in it</span>
 <span class="sd">    live in, or a fresh in-memory DuckDB of its own when it names only</span>
-<span class="sd">    files. ChartBook never parses or rewrites the SQL; what is between the</span>
+<span class="sd">    files. An Arrow IPC file, which DuckDB has no reader of its own for, is</span>
+<span class="sd">    handed to it as an Arrow dataset under a name of its own, which DuckDB</span>
+<span class="sd">    reads lazily as it would a file; a JSON lines file with</span>
+<span class="sd">    ``schema_overrides`` is handed as the frame :func:`load` gives, so that</span>
+<span class="sd">    its overrides mean in SQL what they mean there. ChartBook never parses</span>
+<span class="sd">    or rewrites the SQL; what is between the</span>
 <span class="sd">    braces is a reference, and everything else is yours, in that engine's</span>
 <span class="sd">    dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or</span>
 <span class="sd">    inside a string, is written twice: ``{{'a': 1}}``. A warehouse reads</span>
@@ -1113,7 +1126,8 @@
 <span class="sd">    :raises chartbook.backends.BackendError: If the engine refuses the SQL</span>
 <span class="sd">        as it binds it: a name it does not know, or SQL it cannot parse.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">DuckDBBackend</span><span class="p">,</span> <span class="n">backend_for</span><span class="p">,</span> <span class="n">open_backend</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">formats</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">DuckDBBackend</span><span class="p">,</span> <span class="n">backend_for</span><span class="p">,</span> <span class="n">open_backend</span><span class="p">,</span> <span class="n">quote_identifier</span>
 
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{{"</span><span class="p">,</span> <span class="n">_LITERAL_OPEN</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"}}"</span><span class="p">,</span> <span class="n">_LITERAL_CLOSE</span><span class="p">)</span>
@@ -1152,12 +1166,45 @@
                 <span class="sa">f</span><span class="s2">"the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, which reads its own tables only. "</span>
                 <span class="sa">f</span><span class="s2">"Load them apart with data.load() and join the frames in Polars."</span>
             <span class="p">)</span>
+    <span class="n">arrow</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">text</span><span class="p">,</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">locations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">replacement</span> <span class="o">=</span> <span class="n">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span> <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span> <span class="k">else</span> <span class="n">engine</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="n">handed</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">handed</span><span class="p">(</span><span class="n">location</span><span class="p">)</span> <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">handed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># An Arrow IPC file, or a JSON lines file with overrides: DuckDB is</span>
+            <span class="c1"># handed it, under a name of its own, the same each call, so a</span>
+            <span class="c1"># :memory: source keeps one view of it and not one a call</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_takes_arrow</span><span class="p">(</span><span class="n">engine</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"The query names </span><span class="si">{</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">, which DuckDB is handed rather than given a "</span>
+                    <span class="sa">f</span><span class="s2">"reader of, and runs in the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, "</span>
+                    <span class="sa">f</span><span class="s2">"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."</span>
+                <span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">handed_name</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+            <span class="n">arrow</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">handed</span>
+            <span class="n">replacement</span> <span class="o">=</span> <span class="n">quote_identifier</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+            <span class="n">replacement</span> <span class="o">=</span> <span class="n">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">replacement</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
         <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{"</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="s2">"}"</span><span class="p">,</span> <span class="n">replacement</span><span class="p">)</span>
     <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_OPEN</span><span class="p">,</span> <span class="s2">"{"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_CLOSE</span><span class="p">,</span> <span class="s2">"}"</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">arrow</span><span class="o">=</span><span class="n">arrow</span><span class="p">)</span> <span class="k">if</span> <span class="n">arrow</span> <span class="k">else</span> <span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_takes_arrow</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Whether an engine's ``sql()`` takes Arrow data to register (``arrow=``), as DuckDB's does.</span>
+
+<span class="sd">    A backend from a plugin, written before there was such an argument, is</span>
+<span class="sd">    handed none.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="s2">"arrow"</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">is</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="connect">

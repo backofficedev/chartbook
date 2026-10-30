@@ -63,6 +63,10 @@
   - ```{autodoc2-docstring} chartbook.index.ASSET_KINDS
     :summary:
     ```
+* - {py:obj}`FILES_LISTED <chartbook.index.FILES_LISTED>`
+  - ```{autodoc2-docstring} chartbook.index.FILES_LISTED
+    :summary:
+    ```
 * - {py:obj}`INDEX_FILE <chartbook.index.INDEX_FILE>`
   - ```{autodoc2-docstring} chartbook.index.INDEX_FILE
     :summary:
@@ -86,9 +90,19 @@
 ````{py:data} ASSET_KINDS
 :canonical: chartbook.index.ASSET_KINDS
 :value: >
-   ('dataframe', 'chart', 'notebook', 'note', 'model')
+   ('dataframe', 'chart', 'notebook', 'note', 'model', 'file')
 
 ```{autodoc2-docstring} chartbook.index.ASSET_KINDS
+```
+
+````
+
+````{py:data} FILES_LISTED
+:canonical: chartbook.index.FILES_LISTED
+:value: >
+   1000
+
+```{autodoc2-docstring} chartbook.index.FILES_LISTED
 ```
 
 ````

@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -271,6 +271,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -278,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -305,6 +307,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -344,6 +348,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -530,7 +535,7 @@
 <span class="n">MANIFEST_NAME</span> <span class="o">=</span> <span class="s2">"chartbook.toml"</span>
 
 <span class="c1">#: The kinds of asset a manifest can declare, and so the kinds that resolve.</span>
-<span class="n">RESOLVABLE_KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"notebook"</span><span class="p">,</span> <span class="s2">"note"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">)</span>
+<span class="n">RESOLVABLE_KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"notebook"</span><span class="p">,</span> <span class="s2">"note"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">)</span>
 
 <span class="c1">#: The manifest tables those kinds are declared in. Each table is its own</span>
 <span class="c1">#: namespace: ``[dataframes.gdp]`` and ``[charts.gdp]`` are two assets,</span>
@@ -544,6 +549,7 @@
     <span class="s2">"notebooks"</span><span class="p">:</span> <span class="s2">"./_output/</span><span class="si">{name}</span><span class="s2">.ipynb"</span><span class="p">,</span>
     <span class="s2">"notes"</span><span class="p">:</span> <span class="s2">"./docs_src/</span><span class="si">{name}</span><span class="s2">.md"</span><span class="p">,</span>
     <span class="s2">"models"</span><span class="p">:</span> <span class="s2">"./_models/</span><span class="si">{name}</span><span class="s2">.joblib"</span><span class="p">,</span>
+    <span class="s2">"files"</span><span class="p">:</span> <span class="s2">"./_data/</span><span class="si">{name}</span><span class="s2">/"</span><span class="p">,</span>
 <span class="p">}</span>
 
 
@@ -593,13 +599,24 @@
 <span class="sd">            CSVs) has *listed* and no *files*: ``data.path()`` gives the</span>
 <span class="sd">            folder, and a read of it as parquet is refused</span>
 <span class="sd">            (:func:`nothing_to_read`).</span>
+<span class="sd">        content_hash: The asset's hash when the store holds what is read</span>
+<span class="sd">            (a pin, a version, a snapshot), so that its files' hashes can be</span>
+<span class="sd">            taken from the store's record rather than read. None for what is</span>
+<span class="sd">            read where it is: a local asset, another pipeline's working folder.</span>
+<span class="sd">        format: The ``format`` its entry gives, or None: then its path's</span>
+<span class="sd">            ending says it (:mod:`chartbook.formats`). For another</span>
+<span class="sd">            pipeline's file, its record's, as its owner gave it.</span>
+<span class="sd">        read_options: The ``read_options`` its entry gives, likewise.</span>
 <span class="sd">    """</span>
 
     <span class="n">kind</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"file"</span>
 
     <span class="n">path</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">files</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">listed</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+    <span class="n">listed</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">(),</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">content_hash</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">read_options</span><span class="p">:</span> <span class="n">Mapping</span> <span class="o">=</span> <span class="n">dataclasses</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span> <span class="n">compare</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
 
 
 
@@ -620,8 +637,8 @@
     <span class="n">shown</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">listed</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="s2">", …"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="sa">f</span><span class="s2">"The folder </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> holds the </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">listed</span><span class="p">)</span><span class="si">}</span><span class="s2"> file(s) its record lists (</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">), "</span>
-        <span class="sa">f</span><span class="s2">"and none is a parquet table: data.load and data.sql read parquet. data.path() gives the folder, "</span>
-        <span class="sa">f</span><span class="s2">"for a reader of what it holds."</span>
+        <span class="sa">f</span><span class="s2">"and none is a parquet table: a folder is read as parquet unless its entry's format says otherwise. "</span>
+        <span class="sa">f</span><span class="s2">"data.path() gives the folder, for a reader of what it holds."</span>
     <span class="p">)</span></div>
 
 
@@ -1132,6 +1149,12 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">without</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> to get the model's path, and join "</span>
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">part</span><span class="si">!r}</span><span class="s2"> to it."</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">UnsupportedReferenceError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> names one file of a files asset. Use "</span>
+                <span class="sa">f</span><span class="s2">"chartbook.assets.files(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">without</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for its files, or "</span>
+                <span class="sa">f</span><span class="s2">"assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">without</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) and join </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">part</span><span class="si">!r}</span><span class="s2"> to it."</span>
+            <span class="p">)</span>
         <span class="k">raise</span> <span class="n">UnsupportedReferenceError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> addresses a part of a </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> with "</span>
             <span class="sa">f</span><span class="s2">"'#'. A </span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2"> has no parts; use </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">without</span><span class="p">)</span><span class="si">!r}</span><span class="s2">."</span>
@@ -1373,7 +1396,8 @@
         <span class="p">)</span>
 
     <span class="n">_note_the_read</span><span class="p">(</span><span class="n">manifest_dir</span> <span class="o">/</span> <span class="s2">"chartbook.lock"</span><span class="p">,</span> <span class="n">locked</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">locked</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span> <span class="o">==</span> <span class="n">dependency</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="p">{})</span> <span class="k">if</span> <span class="n">locked</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="n">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">record</span><span class="p">,</span> <span class="n">listed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pinned_from"</span><span class="p">))</span>
 
 
 <span class="c1">#: The lockfiles whose note a read has seen to in this process, each as it was then.</span>
@@ -1402,8 +1426,13 @@
     <span class="n">_noted_reads</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Where the store holds an asset, given its record with a content hash."""</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Where the store holds an asset, given its record with a content hash.</span>
+
+<span class="sd">    :param pipeline: The pipeline it was pinned from, whose copy is the one</span>
+<span class="sd">        read: the same bytes in another pipeline's snapshot may be cleared</span>
+<span class="sd">        while this one's is kept.</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">hashing</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">not_whole</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span>
@@ -1415,12 +1444,25 @@
     <span class="n">unsynced</span> <span class="o">=</span> <span class="n">not_whole</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">unsynced</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">AssetNotPinnedError</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]),</span> <span class="s2">"not_synced"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'id'</span><span class="p">)</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">unsynced</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
-    <span class="n">held</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">])</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">kept</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">materialized_name</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">declared_name</span> <span class="k">as</span> <span class="n">_declared_name</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span> <span class="k">as</span> <span class="n">_is_glob</span>
+
+    <span class="c1"># The name a file is read by: the same bytes may be two assets', kept once</span>
+    <span class="k">if</span> <span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"table"</span><span class="p">,</span> <span class="s2">"query"</span><span class="p">):</span>
+        <span class="n">one</span> <span class="o">=</span> <span class="n">materialized_name</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">),</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_is_glob</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)):</span>
+        <span class="n">one</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">one</span> <span class="o">=</span> <span class="n">_declared_name</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="n">held</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">],</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">one</span><span class="p">)</span>
+    <span class="n">content_hash</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span>
+    <span class="c1"># How its owner said to read it: the format and options its entry gave, or its declared path's ending</span>
+    <span class="n">said</span> <span class="o">=</span> <span class="n">kept</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"table"</span><span class="p">,</span> <span class="s2">"query"</span><span class="p">):</span>
         <span class="c1"># Written out as parquet when the snapshot was made</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">materialized_name</span>
-
-        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span> <span class="o">/</span> <span class="n">materialized_name</span><span class="p">(</span><span class="n">record</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span> <span class="o">/</span> <span class="n">materialized_name</span><span class="p">(</span><span class="n">record</span><span class="p">),</span> <span class="n">content_hash</span><span class="o">=</span><span class="n">content_hash</span><span class="p">)</span>
     <span class="n">declared_path</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">"location"</span><span class="p">][</span><span class="s2">"path"</span><span class="p">]</span>
     <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">declared_path</span><span class="p">):</span>
         <span class="c1"># The files are laid out from the glob's fixed prefix. What follows</span>
@@ -1437,7 +1479,7 @@
                 <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'id'</span><span class="p">)</span><span class="si">!r}</span><span class="s2">: its record's path, </span><span class="si">{</span><span class="n">declared_path</span><span class="si">!r}</span><span class="s2">, is not plain after its "</span>
                 <span class="sa">f</span><span class="s2">"wildcard. The record is not one a store wrote, and is not read."</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">parts</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">parts</span><span class="p">),</span> <span class="n">content_hash</span><span class="o">=</span><span class="n">content_hash</span><span class="p">,</span> <span class="o">**</span><span class="n">said</span><span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">declared_name</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="n">declared_name</span><span class="p">(</span><span class="n">declared_path</span><span class="p">)</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">declared_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>  <span class="c1"># as put named it, on every system</span>
@@ -1471,13 +1513,16 @@
         <span class="c1"># folder of CSVs, a model's files) is still the folder for</span>
         <span class="c1"># data.path(), and a parquet read of it is refused (nothing_to_read)</span>
         <span class="c1"># rather than handed the folder, which would take whatever it holds</span>
-        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">read</span><span class="p">),</span> <span class="n">listed</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">files_read</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})))</span>
+        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span>
+            <span class="n">held</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">read</span><span class="p">),</span> <span class="n">listed</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">files_read</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})),</span> <span class="n">content_hash</span><span class="o">=</span><span class="n">content_hash</span><span class="p">,</span> <span class="o">**</span><span class="n">said</span>
+        <span class="p">)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">on_disk</span>
 
     <span class="n">own</span> <span class="o">=</span> <span class="n">on_disk</span><span class="p">(</span><span class="n">held</span><span class="p">,</span> <span class="p">[</span><span class="n">name</span><span class="p">])</span>  <span class="c1"># as the disk names it, in either of Unicode's forms</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">own</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span><span class="p">)</span>  <span class="c1"># a directory pinned before records listed its files: the folder</span>
-    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">own</span><span class="p">)</span>
+        <span class="c1"># A directory pinned before records listed its files: the folder</span>
+        <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">held</span><span class="p">,</span> <span class="n">content_hash</span><span class="o">=</span><span class="n">content_hash</span><span class="p">,</span> <span class="o">**</span><span class="n">said</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">own</span><span class="p">,</span> <span class="n">content_hash</span><span class="o">=</span><span class="n">content_hash</span><span class="p">,</span> <span class="o">**</span><span class="n">said</span><span class="p">)</span>
 
 
 <span class="c1">#: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.</span>
@@ -1705,7 +1750,7 @@
             <span class="sa">f</span><span class="s2">"Version </span><span class="si">{</span><span class="n">pinned</span><span class="o">.</span><span class="n">rev</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">without</span><span class="si">}</span><span class="s2"> is named by a snapshot, and its "</span>
             <span class="sa">f</span><span class="s2">"bytes are not in the store at </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="n">local</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">_held</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="n">local</span><span class="p">],</span> <span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_declared_in_source</span><span class="p">(</span><span class="n">dependency</span><span class="p">:</span> <span class="n">PipelineLocation</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
@@ -1765,7 +1810,10 @@
         <span class="k">return</span> <span class="n">_resolve_version</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">manifest_dir</span><span class="p">,</span> <span class="n">raw</span><span class="p">[</span><span class="n">table</span><span class="p">][</span><span class="n">name</span><span class="p">])</span>
     <span class="c1"># Joined lexically, not resolved: the declared path is the asset's real</span>
     <span class="c1"># location even when something has since linked another file into it.</span>
-    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">manifest_dir</span> <span class="o">/</span> <span class="n">declared_path</span><span class="p">)))</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">declared</span>
+
+    <span class="n">reading</span> <span class="o">=</span> <span class="n">declared</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span> <span class="k">if</span> <span class="n">table</span> <span class="o">==</span> <span class="s2">"dataframes"</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">manifest_dir</span> <span class="o">/</span> <span class="n">declared_path</span><span class="p">)),</span> <span class="o">**</span><span class="n">reading</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_in_source</span><span class="p">(</span><span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">manifest_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Location</span><span class="p">:</span>
@@ -1814,7 +1862,9 @@
             <span class="sa">f</span><span class="s2">"Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2"> has no "</span>
             <span class="sa">f</span><span class="s2">"'path' set in its chartbook.toml."</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">))</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">declared</span>
+
+    <span class="k">return</span> <span class="n">FileLocation</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">),</span> <span class="o">**</span><span class="n">declared</span><span class="p">(</span><span class="n">entry</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="resolve">

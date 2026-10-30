@@ -41,7 +41,7 @@
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=6512192e"></script>
     <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -271,6 +271,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -278,6 +279,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -305,6 +307,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -344,6 +348,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -1479,6 +1484,7 @@
 <span class="sd">    :param build_kwargs: Passed to ``generate_docs``.</span>
 <span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.build_docs</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_docs</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
 
     <span class="k">if</span> <span class="n">watch_interval</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">watch</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">click</span><span class="o">.</span><span class="n">UsageError</span><span class="p">(</span><span class="s2">"--watch-interval only applies with --watch."</span><span class="p">)</span>
@@ -1489,7 +1495,7 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="n">watch</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">summary</span> <span class="o">=</span> <span class="n">generate_docs</span><span class="p">(</span><span class="n">incremental</span><span class="o">=</span><span class="n">incremental</span><span class="p">,</span> <span class="o">**</span><span class="n">build_kwargs</span><span class="p">)</span>
-        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">report</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">summary</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1502,7 +1508,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">build_once</span><span class="p">():</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">summary</span> <span class="o">=</span> <span class="n">generate_docs</span><span class="p">(</span><span class="n">incremental</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">build_kwargs</span><span class="p">)</span>
-        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">report</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">summary</span><span class="o">.</span><span class="n">describe</span><span class="p">())</span>
@@ -1772,14 +1778,14 @@
     <span class="n">pipelines</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pid</span><span class="p">)</span> <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
     <span class="p">]</span>
-    <span class="c1"># Models and dependencies are counted only where there are some, so that</span>
-    <span class="c1"># the line for a project without them reads as it always has</span>
+    <span class="c1"># Models, files and dependencies are counted only where there are some,</span>
+    <span class="c1"># so that the line for a project without them reads as it always has</span>
     <span class="n">sections</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"dataframes"</span><span class="p">,</span> <span class="s2">"charts"</span><span class="p">,</span> <span class="s2">"notebooks"</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">optional</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"models"</span><span class="p">,</span> <span class="s2">"dependencies"</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">optional</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"models"</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">,</span> <span class="s2">"dependencies"</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">optional</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pipelines</span><span class="p">):</span>
             <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">optional</span><span class="p">)</span>
     <span class="n">counts</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">,</span><span class="w"> </span><span class="p">{}))</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">pipelines</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">section</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">pipelines</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'files assets'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">section</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'files'</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">section</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">sections</span>
     <span class="p">)</span>
     <span class="n">shown</span> <span class="o">=</span> <span class="n">display_path</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">,</span> <span class="n">relative_to</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
@@ -1828,7 +1834,7 @@
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">"ref"</span><span class="p">)</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
     <span class="s2">"--kind"</span><span class="p">,</span>
-    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"notebook"</span><span class="p">,</span> <span class="s2">"note"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">]),</span>
+    <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"notebook"</span><span class="p">,</span> <span class="s2">"note"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">]),</span>
     <span class="n">help</span><span class="o">=</span><span class="s2">"The kind of asset REF names, when REF does not say "</span>
     <span class="s2">"(default: dataframe). The same as writing KIND/REF."</span><span class="p">,</span>
 <span class="p">)</span>
@@ -1838,7 +1844,15 @@
     <span class="n">help</span><span class="o">=</span><span class="s2">"Where to look for the pipeline: its chartbook.toml is found by "</span>
     <span class="s2">"walking up from here (default: the current directory)"</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">path_command</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">):</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">"--files"</span><span class="p">,</span>
+    <span class="s2">"list_files"</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">"Print the asset's files, one per line, sorted: the file, a "</span>
+    <span class="s2">"folder's files or a glob's matches"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">path_command</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">,</span> <span class="n">list_files</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Print the path of an asset: this pipeline's, or a pinned copy of another's.</span>
 
 <span class="sd">    REF names an asset declared in the enclosing chartbook.toml. A dataframe</span>
@@ -1850,6 +1864,7 @@
 <span class="sd">        notebook/analysis       [notebooks.analysis]</span>
 <span class="sd">        note/methodology        [notes.methodology]</span>
 <span class="sd">        model/rate_forecaster   [models.rate_forecaster]</span>
+<span class="sd">        file/filings            [files.filings]</span>
 
 <span class="sd">    The path is printed absolute, whether or not the file exists yet, so a</span>
 <span class="sd">    build tool can use it for inputs and outputs alike. This is</span>
@@ -1871,24 +1886,30 @@
 <span class="sd">    pipeline's own directory. Run `chartbook pin` first. That copy stays as</span>
 <span class="sd">    it is until `chartbook update`.</span>
 
+<span class="sd">    With --files, the asset's files are printed instead, one per line: the</span>
+<span class="sd">    file, a folder's files, or a glob's matches, as</span>
+<span class="sd">    `chartbook.assets.files()` gives them.</span>
+
 <span class="sd">    Examples:</span>
 <span class="sd">        chartbook path repo_public</span>
 <span class="sd">        chartbook path chart/repo_rates</span>
 <span class="sd">        chartbook path repo_rates --kind chart --project-dir ../yield_curve</span>
 <span class="sd">        chartbook path fed_yield_curve:treasury_rates</span>
+<span class="sd">        chartbook path file/filings --files</span>
 <span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.assets</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span> <span class="k">as</span> <span class="n">resolve_files</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.assets</span><span class="w"> </span><span class="kn">import</span> <span class="n">path</span> <span class="k">as</span> <span class="n">resolve_path</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
 
+    <span class="n">resolver</span> <span class="o">=</span> <span class="n">resolve_files</span> <span class="k">if</span> <span class="n">list_files</span> <span class="k">else</span> <span class="n">resolve_path</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">asset_path</span> <span class="o">=</span> <span class="n">resolve_path</span><span class="p">(</span>
-            <span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">project_dir</span><span class="o">=</span><span class="n">project_dir</span> <span class="ow">or</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span>
-        <span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">resolver</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">project_dir</span><span class="o">=</span><span class="n">project_dir</span> <span class="ow">or</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">LookupError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="c1"># Nothing but the path on stdout: this output gets captured</span>
-    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">asset_path</span><span class="p">))</span>
+    <span class="c1"># Nothing but the paths on stdout: this output gets captured</span>
+    <span class="k">for</span> <span class="n">asset_path</span> <span class="ow">in</span> <span class="n">found</span> <span class="k">if</span> <span class="n">list_files</span> <span class="k">else</span> <span class="p">[</span><span class="n">found</span><span class="p">]:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">asset_path</span><span class="p">))</span>
 
 
 <span class="nd">@main</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
@@ -3174,6 +3195,7 @@
             <span class="s2">"stale"</span><span class="p">:</span> <span class="s2">"changed upstream since it was pinned"</span><span class="p">,</span>
             <span class="s2">"not_built"</span><span class="p">:</span> <span class="s2">"not built"</span><span class="p">,</span>
             <span class="s2">"outside"</span><span class="p">:</span> <span class="s2">"outside the repository"</span><span class="p">,</span>
+            <span class="s2">"glob_name"</span><span class="p">:</span> <span class="s2">"named like a pattern"</span><span class="p">,</span>
             <span class="s2">"let_go"</span><span class="p">:</span> <span class="s2">"let go"</span><span class="p">,</span>
             <span class="s2">"dropped"</span><span class="p">:</span> <span class="s2">"no longer declared"</span><span class="p">,</span>
             <span class="s2">"lost"</span><span class="p">:</span> <span class="s2">"lost"</span><span class="p">,</span>
@@ -3209,7 +3231,7 @@
                 <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  changed upstream: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"let_go"</span><span class="p">:</span>
                 <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  let go: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">asset</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">detail</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"outside"</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"outside"</span><span class="p">,</span> <span class="s2">"glob_name"</span><span class="p">):</span>
                 <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  not pinned: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">asset</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">detail</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"dropped"</span><span class="p">:</span>
                 <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  no longer declared: </span><span class="si">{</span><span class="n">event</span><span class="o">.</span><span class="n">asset</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -4009,6 +4031,217 @@
         <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cache: </span><span class="si">{</span><span class="n">shown_store_url</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cache</span><span class="p">))</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"  where what is read from a remote store is kept on this machine"</span><span class="p">)</span>
+    <span class="n">_say_how_long_paths_are</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_say_how_long_paths_are</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""On Windows, say when the store's folder leaves its paths too little room (#136)."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">store</span> <span class="k">as</span> <span class="n">stores</span>
+
+    <span class="k">if</span> <span class="n">folder</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">stores</span><span class="o">.</span><span class="n">_ON_WINDOWS</span> <span class="ow">or</span> <span class="n">stores</span><span class="o">.</span><span class="n">long_paths_enabled</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">longest</span><span class="p">,</span> <span class="n">made</span> <span class="o">=</span> <span class="n">stores</span><span class="o">.</span><span class="n">FolderStore</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span><span class="o">.</span><span class="n">longest_paths</span><span class="p">()</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="c1"># Before any snapshot: an ID of 34 characters, and an ordinary file 30 deep in its pipeline</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">longest</span><span class="p">,</span> <span class="n">made</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">pipelines</span><span class="se">\\</span><span class="s2">"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">34</span> <span class="o">+</span> <span class="mi">33</span> <span class="o">+</span> <span class="mi">30</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">expected</span> <span class="o">&lt;</span> <span class="n">stores</span><span class="o">.</span><span class="n">WINDOWS_PATH_LIMIT</span> <span class="o">-</span> <span class="mi">20</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Warning: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"yellow"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="o">+</span> <span class="sa">f</span><span class="s2">"the store's folder is </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span><span class="si">}</span><span class="s2"> characters long, and its paths reach about </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2">: Windows "</span>
+        <span class="sa">f</span><span class="s2">"refuses a path of </span><span class="si">{</span><span class="n">stores</span><span class="o">.</span><span class="n">WINDOWS_PATH_LIMIT</span><span class="si">}</span><span class="s2"> or more on this machine, where long paths are not turned on. "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stores</span><span class="o">.</span><span class="n">LONG_PATHS_REMEDY</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
+        <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@store</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">"migrate"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--dry-run"</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Say what would be moved, and move nothing"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--yes"</span><span class="p">,</span> <span class="s2">"-y"</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Do not ask"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">store_migrate</span><span class="p">(</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">yes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Move a store made by ChartBook 0.2 to the layout of 0.3.</span>
+
+<span class="sd">    ChartBook 0.3 keeps a folder for each pipeline in the store, a folder</span>
+<span class="sd">    for each snapshot in it named by when it was made and its commit, and</span>
+<span class="sd">    each file once, under its own name. A store of 0.2 is refused until it</span>
+<span class="sd">    is moved, once, on one machine.</span>
+
+<span class="sd">    Upgrade every machine that uses the store to ChartBook 0.3 first: a</span>
+<span class="sd">    machine still on 0.2 cannot read the store once it is moved, and says</span>
+<span class="sd">    so. Then run this on one of them; in a store a sync service keeps, the</span>
+<span class="sd">    others wait for the sync.</span>
+
+<span class="sd">    Files are moved by renaming, so a store in a synced folder uploads</span>
+<span class="sd">    nothing again; bytes two pipelines' snapshots share are copied for the</span>
+<span class="sd">    second. The files of a glob, whose records give no hash for each file,</span>
+<span class="sd">    are read once to hash them: in a folder that streams its files (Google</span>
+<span class="sd">    Drive's), that downloads them. A migrate cut short is run again and</span>
+<span class="sd">    goes on where it stopped. A store in a bucket is moved by syncing it to</span>
+<span class="sd">    a folder (`aws s3 sync`), moving that, and syncing it back.</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    Examples:</span>
+<span class="sd">        chartbook store migrate --dry-run</span>
+<span class="sd">        chartbook store migrate</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">migrate</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">FolderStore</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">the_store</span> <span class="o">=</span> <span class="n">default_store</span><span class="p">()</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">the_store</span><span class="p">,</span> <span class="n">FolderStore</span><span class="p">):</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
+            <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="o">+</span> <span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> is not a folder. Sync it to one (`aws s3 sync`), set CHARTBOOK_STORE to "</span>
+            <span class="sa">f</span><span class="s2">"that folder, run this, and sync it back."</span><span class="p">,</span>
+            <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">migrate</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">the_store</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">StoreError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plan</span><span class="o">.</span><span class="n">needed</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> has the layout of this version already: nothing to move."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">records</span><span class="p">)</span> <span class="o">-</span> <span class="n">plan</span><span class="o">.</span><span class="n">done</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">layout</span> <span class="o">==</span> <span class="s2">"chartbook/store/v2"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plan</span><span class="o">.</span><span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> says it has the layout of ChartBook 0.3, and holds 0.2's folders too."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">plan</span><span class="o">.</span><span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> has the layout of ChartBook 0.2."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plan</span><span class="o">.</span><span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"Would move </span><span class="si">{</span><span class="n">left</span><span class="si">}</span><span class="s2"> snapshot(s) of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">records</span><span class="p">)</span><span class="si">}</span><span class="s2"> into their pipelines' folders, from "</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">plan</span><span class="o">.</span><span class="n">objects</span><span class="si">}</span><span class="s2"> object(s), </span><span class="si">{</span><span class="n">_format_bytes</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"; </span><span class="si">{</span><span class="n">plan</span><span class="o">.</span><span class="n">done</span><span class="si">}</span><span class="s2"> were moved by a migrate cut short"</span> <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">done</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span>
+            <span class="o">+</span> <span class="s2">"."</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">unowned</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">unowned</span><span class="p">)</span><span class="si">}</span><span class="s2"> object(s) no snapshot names go to pipelines/+unowned/, until no lockfile names them."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">shared</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">plan</span><span class="o">.</span><span class="n">shared</span><span class="si">}</span><span class="s2"> object(s) two pipelines' snapshots share are copied for the second."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">to_read</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_format_bytes</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">to_read</span><span class="p">)</span><span class="si">}</span><span class="s2"> of globs and documents is read once, to hash each file."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">lost</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">plan</span><span class="o">.</span><span class="n">lost</span><span class="si">}</span><span class="s2"> asset(s) the store had lost already, in 0.2, are named by their records still, as they were."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">unfinished</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"A migrate was cut short after it switched the store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2">; what is left of the old layout is to go."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"Nothing was moved (--dry-run)."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">yes</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">click</span><span class="o">.</span><span class="n">confirm</span><span class="p">(</span><span class="s2">"Move it now? Every machine that uses this store must have ChartBook 0.3 first"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"Nothing was moved."</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">migrate</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">the_store</span><span class="o">.</span><span class="n">root</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">"What was moved stays moved: run this again to go on."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Moved. The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> has the layout of ChartBook 0.3; `chartbook store verify` checks it."</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_folder_store_or_exit</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""This machine's store, if it is a folder; else the command stops, saying so."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">FolderStore</span><span class="p">,</span> <span class="n">StoreError</span><span class="p">,</span> <span class="n">default_store</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">the_store</span> <span class="o">=</span> <span class="n">default_store</span><span class="p">()</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">StoreError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">the_store</span><span class="p">,</span> <span class="n">FolderStore</span><span class="p">):</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">the_store</span><span class="si">}</span><span class="s2"> is not a folder: this works on a folder store."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">the_store</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_say_copied</span><span class="p">(</span><span class="n">done</span><span class="p">,</span> <span class="n">verb</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">verb</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">done</span><span class="o">.</span><span class="n">copied</span><span class="p">)</span><span class="si">}</span><span class="s2"> snapshot(s), </span><span class="si">{</span><span class="n">_format_bytes</span><span class="p">(</span><span class="n">done</span><span class="o">.</span><span class="n">size_bytes</span><span class="p">)</span><span class="si">}</span><span class="s2"> copied."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">done</span><span class="o">.</span><span class="n">there</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">done</span><span class="o">.</span><span class="n">there</span><span class="p">)</span><span class="si">}</span><span class="s2"> snapshot(s) were there already, and were left as they are."</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">what</span><span class="p">,</span> <span class="n">why</span> <span class="ow">in</span> <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Refused: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">why</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="nd">@store</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">"export"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--to"</span><span class="p">,</span> <span class="s2">"to"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">file_okay</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">help</span><span class="o">=</span><span class="s2">"The folder to write the export into"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--latest"</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Only the newest snapshot, every file it needs in its own folder"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">"--snapshot"</span><span class="p">,</span> <span class="s2">"snapshots"</span><span class="p">,</span> <span class="n">multiple</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s2">"COMMIT[@MADE_AT]"</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">"Only this snapshot (more than one may be given)"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">store_export</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="n">latest</span><span class="p">,</span> <span class="n">snapshots</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Write one pipeline's snapshots into a folder, to send to someone.</span>
+
+<span class="sd">    The folder is laid out as a store is: TO/pipelines/PIPELINE/, a folder</span>
+<span class="sd">    for each snapshot, each file once, with its record. Send that folder;</span>
+<span class="sd">    whoever receives it runs `chartbook store import` on it, or copies it</span>
+<span class="sd">    into their store's pipelines/ by hand.</span>
+
+<span class="sd">    Every snapshot its owner made is written, or with --latest the newest</span>
+<span class="sd">    alone (one complete snapshot, readable without ChartBook), or each</span>
+<span class="sd">    --snapshot named. Only what a snapshot's record names is written: its</span>
+<span class="sd">    data, its documents and its index, never anything that runs.</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    Examples:</span>
+<span class="sd">        chartbook store export ftsfr/fed_yield_curve --to ~/Desktop/for-alice</span>
+<span class="sd">        chartbook store export ftsfr/fed_yield_curve --latest --to ~/Desktop/for-alice</span>
+<span class="sd">        chartbook store export ftsfr/fed_yield_curve --snapshot 4f2a91c --to ./out</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">sharing</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
+
+    <span class="n">the_store</span> <span class="o">=</span> <span class="n">_folder_store_or_exit</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">latest</span> <span class="ow">and</span> <span class="n">snapshots</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"Give --latest or --snapshot, not both."</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">sharing</span><span class="o">.</span><span class="n">export</span><span class="p">(</span><span class="n">the_store</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">to</span><span class="p">,</span> <span class="s2">"latest"</span> <span class="k">if</span> <span class="n">latest</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">snapshots</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">StoreError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">_say_copied</span><span class="p">(</span><span class="n">done</span><span class="p">,</span> <span class="s2">"Exported"</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Send </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">to</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="s1">'pipelines'</span><span class="si">}</span><span class="s2">; `chartbook store import` there takes it in."</span><span class="p">)</span>
+
+
+<span class="nd">@store</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">"import"</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">"folder"</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">exists</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">file_okay</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">store_import</span><span class="p">(</span><span class="n">folder</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Copy the snapshots a folder holds into this machine's store.</span>
+
+<span class="sd">    FOLDER is what `chartbook store export` wrote, a store, or one</span>
+<span class="sd">    pipeline's folder from a store (its snapshots' folders, each with</span>
+<span class="sd">    _chartbook/snapshot.json). Every file is hashed as it is copied and</span>
+<span class="sd">    checked against its record: a snapshot with a file that is not what its</span>
+<span class="sd">    record says is refused, and said. A file the store holds already is</span>
+<span class="sd">    not copied again, a snapshot it has already is left as it is, and</span>
+<span class="sd">    nothing in the store is written over. A pipeline in this store then</span>
+<span class="sd">    pins the snapshots by the pipeline's ID, with `chartbook pin` and</span>
+<span class="sd">    `chartbook update`.</span>
+
+<span class="sd">    \b</span>
+<span class="sd">    Examples:</span>
+<span class="sd">        chartbook store import ~/Downloads/for-alice</span>
+<span class="sd">        chartbook store import ~/Downloads/ftsfr+fed_yield_curve</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">sharing</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="n">StoreError</span>
+
+    <span class="n">the_store</span> <span class="o">=</span> <span class="n">_folder_store_or_exit</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">sharing</span><span class="o">.</span><span class="n">import_snapshots</span><span class="p">(</span><span class="n">the_store</span><span class="p">,</span> <span class="n">folder</span><span class="p">,</span> <span class="n">echo</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">StoreError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> <span class="n">_said</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">_say_copied</span><span class="p">(</span><span class="n">done</span><span class="p">,</span> <span class="s2">"Imported"</span><span class="p">)</span>
 
 
 <span class="nd">@store</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">"verify"</span><span class="p">)</span>

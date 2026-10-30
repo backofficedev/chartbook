@@ -7,7 +7,7 @@ serves.
 
 Status: **the first implementation is built** (`chartbook.index`, `chartbook.hashing`): every
 build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`,
-`Note` and `Model` records, and each pipeline's declared `dependencies`. `Build` records and
+`Note`, `Model` and `File` records, and each pipeline's declared `dependencies`. `Build` records and
 pinned hashes are not written yet; they come with the parts of the {doc}`asset graph
 <asset-graph>` that produce them.
 {ref}`index-implementing` says exactly what is and is not there.
@@ -124,6 +124,7 @@ ftsfr/fed_yield_curve:chart/curve_today        Chart
 ftsfr/fed_yield_curve:notebook/analysis        Notebook
 ftsfr/fed_yield_curve:note/methodology         Note
 ftsfr/fed_yield_curve:model/rate_forecaster    Model
+ftsfr/fed_yield_curve:file/releases            File
 ```
 
 An ID never carries `@rev`. Which version a record describes is said by its `content_hash`.
@@ -144,8 +145,9 @@ set. This is exactly `chartbook.refs.AssetRef.to_dict()`, and `str()` of the sam
 `id`. Build both from one `AssetRef`; never assemble an ID by joining strings.
 
 **Record kinds and asset kinds.** A record's `kind` is capitalized (`Chart`). The kind in a
-reference is lowercase (`chart`). For the five asset kinds one is the other, capitalized:
-`dataframe`/`Dataframe`, `chart`/`Chart`, `notebook`/`Notebook`, `note`/`Note`, `model`/`Model`.
+reference is lowercase (`chart`). For the six asset kinds one is the other, capitalized:
+`dataframe`/`Dataframe`, `chart`/`Chart`, `notebook`/`Notebook`, `note`/`Note`, `model`/`Model`,
+`file`/`File`.
 `Catalog`, `Pipeline`, `Series` and `Build` are records that are not assets.
 
 **Hashes** are `"<algorithm>:<hex>"`, e.g. `"sha256:7f3a9c…"`. Never a bare hex string, so the
@@ -502,6 +504,17 @@ catalog's index an input is the `id` of another record in the same file whenever
 `"kind": "file"` whether its `path` is a file or a directory; `files` is what tells the two
 apart.
 
+### File
+
+*(Added 2026-10-29, #133.)* A files asset that a pipeline declares in `[files]`: a file, a folder
+or a glob of files, whatever is inside. The skeleton of the other asset records, and the fields
+its entry declares (`sources`, `license`, `restrictions`...), plus what is said of its files:
+`file_count`, `extensions` (how many there are of each type, by the end of their names: `.jsonl.gz`),
+and `files`, the first 1000 by path, each with `path`, `size_bytes`, `content_hash` and, in
+`key=value` folders, `partitions`. A path that names one file lists that file. Its ID is
+`ftsfr/fed_yield_curve:file/releases`. A `Dataframe` of many parts (a folder or a glob) has
+`file_count` and `files` too, each part with its `row_count` from its parquet footer.
+
 ### Build
 
 The derivation record: a complete description of how an asset was produced. One object serving as
@@ -618,6 +631,12 @@ missing from it: one record for each asset of each dependency, with its `content
 - **IDs use the dependency's key** in `[dependencies]`, which is this pipeline's name for it.
 - **`pinned_hash`** is the SHA-256 of a listing with one line per pinned asset of that
   dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID.
+- **`pinned_from`** is the pipeline the pins came from, by its own ID and not by the key: the
+  pipeline of the snapshot they were taken from, or the one a `git` dependency's clone holds
+  (its `[project] id`, else the ID its repository's address gives). It says where the store
+  keeps them, which store v2 needs ({doc}`plan-0.3.0`), and not what they are, so a snapshot's
+  `inputs` are compared without it. A pin kept as it was keeps the one it had; one made before
+  0.3.0 has none until it is made again or moved. *(Added 2026-10-28.)*
 - **A `location` of kind `path` has `path` and no `value`**: a lockfile holds no absolute path.
 - **A `location` of kind `git` has `url`, `rev` if the manifest gives one, and `commit`**: the
   full hash that `rev` meant when the dependency was pinned. `rev` is what was asked for;

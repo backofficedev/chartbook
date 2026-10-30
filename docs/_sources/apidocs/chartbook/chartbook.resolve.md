@@ -159,6 +159,17 @@ Bases: {py:obj}`chartbook.resolve.Location`
 ```{autodoc2-docstring} chartbook.resolve.FileLocation
 ```
 
+````{py:attribute} content_hash
+:canonical: chartbook.resolve.FileLocation.content_hash
+:type: typing.Optional[str]
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.resolve.FileLocation.content_hash
+```
+
+````
+
 ````{py:attribute} files
 :canonical: chartbook.resolve.FileLocation.files
 :type: tuple
@@ -166,6 +177,17 @@ Bases: {py:obj}`chartbook.resolve.Location`
    'field(...)'
 
 ```{autodoc2-docstring} chartbook.resolve.FileLocation.files
+```
+
+````
+
+````{py:attribute} format
+:canonical: chartbook.resolve.FileLocation.format
+:type: typing.Optional[str]
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.resolve.FileLocation.format
 ```
 
 ````
@@ -199,6 +221,17 @@ Bases: {py:obj}`chartbook.resolve.Location`
    None
 
 ```{autodoc2-docstring} chartbook.resolve.FileLocation.path
+```
+
+````
+
+````{py:attribute} read_options
+:canonical: chartbook.resolve.FileLocation.read_options
+:type: typing.Mapping
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.resolve.FileLocation.read_options
 ```
 
 ````
@@ -413,7 +446,7 @@ Bases: {py:obj}`chartbook.resolve.Location`
 ````{py:data} RESOLVABLE_KINDS
 :canonical: chartbook.resolve.RESOLVABLE_KINDS
 :value: >
-   ('dataframe', 'chart', 'notebook', 'note', 'model')
+   ('dataframe', 'chart', 'notebook', 'note', 'model', 'file')
 
 ```{autodoc2-docstring} chartbook.resolve.RESOLVABLE_KINDS
 ```

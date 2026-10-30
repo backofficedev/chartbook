@@ -42,7 +42,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
 
-    <script src="../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../_static/documentation_options.js?v=6512192e"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -276,6 +276,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 </ul>
@@ -283,6 +284,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
@@ -310,6 +312,8 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
@@ -349,6 +353,7 @@
 <li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
 </ul>
 
     </div>
@@ -515,6 +520,7 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart">Chart</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebook-and-note">Notebook and Note</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#file">File</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build">Build</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added-for-the-versioned-catalog">Added for the versioned catalog</a></li>
 </ul>
@@ -547,7 +553,7 @@ is specified before anything that depends on it. See <a class="reference interna
 serves.</p>
 <p>Status: <strong>the first implementation is built</strong> (<code class="docutils literal notranslate"><span class="pre">chartbook.index</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook.hashing</span></code>): every
 build writes <code class="docutils literal notranslate"><span class="pre">index.json</span></code> with <code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code>, <code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">Notebook</span></code>,
-<code class="docutils literal notranslate"><span class="pre">Note</span></code> and <code class="docutils literal notranslate"><span class="pre">Model</span></code> records, and each pipeline’s declared <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>. <code class="docutils literal notranslate"><span class="pre">Build</span></code> records and
+<code class="docutils literal notranslate"><span class="pre">Note</span></code>, <code class="docutils literal notranslate"><span class="pre">Model</span></code> and <code class="docutils literal notranslate"><span class="pre">File</span></code> records, and each pipeline’s declared <code class="docutils literal notranslate"><span class="pre">dependencies</span></code>. <code class="docutils literal notranslate"><span class="pre">Build</span></code> records and
 pinned hashes are not written yet; they come with the parts of the <a class="reference internal" href="asset-graph.html"><span class="doc">asset graph</span></a> that produce them.
 <a class="reference internal" href="#index-implementing"><span class="std std-ref">What the first implementation does</span></a> says exactly what is and is not there.</p>
 <p>Revised 2026-10-12, before any of it was built: IDs carry the asset’s kind
@@ -648,6 +654,7 @@ ftsfr/fed_yield_curve:chart/curve_today        Chart
 ftsfr/fed_yield_curve:notebook/analysis        Notebook
 ftsfr/fed_yield_curve:note/methodology         Note
 ftsfr/fed_yield_curve:model/rate_forecaster    Model
+ftsfr/fed_yield_curve:file/releases            File
 </pre></div>
 </div>
 <p>An ID never carries <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>. Which version a record describes is said by its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>.</p>
@@ -663,8 +670,9 @@ fields, so that no consumer ever has to parse an ID:</p>
 set. This is exactly <code class="docutils literal notranslate"><span class="pre">chartbook.refs.AssetRef.to_dict()</span></code>, and <code class="docutils literal notranslate"><span class="pre">str()</span></code> of the same object is the
 <code class="docutils literal notranslate"><span class="pre">id</span></code>. Build both from one <code class="docutils literal notranslate"><span class="pre">AssetRef</span></code>; never assemble an ID by joining strings.</p>
 <p><strong>Record kinds and asset kinds.</strong> A record’s <code class="docutils literal notranslate"><span class="pre">kind</span></code> is capitalized (<code class="docutils literal notranslate"><span class="pre">Chart</span></code>). The kind in a
-reference is lowercase (<code class="docutils literal notranslate"><span class="pre">chart</span></code>). For the five asset kinds one is the other, capitalized:
-<code class="docutils literal notranslate"><span class="pre">dataframe</span></code>/<code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">chart</span></code>/<code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">notebook</span></code>/<code class="docutils literal notranslate"><span class="pre">Notebook</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>/<code class="docutils literal notranslate"><span class="pre">Note</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>/<code class="docutils literal notranslate"><span class="pre">Model</span></code>.
+reference is lowercase (<code class="docutils literal notranslate"><span class="pre">chart</span></code>). For the six asset kinds one is the other, capitalized:
+<code class="docutils literal notranslate"><span class="pre">dataframe</span></code>/<code class="docutils literal notranslate"><span class="pre">Dataframe</span></code>, <code class="docutils literal notranslate"><span class="pre">chart</span></code>/<code class="docutils literal notranslate"><span class="pre">Chart</span></code>, <code class="docutils literal notranslate"><span class="pre">notebook</span></code>/<code class="docutils literal notranslate"><span class="pre">Notebook</span></code>, <code class="docutils literal notranslate"><span class="pre">note</span></code>/<code class="docutils literal notranslate"><span class="pre">Note</span></code>, <code class="docutils literal notranslate"><span class="pre">model</span></code>/<code class="docutils literal notranslate"><span class="pre">Model</span></code>,
+<code class="docutils literal notranslate"><span class="pre">file</span></code>/<code class="docutils literal notranslate"><span class="pre">File</span></code>.
 <code class="docutils literal notranslate"><span class="pre">Catalog</span></code>, <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code>, <code class="docutils literal notranslate"><span class="pre">Series</span></code> and <code class="docutils literal notranslate"><span class="pre">Build</span></code> are records that are not assets.</p>
 <p><strong>Hashes</strong> are <code class="docutils literal notranslate"><span class="pre">&quot;&lt;algorithm&gt;:&lt;hex&gt;&quot;</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;sha256:7f3a9c…&quot;</span></code>. Never a bare hex string, so the
 algorithm can change without ambiguity.</p>
@@ -982,6 +990,17 @@ catalog’s index an input is the <code class="docutils literal notranslate"><sp
 <code class="docutils literal notranslate"><span class="pre">&quot;kind&quot;:</span> <span class="pre">&quot;file&quot;</span></code> whether its <code class="docutils literal notranslate"><span class="pre">path</span></code> is a file or a directory; <code class="docutils literal notranslate"><span class="pre">files</span></code> is what tells the two
 apart.</p>
 </section>
+<section id="file">
+<h3>File<a class="headerlink" href="#file" title="Link to this heading">#</a></h3>
+<p><em>(Added 2026-10-29, #133.)</em> A files asset that a pipeline declares in <code class="docutils literal notranslate"><span class="pre">[files]</span></code>: a file, a folder
+or a glob of files, whatever is inside. The skeleton of the other asset records, and the fields
+its entry declares (<code class="docutils literal notranslate"><span class="pre">sources</span></code>, <code class="docutils literal notranslate"><span class="pre">license</span></code>, <code class="docutils literal notranslate"><span class="pre">restrictions</span></code>…), plus what is said of its files:
+<code class="docutils literal notranslate"><span class="pre">file_count</span></code>, <code class="docutils literal notranslate"><span class="pre">extensions</span></code> (how many there are of each type, by the end of their names: <code class="docutils literal notranslate"><span class="pre">.jsonl.gz</span></code>),
+and <code class="docutils literal notranslate"><span class="pre">files</span></code>, the first 1000 by path, each with <code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">size_bytes</span></code>, <code class="docutils literal notranslate"><span class="pre">content_hash</span></code> and, in
+<code class="docutils literal notranslate"><span class="pre">key=value</span></code> folders, <code class="docutils literal notranslate"><span class="pre">partitions</span></code>. A path that names one file lists that file. Its ID is
+<code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:file/releases</span></code>. A <code class="docutils literal notranslate"><span class="pre">Dataframe</span></code> of many parts (a folder or a glob) has
+<code class="docutils literal notranslate"><span class="pre">file_count</span></code> and <code class="docutils literal notranslate"><span class="pre">files</span></code> too, each part with its <code class="docutils literal notranslate"><span class="pre">row_count</span></code> from its parquet footer.</p>
+</section>
 <section id="build">
 <h3>Build<a class="headerlink" href="#build" title="Link to this heading">#</a></h3>
 <p>The derivation record: a complete description of how an asset was produced. One object serving as
@@ -1090,6 +1109,12 @@ envelope schema, <code class="docutils literal notranslate"><span class="pre">sc
 <li><p><strong>IDs use the dependency’s key</strong> in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, which is this pipeline’s name for it.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">pinned_hash</span></code></strong> is the SHA-256 of a listing with one line per pinned asset of that
 dependency, <code class="docutils literal notranslate"><span class="pre">&lt;hex</span> <span class="pre">of</span> <span class="pre">its</span> <span class="pre">content</span> <span class="pre">hash&gt;</span></code>, two spaces, <code class="docutils literal notranslate"><span class="pre">&lt;its</span> <span class="pre">ID&gt;</span></code>, newline, sorted by ID.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pinned_from</span></code></strong> is the pipeline the pins came from, by its own ID and not by the key: the
+pipeline of the snapshot they were taken from, or the one a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s clone holds
+(its <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code>, else the ID its repository’s address gives). It says where the store
+keeps them, which store v2 needs (<a class="reference internal" href="plan-0.3.0.html"><span class="doc">Design: the plan for 0.3.0</span></a>), and not what they are, so a snapshot’s
+<code class="docutils literal notranslate"><span class="pre">inputs</span></code> are compared without it. A pin kept as it was keeps the one it had; one made before
+0.3.0 has none until it is made again or moved. <em>(Added 2026-10-28.)</em></p></li>
 <li><p><strong>A <code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">path</span></code> has <code class="docutils literal notranslate"><span class="pre">path</span></code> and no <code class="docutils literal notranslate"><span class="pre">value</span></code></strong>: a lockfile holds no absolute path.</p></li>
 <li><p><strong>A <code class="docutils literal notranslate"><span class="pre">location</span></code> of kind <code class="docutils literal notranslate"><span class="pre">git</span></code> has <code class="docutils literal notranslate"><span class="pre">url</span></code>, <code class="docutils literal notranslate"><span class="pre">rev</span></code> if the manifest gives one, and <code class="docutils literal notranslate"><span class="pre">commit</span></code></strong>: the
 full hash that <code class="docutils literal notranslate"><span class="pre">rev</span></code> meant when the dependency was pinned. <code class="docutils literal notranslate"><span class="pre">rev</span></code> is what was asked for;
@@ -1360,6 +1385,7 @@ warning, and does not stop the build.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart">Chart</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebook-and-note">Notebook and Note</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#model">Model</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#file">File</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build">Build</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added-for-the-versioned-catalog">Added for the versioned catalog</a></li>
 </ul>

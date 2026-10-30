@@ -241,7 +241,7 @@ chartbook.backends.databricks
 
 ````
 
-````{py:method} sql(query: str)
+````{py:method} sql(query: str, arrow: typing.Optional[dict] = None)
 :canonical: chartbook.backends.Backend.sql
 :abstractmethod:
 
@@ -354,7 +354,7 @@ Bases: {py:obj}`chartbook.backends.Backend`
 
 ````
 
-````{py:method} sql(query: str)
+````{py:method} sql(query: str, arrow: typing.Optional[dict] = None)
 :canonical: chartbook.backends.DuckDBBackend.sql
 
 ```{autodoc2-docstring} chartbook.backends.DuckDBBackend.sql

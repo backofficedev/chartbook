@@ -214,7 +214,7 @@
 ````{py:data} KINDS
 :canonical: chartbook.refs.KINDS
 :value: >
-   ('dataframe', 'chart', 'notebook', 'note', 'model')
+   ('dataframe', 'chart', 'notebook', 'note', 'model', 'file')
 
 ```{autodoc2-docstring} chartbook.refs.KINDS
 ```

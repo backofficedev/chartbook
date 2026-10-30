@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../../_static/documentation_options.js?v=06af8975"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/models';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -284,7 +284,6 @@
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
@@ -352,14 +351,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -408,23 +402,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -451,7 +446,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.models</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Models: the front door for trained models a pipeline declares.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Models: the front door for trained models a pipeline declares.</span>
 
 <span class="sd">A model is a file, or a directory of files, that a pipeline produces and</span>
 <span class="sd">declares in ``[models]``. ChartBook records where it is, what it was trained</span>
@@ -462,7 +457,7 @@
 <span class="sd">    import joblib</span>
 <span class="sd">    from chartbook import models</span>
 
-<span class="sd">    model = joblib.load(models.path("rate_forecaster"))</span>
+<span class="sd">    model = joblib.load(models.path(&quot;rate_forecaster&quot;))</span>
 
 <span class="sd">Every function here takes a model and nothing else, as</span>
 <span class="sd">:mod:`chartbook.data` does for dataframes. :mod:`chartbook.assets` is the</span>
@@ -475,55 +470,55 @@
 <span class="sd">gives it a name people use::</span>
 
 <span class="sd">    [models.rate_forecaster.aliases]</span>
-<span class="sd">    champion = "7f3a9c2e41b0"</span>
+<span class="sd">    champion = &quot;7f3a9c2e41b0&quot;</span>
 
-<span class="sd">    models.path("rate_forecaster")             # what is in the folder now</span>
-<span class="sd">    models.path("rate_forecaster@7f3a9c2e41b0")     # that version, in the store</span>
-<span class="sd">    models.path("rate_forecaster@champion")    # the version the label points at</span>
-<span class="sd">    models.versions("rate_forecaster")         # all of them, oldest first</span>
+<span class="sd">    models.path(&quot;rate_forecaster&quot;)             # what is in the folder now</span>
+<span class="sd">    models.path(&quot;rate_forecaster@7f3a9c2e41b0&quot;)     # that version, in the store</span>
+<span class="sd">    models.path(&quot;rate_forecaster@champion&quot;)    # the version the label points at</span>
+<span class="sd">    models.versions(&quot;rate_forecaster&quot;)         # all of them, oldest first</span>
 
 <span class="sd">The design, including what is deliberately not done, is</span>
 <span class="sd">``docs_src/design/models.md``.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">caller_start_dirs</span>
+<span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
+<span class="kn">from</span> <span class="nn">chartbook.refs</span> <span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
+<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">caller_start_dirs</span>
 
 
 <div class="viewcode-block" id="path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">path</span><span class="p">(</span>
     <span class="n">ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the path the manifest declares for a model of the current pipeline.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path the manifest declares for a model of the current pipeline.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import models</span>
-<span class="sd">    &gt;&gt;&gt; models.path("rate_forecaster")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; models.path(&quot;rate_forecaster&quot;)  # doctest: +SKIP</span>
 
-<span class="sd">    This is :func:`chartbook.assets.path` with ``kind="model"``: it answers</span>
+<span class="sd">    This is :func:`chartbook.assets.path` with ``kind=&quot;model&quot;``: it answers</span>
 <span class="sd">    for models and nothing else. The path is the model file, or the</span>
-<span class="sd">    directory that holds the model's files. Nothing checks that it exists,</span>
+<span class="sd">    directory that holds the model&#39;s files. Nothing checks that it exists,</span>
 <span class="sd">    so training code can ask where to write before anything is there.</span>
 
 <span class="sd">    A model of another pipeline is named with the pipeline in front,</span>
-<span class="sd">    ``models.path("forecasting:rate_forecaster")``, and is the copy that</span>
+<span class="sd">    ``models.path(&quot;forecasting:rate_forecaster&quot;)``, and is the copy that</span>
 <span class="sd">    ``chartbook.lock`` pins; see :func:`chartbook.assets.path`.</span>
 
-<span class="sd">    A version of one of this pipeline's models is named after ``@``:</span>
-<span class="sd">    ``models.path("rate_forecaster@7f3a9c2e41b0")``, by the start of its content</span>
-<span class="sd">    hash, or ``models.path("rate_forecaster@champion")``, by a label of</span>
+<span class="sd">    A version of one of this pipeline&#39;s models is named after ``@``:</span>
+<span class="sd">    ``models.path(&quot;rate_forecaster@7f3a9c2e41b0&quot;)``, by the start of its content</span>
+<span class="sd">    hash, or ``models.path(&quot;rate_forecaster@champion&quot;)``, by a label of</span>
 <span class="sd">    ``[models.rate_forecaster.aliases]``. That path is in the store, is</span>
 <span class="sd">    read-only, and does not change.</span>
 
-<span class="sd">    :param ref: The model's name: its key in ``[models]``.</span>
+<span class="sd">    :param ref: The model&#39;s name: its key in ``[models]``.</span>
 <span class="sd">    :type ref: str</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for</span>
 <span class="sd">        :func:`chartbook.assets.path`.</span>
@@ -537,51 +532,51 @@
 <span class="sd">        not on this machine.</span>
 <span class="sd">    :raises ValueError: If the reference names another kind of asset, uses</span>
 <span class="sd">        reserved syntax, or the entry has no ``path``.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">KindMismatchError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">KindMismatchError</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">),</span>
             <span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="p">,</span>
             <span class="n">e</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span>
             <span class="n">hint</span><span class="o">=</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"models.path() answers for models only; use "</span>
-                <span class="sa">f</span><span class="s2">"chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">."</span>
+                <span class="sa">f</span><span class="s2">&quot;models.path() answers for models only; use &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">.&quot;</span>
             <span class="p">),</span>
-        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+        <span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span></div>
 
 
 
 <div class="viewcode-block" id="read_metrics">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.read_metrics">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">read_metrics</span><span class="p">(</span><span class="n">metrics_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Read a model's metrics file: one flat JSON object of scores.</span>
+<span class="k">def</span> <span class="nf">read_metrics</span><span class="p">(</span><span class="n">metrics_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a model&#39;s metrics file: one flat JSON object of scores.</span>
 
 <span class="sd">    ::</span>
 
-<span class="sd">        { "rmse": 0.214, "mae": 0.171, "n_train": 5120, "n_test": 1280 }</span>
+<span class="sd">        { &quot;rmse&quot;: 0.214, &quot;mae&quot;: 0.171, &quot;n_train&quot;: 5120, &quot;n_test&quot;: 1280 }</span>
 
 <span class="sd">    Scores are in a file, not in ``chartbook.toml``, because they are an</span>
 <span class="sd">    output: they change every time the model is retrained.</span>
 
-<span class="sd">    :param metrics_path: The file a model's ``metrics_path`` names.</span>
+<span class="sd">    :param metrics_path: The file a model&#39;s ``metrics_path`` names.</span>
 <span class="sd">    :returns: The scores, by name.</span>
 <span class="sd">    :raises OSError: If the file cannot be read.</span>
 <span class="sd">    :raises ValueError: If it is not a flat JSON object whose values are</span>
 <span class="sd">        numbers, strings or booleans.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">metrics_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">metrics_path</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">metrics_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">metrics_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">metrics</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2"> is not valid JSON: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2"> is not valid JSON: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">metrics</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2"> must hold one JSON object of scores, such as "</span>
-            <span class="sa">f</span><span class="s1">'</span><span class="se">{{</span><span class="s1">"rmse": 0.21</span><span class="se">}}</span><span class="s1">, not a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">.'</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2"> must hold one JSON object of scores, such as &quot;</span>
+            <span class="sa">f</span><span class="s1">&#39;</span><span class="se">{{</span><span class="s1">&quot;rmse&quot;: 0.21</span><span class="se">}}</span><span class="s1">, not a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">.&#39;</span>
         <span class="p">)</span>
     <span class="n">nested</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">name</span>
@@ -590,9 +585,9 @@
     <span class="p">]</span>
     <span class="k">if</span> <span class="n">nested</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">repr</span><span class="p">,</span><span class="w"> </span><span class="n">nested</span><span class="p">))</span><span class="si">}</span><span class="s2"> must be a number, a "</span>
-            <span class="sa">f</span><span class="s2">"string or true/false. A metrics file is one flat object; a table "</span>
-            <span class="sa">f</span><span class="s2">"or a curve belongs in a dataframe or a chart."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metrics_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">repr</span><span class="p">,</span><span class="w"> </span><span class="n">nested</span><span class="p">))</span><span class="si">}</span><span class="s2"> must be a number, a &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;string or true/false. A metrics file is one flat object; a table &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;or a curve belongs in a dataframe or a chart.&quot;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">metrics</span></div>
 
@@ -601,24 +596,24 @@
 <div class="viewcode-block" id="Version">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.Version">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">Version</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""One version of a model: what a snapshot kept of it.</span>
+<span class="k">class</span> <span class="nc">Version</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;One version of a model: what a snapshot kept of it.</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        name: The version's name: the start of its content hash, as</span>
-<span class="sd">            ``models.path("x@&lt;name&gt;")`` takes it.</span>
-<span class="sd">        content_hash: The model's whole content hash.</span>
+<span class="sd">        name: The version&#39;s name: the start of its content hash, as</span>
+<span class="sd">            ``models.path(&quot;x@&lt;name&gt;&quot;)`` takes it.</span>
+<span class="sd">        content_hash: The model&#39;s whole content hash.</span>
 <span class="sd">        made_at: When the snapshot that made it was made, in UTC.</span>
 <span class="sd">        commit: The commit the pipeline was at: which code trained it.</span>
 <span class="sd">        labels: The labels that point at it in ``[models.x.aliases]``.</span>
 <span class="sd">        metrics: Its scores, as the metrics file had them then.</span>
 <span class="sd">        inputs: What the pipeline was pinned to then: which data.</span>
 <span class="sd">        trained_on: The content hash of each ``trained_on`` input when the</span>
-<span class="sd">            version was first made, by the input's ID: exactly which data</span>
+<span class="sd">            version was first made, by the input&#39;s ID: exactly which data</span>
 <span class="sd">            made it.</span>
 <span class="sd">        built_by_run: Whether ChartBook ran the build in the command that</span>
 <span class="sd">            made the snapshot.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">content_hash</span><span class="p">:</span> <span class="nb">str</span>
@@ -632,22 +627,22 @@
 
 <div class="viewcode-block" id="Version.to_dict">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.Version.to_dict">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The version as the index records it. Empty fields are left out."""</span>
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The version as the index records it. Empty fields are left out.&quot;&quot;&quot;</span>
         <span class="n">record</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">"version"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="s2">"content_hash"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span>
-            <span class="s2">"made_at"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span>
-            <span class="s2">"commit"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;content_hash&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span>
+            <span class="s2">&quot;made_at&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span>
+            <span class="s2">&quot;commit&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">[</span><span class="s2">"labels"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">[</span><span class="s2">"metrics"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">&quot;metrics&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">[</span><span class="s2">"inputs"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trained_on</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">[</span><span class="s2">"trained_on"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trained_on</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">&quot;trained_on&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trained_on</span>
         <span class="k">return</span> <span class="n">record</span></div>
 </div>
 
@@ -656,54 +651,54 @@
 <div class="viewcode-block" id="Staleness">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.Staleness">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">Staleness</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether a model's bytes were trained on what its inputs are now.</span>
+<span class="k">class</span> <span class="nc">Staleness</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a model&#39;s bytes were trained on what its inputs are now.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        version: The version the model file is: the snapshot that first held</span>
 <span class="sd">            these bytes recorded what they were trained on.</span>
-<span class="sd">        trained_with: Each input's content hash then, by the input's ID as</span>
+<span class="sd">        trained_with: Each input&#39;s content hash then, by the input&#39;s ID as</span>
 <span class="sd">            the lockfile writes it.</span>
-<span class="sd">        now: Each input's content hash now: the local dataframe as it is in</span>
-<span class="sd">            the folder, another pipeline's as ``chartbook.lock`` pins it.</span>
+<span class="sd">        now: Each input&#39;s content hash now: the local dataframe as it is in</span>
+<span class="sd">            the folder, another pipeline&#39;s as ``chartbook.lock`` pins it.</span>
 <span class="sd">            Missing where it cannot be told (a file not there, a pin gone).</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">trained_with</span><span class="p">:</span> <span class="nb">dict</span>
     <span class="n">now</span><span class="p">:</span> <span class="nb">dict</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">stale</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""The inputs that have moved since the model was trained."""</span>
+    <span class="k">def</span> <span class="nf">stale</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The inputs that have moved since the model was trained.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">then</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trained_with</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">now</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">then</span><span class="p">)]</span></div>
 
 
 
 <div class="viewcode-block" id="staleness">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.staleness">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">staleness</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">staleness</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Staleness</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Say whether a model is out of date: trained on inputs that have moved.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Say whether a model is out of date: trained on inputs that have moved.</span>
 
-<span class="sd">    The model file's bytes are a version, if some snapshot of the pipeline</span>
+<span class="sd">    The model file&#39;s bytes are a version, if some snapshot of the pipeline</span>
 <span class="sd">    first held them; that snapshot recorded the content hash of each</span>
 <span class="sd">    ``trained_on`` input at the time. Those are compared with the inputs</span>
 <span class="sd">    now. The answer is None when nothing can be said: no model file, no</span>
 <span class="sd">    snapshot holding these bytes, or no inputs recorded.</span>
 
-<span class="sd">    :param directory: The pipeline's folder.</span>
-<span class="sd">    :param model_id: The model's key in ``[models]``.</span>
+<span class="sd">    :param directory: The pipeline&#39;s folder.</span>
+<span class="sd">    :param model_id: The model&#39;s key in ``[models]``.</span>
 <span class="sd">    :param entry: Its manifest entry, with ``path``.</span>
-<span class="sd">    :param store: The store; this user's by default.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">hashing</span><span class="p">,</span> <span class="n">snapshot</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.lock</span><span class="w"> </span><span class="kn">import</span> <span class="n">LOCK_FILE</span><span class="p">,</span> <span class="n">LockError</span><span class="p">,</span> <span class="n">read_lock</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span> <span class="n">_read_raw_manifest</span><span class="p">,</span> <span class="n">parse_declared_ref</span>
+<span class="sd">    :param store: The store; this user&#39;s by default.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">hashing</span><span class="p">,</span> <span class="n">snapshot</span>
+    <span class="kn">from</span> <span class="nn">chartbook.lock</span> <span class="kn">import</span> <span class="n">LOCK_FILE</span><span class="p">,</span> <span class="n">LockError</span><span class="p">,</span> <span class="n">read_lock</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span> <span class="n">_read_raw_manifest</span><span class="p">,</span> <span class="n">parse_declared_ref</span>
 
     <span class="n">directory</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
-    <span class="n">declared</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span>
+    <span class="n">declared</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">declared</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">declared</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
@@ -713,13 +708,13 @@
     <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">versions</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">versions_of</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+        <span class="n">versions</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">versions_of</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">held</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">taken</span> <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">versions</span> <span class="k">if</span> <span class="n">content_hash</span> <span class="o">==</span> <span class="n">current</span><span class="o">.</span><span class="n">content_hash</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">held</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">trained_with</span> <span class="o">=</span> <span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">"model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"trained_on"</span><span class="p">)</span>
+    <span class="n">trained_with</span> <span class="o">=</span> <span class="p">(</span><span class="n">held</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trained_on&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">trained_with</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="n">hashes</span> <span class="o">=</span> <span class="p">[</span><span class="n">content_hash</span> <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">versions</span><span class="p">]</span>
@@ -727,7 +722,7 @@
         <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_raw_manifest</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
         <span class="n">raw</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">dataframes</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dataframes"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dataframes"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">dataframes</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">locked</span> <span class="o">=</span> <span class="n">read_lock</span><span class="p">(</span><span class="n">directory</span> <span class="o">/</span> <span class="n">LOCK_FILE</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">LockError</span><span class="p">:</span>
@@ -735,11 +730,11 @@
     <span class="n">now</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">trained_with</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">ref</span> <span class="o">=</span> <span class="n">parse_declared_ref</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"dataframe"</span><span class="p">)</span>
+            <span class="n">ref</span> <span class="o">=</span> <span class="n">parse_declared_ref</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="k">continue</span>
         <span class="k">if</span> <span class="n">ref</span><span class="o">.</span><span class="n">is_local</span><span class="p">:</span>
-            <span class="n">path</span> <span class="o">=</span> <span class="p">(</span><span class="n">dataframes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataframes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">(</span><span class="n">dataframes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataframes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ref</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
                 <span class="k">continue</span>
             <span class="k">try</span><span class="p">:</span>
@@ -750,46 +745,46 @@
                 <span class="n">now</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">content_hash</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">record</span> <span class="o">=</span> <span class="p">(</span><span class="n">locked</span><span class="o">.</span><span class="n">assets</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">if</span> <span class="n">locked</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">):</span>
-                <span class="n">now</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_hash&quot;</span><span class="p">):</span>
+                <span class="n">now</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">Staleness</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">version_name</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">content_hash</span><span class="p">,</span> <span class="n">hashes</span><span class="p">),</span> <span class="nb">dict</span><span class="p">(</span><span class="n">trained_with</span><span class="p">),</span> <span class="n">now</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="versions_in">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.versions_in">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">versions_in</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">versions_in</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">model_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">aliases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Version</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Every version of a model of the pipeline in a folder, oldest first.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Every version of a model of the pipeline in a folder, oldest first.</span>
 
 <span class="sd">    Empty if the pipeline is not in a git repository, or has no snapshot</span>
 <span class="sd">    that holds the model: there is nothing to list.</span>
 
-<span class="sd">    :param directory: The pipeline's folder.</span>
-<span class="sd">    :param model_id: The model's key in ``[models]``.</span>
-<span class="sd">    :param aliases: The model's ``aliases`` table, to say which labels</span>
+<span class="sd">    :param directory: The pipeline&#39;s folder.</span>
+<span class="sd">    :param model_id: The model&#39;s key in ``[models]``.</span>
+<span class="sd">    :param aliases: The model&#39;s ``aliases`` table, to say which labels</span>
 <span class="sd">        point at which version.</span>
-<span class="sd">    :param store: The store; this user's by default.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot</span>
+<span class="sd">    :param store: The store; this user&#39;s by default.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">snapshot</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">found</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">versions_of</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">versions_of</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">store</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">SnapshotError</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
     <span class="n">hashes</span> <span class="o">=</span> <span class="p">[</span><span class="n">content_hash</span> <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">found</span><span class="p">]</span>
     <span class="n">listed</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">content_hash</span><span class="p">,</span> <span class="n">taken</span> <span class="ow">in</span> <span class="n">found</span><span class="p">:</span>
-        <span class="n">digits</span> <span class="o">=</span> <span class="n">content_hash</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">digits</span> <span class="o">=</span> <span class="n">content_hash</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">labels</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="nb">sorted</span><span class="p">(</span>
                 <span class="n">label</span>
                 <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">points_at</span> <span class="ow">in</span> <span class="p">(</span><span class="n">aliases</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">digits</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">points_at</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">digits</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">points_at</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             <span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">record</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="sa">f</span><span class="s2">"model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span>
+        <span class="n">record</span> <span class="o">=</span> <span class="n">taken</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;model/</span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
         <span class="n">listed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">Version</span><span class="p">(</span>
                 <span class="n">name</span><span class="o">=</span><span class="n">snapshot</span><span class="o">.</span><span class="n">version_name</span><span class="p">(</span><span class="n">content_hash</span><span class="p">,</span> <span class="n">hashes</span><span class="p">),</span>
@@ -797,9 +792,9 @@
                 <span class="n">made_at</span><span class="o">=</span><span class="n">taken</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span>
                 <span class="n">commit</span><span class="o">=</span><span class="n">taken</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span>
                 <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
-                <span class="n">metrics</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"metrics"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span>
+                <span class="n">metrics</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metrics&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span>
                 <span class="n">inputs</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">inputs</span><span class="p">),</span>
-                <span class="n">trained_on</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"trained_on"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span>
+                <span class="n">trained_on</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trained_on&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}),</span>
                 <span class="n">built_by_run</span><span class="o">=</span><span class="n">taken</span><span class="o">.</span><span class="n">built_by_run</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">)</span>
@@ -809,27 +804,27 @@
 
 <div class="viewcode-block" id="versions">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.models.html#chartbook.models.versions">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">versions</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">versions</span><span class="p">(</span>
     <span class="n">ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Version</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""List the versions of a model of the current pipeline, oldest first.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the versions of a model of the current pipeline, oldest first.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import models</span>
-<span class="sd">    &gt;&gt;&gt; [v.name for v in models.versions("rate_forecaster")]  # doctest: +SKIP</span>
-<span class="sd">    ['7f3a9c2e41b0', 'b2c91d0a77f3']</span>
+<span class="sd">    &gt;&gt;&gt; [v.name for v in models.versions(&quot;rate_forecaster&quot;)]  # doctest: +SKIP</span>
+<span class="sd">    [&#39;7f3a9c2e41b0&#39;, &#39;b2c91d0a77f3&#39;]</span>
 
 <span class="sd">    A version is made by a snapshot, so these are the versions on this</span>
 <span class="sd">    machine: the ones in its store.</span>
 
-<span class="sd">    :param ref: The model's name: its key in ``[models]``.</span>
+<span class="sd">    :param ref: The model&#39;s name: its key in ``[models]``.</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for :func:`path`.</span>
 <span class="sd">    :raises AssetNotDeclaredError: If the manifest declares no such model.</span>
 <span class="sd">    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the</span>
 <span class="sd">        starting directory.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetNotDeclaredError</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.errors</span> <span class="kn">import</span> <span class="n">AssetNotDeclaredError</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="p">(</span>
         <span class="n">MANIFEST_NAME</span><span class="p">,</span>
         <span class="n">_read_raw_manifest</span><span class="p">,</span>
         <span class="n">declared_assets</span><span class="p">,</span>
@@ -837,24 +832,24 @@
         <span class="n">parse_declared_ref</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">asset</span> <span class="o">=</span> <span class="n">parse_declared_ref</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"model"</span><span class="p">)</span>
+    <span class="n">asset</span> <span class="o">=</span> <span class="n">parse_declared_ref</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;model&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">asset</span><span class="o">.</span><span class="n">is_local</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"models.versions() lists the versions of one of this pipeline's "</span>
-            <span class="sa">f</span><span class="s2">"own models, and </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> names another pipeline's."</span>
+            <span class="sa">f</span><span class="s2">&quot;models.versions() lists the versions of one of this pipeline&#39;s &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;own models, and </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> names another pipeline&#39;s.&quot;</span>
         <span class="p">)</span>
     <span class="n">manifest_dir</span> <span class="o">=</span> <span class="n">find_manifest_dir</span><span class="p">(</span><span class="o">*</span><span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
     <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_raw_manifest</span><span class="p">(</span><span class="n">manifest_dir</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span>
-    <span class="n">entry</span> <span class="o">=</span> <span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"models"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">entry</span> <span class="o">=</span> <span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
         <span class="k">raise</span> <span class="n">AssetNotDeclaredError</span><span class="p">(</span>
             <span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
             <span class="n">manifest_dir</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span>
             <span class="n">declared_assets</span><span class="p">(</span><span class="n">manifest_dir</span><span class="p">),</span>
-            <span class="n">kind</span><span class="o">=</span><span class="s2">"model"</span><span class="p">,</span>
-            <span class="n">example_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">"./_models/</span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.joblib"</span><span class="p">,</span>
+            <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;model&quot;</span><span class="p">,</span>
+            <span class="n">example_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;./_models/</span><span class="si">{</span><span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.joblib&quot;</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="n">aliases</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="n">aliases</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;aliases&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;aliases&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
     <span class="k">return</span> <span class="n">versions_in</span><span class="p">(</span><span class="n">manifest_dir</span><span class="p">,</span> <span class="n">asset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">aliases</span><span class="p">)</span></div>
 
 
@@ -920,8 +915,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

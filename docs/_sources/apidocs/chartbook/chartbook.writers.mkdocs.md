@@ -72,7 +72,7 @@ Bases: {py:obj}`chartbook.writers.sphinx.SphinxWriter`
 ````{py:attribute} CATALOG_PAGES
 :canonical: chartbook.writers.mkdocs.MkDocsWriter.CATALOG_PAGES
 :value: >
-   ('index.md', 'cb/charts.md', 'cb/dataframes.md', 'cb/models.md', 'cb/pipelines.md', 'cb/diagnostics....
+   ('index.md', 'cb/charts.md', 'cb/dataframes.md', 'cb/models.md', 'cb/files.md', 'cb/pipelines.md', '...
 
 ```{autodoc2-docstring} chartbook.writers.mkdocs.MkDocsWriter.CATALOG_PAGES
 ```

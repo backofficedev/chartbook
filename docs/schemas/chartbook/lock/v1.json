@@ -39,7 +39,7 @@
           },
           "dependencies": {
             "type": "array",
-            "description": "On the Pipeline record: each dependency as in the index's Pipeline record, by its key in [dependencies], with no absolute path. `pinned_hash` is one hash over everything pinned of it, labelled versions included. A directory pinned from a snapshot has the snapshot's commit in `location.commit` and its time in `snapshot`.",
+            "description": "On the Pipeline record: each dependency as in the index's Pipeline record, by its key in [dependencies], with no absolute path. `pinned_hash` is one hash over everything pinned of it, labelled versions included. A directory pinned from a snapshot has the snapshot's commit in `location.commit` and its time in `snapshot`. `pinned_from` is the pipeline the pins came from, by its own ID rather than the key: the snapshot's pipeline, or the one a `git` dependency's clone holds; a pin made before 0.3.0 has none until it is made again or moved.",
             "items": {
               "type": "object",
               "required": [

@@ -31,6 +31,10 @@
   - ```{autodoc2-docstring} chartbook.sitefiles.copy_theme_files
     :summary:
     ```
+* - {py:obj}`download_link <chartbook.sitefiles.download_link>`
+  - ```{autodoc2-docstring} chartbook.sitefiles.download_link
+    :summary:
+    ```
 * - {py:obj}`downloadable <chartbook.sitefiles.downloadable>`
   - ```{autodoc2-docstring} chartbook.sitefiles.downloadable
     :summary:
@@ -45,6 +49,10 @@
     ```
 * - {py:obj}`not_built_text <chartbook.sitefiles.not_built_text>`
   - ```{autodoc2-docstring} chartbook.sitefiles.not_built_text
+    :summary:
+    ```
+* - {py:obj}`thumbnail_path <chartbook.sitefiles.thumbnail_path>`
+  - ```{autodoc2-docstring} chartbook.sitefiles.thumbnail_path
     :summary:
     ```
 * - {py:obj}`write_not_built <chartbook.sitefiles.write_not_built>`
@@ -151,6 +159,13 @@
 ```
 ````
 
+````{py:function} download_link(record: dict) -> dict
+:canonical: chartbook.sitefiles.download_link
+
+```{autodoc2-docstring} chartbook.sitefiles.download_link
+```
+````
+
 ````{py:function} downloadable(record: dict) -> bool
 :canonical: chartbook.sitefiles.downloadable
 
@@ -176,6 +191,13 @@
 :canonical: chartbook.sitefiles.not_built_text
 
 ```{autodoc2-docstring} chartbook.sitefiles.not_built_text
+```
+````
+
+````{py:function} thumbnail_path(record: dict, preview: dict) -> str
+:canonical: chartbook.sitefiles.thumbnail_path
+
+```{autodoc2-docstring} chartbook.sitefiles.thumbnail_path
 ```
 ````
 
