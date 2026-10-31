@@ -222,9 +222,14 @@ table = assets.index("file/filings")          # LazyFrame: path, size_bytes, sha
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
 # not its working directory. It changes only on `chartbook update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy
-path = data.path("fed_yield_curve:treasury_rates")            # its path in the store
+path = data.path("fed_yield_curve:treasury_rates")            # its path in the store (one file)
+files = data.files("news_headlines:articles")                 # a Hive folder or glob: its files, wherever kept
 chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
 mine = data.load("my_data")                                   # this pipeline's own, live
+# Another pipeline's dataset of several files has NO one path: the store keeps each file once,
+# so a later snapshot's files may sit in earlier snapshot folders. data.path() raises
+# NoSinglePathError; data.load()/data.sql() read the files where they are, data.files() lists
+# them (for a dodo.py file_dep). A model that is a folder: `with assets.gathered(ref) as folder:`.
 # ChartBook NEVER selects columns or rows. "my_data#col" is an address for
 # documenting a column and is refused by data.load()/data.path(). Load or locate
 # the whole dataframe, then use polars or SQL:
