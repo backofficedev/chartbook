@@ -211,6 +211,18 @@ def test_move_refuses_one_store_under_two_names(tmp_path):
     assert not source.verify(taken.hashes())
 
 
+def test_one_bucket_is_one_store_but_another_endpoint_is_not(tmp_path):
+    from types import SimpleNamespace
+    from chartbook.stores.s3 import S3Store
+    from chartbook.transfer import _same_place
+    aws = S3Store("s3://chartbook/data", cache=tmp_path / "a")
+    assert _same_place(aws, S3Store("s3://chartbook/data/?region=us-east-1", cache=tmp_path / "b"))
+    assert not _same_place(aws, S3Store("s3://chartbook/data?endpoint=https://minio.example.org", cache=tmp_path / "c"))
+    assert not _same_place(aws, S3Store("s3://chartbook/other", cache=tmp_path / "d"))
+    assert not _same_place(aws, FolderStore(tmp_path / "folder"))
+    assert not _same_place(SimpleNamespace(bucket="chartbook"), aws)  # a plugin's store with no prefix
+
+
 def test_move_whose_source_cannot_be_tidied_still_routes(tmp_path, monkeypatch):
     from chartbook.store import MIGRATE_JOURNAL, StoreError, TMP_DIR
     from chartbook.transfer import move

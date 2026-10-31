@@ -55,8 +55,12 @@ def copy_snapshot(taken, source, target):
 
 def _same_place(a, b):
     """Whether two stores are one: two names for a folder (letter case, a link) or for a bucket."""
-    if hasattr(a, "bucket") and hasattr(b, "bucket"):
-        return a.bucket == b.bucket and a.prefix.strip("/") == b.prefix.strip("/")
+    if getattr(a, "bucket", None) is not None and getattr(b, "bucket", None) is not None:
+        def place(store):
+            options = getattr(store, "options", None) or {}
+            endpoint = str(options.get("endpoint") or "").rstrip("/")  # none is AWS
+            return store.bucket, str(getattr(store, "prefix", "") or "").strip("/"), endpoint
+        return place(a) == place(b)
     first, second = getattr(a, "root", None), getattr(b, "root", None)
     if isinstance(first, Path) and isinstance(second, Path):
         try:
@@ -123,8 +127,12 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     if not keep and sources:
         # Clearing a record leaves its files for a tidy: this pipeline's go now, and no other's,
         # once the target is seen to hold every record still
-        held = {(t.commit, t.made_at) for t in map(snapshot.read, target.all_snapshot_files() + target.pinned_snapshot_files())
-                if t.pipeline == pipeline}
+        try:
+            held = {(t.commit, t.made_at) for t in map(snapshot.read, target.all_snapshot_files() + target.pinned_snapshot_files())
+                    if t.pipeline == pipeline}
+        except (snapshot.SnapshotError, ValueError, StoreError, OSError) as error:
+            raise StoreError(f"Moved {count} snapshot(s) of {pipeline}, but {to!r} could not be read again ({error}); "
+                             f"the sources' files are left as they are") from None
         missing = [t for _, chosen in sources for t in chosen if (t.commit, t.made_at) not in held]
         if missing:
             raise StoreError(f"Moved {count} snapshot(s) of {pipeline}, but {to!r} no longer lists one made {missing[0].made_at}; "
