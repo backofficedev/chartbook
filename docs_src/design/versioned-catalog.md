@@ -257,3 +257,5 @@ How a version is named on a page (the commit's start and the date is the proposa
 snapshot should also carry template overrides from `docs_src/_templates`; whether the version
 list should be a drop-down in each theme; what the assistant file is called (*decided
 2026-10-16 when it was built:* `llms.txt`).
+
+The 0.4.0 catalog and several-store behavior is described in {doc}`plan-0.4.0` and {doc}`../guide/catalogs-and-data`: catalogs list stores, reads span them, and new snapshots follow catalog routing. The individual Store plugin contract and snapshot layout stay unchanged.

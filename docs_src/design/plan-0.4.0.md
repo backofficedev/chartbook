@@ -3,8 +3,9 @@
 ```{note}
 A plan, written 2026-10-30, the day after 0.3.0 was released, from a conversation with the
 maintainer that day. It says what 0.4.0 is for, the rule at its centre (a catalog is its stores,
-and a machine may have several), and the order of the work. Status: **proposed**. What the
-maintainer decided on 2026-10-30 is marked *decided*; the rest is *proposed*. The fix for a
+and a machine may have several), and the order of the work. Status: **implemented in 0.4.0**. What the
+maintainer decided on 2026-10-30 is marked *decided*; the original proposal labels below
+are retained as design history. The fix for a
 pipeline's page in a catalog, found the same day, is not part of this plan: it ships first, as
 0.3.1 (the {doc}`../changelog`).
 ```

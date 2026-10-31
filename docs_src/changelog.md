@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Design — 0.4.0: the catalog as its stores
+### 0.4.0 — catalogs and several stores
 
-The plan for 0.4.0 is written ({doc}`design/plan-0.4.0`): a catalog lists stores and shows every snapshot in them, from the store alone; a machine may have several stores, with new snapshots routed to the ones that should hold them and a dependency able to name a public store by URL; the catalog's pages become hubs over every version of a pipeline and of each of its dataframes; `chartbook.links.toml` points a pipeline's dependencies at working folders while two pipelines are fixed together; and `chartbook build` gives way to `chartbook run` and `chartbook docs build`. Nothing is built yet.
+- Catalogs use `catalog.toml` and list named stores. `catalog migrate` keeps a backup and reports pipelines that need snapshots. The settings' store remains a fallback; `CHARTBOOK_STORE` isolates a process to one store.
+- Reads choose newest snapshots across stores. Writes follow catalog routing, allow `snapshot --store NAME`, and can publish checked copies to several stores. Read-only stores refuse writes; unavailable named folders are reported.
+- Store management supports named destinations, comment-preserving add/remove, and verified moves with dry-run, retention notes, and routing. Garbage collection reasons from each store's own notes.
+- Dependencies may name a portable publishing store URL. S3 supports `?anonymous=true`; `chartbook add URL` records the upstream repository.
+- Catalog pipeline and asset hubs are rendered from snapshots, with version lists, index differences, and a Stores page. Published indexes omit local store paths. Table and query version pages read stored parquet.
+- Working-folder catalog membership, `catalog add`, catalog execution and member checks, and `trust --members` are removed. Pipelines enter catalogs through snapshots.
+- `chartbook.links.toml` explicitly overrides working-copy reads. Links warn, appear in build indexes and provenance, are ignored in frozen runs and CI, and prevent snapshots. `chartbook link ID FOLDER` checks identity and writes the file.
+- `docs generate` becomes `docs build`; `catalog generate` becomes `catalog build`. `chartbook build` is removed with an actionable message. Pipeline task runners own their final documentation step.
+
+The snapshot layout, plugin Store contract, content hashes, and lockfile format are unchanged. See {doc}`design/plan-0.4.0` and {doc}`guide/catalogs-and-data`.
 
 ## [0.3.0] - 2026-10-29
 

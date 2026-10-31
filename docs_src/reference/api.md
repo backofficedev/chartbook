@@ -52,4 +52,9 @@ chartbook
 ../apidocs/chartbook/chartbook.sitefiles
 ../apidocs/chartbook/chartbook.conf_validation
 ../apidocs/chartbook/chartbook.path_validation
+../apidocs/chartbook/chartbook.multi_store
+../apidocs/chartbook/chartbook.catalog_config
+../apidocs/chartbook/chartbook.links
+../apidocs/chartbook/chartbook.hubs
+../apidocs/chartbook/chartbook.transfer
 ```

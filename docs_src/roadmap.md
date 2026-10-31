@@ -3,13 +3,13 @@
 What ChartBook does now, what is an early experiment, and what may come next. Nothing below the first
 section is a promise; it is where the work is pointed.
 
-## Now: one machine, and a folder shared between machines
+## Now: catalogs of snapshots across several stores
 
 ChartBook is meant to be useful on one laptop with nothing but `pip install chartbook`:
 
 - A pipeline documents its charts, dataframes, notebooks and models in `chartbook.toml`, and
-  `chartbook build` makes a site of them.
-- A catalog gathers several pipelines into one site.
+  `chartbook docs build` makes a site of them.
+- A catalog lists stores in `catalog.toml` and renders hubs over every pipeline and snapshot in them. New snapshots follow catalog routing; reads search every store.
 - One pipeline reads another's data by name, from a **snapshot** in the **store**, pinned in its
   lockfile, so that what it read is recorded and can be read again
   ({doc}`guide/depending-on-pipelines`).

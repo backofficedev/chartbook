@@ -5,9 +5,9 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | Command | Purpose |
 |---------|---------|
 | `chartbook init` | Scaffold a new pipeline project |
-| `chartbook docs generate` | Render the documentation site |
+| `chartbook docs build` | Render the documentation site |
 | `chartbook docs open` | Open the rendered site in a browser |
-| `chartbook build` | Make everything current: run the build script, then render the site |
+| `chartbook run` | Make everything current: run the build script, then render the site |
 | `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
@@ -39,10 +39,10 @@ Scaffold a new pipeline from the [cookiecutter template](https://github.com/back
 
 **The template comes with the package**, as `chartbook/template` in the wheel (the files git tracks in the repository's `template/`; in a source checkout, those same files of `template/` beside `src/`), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project's `.cruft.json` is written as [cruft](https://cruft.github.io/cruft/) writes it: the template's repository on GitHub, its `template` folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So `cruft update` and `cruft check` in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template's repository, in the checkout it runs from, so may not be on GitHub, where `cruft update` looks for it. When the commit is not known (the package recorded none, or the checkout's `template/` has changes git has not committed to tracked files), there is no `.cruft.json`, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '{…}'`. A source checkout that git cannot read, or a copy of one with no `.git`, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project's name that is there already stops it, with nothing changed. The project's environment files ask for `chartbook>=` the template's version, which is your ChartBook's; `cruft update` moves it to the template's version then.
 
-The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site, and before that `chartbook docs generate` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs generate`, the commands that install its dependencies, then `chartbook build -f`, `chartbook docs open` and `chartbook check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
+The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook run` builds it and renders its site, and before that `chartbook docs build` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs build`, the commands that install its dependencies, then `chartbook run`, `chartbook docs open` and `chartbook check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
 
 ```console
-chartbook init [--git] [--github [--public | --private]]
+chartbook init [--git] [--github [OPTIONS] [--public | --private]]
 ```
 
 | Option | Effect |
@@ -62,32 +62,32 @@ If a later step fails — a commit hook rejects the commit, or the repository na
 (chartbook-docs)=
 ## chartbook docs
 
-The documentation site, as a group of two commands: `chartbook docs generate` renders it, and `chartbook docs open` opens it. Neither builds the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` runs the build script and then generates the site. `chartbook docs` on its own lists the two.
+The documentation site, as a group of two commands: `chartbook docs build` renders it, and `chartbook docs open` opens it. Neither builds the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook run <chartbook-run>` runs the build script and then generates the site. `chartbook docs` on its own lists the two.
 
-### docs generate
+### docs build
 
 ```console
-chartbook docs generate [OPTIONS] [OUTPUT_DIR]
+chartbook docs build [OPTIONS] [OUTPUT_DIR]
 ```
 
 Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
 
-It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
+It renders the site from what is already built. {ref}`chartbook run <chartbook-run>` executes the build script. Its task runner should render documentation as the final task.
 
-**In a folder you have not trusted**, you are asked first when you are at a terminal ({ref}`chartbook trust <chartbook-trust>`, "Asked at a terminal"); elsewhere, and after the answer `r`, the site is rendered as a version from a store is: no query is run (the dataframe's glimpse says why), no template or file from outside the folder is read (a manifest that names one stops the render, naming the entry), and every template runs in Jinja's sandbox. The command says so in a `Warning:` line, and the site is still built. {ref}`chartbook trust <chartbook-trust>` in the folder says the pipeline is yours to build (`--render` to render only); a project `chartbook init` made is trusted already. In a catalog, the catalog's own folder and every member folder on this machine must be trusted, or nothing is built and the error lists them: `chartbook trust --members`.
+**In a folder you have not trusted**, you are asked first when you are at a terminal ({ref}`chartbook trust <chartbook-trust>`, "Asked at a terminal"); elsewhere, and after the answer `r`, the site is rendered as a version from a store is: no query is run (the dataframe's glimpse says why), no template or file from outside the folder is read (a manifest that names one stops the render, naming the entry), and every template runs in Jinja's sandbox. The command says so in a `Warning:` line, and the site is still built. {ref}`chartbook trust <chartbook-trust>` in the folder says the pipeline is yours to build (`--render` to render only); a project `chartbook init` made is trusted already. A catalog renders stored snapshots and needs no trust in working folders.
 
 **Before anything is built.** A lone pipeline that has built none of the data, charts, notebooks and models it declares, as a project just made by `chartbook init` or a fresh clone has not, is rendered all the same, with a warning that lists them:
 
 ```text
 Warning: rates_study has built nothing it declares yet, so the site shows each as not built:
   - notebook: _output/01_example_notebook_interactive.ipynb
-`chartbook build` runs its build script and renders the site again.
+`chartbook run` runs the build script. A script can render documentation as its final step.
 With --strict, this is an error.
 ```
 
 Each of them keeps its record in `index.json`, without a hash, and its provenance panel says "not built". A notebook's page is its title and "Not built yet", with how to build it; a chart's embedded frame and its full-screen link say the same, and so does a dataframe's glimpse, which then has no dates and no download link. A model's page says it only in its provenance panel.
 
-It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs generate --strict`, or `chartbook build`, which runs the build first and makes no exception. An output that is there and cannot be read is not "not built": the render stops and names it.
+It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs build --strict`, or `chartbook run`, which runs the build first and makes no exception. An output that is there and cannot be read is not "not built": the render stops and names it.
 
 A version's site, which a catalog builds from the store (see `chartbook snapshot`), holds what that version's build made. Any output it did not make is shown the same way, built in part or not, and says "Not built in this version", with no advice.
 
@@ -109,14 +109,14 @@ Beside the HTML it writes `index.json`: one record for every pipeline, dataframe
 | `--publish-dir PATH` | `./_output/to_be_published/` | Publish staging directory |
 
 ```console
-chartbook docs generate             # the first time
-chartbook docs generate -f          # again, over what is there
-chartbook docs generate ./site -f   # custom output directory
-chartbook docs generate -f --incremental   # rebuild only what changed
-chartbook docs generate -f --watch         # ...and keep doing so as you edit
+chartbook docs build             # the first time
+chartbook docs build -f          # again, over what is there
+chartbook docs build ./site -f   # custom output directory
+chartbook docs build -f --incremental   # rebuild only what changed
+chartbook docs build -f --watch         # ...and keep doing so as you edit
 ```
 
-**Incremental builds.** A plain `docs generate` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
+**Incremental builds.** A plain `docs build` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
 
 - a pipeline none of whose files changed is not regenerated at all — its `chartbook.toml`, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares are compared by modification time and size;
 - a page whose content comes out the same is left untouched, so Sphinx does not read it again;
@@ -125,65 +125,29 @@ chartbook docs generate -f --watch         # ...and keep doing so as you edit
 Each build says what it did:
 
 ```console
-$ chartbook docs generate -f --incremental
+$ chartbook docs build -f --incremental
 Incremental build: regenerated 1 of 40 pipeline(s); 10 source file(s) changed, 0 removed; Sphinx re-read 10 page(s).
 ```
 
 When a page is added or removed, every page is rendered again — from Sphinx's cache, without re-reading anything — so that navigation stays right and no stale page is left behind. Upgrading ChartBook, Sphinx or a theme, or changing a build option, starts over from nothing. The kept `_docs/` directory ignores itself in git.
 
-Two things an incremental build does not promise, both fixed by one plain `chartbook docs generate`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
+Two things an incremental build does not promise, both fixed by one plain `chartbook docs build`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
 
 **Watch mode.** `--watch` is an incremental build in a loop. It polls the project's files (once a second by default), rebuilds on any change, reports a failed build and carries on. There is no server and nothing to install: open the site with `chartbook docs open` and refresh the page.
 
 ### docs open
 
 ```console
-chartbook docs open [OUTPUT_DIR] [--project-dir PATH]
+chartbook docs open [OUTPUT_DIR] [OPTIONS] [--project-dir PATH]
 ```
 
-Open the rendered site, `OUTPUT_DIR/index.html` (default `./docs/index.html`), in your default browser. There is no server: the file is opened as it is, and after a rebuild you refresh the page. If there is no site yet, it says to run `chartbook docs generate` first.
-
-(chartbook-build)=
-## chartbook build
-
-```console
-chartbook build [OPTIONS] [OUTPUT_DIR]
-```
-
-Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs generate`, and it takes the arguments of {ref}`chartbook docs generate <chartbook-docs>`. `--upstream` first builds and snapshots each upstream with no snapshot to pin, as `chartbook run --upstream` does.
-
-```console
-$ chartbook build -f
-ftsfr/rate_forecast: build
-Ran build in 1 pipeline(s).
-Successfully generated documentation in /work/rate_forecast/docs
-```
-
-| Command | Builds the data | Renders the site |
-|---|---|---|
-| `chartbook run` | Yes | No |
-| `chartbook docs generate` | No | Yes |
-| `chartbook build` | Yes | Yes |
-
-- **If the script fails, the site is not rendered**, and the command exits with the script's exit code.
-- **After the script has run, a declared file that is missing is an error**, even when none of them is there, which `chartbook docs generate` would show as not built yet: the build has just run and did not make it.
-- **With no `build` script** in {ref}`[scripts] <scripts>`, there is nothing to run. It says so and renders the site.
-- **A build tool's task that says `chartbook build`**, as a `dodo.py` written for 0.1.1 does to render the site, is run by the build command that `chartbook build` runs first: the site would be rendered twice, and a plain `doit` would run inside itself. When the build command runs doit, make or just and that tool's task file (`dodo.py`, a `Makefile`, a `justfile`) runs `chartbook build` on this pipeline, `chartbook build` stops before building anything, names each such line (a catalog's members' too), and says to write `chartbook docs generate -f` there. A comment, a docstring and `chartbook build --project-dir` of another pipeline do not count; `"chartbook", "build"` as a list does. `chartbook check` reports the same on the `build` field, and warns of such a line where no build command is declared.
-- **`--remake`** is {ref}`chartbook run <chartbook-run>`'s: without it, the build stops when an asset marked `keep = true` is not on disk while the store has a version of it, and says `chartbook build --remake` as the way on.
-- **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
-- **In a folder you have not trusted to run**, you are asked first when you are at a terminal: `y` trusts it and builds, `r` renders the site without running the script, Enter stops ({ref}`chartbook trust <chartbook-trust>`). Where no one is asked, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.
-
-```{warning}
-**`chartbook build` used to mean what `chartbook docs generate` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs generate -f`, or, better, not render the site at all: `chartbook build` renders it after the script, and the template's `dodo.py` no longer has a task that does.
-
-Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
-```
+Open the rendered site, `OUTPUT_DIR/index.html` (default `./docs/index.html`), in your default browser. There is no server: the file is opened as it is, and after a rebuild you refresh the page. If there is no site yet, it says to run `chartbook docs build` first.
 
 (chartbook-check)=
 ## chartbook check
 
 ```console
-chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-outputs]
+chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [OPTIONS] [--skip-outputs]
 ```
 
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
@@ -192,7 +156,7 @@ The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 - **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing), or an asset's `path` that names a file or folder with `[`, `?` or `*` in its name (`./_data/[raw]`), which a reader would take for a pattern: rename it;
 - **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days;
-- **a build tool's task that says `chartbook build`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook build` would run the build command, which runs that task again (see {ref}`chartbook build <chartbook-build>`).
+- **a build tool's task that says `chartbook run`** — in the pipeline's `dodo.py`, `Makefile` or `justfile` (the file of the tool its build command runs), as a pipeline written for 0.1.1 has to render its site; reported on the `build` field, since `chartbook run` would run the build command, which runs that task again (see {ref}`chartbook run <chartbook-run>`).
 
 A project whose `[project] requires_chartbook` this ChartBook does not meet is not checked: the command stops first, as every command that acts on the manifest does, and says how to install one that meets it.
 
@@ -209,12 +173,12 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 
 | Option | Default | Effect |
 |--------|---------|--------|
-| `--project-dir PATH` | `.` | Project to check — a pipeline or a catalog |
+| `--project-dir PATH` | `.` | Pipeline to check |
 | `--within DAYS` | `30` | How far ahead a license expiration counts as a failure. `0` fails only on licenses already expired or expiring today |
-| `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `chartbook.toml`, its directory, or any TOML file with a `[policy]` table) |
+| `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `catalog.toml`, its directory, or any TOML file with a `[policy]` table) |
 | `--skip-outputs` | off | Do not require data files, charts and notebooks to exist |
 
-**Which fields are required.** Run in a catalog, `check` applies the catalog's {ref}`[policy.required] <policy>` to every member pipeline. Run in a pipeline, it applies the pipeline's own `[policy]`. To hold a pipeline to the policy of the catalog it is published to, or to a list of your own, pass `--policy`; only the `[policy]` table is read, so the catalog's other pipelines need not be checked out, and it replaces the pipeline's own `[policy]`. A field that a policy requires and that is missing or empty is a problem, and the check fails.
+**Which fields are required.** A pipeline uses its own `[policy]`, with the machine catalog's policy as a fallback. `--policy FILE` explicitly replaces it. A missing required field fails the check. Catalogs compare snapshot metadata with their policy on the Diagnostics page; `chartbook check` is a pipeline command.
 
 When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, no `--policy`, or a `--policy` file with no `[policy]` table, as a catalog that sets none), `check` uses the built-in recommended-field lists, the same ones that drive the diagnostics page, as advice only: each missing field is a `warning:` line, and none of them makes the check fail. The one exception is a write-up: a dataframe or chart whose `docs_path` or `docs` is empty fails the check whatever the policy, since the format itself requires one.
 
@@ -268,7 +232,7 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook build` in a pipeline with no build command (where `chartbook build` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
+**Warnings, not problems.** Nothing said with `warning:` fails the command. Besides those about IDs that changed (above), these are: a recommended field that is missing when no policy is given, a task that says `chartbook run` in a pipeline with no build command (where `chartbook run` only renders the site, as it did), a `git` dependency that has not been fetched here, a `path` dependency whose folder is not on this machine and whose pins are all in the store, a `path` dependency in another git repository than the pipeline's own, or in none (it works on this machine only, and the message gives the entry that names it by its ID), a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it), and a dataframe's path that names one file of a set (above).
 
 **Trust.** `check` reads and runs nothing, so it works in any folder, trusted or not. When the folder is not trusted to run ({ref}`chartbook trust <chartbook-trust>`), its last line says so, and what `build`, `run` and `docs` would do there, and names the command; in a catalog, that is the lowest level among the catalog's folder and its member folders on this machine.
 
@@ -276,12 +240,12 @@ Where more than one run differs (`transcripts_2026_q4` beside the other quarters
 ## chartbook trust
 
 ```console
-chartbook trust [PATH] [--render] [--repository] [--members] [--list] [--forget]
+chartbook trust [PATH] [--render] [--repository] [--members] [--list] [OPTIONS] [--forget]
 ```
 
-Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs generate` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook build` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
+Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs build` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook run` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
 
-**Asked at a terminal.** The first `chartbook build`, `chartbook run` or `chartbook docs generate` of a folder you have not trusted asks, when you are at a terminal:
+**Asked at a terminal.** The first `chartbook run`, `chartbook run` or `chartbook docs build` of a folder you have not trusted asks, when you are at a terminal:
 
 ```text
 ChartBook has not run the code in this folder before:
@@ -294,14 +258,14 @@ Its build command runs on this machine:
 Trust this folder? [y/r/N]:
 ```
 
-`y` (or `yes`) records the folder at `run`, as `chartbook trust` there would, so the folders inside it too, and nothing asks again; since a later `chartbook build` then runs its build command without asking, `docs generate`'s question shows that command as well. `r` renders the site and runs no build command: a folder not trusted at all renders as a build of files from a store is rendered (a `Warning:` line says so), and one trusted to render renders as it always does. It records nothing, and is offered by `chartbook build` and `docs generate`, which have a site to render, not by `run`. Enter, `n`, end of input and Ctrl-C stop at once, and nothing is run; any other answer is asked again. A folder trusted to render only is asked about running. A catalog asks once, `[y/N]`, listing the catalog's own folder and each member folder this command needs and does not have (for `chartbook build`, a member trusted to render only too), each with its build command; `y` records them all. One command asks once. What the question shows of a folder (its path, ID, repository and build command) is shown plainly: blank lines and runs of space folded, a control or format character written as `<U+202E>`, at most ten lines. No one is asked when stdin or stderr is not a terminal, under `CI`, or in a build `chartbook run` or `chartbook build` is running (`CHARTBOOK_BATCH`, `CHARTBOOK_RUN_DIR`): there the build refuses and `docs generate` renders without the folder's code, as described here, and `chartbook trust` is the way to say it beforehand. `chartbook trust` also does what a question cannot: a parent folder for everything inside it, a repository for every clone of it, a level of `render` only.
+`y` (or `yes`) records the folder at `run`, as `chartbook trust` there would, so the folders inside it too, and nothing asks again; since a later `chartbook run` then runs its build command without asking, `docs build`'s question shows that command as well. `r` renders the site and runs no build command: a folder not trusted at all renders as a build of files from a store is rendered (a `Warning:` line says so), and one trusted to render renders as it always does. It records nothing, and is offered by `chartbook run` and `docs build`, which have a site to render, not by `run`. Enter, `n`, end of input and Ctrl-C stop at once, and nothing is run; any other answer is asked again. A folder trusted to render only is asked about running. A catalog asks once, `[y/N]`, listing the catalog's own folder and each member folder this command needs and does not have (for `chartbook run`, a member trusted to render only too), each with its build command; `y` records them all. One command asks once. What the question shows of a folder (its path, ID, repository and build command) is shown plainly: blank lines and runs of space folded, a control or format character written as `<U+202E>`, at most ten lines. No one is asked when stdin or stderr is not a terminal, under `CI`, or in a build `chartbook run` or `chartbook run` is running (`CHARTBOOK_BATCH`, `CHARTBOOK_RUN_DIR`): there the build refuses and `docs build` renders without the folder's code, as described here, and `chartbook trust` is the way to say it beforehand. `chartbook trust` also does what a question cannot: a parent folder for everything inside it, a repository for every clone of it, a level of `render` only.
 
 | Option | Effect |
 |---|---|
 | `PATH` | The folder; this one by default. Its trust covers the folders inside it, so `chartbook trust ~/GitRepositories/ftsfr` trusts every pipeline under it, and the command says so when the folder has no `chartbook.toml` |
 | `--render` | Trust it to render only: queries run for glimpses and the index, and the files its manifest names are read wherever they are. `build` and `run` still refuse, saying "trusted to render, not to run" |
 | `--repository` | Trust the folder's `origin` repository instead of the folder: every clone of it, wherever it is on this machine. The folder must have an `origin` remote |
-| `--members` | In a catalog: trust the catalog's own folder and each member folder on this machine. A member shown from the store has no folder here and needs no trust. With `--render`, to render only |
+| `--members` | Removed: catalogs render stored snapshots and have no working members to trust |
 | `--list` | What is trusted, and how: each folder and repository with its level and when it was recorded, and whether `CHARTBOOK_TRUST=all` or `CI` trusts more |
 | `--forget` | Take the folder (or, with `--repository`, its repository) out of the record. A parent folder's entry that covers it is left as it is |
 
@@ -318,18 +282,18 @@ Pipelines (each covers the folders inside it):
 
 **The record** is `~/.chartbook/trust.toml`, this user's ({doc}`configuration`): `[[pipeline]]` entries with a resolved `path`, a `level`, and the pipeline's `id` and `repository` as notes for you (nothing goes by them: an entry is matched by its path, so a stranger's manifest claiming your ID gains nothing), and `[[repository]]` entries with a `url`, matched by the folder's `origin` remote, which you set when you cloned. Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside may name any repository in its `.git/config`, and is trusted by its path. The file is written whole or not at all. One that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning naming it, and a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it.
 
-**Recorded for you.** A project `chartbook init` makes is recorded at `run`, and so is the folder of a catalog `chartbook catalog init` makes: you made them. A folder `chartbook catalog add` adds is recorded at `render`, unless it is trusted already: adding it to your catalog asks for it to be rendered there, and `run` stays yours to say, since `chartbook build` in a catalog runs every member's script. Each says so in one line, and goes on when the record cannot be written.
+**Recorded for you.** A project `chartbook init` makes is trusted to run. Catalogs and their stores need no working-folder trust: the catalog renders snapshots in the version renderer's sandbox.
 
 **Without a record.** Under `CI` (the environment variable, set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none; a runner builds its own checkout. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code (the test suite runs so); it is the one value the variable takes, and another is said once and ignored. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. A `git` dependency is built in ChartBook's own copy of its commit: naming it in `[dependencies]` is the trust for that, and the pipeline that names it must itself be trusted to run.
 
-`chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook catalog generate`, `chartbook create-data-glimpses` and `chartbook publish` take the gate; `chartbook check` does not, and says the level. In a catalog, `--members` records nothing while a member's folder has no `chartbook.toml` where the catalog says it is, and names it: a folder trusted before anything is there would trust whatever is put there later.
+`chartbook docs build`, `chartbook run`, `chartbook create-data-glimpses` and `chartbook publish` use the pipeline trust gate; `chartbook check` reports the trust level without requiring trust. `chartbook catalog build` renders stored snapshots without member trust.
 
 No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {doc}`../design/trust`.
 
 ## chartbook path
 
 ```console
-chartbook path REF [--kind KIND] [--project-dir PATH] [--files]
+chartbook path REF [--kind KIND] [--project-dir PATH] [OPTIONS] [--files]
 ```
 
 Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note, model or files asset — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
@@ -413,7 +377,7 @@ Two more parts of the {doc}`reference grammar <../design/references>` do not giv
 Copy the pipeline's publishable *source* files — README, `chartbook.toml`, parquet artifacts, write-ups, chart HTML, and notebooks marked `publishable = true` — into a staging directory. This is for sharing the pipeline itself; `build` is what renders the website.
 
 ```console
-chartbook publish [--publish-dir PATH] [--project-dir PATH] [-v]
+chartbook publish [--publish-dir PATH] [--project-dir PATH] [OPTIONS] [-v]
 ```
 
 It copies the files the manifest names, so in a folder you have not trusted it reads as a build of files from a store does: a manifest that names a file outside the folder stops it, naming the entry, and the command says how to trust the folder ({ref}`chartbook trust <chartbook-trust>`).
@@ -431,44 +395,39 @@ Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` 
 Create the global catalog with an empty `[pipelines]` section. Its folder is recorded as trusted to run ({ref}`chartbook trust <chartbook-trust>`): you made it.
 
 ```console
-chartbook catalog init [--title TITLE]
+chartbook catalog init [OPTIONS] [--title TITLE]
 ```
 
-### catalog add
-
-Register pipeline directories. Each is keyed by its pipeline ID ({ref}`the rule <pipeline-identity>`): its `[project] id` if set; otherwise, at the top of a git repository with a remote (its `[project] repo_url`, or else its git `origin` remote), the repository's scope and name from the remote, whatever the folder is called; in a subfolder of one, the remote's scope and the subfolder's name; with no remote, the bare folder name. Paths are stored relative to the catalog, between the two folders with any link in their paths followed (a path written from the catalog's folder as named through a link, as an older `catalog add` wrote it, is still read where the catalog is reached that way, with a warning naming the path to write); duplicates (by resolved path) are skipped, as are paths already covered by a `pipelines.members` pattern. A folder that is another checkout of a pipeline the catalog has (a worktree of its repository, or a second clone), whether an entry names it under any key or a `members` pattern finds it, is said to be in the catalog already, under that key, and is not added; a disabled one is enabled again, as adding its own folder does.
+### catalog migrate
 
 ```console
-chartbook catalog add PATHS... [--catalog PATH] [-y]
-
-chartbook catalog add ../crsp_treasury      # one pipeline
-chartbook catalog add ../repos/* -y         # glob, no confirmation prompt
+chartbook catalog migrate [OPTIONS]
 ```
 
-Each folder added is recorded as trusted to render, unless it is trusted already ({ref}`chartbook trust <chartbook-trust>`): adding it to your catalog asks for it to be rendered there. To run stays yours to say, `chartbook trust` in the folder or `chartbook trust --members` in the catalog's, since `chartbook build` in a catalog runs every member's script.
+Rename a folder catalog to `catalog.toml`, preserving `[project]`, `[policy]`, and disabled notes. An exact `.pre-0.4.bak` backup is kept. Store definitions replace working-folder entries. Pipelines without snapshots are listed with the command to publish them. `--catalog PATH` selects the old catalog.
 
 ### catalog disable / enable
 
 Switch a pipeline off or on without deleting its registration. Explicit entries get `disabled = true`; member-discovered pipelines are tracked on the `pipelines.disabled` ID list. In a catalog with only explicit entries, an unknown ID errors and lists the available pipelines; in a member-based catalog the ID is simply added to (or removed from) the list, and if it matches no pipeline the next build warns with a did-you-mean suggestion.
 
 ```console
-chartbook catalog disable ftsfr/sovereign_bonds [--catalog PATH]
-chartbook catalog enable ftsfr/sovereign_bonds [--catalog PATH]
+chartbook catalog disable ftsfr/sovereign_bonds [OPTIONS] [--catalog PATH]
+chartbook catalog enable ftsfr/sovereign_bonds [OPTIONS] [--catalog PATH]
 ```
 
-### catalog generate
+### catalog build
 
-Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs generate`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
+Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog generate [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
+chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]]
 ```
 
 A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-docs).
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
-As `chartbook docs generate` in the catalog's folder, it builds only when the catalog's own folder and every member folder on this machine are trusted ({ref}`chartbook trust --members <chartbook-trust>`); otherwise it lists the folders that are not, and builds nothing.
+The catalog reads snapshots from its stores. It runs no member code and needs no member trust.
 
 ### catalog open
 
@@ -483,10 +442,10 @@ chartbook catalog open
 List cataloged objects. Without a subcommand, prints a tree of every pipeline with its dataframes and charts; subcommands print flat lists.
 
 ```console
-chartbook ls [--catalog PATH]              # the tree
-chartbook ls pipelines [--catalog PATH]    # flat lists
-chartbook ls dataframes [--catalog PATH]
-chartbook ls charts [--catalog PATH]
+chartbook ls [OPTIONS] [--catalog PATH]              # the tree
+chartbook ls pipelines [OPTIONS] [--catalog PATH]    # flat lists
+chartbook ls dataframes [OPTIONS] [--catalog PATH]
+chartbook ls charts [OPTIONS] [--catalog PATH]
 ```
 
 ```console
@@ -499,6 +458,22 @@ Catalog: /data/my-catalog/chartbook.toml
 ```
 
 Each asset is written as its reference, `pipeline:name`. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.
+
+### ls stores
+
+```console
+chartbook ls stores
+```
+
+List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog.
+
+### ls versions
+
+```console
+chartbook ls versions
+```
+
+List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once.
 
 ## chartbook data
 
@@ -517,7 +492,7 @@ All three take `--catalog PATH` to override the configured catalog. The Python e
 Read `chartbook.toml`, take every dataframe it declares, and write `data_glimpses.md`: file metadata, column types, null percentages, sample rows, and numeric summary stats.
 
 ```console
-chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-threshold MB] [--project-dir PATH]
+chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-threshold MB] [OPTIONS] [--project-dir PATH]
 ```
 
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
@@ -530,7 +505,7 @@ The report reads the files the manifest names, so in a folder you have not trust
 ## chartbook snapshot
 
 ```console
-chartbook snapshot [--project-dir PATH] [--deep]
+chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep]
 ```
 
 Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
@@ -585,7 +560,7 @@ An asset that is declared and not built is listed, and the rest is in the snapsh
 
 **A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 
-**The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs generate` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
+**The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs build` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
 
 ```console
 $ chartbook snapshot
@@ -635,10 +610,12 @@ Things to know:
 - **It is found by commit, or by the pipeline's ID.** A pipeline that depends on this folder, or on the same repository by URL, finds it by the commit; one that names this pipeline by its ID (`"ftsfr/fed_yield_curve" = {}`) finds it by the ID. It is in the store, so another machine that shares the store ({ref}`a store a team shares <chartbook-store>`) finds it the same ways once the store has synced, and by the ID with no folder of this pipeline there at all.
 
 (chartbook-restore)=
+`--store NAME` writes this snapshot to that catalog store; repeat it to write to several. Without it, catalog routing applies, then the first store. A read-only or unreachable destination is refused before any write. The command reports its destinations.
+
 ## chartbook restore
 
 ```console
-chartbook restore [NAMES...] [--project-dir PATH]
+chartbook restore [NAMES...] [OPTIONS] [--project-dir PATH]
 ```
 
 Put this pipeline's own assets back on disk, from its snapshots in the store. The mirror of {ref}`chartbook snapshot <chartbook-snapshot>`, which copies the folder into the store; the guide is {doc}`../guide/keeping-costly-outputs`.
@@ -660,7 +637,7 @@ Whether the build tool then skips the step that makes the asset is its own rule:
 ## chartbook add
 
 ```console
-chartbook add PIPELINE [--as NAME] [--commit COMMIT] [--project-dir PATH]
+chartbook add PIPELINE [--as NAME] [--commit COMMIT] [OPTIONS] [--project-dir PATH]
 ```
 
 Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
@@ -683,7 +660,7 @@ A key already in `[dependencies]`, or a `commit` that is not the start of one, w
 ## chartbook pin
 
 ```console
-chartbook pin [--project-dir PATH] [--frozen]
+chartbook pin [--project-dir PATH] [OPTIONS] [--frozen]
 ```
 
 Freeze what this pipeline depends on. Each pipeline in {ref}`[dependencies] <dependencies>` is pinned to a snapshot of it, and the content hash of each of its assets is written to `chartbook.lock`, beside `chartbook.toml`.
@@ -769,7 +746,7 @@ Once it is pinned, your code reads the pinned copy: `chartbook path fed_yield_cu
 
 To see a change in a pipeline you depend on and are changing too, declare it ready and move to it: commit the change there, run `chartbook snapshot` there, then `chartbook update` here, which prints what moved. A lockfile names only what a snapshot or a commit holds, so every pin can be traced to the commit it came from.
 
-In a notebook, or a script you run yourself, `data.load()` reads a dependency that has no snapshot yet from its working folder, with a `WorkingVersionWarning`, and records nothing in the lockfile. A build does not: `chartbook run` sets `CHARTBOOK_BATCH=1` for `build`, and there that read is an error.
+When working on two pipelines together, run `chartbook link ID FOLDER` in the consumer. Reads follow that explicit local link and warn that pins are not in use. Without a link, a dependency needs a snapshot. A snapshot is refused while `chartbook.links.toml` exists; remove it and update pins before publishing.
 
 **`--frozen`: say, and write nothing but a note.** For CI, and for anyone whose store is read-only. `chartbook pin --frozen` pins nothing, fetches nothing and does not write the lockfile or any object. It reads `[dependencies]`, `chartbook.lock` and the store, and exits `1` unless the pipeline can be built from its lockfile alone: every dependency pinned, from where the manifest says it is; every asset built when it was pinned; every pin in the store. The one thing it may write is the store's note that this machine reads these pins, replaced with what the lockfile pins now as `pin` would write it, where the store can be written and the note says otherwise (under CI with no `CHARTBOOK_MACHINE_ID`, the note names the lockfile's path alone, as `pin`'s does there), so that `store gc` on another machine keeps them (see {ref}`store gc <chartbook-store-gc>`); it then says `Nothing written but the store's note that this machine reads these pins`, and says so when the note could not be written. A read through the lockfile (`data.load`) leaves the same note, silently.
 
@@ -789,7 +766,7 @@ Dependencies between pipelines must form a graph with no cycles. A pin whose new
 ## chartbook update
 
 ```console
-chartbook update [DEPENDENCY...] [--project-dir PATH]
+chartbook update [DEPENDENCY...] [OPTIONS] [--project-dir PATH]
 ```
 
 Move pins forward, and rewrite `chartbook.lock`. A folder you depend on moves to its newest snapshot. A repository is fetched again, and moves to what its `rev` means now. With no argument every dependency is updated. Name some to update only those, as they are written in `[dependencies]`; the scope may be left off when only one has that name.
@@ -843,7 +820,7 @@ Keeping it would leave the lockfile naming one commit beside data built from ano
 ## chartbook lineage
 
 ```console
-chartbook lineage [--project-dir PATH] [--check] [--rehash] [--json]
+chartbook lineage [--project-dir PATH] [--check] [--rehash] [OPTIONS] [--json]
 ```
 
 Show where this pipeline's data comes from, and check it, all the way up. It starts from the lockfile: each snapshot the pipeline is pinned to, then the snapshots those were pinned to, as each recorded them when it was made, and so on. Every step of the way is a hash, and each is checked:
@@ -875,7 +852,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [OPTIONS] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -900,11 +877,11 @@ What `chartbook run` does for `build`, in order:
 2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy. A dependency named by its ID that the store has no snapshot of is built and pinned from its repository on the default host, as a `git` dependency is ({doc}`configuration`, `[resolve] default_host`).
 3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
 
-`build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: one that is not declared, or that has no snapshot and is read from its working folder, is an error rather than a warning, since nothing would record what was read. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.
+`build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: an undeclared dependency or an unpinned dependency is refused. Explicit links are honored for development, and `--snapshot` refuses them. `--frozen` and CI ignore links. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.
 
 In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
 
-**Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, you are asked first when you are at a terminal (`y` trusts it, Enter stops; {ref}`chartbook trust <chartbook-trust>`). Where no one is asked, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; in a catalog, it lists every member that is not trusted, and nothing runs (`chartbook trust --members`). A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
+**Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, you are asked first when you are at a terminal (`y` trusts it, Enter stops; {ref}`chartbook trust <chartbook-trust>`). Where no one is asked, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; catalogs have no runnable members. A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
 
 **It never builds in a folder this pipeline depends on, and never reads one**, unless you say `--upstream` (below). A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads the snapshot it pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build, and to declare ready with `chartbook snapshot`. If its owner has made no snapshot yet, `chartbook run` stops and says so.
 
@@ -987,7 +964,7 @@ Error: acme/docs: embeddings is kept, and is not on disk (./_data/embeddings.par
 Nothing was built.
 ```
 
-{ref}`chartbook restore <chartbook-restore>` puts the bytes back (for an upstream of `--upstream`, `chartbook restore --project-dir` its folder), and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing: to remake one on purpose, delete the file, then `--remake`. The stop covers the pipelines the command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is not stopped. A version whose bytes are not in the store is nothing to put back, so it stops nothing either.
+{ref}`chartbook restore <chartbook-restore>` puts the bytes back (for an upstream of `--upstream`, `chartbook restore --project-dir` its folder), and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing: to remake one on purpose, delete the file, then `--remake`. The stop covers the pipeline and any upstream pipelines the command builds; a `git` dependency built in ChartBook's own copy is not stopped. A version whose bytes are not in the store is nothing to put back, so it stops nothing either.
 
 ```console
 $ chartbook run --frozen
@@ -999,7 +976,7 @@ Ran build in 1 pipeline(s).
 ## chartbook index
 
 ```console
-chartbook index diff BEFORE AFTER [--json] [--exit-code]
+chartbook index diff BEFORE AFTER [--json] [OPTIONS] [--exit-code]
 ```
 
 Say what changed between two builds, from the `index.json` each wrote beside its site. `BEFORE` and `AFTER` are two `index.json` files, or the folders that hold them. Records are matched by kind and ID; the two are compared as published, so a build directory's full index and the site's compare as equals, and `generated_at` is ignored.
@@ -1057,6 +1034,8 @@ Cache: /Users/x/.chartbook/cache
 
 What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
 
+`--store NAME` shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.
+
 ### store verify
 
 ```console
@@ -1087,10 +1066,12 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 `chartbook pin` asks for the first or the last of these only, so a pin is always frozen. The two in the middle are there for what is cheap to make again, a build cache, which is not built yet. `verify` is how you find out that an object has changed. It reads every byte, so on a large store it takes a while.
 
 (chartbook-store-gc)=
+`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+
 ### store gc
 
 ```console
-chartbook store gc [--dry-run] [--yes] [--forget-missing] [--keep-days DAYS] [--keep-lineage] [--aggressive]
+chartbook store gc [--dry-run] [--yes] [--forget-missing] [--keep-days DAYS] [--keep-lineage] [OPTIONS] [--aggressive]
 ```
 
 Remove from the store what nothing needs any more: old snapshots, and the objects that only they, or a pin that has since moved, named.
@@ -1155,10 +1136,12 @@ A note only ever adds to what is kept. A lockfile on this machine is read as it 
 
 
 
+`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+
 ### store export
 
 ```console
-chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[@MADE_AT] ...]
+chartbook store export PIPELINE --to FOLDER [--latest | --snapshot COMMIT[OPTIONS] [@MADE_AT] ...]
 ```
 
 Write one pipeline's snapshots into a folder, to send to a collaborator. The folder is laid out as
@@ -1168,6 +1151,8 @@ made is written; with `--latest`, the newest alone, which is then one complete s
 file it needs in its own folder and readable without ChartBook; with `--snapshot`, each one named,
 by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
 a snapshot's record names goes: its data, its documents and its index, never anything that runs.
+
+`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
 
 ### store import
 
@@ -1190,10 +1175,12 @@ acme/rates at 9b1e22d, made 2026-10-02T10:00:00.000000Z
 Imported 2 snapshot(s), 2.1 GB copied.
 ```
 
+`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+
 ### store migrate
 
 ```console
-chartbook store migrate [--dry-run] [--yes]
+chartbook store migrate [--dry-run] [OPTIONS] [--yes]
 ```
 
 Move a store made by ChartBook 0.2 to the layout of 0.3, once. ChartBook 0.3 keeps a folder for
@@ -1223,6 +1210,32 @@ Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s)
 Nothing was moved (--dry-run).
 ```
 
+`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+
+### store add
+
+```console
+chartbook store add NAME URL [OPTIONS]
+```
+
+Read a store and add it to `catalog.toml`. `--pipelines ID` may be repeated to route new snapshots there. `--read-only` prevents writes. `--catalog PATH` selects the catalog. Comments are preserved and duplicate locations are refused.
+
+### store remove
+
+```console
+chartbook store remove NAME [OPTIONS]
+```
+
+Remove a store definition, leaving its files untouched. `--catalog PATH` selects the catalog.
+
+### store move
+
+```console
+chartbook store move PIPELINE --to NAME [OPTIONS]
+```
+
+Copy every snapshot to `--to NAME`, checking hashes and copying retention and origin notes before removing source snapshots. `--dry-run` reports the count and bytes. `--keep` keeps the source copies; `--no-route` leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.
+
 ## chartbook config
 
 Interactively set the default catalog path (stored as `catalog.path` in `~/.chartbook/settings.toml`). This is what `data.load()`, `chartbook ls`, `chartbook data`, and the `catalog` commands use when no explicit `--catalog`/`catalog_path` is given.
@@ -1251,3 +1264,14 @@ metadata:
 A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.2.0 to 0.3.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
 
 **Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
+
+(chartbook-link)=
+## chartbook link
+
+```console
+chartbook link PIPELINE FOLDER [OPTIONS]
+```
+
+Use a dependency's built files while developing both pipelines. The command checks the folder's declared ID and writes `chartbook.links.toml` beside the consumer's manifest. `--project-dir PATH` selects that consumer. Paths are relative to it. Delete the line or file to return to pins.
+
+Reads warn once per linked dependency. Pins and updates ignore links and leave the lockfile's identity unchanged. A snapshot refuses while the file exists; remove it, update, then snapshot. Frozen runs and CI ignore links. A tracked links file is a check error. Build indexes record the linked folder, commit, and whether it has uncommitted changes.
