@@ -191,32 +191,8 @@ class TestWhatTheReviewFound:
         assert result.exit_code == 1 and isinstance(result.exception, SystemExit), result.output
         assert result.output.startswith("Error: ") and "the store cannot be reached" in result.output
 
-    def test_a_catalog_member_another_pins_by_path_is_snapshotted_first(self, work):
-        u = _with_data(work / "u", {"build": LOG})
-        _with_data(work / "a", {"build": LOG}, {"u": {"path": "../u"}})
-        _catalog(work, "a", "u")
-        _commit(work)
-        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
-        assert _order(work) == ["u", "a"] and len(_snapshots_of("u")) == 1 and _snapshots_of("a") == []
 
-    def test_an_upstream_that_depends_on_a_catalog_member(self, work):
-        """d is in the catalog and reads u, which is not; u reads m, which is: m, then u, then d."""
-        _with_data(work / "m", {"build": LOG})
-        _with_data(work / "u", {"build": LOG}, {"m": {"path": "../m"}})
-        _with_data(work / "d", {"build": LOG}, {"u": {"path": "../u"}})
-        _catalog(work, "d", "m")
-        _commit(work)
-        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
-        assert _order(work) == ["m", "u", "d"] and len(_snapshots_of("m")) == 1 and len(_snapshots_of("u")) == 1
 
-    def test_two_pipelines_that_read_one_upstream_build_it_once(self, work):
-        _with_data(work / "u", {"build": LOG})
-        _with_data(work / "a", {"build": LOG}, {"u": {"path": "../u"}})
-        _with_data(work / "b", {"build": LOG}, {"u": {"path": "../u"}})
-        _catalog(work, "a", "b")
-        _commit(work)
-        assert run.run(work, upstream=True, echo=lambda line: None).failed is None
-        assert _order(work) == ["u", "a", "b"] and len(_snapshots_of("u")) == 1
 
     def test_a_git_dependencys_own_path_is_not_followed(self, work, tmp_path):
         """A git dependency's manifest names a folder that happens to be here: --upstream does not build it."""
@@ -310,7 +286,7 @@ class TestWhatTheReviewFound:
         monkeypatch.setattr(cli, "_run_script", lambda *a, **k: seen.update(k))
         monkeypatch.setattr(cli, "_render_site", lambda **k: None)
         monkeypatch.chdir(down)
-        result = CliRunner().invoke(main, ["build", "-f", "--upstream"])
+        result = CliRunner().invoke(main, ["run", "--upstream"])
         assert result.exit_code == 0, result.output
         assert seen.get("upstream") is True
 
@@ -363,14 +339,6 @@ class TestWhatTheSecondReviewFound:
         assert run.run(up, snapshot=True, echo=said.append).failed is None
         assert "up: another run is building it to make a snapshot; waiting for it" in said
 
-    def test_a_catalog_member_with_no_build_plans_no_upstream(self, work):
-        _with_data(work / "u", {"build": LOG})
-        _with_data(work / "p", None, {"u": {"path": "../u"}})
-        _with_data(work / "q", {"build": LOG})
-        _catalog(work, "p", "q")
-        _commit(work)
-        run.run(work, upstream=True, echo=lambda line: None)
-        assert "u" not in _order(work) and _snapshots_of("u") == []
 
     def test_snapshots_that_cannot_be_read_at_its_turn_build_nothing(self, pair, work, monkeypatch):
         import contextlib
@@ -480,14 +448,6 @@ class TestWhatTheThirdReviewFound:
         assert any(line.startswith("up: has a snapshot now") for line in said)
         assert len(_snapshots_of("up")) == 1 and _order(work).count("up") == 1
 
-    def test_a_member_with_no_build_is_not_said_to_be_snapshotted(self, work):
-        _with_data(work / "m", None)
-        _with_data(work / "p", {"build": LOG}, {"m": {"path": "../m"}})
-        _catalog(work, "p", "m")
-        _commit(work)
-        said = []
-        run.run(work, upstream=True, echo=said.append)
-        assert "Pipelines of this run that another pins by path, snapshotted after their build:" not in said
 
     def test_a_repository_that_moved_is_said_to_have(self, work, tmp_path_factory):
         """c, in a repository of its own, commits in b's repository as it builds: b's folder is as it was."""

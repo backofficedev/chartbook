@@ -1,10 +1,10 @@
 # Pipelines 🔌
 
-{% for pipeline_id, pipeline_manifest in manifest.pipelines|dictsort %}- [{{ pipeline_manifest.project.name or pipeline_id }}](pipelines/{{pipeline_id | replace("/", "--")}}_README.md)
+{% for pipeline_id, pipeline_manifest in manifest.pipelines|dictsort %}- [{{ pipeline_manifest.project.name or pipeline_id }}]({{pipeline_manifest.page}})
 {% endfor %}
 
 {% for pipeline_id, pipeline_manifest in manifest.pipelines|dictsort %}
-  {% set pipeline_page_link = "./pipelines/" ~ (pipeline_id | replace("/", "--")) ~ "_README.md" %}
+  {% set pipeline_page_link = "./" ~ pipeline_manifest.page %}
   {% set dot_or_dotdot = "." %}
 
 ## {{ pipeline_manifest.project.name }}

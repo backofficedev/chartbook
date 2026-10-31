@@ -599,3 +599,53 @@ def clear_keeping_its_bytes(store, taken) -> None:
         store.put(held / name if name else held, links=("copy",))
     os.chmod(taken.path, 0o600)
     taken.path.unlink()
+
+
+def publish_catalog(root):
+    """Publish a synthetic folder catalog's fixtures, then use its store as a 0.4 catalog."""
+    import os
+    import tomli
+    import tomli_w
+    from chartbook import snapshot
+    from chartbook.manifest import _catalog_entries, resolve_platform_path, catalog_entry_dir
+    from chartbook.config import get_store_url
+    from tests.test_model_versions import _git
+    root = Path(root)
+    if (root / "catalog.toml").is_file():
+        return root
+    legacy = root / "chartbook.toml"
+    raw = tomli.loads(legacy.read_text(encoding="utf-8"))
+    entries = _catalog_entries(raw, root, str(legacy))
+    try:
+        _git(root, "rev-parse", "--show-toplevel")
+    except subprocess.CalledProcessError:
+        _git(root, "init", "--quiet", "-b", "main")
+    _git(root, "add", "-A")
+    if _git(root, "status", "--porcelain"):
+        _git(root, "commit", "--quiet", "-m", "Catalog fixtures")
+    for pipeline, entry in entries.items():
+        if entry.get("path"):
+            folder = catalog_entry_dir(root, resolve_platform_path(entry["path"]))
+            from chartbook.store import default_store
+            from chartbook.resolve import _own_id
+            known, _ = snapshot.readable_snapshots(default_store())
+            if not any(t.pipeline == _own_id(folder) for t in known):
+                snapshot.make(folder)
+    document = {"project": raw.get("project", {}), "stores": {"default": {"url": get_store_url()}}}
+    if "policy" in raw:
+        document["policy"] = raw["policy"]
+    (root / "catalog.toml").write_text(tomli_w.dumps(document), encoding="utf-8", newline="\n")
+    legacy.unlink()
+    return root
+
+
+def republish_catalog(root):
+    """Publish edits to already modern synthetic catalogs before testing their pages."""
+    from chartbook import snapshot
+    from tests.test_model_versions import _git
+    root = Path(root)
+    _git(root, "add", "-A")
+    if _git(root, "status", "--porcelain"):
+        _git(root, "commit", "--quiet", "-m", "Publish edited metadata")
+    for path in sorted((root / "pipelines").glob("*/chartbook.toml")):
+        snapshot.make(path.parent)

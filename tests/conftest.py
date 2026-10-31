@@ -134,40 +134,44 @@ def pipeline_project_multi_dataframes(tmp_path):
 @pytest.fixture
 def catalog_project(tmp_path):
     """Creates and returns path to a catalog with 2 pipelines."""
-    return create_catalog_project(
+    from tests.fixtures import publish_catalog
+    return publish_catalog(create_catalog_project(
         tmp_path / "catalog_project",
         pipeline_ids=["pipeline_a", "pipeline_b"],
-    )
+    ))
 
 
 @pytest.fixture
 def catalog_project_platform_paths(tmp_path):
     """Creates a catalog project using platform-specific path dicts."""
-    return create_catalog_project(
+    from tests.fixtures import publish_catalog
+    return publish_catalog(create_catalog_project(
         tmp_path / "catalog_platform",
         pipeline_ids=["pipeline_x", "pipeline_y"],
         use_platform_paths=True,
-    )
+    ))
 
 
 @pytest.fixture
 def catalog_project_inline_docs(tmp_path):
     """Creates a catalog project with inline docs (dataframe_docs_str)."""
-    return create_catalog_project(
+    from tests.fixtures import publish_catalog
+    return publish_catalog(create_catalog_project(
         tmp_path / "catalog_inline_docs",
         pipeline_ids=["pipeline_inline"],
         use_inline_docs=True,
-    )
+    ))
 
 
 @pytest.fixture
 def catalog_project_glob(tmp_path):
     """Creates a catalog project with glob/hive-partitioned parquet data."""
-    return create_catalog_project(
+    from tests.fixtures import publish_catalog
+    return publish_catalog(create_catalog_project(
         tmp_path / "catalog_glob",
         pipeline_ids=["pipeline_glob"],
         use_glob_paths=True,
-    )
+    ))
 
 
 @pytest.fixture

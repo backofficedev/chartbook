@@ -131,9 +131,9 @@ class TestNoSnapshotButAWorkingFolder:
         _git(work, "init", "--quiet", "-b", "main")
         _commit(work)
         monkeypatch.chdir(forecast)
-        with pytest.warns(WorkingVersionWarning, match="reading its WORKING version") as said:
+        with pytest.raises(AssetNotPinnedError, match="chartbook link") as said:
             assert _value("acme/rates:treasury") == [7.0]
-        assert str(work / "rates" / "_data" / "treasury.parquet") in str(said[0].message)
+        assert str(work / "rates") in str(said.value)
         assert not (forecast / lock.LOCK_FILE).exists()  # nothing records the read, and no empty lockfile is made
 
     def test_a_batch_run_refuses_it(self, tmp_path, monkeypatch):
@@ -254,7 +254,7 @@ class TestWhatTheReviewFound:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             # Through the catalog that lists its folder: its own file
-            assert data.load(pipeline="acme/rates", dataframe="treasury", catalog_path=catalog).collect()["r"].to_list() == [5.0]
+            assert data.load("treasury").collect()["r"].to_list() == [5.0]
         # By its own ID: refused, never a stale snapshot of itself
         with pytest.raises(ValueError, match="names this pipeline, acme/rates. Read its own assets by their own names"):
             data.load("acme/rates:treasury")
@@ -290,9 +290,7 @@ class TestWhatTheReviewFound:
         catalog = _catalog(work, {"rates": {"path": "../rates"}})
         (work / "scratch").mkdir()
         monkeypatch.chdir(work / "scratch")
-        with pytest.warns(WorkingVersionWarning):
-            frame = data.load(pipeline="rates", dataframe="treasury", catalog_path=catalog)
-        assert frame.collect()["r"].to_list() == [4.0]
+        assert data.load(pipeline="rates", dataframe="treasury", catalog_path=catalog).collect()["r"].to_list() == [8.0]
 
     def test_a_store_dependencys_working_folder_is_found_by_its_id(self, tmp_path, monkeypatch):
         from chartbook import resolve as resolve_module
@@ -303,7 +301,9 @@ class TestWhatTheReviewFound:
         catalog = _catalog(work, {"acme/rates": {"path": "../rates"}})
         monkeypatch.setattr(resolve_module, "get_default_catalog_path", lambda: catalog / "chartbook.toml")
         monkeypatch.chdir(forecast)
-        with pytest.warns(WorkingVersionWarning):
+        from chartbook import links
+        links.add(forecast, "acme/rates", work / "rates")
+        with pytest.warns(links.LinkedDependencyWarning):
             assert _value("yc:treasury") == [4.0]
 
     def test_an_ambiguous_name_or_an_unreadable_store_is_an_error_not_a_folder(self, elsewhere, monkeypatch):
@@ -394,7 +394,8 @@ class TestWhatTheReviewFound:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for _ in range(5):
-                assert _value("acme/rates:treasury") == [7.0]
+                with pytest.raises(AssetNotPinnedError):
+                    _value("acme/rates:treasury")
         assert len(pins) == 1
 
     def test_the_catalog_command_says_what_is_missing(self, tmp_path, monkeypatch):
@@ -420,7 +421,7 @@ class TestWhatTheReviewFound:
         _forecast(forecast, {"acme/gone": {"path": "../gone"}})
         (work / "gone").mkdir()
         monkeypatch.chdir(forecast)
-        with pytest.raises(AssetNotPinnedError, match="has no chartbook.toml"):
+        with pytest.raises(AssetNotPinnedError):
             data.load("acme/gone:treasury")
         _forecast(forecast, {"acme/rates": {"path": "../rates"}})
         (forecast / lock.LOCK_FILE).unlink(missing_ok=True)
@@ -521,7 +522,7 @@ class TestWhatTheSecondReviewFound:
         os.chmod(forecast, 0o555)
         monkeypatch.chdir(forecast)
         try:
-            with pytest.warns(WorkingVersionWarning):
+            with pytest.raises(AssetNotPinnedError):
                 assert _value("acme/rates:treasury") == [7.0]
         finally:
             os.chmod(forecast, 0o755)
@@ -555,7 +556,7 @@ class TestWhatTheSecondReviewFound:
         (work / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
         _commit(work)
         monkeypatch.chdir(forecast)
-        with pytest.warns(WorkingVersionWarning):
+        with pytest.raises(AssetNotPinnedError):
             assert _value("acme/rates:treasury") == [7.0]
         snapshot.make(work / "rates")
         pl.DataFrame({"d": ["2024-01-01"], "r": [8.0]}).write_parquet(work / "rates" / "_data" / "treasury.parquet")
@@ -665,7 +666,7 @@ class TestWhatTheThirdReviewFound:
         _commit(work)
         other = snapshot.make(work / "other").snapshot
         monkeypatch.chdir(forecast)
-        with pytest.warns(WorkingVersionWarning):
+        with pytest.raises(AssetNotPinnedError):
             assert _value("acme/rates:treasury") == [7.0]
         other.path.unlink()  # the store has as many records as before, one of them new
         snapshot.make(work / "rates")
@@ -686,9 +687,11 @@ class TestWhatTheThirdReviewFound:
         monkeypatch.chdir(forecast)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            _value("acme/rates:treasury")
+            with pytest.raises(AssetNotPinnedError):
+                _value("acme/rates:treasury")
             listed.clear()
-            _value("acme/rates:treasury")
+            with pytest.raises(AssetNotPinnedError):
+                _value("acme/rates:treasury")
         assert len(listed) == 1
 
     def test_no_test_reads_the_users_sources(self):

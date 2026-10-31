@@ -27,7 +27,7 @@ KINDS = ("Catalog", "Pipeline", "Dataframe", "Series", "Chart", "Notebook", "Not
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = Path(project_dir) / "chartbook.toml"
+    toml_path = Path(project_dir) / ("catalog.toml" if (Path(project_dir) / "catalog.toml").is_file() else "chartbook.toml")
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
     toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
@@ -583,15 +583,6 @@ class TestCatalog:
         assert built["records"][0]["pipelines"] == ["pipeline_a"]
         assert not [r for r in built["records"] if r.get("pipeline") == "pipeline_b"]
 
-    def test_a_catalog_key_is_the_pipelines_id(self, catalog_project):
-        """A catalog may register a pipeline under a scoped ID of its choosing."""
-
-        def edit(config):
-            config["pipelines"]["acme/rates"] = config["pipelines"].pop("pipeline_a")
-
-        _edit_toml(catalog_project, edit)
-        built = _build(catalog_project)
-        assert "acme/rates:dataframe_0" in [r["id"] for r in built["records"]]
 
 
 class TestPublished:
@@ -602,7 +593,7 @@ class TestPublished:
         assert "resolved_path" not in text
         assert str(Path(catalog_project).resolve()) not in text
         for record in _of_kind(public, "Pipeline"):
-            assert record["location"] == {"kind": "path"}
+            assert record["location"] == {"kind": "store"}
 
     def test_everything_else_is_unchanged(self, project):
         built = _build(project)
@@ -722,11 +713,11 @@ class TestWriteIndex:
 
 
 class TestBuildWritesTheIndex:
-    """``chartbook docs generate`` writes ``index.json`` beside the HTML."""
+    """``chartbook docs build`` writes ``index.json`` beside the HTML."""
 
     def test_published_index_is_beside_the_html(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
         built = json.loads((pipeline_project / "docs" / "index.json").read_text(encoding="utf-8"))
@@ -743,7 +734,7 @@ class TestBuildWritesTheIndex:
         self, pipeline_project, monkeypatch
     ):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
 
         full = json.loads((pipeline_project / "_docs" / "index.json").read_text(encoding="utf-8"))
@@ -758,7 +749,7 @@ class TestBuildWritesTheIndex:
         runner = CliRunner()
         published = pipeline_project / "docs" / "index.json"
 
-        first = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        first = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         before = json.loads(published.read_text(encoding="utf-8"))
 
@@ -769,7 +760,7 @@ class TestBuildWritesTheIndex:
             hashing, "_file_hex", lambda path: (reads.append(path), real(path))[1]
         )
         untouched = published.read_bytes()
-        second = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        second = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert second.exit_code == 0, second.output
         assert reads == []
         # ...and since it says nothing new, the file is not rewritten at all
@@ -780,7 +771,7 @@ class TestBuildWritesTheIndex:
         pl.DataFrame({"date": [datetime.date(2021, 5, 5)], "value": [1]}).write_parquet(
             parquet
         )
-        third = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        third = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert third.exit_code == 0, third.output
         after = json.loads(published.read_text(encoding="utf-8"))
         assert [Path(p).name for p in reads] == ["dataframe_0.parquet"]
@@ -793,7 +784,7 @@ class TestBuildWritesTheIndex:
 
     def test_catalog_build_writes_one_index_for_all(self, catalog_project, monkeypatch):
         monkeypatch.chdir(catalog_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         built = json.loads((catalog_project / "docs" / "index.json").read_text(encoding="utf-8"))
         _validate(built)
@@ -885,6 +876,8 @@ class TestWhatTheWriterNeeds:
         text = config.read_text(encoding="utf-8")
         if "[policy" not in text:
             config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n", encoding="utf-8", newline="\n")
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         built = index.build_index(load_manifest(catalog))
         (record,) = _of_kind(built, "Catalog")
         assert record["policy"]["required"]["dataframes"] == ["name"]

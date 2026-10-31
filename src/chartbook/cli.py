@@ -35,7 +35,7 @@ class _Group(click.Group):
     to the words that stand in its place; ``arguments_go_to`` names the
     subcommand that takes what the group itself took while it was a
     command, so that ``chartbook docs ./site -f`` is told to say
-    ``chartbook docs generate ./site -f``. Either is one usage error with
+    ``chartbook docs build ./site -f``. Either is one usage error with
     the line to type; nothing is run under the old name.
     """
 
@@ -74,13 +74,19 @@ def _reads_as_an_argument(word: str) -> bool:
 class _Main(_Group):
     renamed = {"browse": "docs open"}
 
+    def parse_args(self, ctx, args):
+        if args and args[0] == "build" and not ctx.resilient_parsing:
+            raise click.UsageError("`chartbook build` is gone. `chartbook run` runs the build script, which renders the site; `chartbook docs build` renders it alone.", ctx)
+        return super().parse_args(ctx, args)
+
 
 class _Docs(_Group):
-    arguments_go_to = "generate"
+    arguments_go_to = "build"
+    renamed = {"generate": "build"}
 
 
 class _Catalog(_Group):
-    renamed = {"build": "generate", "browse": "open"}
+    renamed = {"generate": "build", "browse": "open"}
 
 
 class _Install(_Group):
@@ -97,6 +103,8 @@ def main(ctx):
     warnings.showwarning = _show_warning
     # A question about trust is asked once per command, never carried to the next one in this process
     _trust_answers.clear()
+    from chartbook.multi_store import settings_warnings
+    settings_warnings.clear()
     # `install` is what mends it, and `check` says it as a warning of its own
     if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "check"):
         _say_if_the_skill_is_stale()
@@ -151,7 +159,7 @@ def _default_catalog_path():
 def _site_options(command):
     """Give a command the arguments of rendering the site.
 
-    `docs generate` renders it, and `build` renders it after running the
+    `docs build` renders it, and `build` renders it after running the
     build script, so both take the same ones.
     """
     options = [
@@ -233,24 +241,22 @@ def _site_options(command):
 
 @main.group(cls=_Docs)
 def docs():
-    """The documentation site: `generate` renders it, `open` opens it.
+    """The documentation site: `build` renders it, `open` opens it.
 
-    `chartbook docs generate` renders the site from what the project has
+    `chartbook docs build` renders the site from what the project has
     built and writes index.json beside it. `chartbook docs open` opens the
-    rendered site in your browser. Neither builds the project's data:
-    `chartbook run` does that, and `chartbook build` runs the build script
-    and then generates the site.
+    rendered site in your browser. `chartbook run` runs the pipeline build script.
+    The script can render the site as its final step.
     """
 
 
-@docs.command("generate")
+@docs.command("build")
 @_site_options
 def docs_generate(**site):
     """Render the documentation site, in OUTPUT_DIR (./docs by default).
 
     This renders the site and writes index.json beside it. It does not
-    build the project's data: `chartbook run` does that, and
-    `chartbook build` does both. A lone pipeline that has built none of
+    run the build script: `chartbook run` does that. A lone pipeline that has built none of
     its data, charts, notebooks and models yet, as a new project has not,
     is rendered with a warning and each shown as not built; with --strict
     typed, and in a catalog, that is an error.
@@ -264,9 +270,9 @@ def docs_generate(**site):
 
     \b
     Examples:
-        chartbook docs generate -f
-        chartbook docs generate -f --incremental
-        chartbook docs generate -f --watch
+        chartbook docs build -f
+        chartbook docs build -f --incremental
+        chartbook docs build -f --watch
     """
     _render_site(**site)
 
@@ -301,7 +307,7 @@ def docs_open(output_dir, project_dir):
         click.echo("Error: Documentation not found.", err=True)
         click.echo(f"  Expected: {index_path}", err=True)
         click.echo("", err=True)
-        click.echo("Run 'chartbook docs generate' first.", err=True)
+        click.echo("Run 'chartbook docs build' first.", err=True)
         raise SystemExit(1)
 
     import webbrowser
@@ -310,163 +316,6 @@ def docs_open(output_dir, project_dir):
     click.echo(f"Opening {index_path}")
     if not webbrowser.open(url):
         click.echo(f"Could not open browser. Open this URL manually: {url}")
-
-
-@main.command()
-@_site_options
-@click.option(
-    "--remake",
-    is_flag=True,
-    help="Build even though an asset marked keep = true is not on disk while the store has a version of it (see `chartbook run --remake`)",
-)
-@click.option(
-    "--upstream",
-    is_flag=True,
-    help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin (see `chartbook run --upstream`)",
-)
-def build(remake, upstream, **site):
-    """Make everything current: run the build script, then render the site.
-
-    The same as `chartbook run` followed by `chartbook docs generate`, and
-    it takes the arguments of `chartbook docs generate`. In a catalog, the
-    build script is run in each of the catalog's pipelines before the
-    catalog's site is rendered.
-
-    With no `build` script in [scripts], there is nothing to run, and only
-    the site is rendered.
-
-    Inside a build script, say `chartbook docs generate`. `chartbook build`
-    there would run the script that called it; it renders the site and
-    says so.
-
-    As `chartbook run`, it stops before the build when an asset marked
-    `keep = true` is not on disk while the store has a version of it:
-    `chartbook restore` puts it back, and --remake builds without it.
-
-    --upstream first builds and snapshots each pipeline this one depends
-    on by path that has no snapshot to pin, as `chartbook run --upstream`
-    does.
-
-    \b
-    Examples:
-        chartbook build -f
-        chartbook build -f --project-dir ../rate_forecast
-        chartbook build -f --upstream
-    """
-    from chartbook import run as runner
-    from chartbook.manifest import BUILD_SCRIPT
-
-    project_dir = resolve_project_dir(site["project_dir"])
-    if _is_catalog_folder(project_dir):
-        # Every member's script would run before the render refused the
-        # catalog: the render's gate comes first. A pipeline's own run is
-        # gated in `run.run` before its render.
-        _require_trust_to_render(project_dir, running=True)
-    after_build = False
-    if runner.running(project_dir, BUILD_SCRIPT):
-        click.echo(
-            click.style("Warning: ", fg="yellow", bold=True)
-            + "`chartbook build` was called from this pipeline's own build script. "
-            "It runs that script and then renders the site, so here it only "
-            "renders the site. In a build script, say `chartbook docs generate`.",
-            err=True,
-        )
-    elif _has_script(project_dir, BUILD_SCRIPT):
-        _stop_where_a_build_tool_says_chartbook_build(project_dir, upstream=upstream)
-        if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True, upstream=upstream) == "render":
-            click.echo("The build command was not run; only the site is rendered.", err=True)
-            _stop_on_a_cycle(project_dir)
-        else:
-            _run_script(
-                project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake", upstream=upstream
-            )
-            # So what the script did not make is an error, not "not built yet"
-            after_build = True
-    else:
-        click.echo("No `build` script here, so only the site is rendered.")
-        _stop_on_a_cycle(project_dir)
-    _render_site(**site, after_build=after_build)
-
-
-def _stop_on_a_cycle(project_dir):
-    """Stop before rendering when a pipeline here depends, through what it depends on, on itself.
-
-    Dependencies between pipelines form a directed acyclic graph, and
-    `chartbook run` refuses a cycle before it pins or builds anything
-    (:func:`chartbook.lineage.cycle`).
-    Where `chartbook build` runs no build command, nothing has looked yet,
-    so it looks here: at the pipeline, or at each pipeline of a catalog.
-    """
-    from chartbook import lineage
-    from chartbook import run as runner
-    from chartbook.snapshot import SnapshotError
-
-    try:
-        steps = runner.plan(project_dir, git=False)
-    except (runner.RunError, ValueError, OSError):
-        return  # the render says what is wrong
-    members = {step.id: step.directory for step in steps if step.source == "asked" and step.directory is not None}
-    shared: dict = {}  # the store read once for every pipeline's walk
-    for step in steps:
-        if step.source != "asked" or step.directory is None or not step.has_dependencies:
-            continue
-        try:
-            loop = lineage.cycle(step.directory, pipeline=step.id, members=members, shared=shared)
-        except (SnapshotError, ValueError, OSError):
-            continue  # `chartbook check` says what is wrong with the manifest
-        if loop is not None:
-            click.echo(
-                click.style("Error: ", fg="red", bold=True)
-                + f"{step.id}: {lineage.cycle_lead(loop)}, so there is no order to build in.\n"
-                + lineage.explain_cycle(loop)
-                + "\nNothing was rendered.",
-                err=True,
-            )
-            raise SystemExit(1)
-
-
-def _stop_where_a_build_tool_says_chartbook_build(project_dir, upstream=False):
-    """Stop before any build runs when a pipeline's build tool has a task that says `chartbook build`.
-
-    Written when `chartbook build` rendered the site (before 0.2.0). Now it
-    runs the build command first, which runs that task: under `chartbook
-    build` the site is rendered twice, and under a plain `doit` the build
-    runs inside itself. Each pipeline `chartbook build` would build is
-    looked at, a catalog's members too, and all are named at once
-    (:func:`chartbook.run.build_tool_runs_chartbook_build`).
-    """
-    from chartbook import run as runner
-    from chartbook.manifest import BUILD_SCRIPT
-
-    from chartbook.store import StoreError
-
-    try:
-        steps = runner.plan(project_dir, git=False, upstream=upstream)
-    except (runner.RunError, ValueError, OSError, StoreError):
-        return  # the run says what is wrong
-    found = []
-    for step in steps:
-        command = step.scripts.get(BUILD_SCRIPT) if step.directory is not None and step.source in ("asked", "upstream") else None
-        clash = runner.build_tool_runs_chartbook_build(step.directory, command) if command else None
-        if clash is not None:
-            name, number, line = clash
-            where = name if step.directory == project_dir else str(step.directory / name)
-            found.append(f"  {where}, line {number}: {line}")
-    if not found:
-        return
-    click.echo(
-        click.style("Error: ", fg="red", bold=True)
-        + ("These lines run" if len(found) > 1 else "This line runs")
-        + " `chartbook build`:\n"
-        + "\n".join(found)
-        + "\n`chartbook build` runs the build command first, and the build command runs that line: under "
-        "`chartbook build` the site would be rendered twice, and under a plain build-tool run (`doit`) the "
-        "build would run inside itself. Before 0.2.0 `chartbook build` rendered the site; now `chartbook docs "
-        "generate -f` does. Say that there, or take the task out: `chartbook build` renders the site after "
-        "the build command. Nothing was built.",
-        err=True,
-    )
-    raise SystemExit(1)
 
 
 def _render_site(
@@ -528,12 +377,12 @@ def _render_site(
     # The project, before anything is asked or written: with no manifest
     # there is nothing to render, as `chartbook build` says it
     project_dir = resolve_project_dir(project_dir)
-    if not (project_dir / "chartbook.toml").is_file():
+    if not (project_dir / "chartbook.toml").is_file() and not (project_dir / "catalog.toml").is_file():
         click.echo(click.style("Error: ", fg="red", bold=True) + f"No chartbook.toml in {project_dir}.", err=True)
         raise SystemExit(1)
     # Before anything of the project is read: a folder the user has not
     # trusted is rendered as a build of files from a store is
-    untrusted = _require_trust_to_render(project_dir)
+    untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
 
     # Convert output_dir to Path
     output_dir = Path(output_dir).resolve()
@@ -766,7 +615,7 @@ def _ask_to_trust_a_folder(folder, command=None, may_render=True, script="build"
         lines.append("Rendering it as your own runs its manifest's SQL queries and reads the files it names, wherever they are.")
         later = _build_command_of(key)
         if later:
-            lines.append("Trusting it also lets `chartbook build` run its build command, without asking:")
+            lines.append("Trusting it also lets `chartbook run` run its build command, without asking:")
             lines += [f"    {line}" for line in _shown_command(later)]
     lines.append("  y  it's mine: trust this folder and the folders inside it, and don't ask again")
     if may_render:
@@ -878,97 +727,41 @@ def _require_trust_to_render(project_dir, running: bool = False) -> bool:
     A pipeline folder with no trust is rendered as a build of files from a
     store is (:func:`_untrusted_mode` sets ``CHARTBOOK_UNTRUSTED_SOURCE=1``
     for the render, before anything of the folder is read), and the user
-    is told why. A catalog's own folder and every member folder on this
-    machine must be trusted at least to render, since the untrusted mode
-    is the process's and cannot be one member's; one that is not is an
-    error that lists them, and nothing is built.
+    is told why. A catalog renders stored snapshots without consulting
+    working folders or their trust records.
 
     :returns: True to render as a build of files from a store.
-    :raises SystemExit: For a catalog with a folder that is not trusted,
-        or a trust record that cannot be read.
+    :raises SystemExit: If the user declines to render.
     """
     from chartbook.config import trust_of
-    from chartbook.manifest import _read_manifest_file, catalog_member_dirs, resolve_project_type
-
-    def fail(message):
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(message), err=True)
-        raise SystemExit(1)
-
-    try:
-        raw = _read_manifest_file(project_dir)
-        is_catalog = resolve_project_type(raw, source=str(project_dir / "chartbook.toml")) == "catalog"
-    except (ValueError, FileNotFoundError):
-        # A manifest that cannot be read is the build's error to say
+    if (Path(project_dir) / "catalog.toml").is_file():
         return False
+    project_dir = Path(project_dir)
     here = "here" if project_dir.resolve() == Path.cwd().resolve() else f"in {project_dir}"
-    try:
-        if not is_catalog:
-            answered = _trust_answers.get(Path(project_dir).resolve())
-            if trust_of(project_dir) is None and answered is None and _can_ask():
-                answered = _ask_to_trust_a_folder(project_dir)
-                if answered == "n":
-                    click.echo("Nothing was rendered.", err=True)
-                    raise SystemExit(1)
-            if trust_of(project_dir) is None and answered == "r":
-                click.echo(
-                    click.style("Warning: ", fg="yellow", bold=True)
-                    + "rendered as files from a store are, as you answered: no query is run, and no template or "
-                    "file from outside the folder is read.",
-                    err=True,
-                )
-                return True
-            if trust_of(project_dir) is None:
-                click.echo(
-                    click.style("Warning: ", fg="yellow", bold=True)
-                    + f"{project_dir} is not a pipeline you trust, so it is read as files from a store are: "
-                    f"no query is run, and no template or file from outside the folder is read. If it is "
-                    f"yours to run, `chartbook trust` {here} trusts it; `chartbook trust --render` trusts it "
-                    f"to render only.",
-                    err=True,
-                )
-                return True
-            return False
-        try:
-            # The build reads the same entries next, and says what it warns of
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                members = catalog_member_dirs(project_dir)
-        except (ValueError, FileNotFoundError, TypeError, KeyError):
-            return False  # the build says what is wrong with the catalog
-        untrusted = []
-        if trust_of(project_dir) is None:
-            untrusted.append(f"  {project_dir} (the catalog's own folder)")
-        for pipeline_id, directory in members.items():
-            if not (directory / "chartbook.toml").is_file():
-                continue  # nothing to trust or read there; the build says the entry names no pipeline
-            if trust_of(directory) is None:
-                untrusted.append(f"  {directory} ({pipeline_id})")
-    except ValueError as error:
-        fail(error)
-    # Building runs each member's script too: one question about every
-    # folder this command needs, a member trusted to render only included
-    wanted = (lambda level: level != "run") if running else (lambda level: level is None)
-    if _can_ask() and (untrusted or (running and any(
-        (d / "chartbook.toml").is_file() and wanted(trust_of(d)) for d in members.values()
-    ))):
-        folders = []
-        if trust_of(project_dir) is None:
-            folders.append((project_dir, None, "the catalog's own folder"))
-        for pipeline_id, directory in members.items():
-            if (directory / "chartbook.toml").is_file() and wanted(trust_of(directory)):
-                folders.append((directory, pipeline_id, None))
-        if _ask_to_trust_folders(folders, running=running):
-            return False
-        click.echo("Nothing was built.", err=True)
-        raise SystemExit(1)
-    if untrusted:
-        fail(
-            "a catalog's site is built only from folders you trust, and these are not trusted:\n"
-            + "\n".join(untrusted)
-            + f"\n`chartbook trust --members` {here} trusts the catalog's folder and each member folder on "
-            f"this machine (`chartbook trust --members --render` to render only); `chartbook trust` in one "
-            f"folder trusts that one."
+    answered = _trust_answers.get(Path(project_dir).resolve())
+    if trust_of(project_dir) is None and answered is None and _can_ask():
+        answered = _ask_to_trust_a_folder(project_dir)
+        if answered == "n":
+            click.echo("Nothing was rendered.", err=True)
+            raise SystemExit(1)
+    if trust_of(project_dir) is None and answered == "r":
+        click.echo(
+            click.style("Warning: ", fg="yellow", bold=True)
+            + "rendered as files from a store are, as you answered: no query is run, and no template or "
+            "file from outside the folder is read.",
+            err=True,
         )
+        return True
+    if trust_of(project_dir) is None:
+        click.echo(
+            click.style("Warning: ", fg="yellow", bold=True)
+            + f"{project_dir} is not a pipeline you trust, so it is read as files from a store are: "
+            f"no query is run, and no template or file from outside the folder is read. If it is "
+            f"yours to run, `chartbook trust` {here} trusts it; `chartbook trust --render` trusts it "
+            f"to render only.",
+            err=True,
+        )
+        return True
     return False
 
 
@@ -1100,7 +893,7 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     project_dir = resolve_project_dir(project_dir)
     # Publishing copies the files the manifest names: in a folder the user
     # has not trusted, as a build of files from a store, nothing outside it
-    untrusted = _require_trust_to_render(project_dir)
+    untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
     try:
         with _untrusted_mode(untrusted):
             manifest = load_manifest(base_dir=project_dir)
@@ -1237,7 +1030,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     from chartbook.check import NOT_BUILT_YET, display_path, not_built_hint, read_policy, run_checks
     from chartbook.manifest import (
         _read_manifest_file,
-        get_pipeline_ids,
+        _working_pipeline_ids,
         get_pipeline_manifest,
         load_manifest,
     )
@@ -1262,6 +1055,8 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             manifest = load_manifest(base_dir=named_dir)
+            if manifest["project"]["type"] == "catalog":
+                raise ValueError("Catalog member checks are gone. `chartbook check` checks a pipeline; the catalog Diagnostics page checks snapshot metadata.")
         # A catalog's manifest always carries a resolved policy, so whether
         # one was written down is read from the file itself
         policy_given = "policy" in _read_manifest_file(project_dir)
@@ -1275,7 +1070,13 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         elif policy_given:
             policy_label = "the pipeline's policy"
         else:
-            policy_label = "the default policy"
+            from chartbook.config import get_default_catalog_path
+            machine_catalog = get_default_catalog_path()
+            if machine_catalog is not None:
+                manifest["policy"], policy_given = read_policy(machine_catalog)
+                policy_label = f"the policy in {machine_catalog}" if policy_given else "the default policy"
+            else:
+                policy_label = "the default policy"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
@@ -1309,7 +1110,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         raise SystemExit(1)
 
     pipelines = [
-        get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
+        get_pipeline_manifest(manifest, pid) for pid in _working_pipeline_ids(manifest)
     ]
     # Models, files and dependencies are counted only where there are some,
     # so that the line for a project without them reads as it always has
@@ -1354,10 +1155,10 @@ def _say_trust_level(manifest, project_dir):
     else:
         standing = "This pipeline is " + ("trusted to render, not to run" if lowest == "render" else "not trusted")
         command = "`chartbook trust` here trusts it"
-    refused = "`chartbook build` and `chartbook run` refuse to run the build script"
+    refused = "`chartbook run` refuses to run the build script"
     if lowest is None:
         refused += (
-            ", and `chartbook docs generate` renders the site as one from a store is (no query run, no file from "
+            ", and `chartbook docs build` renders the site as one from a store is (no query run, no file from "
             "outside the folder)"
         )
     click.echo(f"{standing}: {refused}. {command}; `chartbook trust --list` shows what is trusted.")
@@ -1497,7 +1298,7 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, proje
     project_dir = resolve_project_dir(project_dir)
     # The report reads the files the manifest names: in a folder the user
     # has not trusted, as a build of files from a store, nothing outside it
-    untrusted = _require_trust_to_render(project_dir)
+    untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
     try:
         with _untrusted_mode(untrusted):
             create_data_glimpses_main(
@@ -1527,7 +1328,7 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, proje
 def _load_catalog_for_cli(catalog_path=None):
     """Load manifest from catalog path or default settings.
 
-    :param catalog_path: Optional path to catalog chartbook.toml.
+    :param catalog_path: Optional path to catalog catalog.toml.
     :type catalog_path: str or Path, optional
     :returns: Tuple of (manifest, resolved_catalog_path).
     :rtype: tuple
@@ -1548,7 +1349,7 @@ def _load_catalog_for_cli(catalog_path=None):
     # folder itself: an entry's path written from the former still reads
     named = _as_named(catalog_path) if catalog_path is not None else resolved
     if named.is_dir():
-        named = named / "chartbook.toml"
+        named = named / "catalog.toml"
     try:
         manifest = load_manifest(base_dir=named.parent)
     except (ValueError, FileNotFoundError) as e:
@@ -1631,13 +1432,15 @@ def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
     from chartbook.store import StoreError, default_store
 
     try:
-        store = default_store()
+        store = manifest.get("stores") or default_store()
         found, _ = snapshot.readable_snapshots(store)
     except (StoreError, OSError, ValueError):
         return {pipeline_id: ([], 0) for pipeline_id in pipeline_ids}
     listed = {}
     for pipeline_id in pipeline_ids:
-        newest = max((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, default=None)
+        from chartbook.hubs import selected_snapshots
+        selected = selected_snapshots(found, pipeline_id, manifest.get("pipeline_notes", {}).get(pipeline_id, {}).get("repository"))
+        newest = max(selected, key=lambda t: t.made_at, default=None)
         assets = snapshot.stored_assets(newest, store) if newest is not None else []
         shown = sorted((a for a in assets if a["kind"] in kinds), key=lambda a: (kinds.index(a["kind"]), a["id"]))
         rows = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
@@ -1646,7 +1449,7 @@ def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
 
 
 @main.group(invoke_without_command=True)
-@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+@click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 @click.pass_context
 def ls(ctx, catalog):
     """List catalog objects (pipelines, dataframes, charts).
@@ -1807,45 +1610,14 @@ def ls_charts(ctx):
 # =============================================================================
 
 
-def _sanitize_pipeline_key(dirname):
-    """Convert a directory name to a valid TOML key for the pipelines table.
-
-    :param dirname: The directory name to sanitize.
-    :type dirname: str
-    :returns: A sanitized key suitable for use in TOML.
-    :rtype: str
-    """
-    import re
-
-    key = dirname.lower().replace("-", "_").replace(" ", "_")
-    key = re.sub(r"[^a-z0-9_]", "_", key)
-    key = re.sub(r"_+", "_", key)
-    key = key.strip("_")
-    return key
 
 
-def _ensure_unique_key(key, existing_keys):
-    """Append a numeric suffix if key already exists in the set.
-
-    :param key: The candidate key.
-    :type key: str
-    :param existing_keys: Set of keys already in use.
-    :type existing_keys: set
-    :returns: A unique key.
-    :rtype: str
-    """
-    if key not in existing_keys:
-        return key
-    i = 2
-    while f"{key}_{i}" in existing_keys:
-        i += 1
-    return f"{key}_{i}"
 
 
 def _load_raw_catalog(catalog_toml_path):
     """Load a catalog TOML file without full manifest processing.
 
-    :param catalog_toml_path: Path to the catalog's chartbook.toml.
+    :param catalog_toml_path: Path to the catalog's catalog.toml.
     :type catalog_toml_path: Path
     :returns: The raw catalog dictionary.
     :rtype: dict
@@ -1862,6 +1634,8 @@ def _load_raw_catalog(catalog_toml_path):
             f"{catalog_toml_path} uses the old v1 format. "
             f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
         )
+    if catalog_toml_path.name == "catalog.toml":
+        data.setdefault("project", {}).setdefault("type", "catalog")
     try:
         config_type = resolve_project_type(data, source=str(catalog_toml_path))
     except ValueError as error:  # a requirement this ChartBook does not meet, or a type it cannot tell
@@ -1874,116 +1648,14 @@ def _load_raw_catalog(catalog_toml_path):
     return data
 
 
-def _reenable(raw_catalog, key, entry=True) -> bool:
-    """Enable a pipeline of the catalog again: its entry's ``disabled`` flag, and the ``disabled`` list.
-
-    :param entry: Whether it has an entry of its own; one ``members`` finds is on the list only.
-    :returns: Whether it was disabled.
-    """
-    listed_entry = raw_catalog["pipelines"].get(key) if entry else None
-    flagged = isinstance(listed_entry, dict) and bool(listed_entry.pop("disabled", False))
-    return _off_the_disabled_list(raw_catalog, key) or flagged
 
 
-def _another_checkout(directory, listed, covered, checkouts):
-    """The pipeline of the catalog that a folder is another checkout of: a worktree of its repository, or a second clone.
-
-    :param listed: The folders the catalog's entries name, each with its key.
-    :param covered: The folders ``members`` patterns match, each with its pattern.
-    :param checkouts: Where each folder is in its repository, as looked up already; filled in.
-    :returns: The other folder, its key in the catalog, and the pattern
-        that found it (None for an entry); or None.
-    """
-    from chartbook.identity import checkout_of, derive_pipeline_id, same_pipeline_checked_out
-    from chartbook.manifest import _read_manifest_file
-
-    def where(folder):
-        if folder not in checkouts:
-            checkouts[folder] = checkout_of(folder)
-        return checkouts[folder]
-
-    mine = where(directory)
-    if mine is None:
-        return None
-    for folder, key in listed.items():
-        if folder != directory and same_pipeline_checked_out(where(folder), mine):
-            return folder, key, None
-    for folder, pattern in covered.items():
-        if folder == directory or not (folder / "chartbook.toml").is_file():
-            continue
-        if same_pipeline_checked_out(where(folder), mine):
-            try:
-                project = _read_manifest_file(folder).get("project")
-                key = derive_pipeline_id(project if isinstance(project, dict) else {}, folder)
-            except (OSError, ValueError):
-                continue
-            return folder, key, pattern
-    return None
 
 
-def _off_the_disabled_list(raw_catalog, key) -> bool:
-    """Take a pipeline ID off the catalog's ``[pipelines] disabled`` list, every time it is there.
-
-    :returns: Whether it was on it.
-    """
-    pipelines = raw_catalog.get("pipelines", {})
-    listed = pipelines.get("disabled")
-    if not isinstance(listed, list) or key not in listed:
-        return False
-    pipelines["disabled"] = [other for other in listed if other != key]
-    if not pipelines["disabled"]:
-        pipelines.pop("disabled")
-    return True
 
 
-def _get_existing_absolute_paths(raw_catalog, catalog_dir):
-    """Resolve all existing pipeline paths in the catalog to absolute paths.
-
-    :param raw_catalog: The raw catalog dictionary.
-    :type raw_catalog: dict
-    :param catalog_dir: The directory containing the catalog TOML.
-    :type catalog_dir: Path
-    :returns: A dict mapping absolute paths to their catalog keys.
-    :rtype: dict
-    """
-    from chartbook.manifest import RESERVED_PIPELINES_KEYS, catalog_entry_dir, resolve_platform_path
-
-    result = {}
-    for key, entry in raw_catalog.get("pipelines", {}).items():
-        if key in RESERVED_PIPELINES_KEYS:
-            continue
-        if isinstance(entry, str):
-            entry = {"path": entry}
-        pipeline_path = entry.get("path")
-        if pipeline_path is None:
-            continue
-        try:
-            resolved = resolve_platform_path(pipeline_path)
-        except (ValueError, TypeError):
-            continue
-        abs_path = catalog_entry_dir(catalog_dir, resolved)
-        result[abs_path] = key
-    return result
 
 
-def _get_members_covered_paths(raw_catalog, catalog_dir):
-    """Map absolute paths already covered by pipelines.members patterns.
-
-    :returns: Dict of absolute path -> the members pattern that covers it.
-    :rtype: dict
-    """
-    import glob as glob_mod
-
-    covered = {}
-    members = raw_catalog.get("pipelines", {}).get("members", [])
-    if not isinstance(members, list):
-        return covered
-    for pattern in members:
-        if not isinstance(pattern, str):
-            continue
-        for match in glob_mod.glob(str(catalog_dir / pattern)):
-            covered[Path(match).resolve()] = pattern
-    return covered
 
 
 def _prompt_catalog_init():
@@ -2025,9 +1697,9 @@ def _prompt_catalog_init():
 def _resolve_catalog_toml_path(catalog_path):
     """Resolve the catalog TOML path from an option or global settings.
 
-    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :param catalog_path: Optional explicit path to catalog catalog.toml.
     :type catalog_path: str or Path, optional
-    :returns: The resolved path to the catalog's chartbook.toml.
+    :returns: The resolved path to the catalog's catalog.toml.
     :rtype: Path
     :raises SystemExit: If no catalog is configured.
     """
@@ -2051,8 +1723,8 @@ def catalog():
 def catalog_init(title):
     """Initialize the global catalog at ~/.chartbook/chartbook.toml.
 
-    Creates a minimal catalog with an empty pipelines section.
-    Use ``chartbook catalog add`` to add pipelines afterwards.
+    Creates a catalog with the default store.
+    A pipeline enters it when its owner runs ``chartbook snapshot``.
     """
     from chartbook.config import create_global_catalog, get_global_catalog_path
 
@@ -2066,317 +1738,13 @@ def catalog_init(title):
 
     catalog_path = create_global_catalog(title=title)
     click.echo(f"Created global catalog: {catalog_path}")
-    # You made it: its folder is trusted to run, as a project `chartbook init` makes is
-    if _record_trust_or_say(catalog_path.parent, "run"):
-        click.echo(f"Trusted: {catalog_path.parent} (chartbook trust --list)")
     click.echo("")
     click.echo("Next steps:")
-    click.echo("  chartbook catalog add /path/to/pipeline   # add a pipeline")
-    click.echo("  chartbook catalog generate                # render its site")
+    click.echo("  chartbook snapshot --project-dir /path/to/pipeline   # publish a pipeline")
+    click.echo("  chartbook catalog build                # render its site")
     click.echo("  chartbook catalog open                    # open it in the browser")
 
 
-@catalog.command("add")
-@click.argument("paths", type=str, nargs=-1, required=True)
-@click.option(
-    "--catalog",
-    "catalog_path",
-    type=click.Path(),
-    default=None,
-    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
-)
-@click.option(
-    "-y",
-    "--yes",
-    is_flag=True,
-    default=False,
-    help="Skip confirmation prompt when adding multiple pipelines",
-)
-def catalog_add(paths, catalog_path, yes):
-    """Add pipeline directory(ies) to the catalog.
-
-    PATHS can be one or more directories containing a chartbook.toml file,
-    or glob patterns that expand to such directories.
-
-    Examples::
-
-        chartbook catalog add /path/to/pipeline
-        chartbook catalog add /path/to/parent/*
-        chartbook catalog add /path/to/parent/* -y
-        chartbook catalog add ./proj1 ./proj2 ./proj3
-    """
-    import glob as glob_mod
-    import os
-
-    import tomli
-    import tomli_w
-
-    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
-
-    # Validate paths for shell/platform mismatches before processing
-    shell_env = detect_shell_environment()
-    paths = validate_cli_paths(paths, shell_env, auto_confirm=yes)
-
-    # Resolve catalog. Its folder is taken with every link in its path
-    # followed, as each pipeline's is below: a relative path is worked out
-    # between the two as they really are, and read back the same way (a
-    # home folder reached through a link, /var on macOS)
-    catalog_toml = _resolve_catalog_toml_path(catalog_path)
-    catalog_dir = catalog_toml.parent.resolve()
-    raw_catalog = _load_raw_catalog(catalog_toml)
-
-    # Get existing absolute paths for duplicate detection
-    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_toml.parent)
-    members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
-    existing_keys = set(raw_catalog.get("pipelines", {}).keys())
-    checkouts = {}  # where each folder looked at is in its repository
-    reenabled = 0
-
-    # Expand all path arguments (handles globs)
-    candidate_dirs = []
-    for p in paths:
-        expanded = glob_mod.glob(p)
-        if not expanded:
-            # Not a glob, treat as literal path
-            expanded = [p]
-        for entry in expanded:
-            entry_path = Path(entry).resolve()
-            if entry_path.is_dir():
-                candidate_dirs.append(entry_path)
-
-    # In one order, whatever order the filesystem gave the glob: a
-    # repository's main worktree before one made with `git worktree add`,
-    # so that of two checkouts of one pipeline the main one is the entry and
-    # the other is said to be another checkout of it; then by path. Found by
-    # CI, where the worktree came first on one filesystem and not another
-    from chartbook.identity import checkout_of
-
-    def where(folder):
-        if folder not in checkouts:
-            checkouts[folder] = checkout_of(folder)
-        return checkouts[folder]
-
-    candidate_dirs.sort(key=lambda d: (not (where(d) is None or where(d).main), str(d)))
-
-    if not candidate_dirs:
-        tried = ", ".join(paths)
-        click.echo(
-            f"No matching directories found for: {tried}\n"
-            f"Check that the path(s) exist and are spelled correctly.",
-            err=True,
-        )
-        raise SystemExit(1)
-
-    # Validate each candidate
-    is_multi = len(candidate_dirs) > 1
-    valid_pipelines = []  # list of (abs_path, pipeline_name)
-
-    for d in candidate_dirs:
-        toml_path = d / "chartbook.toml"
-        if not toml_path.is_file():
-            if is_multi:
-                click.echo(f"  Skipping {d.name}/ (no chartbook.toml)")
-                continue
-            else:
-                click.echo(f"Error: No chartbook.toml found in {d}", err=True)
-                raise SystemExit(1)
-
-        try:
-            with open(toml_path, "rb") as f:
-                pipeline_toml = tomli.load(f)
-        except Exception as e:
-            if is_multi:
-                click.echo(f"  Skipping {d.name}/ (invalid TOML: {e})")
-                continue
-            else:
-                click.echo(f"Error: Invalid TOML in {toml_path}: {e}", err=True)
-                raise SystemExit(1)
-
-        from chartbook.manifest import detect_v1_format, resolve_project_type
-
-        if detect_v1_format(pipeline_toml):
-            if is_multi:
-                click.echo(f"  Skipping {d.name}/ (old v1-format chartbook.toml)")
-                continue
-            else:
-                click.echo(
-                    f"Error: {toml_path} uses the old v1 format. "
-                    f"Run: python scripts/migrate_toml_v2.py {d}",
-                    err=True,
-                )
-                raise SystemExit(1)
-
-        try:
-            config_type = resolve_project_type(pipeline_toml, source=str(toml_path))
-        except ValueError as e:
-            if is_multi:
-                click.echo(f"  Skipping {d.name}/ ({e})")
-                continue
-            else:
-                click.echo(f"Error: {e}", err=True)
-                raise SystemExit(1)
-        if config_type != "pipeline":
-            if is_multi:
-                click.echo(f"  Skipping {d.name}/ (type={config_type!r}, not pipeline)")
-                continue
-            else:
-                click.echo(
-                    f"Error: {toml_path} is not a pipeline (type={config_type!r})",
-                    err=True,
-                )
-                raise SystemExit(1)
-
-        # Paths already matched by a members pattern need no explicit entry
-        if d in members_covered:
-            click.echo(
-                f"  Already covered by pipelines.members pattern "
-                f"'{members_covered[d]}': {d.name}/"
-            )
-            continue
-
-        # Check for duplicates — re-enable if disabled
-        if d in existing_abs:
-            key = existing_abs[d]
-            if _reenable(raw_catalog, key):
-                reenabled += 1
-                click.echo(f"  Re-enabled '{key}': {d.name}/")
-            else:
-                click.echo(
-                    f"  Already in catalog as '{key}': {d.name}/"
-                )
-            continue
-
-        # Another checkout of a pipeline the catalog has (a worktree, a
-        # second clone) is that pipeline, whatever its key there
-        other = _another_checkout(d, existing_abs, members_covered, checkouts)
-        if other is not None:
-            folder, key, pattern = other
-            how = f"found by pipelines.members pattern '{pattern}', " if pattern else ""
-            said = f"({how}another checkout of the same repository, {folder}): {d.name}/"
-            if _reenable(raw_catalog, key, entry=pattern is None):
-                reenabled += 1
-                click.echo(f"  Re-enabled '{key}' {said}")
-            else:
-                click.echo(f"  Already in catalog as '{key}' {said}")
-            continue
-
-        pipeline_name = pipeline_toml.get("project", {}).get("name", d.name)
-        valid_pipelines.append((d, pipeline_name, pipeline_toml.get("project", {})))
-
-    if not valid_pipelines and not reenabled:
-        click.echo("No new pipelines to add.")
-        return
-
-    if not valid_pipelines and reenabled:
-        # Only re-enables, no new additions — still need to write
-        with open(catalog_toml, "wb") as f:
-            tomli_w.dump(raw_catalog, f)
-        click.echo("")
-        click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
-        return
-
-    from chartbook.identity import derive_pipeline_id
-
-    def _derive_catalog_key(directory, project_table):
-        # Scoped id: explicit project.id, else scope from the git remote /
-        # repo_url with the directory name, else the bare directory name
-        try:
-            return derive_pipeline_id(project_table, directory)
-        except ValueError:
-            return _sanitize_pipeline_key(directory.name)
-
-    from chartbook.manifest import RESERVED_PIPELINES_KEYS
-
-    # An entry with no path is a pipeline the catalog shows from the store:
-    # a folder of the same ID is that pipeline, and fills the entry in
-    from_the_store = {
-        key
-        for key, entry in raw_catalog.get("pipelines", {}).items()
-        if key not in RESERVED_PIPELINES_KEYS and isinstance(entry, dict) and entry.get("path") is None
-    }
-    from chartbook.identity import checkout_of, same_pipeline_checked_out
-
-    # The folder each key names, listed already or added now: a second
-    # checkout of one repository is that same pipeline, not another one
-    folder_of = {key: folder for folder, key in existing_abs.items()}
-    planned = []  # (directory, name, key, whether it fills in an entry from the store)
-    for d, name, project_table in valid_pipelines:
-        key = _derive_catalog_key(d, project_table)
-        fills = key in from_the_store
-        if fills:
-            from_the_store.discard(key)
-        elif key in folder_of and same_pipeline_checked_out(checkout_of(folder_of[key]), checkout_of(d)):
-            click.echo(
-                f"  Already in catalog as '{key}' (another checkout of the same repository, "
-                f"{folder_of[key]}): {d.name}/"
-            )
-            continue
-        else:
-            key = _ensure_unique_key(key, existing_keys)
-        existing_keys.add(key)
-        folder_of.setdefault(key, d)
-        planned.append((d, name, key, fills))
-
-    if not planned:
-        # Every one was another checkout of a pipeline already listed
-        if reenabled:
-            with open(catalog_toml, "wb") as f:
-                tomli_w.dump(raw_catalog, f)
-            click.echo("")
-            click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
-        else:
-            click.echo("No new pipelines to add.")
-        return
-
-    # Prompt for confirmation if multiple
-    if len(planned) > 1 and not yes:
-        click.echo("")
-        click.echo("Pipelines to add:")
-        for d, name, key, fills in planned:
-            shown = " (shown from the store until now)" if fills else ""
-            click.echo(f"  {key}: {name} ({d}){shown}")
-        click.echo("")
-        if not click.confirm(f"Add {len(planned)} pipeline(s)?"):
-            raise SystemExit(0)
-
-    # Add each pipeline
-    added = 0
-    for d, name, key, fills in planned:
-        # With / on every system, so a catalog file is read the same on each
-        try:
-            rel_path = Path(os.path.relpath(d, catalog_dir)).as_posix()
-        except ValueError:
-            # Cross-drive on Windows
-            rel_path = Path(d).as_posix()
-
-        # What is added is enabled, whatever the disabled list said of its ID
-        listed = _off_the_disabled_list(raw_catalog, key)
-        enabled = " (it was on the disabled list)" if listed else ""
-        if fills:
-            entry = raw_catalog["pipelines"][key]
-            entry["path"] = rel_path
-            entry.pop("disabled", None)
-            click.echo(f"  Added '{key}', which the catalog showed from the store: {name} ({rel_path}){enabled}")
-        else:
-            raw_catalog["pipelines"][key] = {"path": rel_path}
-            click.echo(f"  Added '{key}': {name} ({rel_path}){enabled}")
-        added += 1
-        # Adding a folder to your own catalog asks for it to be rendered
-        # there: trusted to render, unless it is trusted already. To run
-        # stays yours to say (`chartbook build` in a catalog runs every
-        # member's script)
-        if _trust_to_render_if_untrusted(d, key):
-            click.echo(f"  Trusted to render: {d} (chartbook trust --list; `chartbook trust` there to run)")
-
-    # Write back
-    with open(catalog_toml, "wb") as f:
-        tomli_w.dump(raw_catalog, f)
-
-    click.echo("")
-    parts = [f"Added {added} pipeline(s)"]
-    if reenabled:
-        parts.append(f"re-enabled {reenabled}")
-    click.echo(f"{', '.join(parts)} in {catalog_toml}")
 
 
 def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
@@ -2384,7 +1752,7 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
 
     :param pipeline_id: The pipeline key in the catalog.
     :type pipeline_id: str
-    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :param catalog_path: Optional explicit path to catalog catalog.toml.
     :type catalog_path: str or Path, optional
     :param disabled: Whether to disable (True) or enable (False) the pipeline.
     :type disabled: bool
@@ -2395,45 +1763,22 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
 
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
     raw_catalog = _load_raw_catalog(catalog_toml)
-
-    pipelines = raw_catalog.get("pipelines", {})
-    has_members = isinstance(pipelines.get("members"), list)
-
-    if pipeline_id in pipelines and pipeline_id not in RESERVED_PIPELINES_KEYS:
-        # Explicit entry: toggle its disabled flag (string shorthand becomes
-        # a table when the flag is set)
-        entry = pipelines[pipeline_id]
-        if isinstance(entry, str):
-            entry = {"path": entry}
-            pipelines[pipeline_id] = entry
+    if catalog_toml.name == "catalog.toml":
+        import tomlkit
+        from chartbook.identity import validate_pipeline_id
+        validate_pipeline_id(pipeline_id)
+        document = tomlkit.parse(catalog_toml.read_text(encoding="utf-8"))
+        notes = document.setdefault("pipelines", tomlkit.table())
+        note = notes.setdefault(pipeline_id, tomlkit.table())
         if disabled:
-            entry["disabled"] = True
+            note["disabled"] = True
         else:
-            entry.pop("disabled", None)
-    elif has_members:
-        # Member-discovered pipelines are toggled via the pipelines.disabled
-        # ID list
-        disabled_list = pipelines.setdefault("disabled", [])
-        if disabled and pipeline_id not in disabled_list:
-            disabled_list.append(pipeline_id)
-        elif not disabled and pipeline_id in disabled_list:
-            disabled_list.remove(pipeline_id)
-        if not disabled_list:
-            pipelines.pop("disabled", None)
-    else:
-        click.echo(f"Error: Pipeline '{pipeline_id}' not found in catalog.", err=True)
-        click.echo("", err=True)
-        available = ", ".join(
-            sorted(k for k in pipelines if k not in RESERVED_PIPELINES_KEYS)
-        ) or "(none)"
-        click.echo(f"Available pipelines: {available}", err=True)
-        raise SystemExit(1)
+            note.pop("disabled", None)
+        catalog_toml.write_text(tomlkit.dumps(document), encoding="utf-8", newline="\n")
+        click.echo(f"{pipeline_id}: {'disabled' if disabled else 'enabled'} in {catalog_toml}")
+        return
 
-    with open(catalog_toml, "wb") as f:
-        tomli_w.dump(raw_catalog, f)
-
-    state = "disabled" if disabled else "enabled"
-    click.echo(f"Pipeline '{pipeline_id}' {state} in {catalog_toml}")
+    raise click.ClickException(f"{catalog_toml} is an old catalog. Run `chartbook catalog migrate`.")
 
 
 @catalog.command("disable")
@@ -2443,7 +1788,7 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
     "catalog_path",
     type=click.Path(),
     default=None,
-    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+    help="Path to catalog.toml (uses default from settings if omitted)",
 )
 def catalog_disable(pipeline_id, catalog_path):
     """Disable a pipeline in the catalog.
@@ -2461,14 +1806,14 @@ def catalog_disable(pipeline_id, catalog_path):
     "catalog_path",
     type=click.Path(),
     default=None,
-    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+    help="Path to catalog.toml (uses default from settings if omitted)",
 )
 def catalog_enable(pipeline_id, catalog_path):
     """Re-enable a previously disabled pipeline in the catalog."""
     _set_pipeline_disabled(pipeline_id, catalog_path, disabled=False)
 
 
-@catalog.command("generate")
+@catalog.command("build")
 @click.option(
     "-f",
     "--force-write",
@@ -2532,12 +1877,12 @@ def catalog_generate(force_write, strict, clean, watch, watch_interval):
     click.echo(f"Generating the catalog's site from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
-    # As `chartbook docs generate` in the catalog's folder: every folder it
+    # As `chartbook docs build` in the catalog's folder: every folder it
     # reads must be trusted. Before --clean, so that a refused build leaves
     # the kept tree. A settings file may point the catalog at a pipeline's
-    # folder: that renders as `chartbook docs generate` there would, trusted
+    # folder: that renders as `chartbook docs build` there would, trusted
     # or not
-    untrusted = _require_trust_to_render(project_dir)
+    untrusted = False if (project_dir / "catalog.toml").is_file() else _require_trust_to_render(project_dir)
 
     if clean:
         from chartbook.incremental import looks_like_build_tree
@@ -2599,7 +1944,7 @@ def catalog_open():
     if not index_path.is_file():
         click.echo("Error: Catalog docs not found.", err=True)
         click.echo("", err=True)
-        click.echo("Run 'chartbook catalog generate' first.", err=True)
+        click.echo("Run 'chartbook catalog build' first.", err=True)
         raise SystemExit(1)
 
     import webbrowser
@@ -2624,7 +1969,7 @@ def data():
 @data.command("get-path")
 @click.option("--pipeline", required=True, help="Pipeline ID")
 @click.option("--dataframe", required=True, help="Dataframe ID")
-@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+@click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 def data_get_path(pipeline, dataframe, catalog):
     """Get the path to a dataframe's parquet file.
 
@@ -2651,7 +1996,7 @@ def data_get_path(pipeline, dataframe, catalog):
 @data.command("get-docs")
 @click.option("--pipeline", required=True, help="Pipeline ID")
 @click.option("--dataframe", required=True, help="Dataframe ID")
-@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+@click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 def data_get_docs(pipeline, dataframe, catalog):
     """Print documentation content for a dataframe.
 
@@ -2680,7 +2025,7 @@ def data_get_docs(pipeline, dataframe, catalog):
 @data.command("get-docs-path")
 @click.option("--pipeline", required=True, help="Pipeline ID")
 @click.option("--dataframe", required=True, help="Dataframe ID")
-@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+@click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
 def data_get_docs_path(pipeline, dataframe, catalog):
     """Get the path to a dataframe's documentation source.
 
@@ -2706,6 +2051,10 @@ def data_get_docs_path(pipeline, dataframe, catalog):
 def _echo_pin_report(report):
     """Print what a pin or an update did, one line per dependency and exception."""
     from chartbook.check import display_path
+    from chartbook.links import read as read_links
+    linked = read_links(report.lockfile.parent, active=False)
+    if linked:
+        click.echo(f"{len(linked)} link(s) in place, not used here.")
 
     by_dependency = {}
     for event in report.events:
@@ -2773,6 +2122,12 @@ def _echo_pin_report(report):
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
             made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
+            from chartbook.multi_store import with_dependencies
+            sources = with_dependencies(report.lockfile.parent)
+            if hasattr(sources, "name_of"):
+                source_name = sources.name_of(taken.path)
+                if source_name:
+                    made_in += f", in store {source_name}"
             click.echo(
                 f"  From its snapshot at {taken.commit[:7]}, made {_when(taken.made_at)}{made_in}."
             )
@@ -3054,6 +2409,13 @@ def add_command(pipeline, key, commit, project_dir):
 
         if manifest_file.is_file():
             require_chartbook(_read_manifest_file(project_dir), str(manifest_file))
+        repository = None
+        if "://" in pipeline or pipeline.startswith("git@"):
+            from chartbook.identity import id_from_address, remote_to_web_url
+            repository = remote_to_web_url(pipeline)
+            pipeline = id_from_address(pipeline)
+            if pipeline is None:
+                raise ValueError("The dependency must name a repository URL")
         validate_pipeline_id(pipeline)
         from chartbook.snapshot import SnapshotError, pipeline_in
 
@@ -3064,7 +2426,7 @@ def add_command(pipeline, key, commit, project_dir):
         if pipeline == itself:
             raise ValueError(f"{pipeline} is this pipeline itself: a pipeline cannot depend on itself.")
         key = key or pipeline
-        entry = {}
+        entry = {"repository": repository} if repository else {}
         if key != pipeline:
             entry["id"] = pipeline
         if commit:
@@ -3098,7 +2460,8 @@ def add_command(pipeline, key, commit, project_dir):
     is_flag=True,
     help="Also refuse if any snapshot upstream has a gap in its own lineage (see `chartbook lineage`)",
 )
-def snapshot(project_dir, deep):
+@click.option("--store", "store_names", multiple=True, help="Write to this catalog store (repeat for several)")
+def snapshot(project_dir, deep, store_names):
     """Declare this pipeline's build ready for the pipelines that depend on it.
 
     Every asset the pipeline declares and has built is copied into the
@@ -3129,7 +2492,7 @@ def snapshot(project_dir, deep):
 
     project_dir = resolve_project_dir(project_dir)
     try:
-        report = snapshots.make(project_dir, deep=deep)
+        report = snapshots.make(project_dir, deep=deep, store_names=list(store_names) or None)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -3277,7 +2640,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     clean copy of the commit, so that what it builds can be pinned. --force
     builds it again, which is how data it pulls from outside is refreshed.
 
-    In a catalog, the script is run in each of the catalog's pipelines.
+    Run this in a pipeline. A catalog lists stored snapshots and runs no code.
 
     --snapshot builds and then declares the build ready, in one command.
     It is `chartbook run` followed by `chartbook snapshot`, with two
@@ -3314,6 +2677,8 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
     that fails stops the run.
     """
     project_dir = resolve_project_dir(project_dir)
+    if _is_catalog_folder(project_dir):
+        raise click.ClickException("A catalog lists stored snapshots. Run `chartbook run` in a pipeline, or orchestrate pipelines with doit.")
     from chartbook.manifest import BUILD_SCRIPT
 
     # Not for arguments the run refuses anyway: it says why, and nothing is recorded
@@ -3381,6 +2746,9 @@ def _echo_snapshot(report, upstream=False):
             f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
             f"No new one was made."
         )
+
+    if getattr(report, "stores", None):
+        click.echo("Stores: " + ", ".join(report.stores))
 
 
 def _run_script(
@@ -3501,7 +2869,8 @@ def store():
 
 
 @store.command("info")
-def store_info():
+@click.option("--store", "store_name", help="Show one named catalog store")
+def store_info(store_name):
     """Say which store this machine uses, and what set it.
 
     The store is a setting of the machine, read in layers: CHARTBOOK_STORE,
@@ -3514,6 +2883,41 @@ def store_info():
         chartbook store info
         CHARTBOOK_STORE=/shared/store chartbook store info
     """
+    from chartbook.multi_store import Stores
+    try:
+        import os
+        from chartbook.config import get_default_catalog_path
+        configured = Stores.configured() if store_name or (not os.environ.get("CHARTBOOK_STORE") and get_default_catalog_path() is not None) else None
+        if configured is not None and (configured.catalog is not None or store_name is not None):
+            from chartbook.snapshot import readable_snapshots
+            entries = [configured.named(store_name)] if store_name else configured.entries
+            for entry in entries:
+                status = "read-only" if entry.read_only else "writable"
+                if not entry.reachable:
+                    status += ", unreachable"
+                click.echo(f"Store {entry.name}: {entry.store} ({status})")
+                if entry.reachable:
+                    from chartbook.store import StoreUnreachableError
+                    try:
+                        found, unreadable = readable_snapshots(entry.store)
+                    except (StoreUnreachableError, OSError) as error:
+                        click.echo(f"  Unreachable: {error}")
+                        continue
+                    counts = {}
+                    for taken in found:
+                        counts[taken.pipeline] = counts.get(taken.pipeline, 0) + 1
+                    for pipeline, count in sorted(counts.items()):
+                        click.echo(f"  {pipeline}: {count} snapshot(s)")
+                    if found:
+                        click.echo(f"  Newest: {found[-1].made_at}")
+                    if unreadable:
+                        click.echo(f"  {len(unreadable)} unreadable record(s)")
+                if entry.pipelines:
+                    click.echo("  Routed: " + ", ".join(entry.pipelines))
+            return
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from None
+
     from chartbook.config import (
         STORE_ENV_VAR,
         folder_of_store_url,
@@ -4301,7 +3705,7 @@ def trust(path, render_only, repository, members, list_, forget):
     """Trust a pipeline's folder, so that a build of it runs as your own.
 
     A build of a folder you have not trusted runs as a build of files from
-    a store does: `chartbook docs generate` renders its site with no query
+    a store does: `chartbook docs build` renders its site with no query
     run and no template or file from outside the folder, and `chartbook build` and
     `chartbook run` refuse to run its build script, which is code. A
     project `chartbook init` made is trusted as it is made. One you cloned
@@ -4310,8 +3714,8 @@ def trust(path, render_only, repository, members, list_, forget):
     With no PATH, this folder. A folder's trust covers the folders inside
     it, so `chartbook trust ~/GitRepositories/ftsfr` trusts every pipeline
     under it. --repository trusts the folder's origin repository instead:
-    every clone of it, wherever it is. --members, in a catalog, trusts the
-    catalog's folder and each of its member folders on this machine.
+    every clone of it, wherever it is. Catalogs render stored snapshots
+    and need no member trust.
 
     Two levels. `run`, the default, lets the build script run. --render
     lets queries run and the files the manifest names be read, wherever
@@ -4327,10 +3731,11 @@ def trust(path, render_only, repository, members, list_, forget):
         chartbook trust --render
         chartbook trust ../rates
         chartbook trust --repository
-        chartbook trust --members
         chartbook trust --list
         chartbook trust --forget
     """
+    if members:
+        raise click.ClickException("Catalogs read snapshots and have no working members to trust. Trust a pipeline folder directly.")
     import os
 
     from chartbook import config
@@ -4428,37 +3833,6 @@ def trust(path, render_only, repository, members, list_, forget):
         click.echo(f"{verb[level]}: {remote} (every clone whose origin remote is it; this one is {folder})")
         return
 
-    if members:
-        try:
-            member_dirs = catalog_member_dirs(folder)
-        except FileNotFoundError:
-            fail(f"No chartbook.toml in {folder}. --members is for a catalog's folder.")
-        except ValueError as error:
-            fail(f"{error} --members is for a catalog's folder; `chartbook trust` trusts a pipeline's.")
-        # A folder with no pipeline in it is not recorded: whatever was put
-        # there later would be trusted. Nothing is recorded until every
-        # member can be, as `chartbook trust /nowhere` records nothing
-        missing = [(pipeline_id, d) for pipeline_id, d in member_dirs.items() if not (d / "chartbook.toml").is_file()]
-        if missing:
-            fail(
-                "these members of the catalog have no chartbook.toml where the catalog says they are, so nothing "
-                "was recorded (a folder trusted now would trust whatever is put there later):\n"
-                + "\n".join(f"  {d} ({pipeline_id})" for pipeline_id, d in missing)
-                + "\nFix or remove their entries in the catalog's chartbook.toml, and run this again."
-            )
-        try:
-            config.record_trust(folder, level, id=None, repository=repository_key(get_git_remote_url(folder)) or None)
-            click.echo(f"{verb[level]}: {folder} (the catalog's folder)")
-            for pipeline_id, directory in member_dirs.items():
-                config.record_trust(
-                    directory, level, id=pipeline_id, repository=repository_key(get_git_remote_url(directory)) or None
-                )
-                click.echo(f"{verb[level]}: {directory} ({pipeline_id})")
-        except (ValueError, OSError) as error:
-            fail(error)
-        if not member_dirs:
-            click.echo("The catalog has no member folder on this machine; what it shows from the store needs no trust.")
-        return
 
     pipeline_id = None
     try:
@@ -4478,8 +3852,6 @@ def trust(path, render_only, repository, members, list_, forget):
         click.echo(
             f"There is no chartbook.toml in {folder}, so this trusts every pipeline in the folders inside it."
         )
-    elif raw is not None and pipeline_id is None:
-        click.echo("That is a catalog's folder; `chartbook trust --members` trusts its member folders too.")
 
 
 @main.command()
@@ -4500,7 +3872,7 @@ def config():
         click.echo("")
 
     raw_path = click.prompt(
-        "Path to catalog chartbook.toml (or its parent directory)",
+        "Path to catalog.toml (or its parent directory)",
         type=str,
     )
     catalog_path = Path(raw_path).expanduser()
@@ -4630,6 +4002,207 @@ def install_claude_skill(force, project):
         click.echo(f"\nUpdated the skill in {shown} from ChartBook {before} to {__version__}")
     else:
         click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {shown} (ChartBook {__version__})")
+
+
+
+@catalog.command("migrate")
+@click.option("--catalog", "catalog_path", type=click.Path())
+def catalog_migrate(catalog_path):
+    """Replace a folder catalog with catalog.toml, keeping an exact backup."""
+    from chartbook.catalog_config import migrate
+    try:
+        target, missing = migrate(catalog_path)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"Migrated to {target}")
+    for pipeline, folder in missing:
+        click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {str(folder)!r}")
+
+
+@ls.command("stores")
+@click.pass_context
+def ls_stores(ctx):
+    """List stores in catalog order."""
+    from chartbook.multi_store import Stores
+    stores = Stores.configured(ctx.obj.get("catalog"))
+    for entry in stores.entries:
+        state = "read-only" if entry.read_only else "writable"
+        if not entry.reachable:
+            state += ", unreachable"
+        click.echo(f"{entry.name}: {entry.store} ({state})")
+
+
+@ls.command("versions")
+@click.pass_context
+def ls_versions(ctx):
+    """List every snapshot, newest first, with its store."""
+    from chartbook.multi_store import Stores
+    from chartbook.snapshot import readable_snapshots
+    stores = Stores.configured(ctx.obj.get("catalog"))
+    found, unreadable = readable_snapshots(stores)
+    for taken in reversed(found):
+        click.echo(f"{taken.pipeline} {taken.commit[:12]} {taken.made_at} {stores.name_of(taken.path)}")
+    for path, why in unreadable:
+        click.echo(f"warning: {path}: {why}", err=True)
+
+
+@main.command("link")
+@click.argument("pipeline")
+@click.argument("folder", type=click.Path(exists=True, file_okay=False))
+@click.option("--project-dir", type=click.Path())
+def link_command(pipeline, folder, project_dir):
+    """Read a dependency's working files until chartbook.links.toml is removed."""
+    from chartbook.links import add
+    try:
+        path = add(resolve_project_dir(project_dir), pipeline, folder)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"Linked {pipeline} in {path}; its pin is not in use.")
+
+
+@store.command("add")
+@click.argument("name")
+@click.argument("url")
+@click.option("--pipelines", multiple=True)
+@click.option("--read-only", is_flag=True)
+@click.option("--catalog", "catalog_path", type=click.Path())
+def store_add(name, url, pipelines, read_only, catalog_path):
+    """Add a store to the catalog; keep comments and list what it holds."""
+    from chartbook.catalog_config import edit_store
+    from chartbook.store import StoreError, store_for_url
+    from chartbook.snapshot import readable_snapshots
+    try:
+        from chartbook.config import get_default_catalog_path, get_global_catalog_path, _absolute_if_folder
+        catalog_file = Path(catalog_path) if catalog_path else (get_default_catalog_path() or get_global_catalog_path())
+        if catalog_file.is_dir():
+            catalog_file /= "catalog.toml"
+        candidate = store_for_url(_absolute_if_folder(url, catalog_file))
+        from chartbook.store import FolderStore
+        if isinstance(candidate, FolderStore) and not candidate.root.is_dir():
+            raise ValueError(f"Store folder does not exist: {candidate}")
+        if isinstance(candidate, FolderStore) and not (candidate.root / "store.json").is_file() and any(candidate.root.iterdir()):
+            from chartbook.store import holds_v1
+            if holds_v1(candidate.root):
+                raise ValueError(f"{candidate} uses the old layout; run `chartbook store migrate` first")
+            raise ValueError(f"{candidate} is not a store (no store.json)")
+        found, errors = readable_snapshots(candidate)
+        if errors:
+            raise ValueError(f"Store has unreadable records: {errors[0][1]}")
+        spec = {"url": url}
+        if pipelines:
+            spec["pipelines"] = list(pipelines)
+        if read_only:
+            spec["read_only"] = True
+        path = edit_store(name, spec, catalog_path)
+    except (ValueError, StoreError, OSError) as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"Added {name} to {path}")
+    for pipeline in sorted({t.pipeline for t in found}):
+        click.echo(pipeline)
+
+
+@store.command("remove")
+@click.argument("name")
+@click.option("--catalog", "catalog_path", type=click.Path())
+def store_remove(name, catalog_path):
+    """Remove a store from the catalog; its files are untouched."""
+    from chartbook.catalog_config import edit_store
+    try:
+        edit_store(name, catalog=catalog_path)
+    except (ValueError, OSError) as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"Removed {name}; its files are untouched.")
+
+
+def _store_selection(command, all_stores=False):
+    """Keep maintenance local to each store and its own retention notes."""
+    original = command.callback
+    import functools
+    @functools.wraps(original)
+    def selected(*args, store_name=None, **kwargs):
+        from chartbook.multi_store import Stores, selected_store
+        try:
+            configured = Stores.configured()
+            chosen = configured.named(store_name) if store_name else None
+        except (ValueError, OSError) as error:
+            raise click.ClickException(str(error)) from None
+        if store_name:
+            entries = [chosen]
+        elif all_stores:
+            entries = configured.entries
+        elif len(configured.entries) > 1:
+            raise click.ClickException("Select a store with --store NAME")
+        else:
+            entries = configured.entries
+        failures = []
+        for entry in entries:
+            if all_stores and store_name is None and entry.reachable:
+                from chartbook.store import StoreError, StoreUnreachableError
+                try:
+                    entry.store.all_snapshot_files()
+                except (StoreUnreachableError, OSError) as error:
+                    click.echo(f"Skipping store {entry.name}: unreachable ({error})")
+                    continue
+                except StoreError:
+                    pass  # the command reports a layout or integrity error below
+            if command.name not in ("verify", "info", "export") and entry.read_only:
+                if all_stores and store_name is None:
+                    click.echo(f"Skipping store {entry.name}: read-only")
+                    continue
+                raise click.ClickException(f"Store {entry.name!r} is read-only")
+            if not entry.reachable:
+                if all_stores and store_name is None:
+                    click.echo(f"Skipping store {entry.name}: unreachable")
+                    continue
+                raise click.ClickException(f"Store {entry.name!r} is unreachable")
+            if len(configured.entries) > 1:
+                click.echo(f"Store {entry.name}: {entry.store}")
+            token = selected_store.set(entry.store)
+            try:
+                original(*args, **kwargs)
+            except click.ClickException as error:
+                if not all_stores or store_name is not None or len(configured.entries) == 1:
+                    raise
+                failures.append(entry.name)
+                click.echo(f"Store {entry.name}: {error.format_message()}", err=True)
+            finally:
+                selected_store.reset(token)
+        if failures:
+            raise click.ClickException("Maintenance failed in stores: " + ", ".join(failures))
+    command.callback = selected
+    command.params.append(click.Option(["--store", "store_name"], help="Select a named catalog store"))
+
+
+for _command_name in ("gc", "verify", "migrate", "export", "import"):
+    _store_selection(store.commands[_command_name], all_stores=_command_name in ("gc", "verify"))
+
+
+# Retired commands retain actionable errors, without executing their old behavior.
+main.commands.pop("build", None)
+_Main.renamed["build"] = "run (runs the build script); `chartbook docs build` renders the site alone"
+catalog.commands.pop("add", None)
+_Catalog.renamed["add"] = "store add NAME URL; a pipeline enters the catalog with `chartbook snapshot`"
+
+
+@store.command("move")
+@click.argument("pipeline")
+@click.option("--to", required=True)
+@click.option("--keep", is_flag=True)
+@click.option("--dry-run", is_flag=True)
+@click.option("--no-route", is_flag=True)
+def store_move(pipeline, to, keep, dry_run, no_route):
+    """Copy and verify a pipeline in the destination before removing its sources."""
+    from chartbook.multi_store import Stores
+    from chartbook.transfer import move
+    from chartbook.store import StoreError
+    try:
+        count, size = move(pipeline, Stores.configured(), to, keep=keep, dry_run=dry_run, route=not no_route)
+    except (ValueError, StoreError, OSError) as error:
+        raise click.ClickException(str(error)) from None
+    click.echo(f"{'Would move' if dry_run else 'Copied' if keep else 'Moved'} {count} snapshot(s), {_format_bytes(size)}, to {to}.")
+    if not keep and not dry_run:
+        click.echo("Paths previously printed from source stores may be gone; resolve them again with `chartbook path`.")
+
 
 if __name__ == "__main__":
     main()

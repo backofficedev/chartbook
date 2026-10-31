@@ -23,7 +23,7 @@ from tests.fixtures import create_pipeline_project, create_sample_parquet
 
 
 def _edit_toml(project_dir: Path, edit) -> None:
-    toml_path = project_dir / "chartbook.toml"
+    toml_path = project_dir / ("catalog.toml" if (project_dir / "catalog.toml").is_file() else "chartbook.toml")
     with open(toml_path, "rb") as f:
         config = tomli.load(f)
     edit(config)

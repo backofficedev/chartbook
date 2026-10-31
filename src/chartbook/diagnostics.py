@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+from chartbook.manifest import _working_pipeline_ids, get_pipeline_manifest
 
 PROJECT_FIELDS: list[str] = [
     "name",
@@ -218,11 +218,19 @@ def build_diagnostics(
         its report either.
     """
 
+    if manifest["project"]["type"] == "catalog":
+        from chartbook import index
+        from chartbook.writers.sphinx import SphinxWriter
+        built = index.build_index(manifest, skip_pipelines=skip_pipelines)
+        writer = SphinxWriter(built, theme="catalog")
+        catalog = next(r for r in built["records"] if r["kind"] == "Catalog")
+        return [DiagnosticRow(row["Object Type"], row["Name"], row["Metadata Complete"], row["Identifier"], row["Pipeline"], row["Missing Fields"], row["Page Link"])
+                for row in writer._diagnostics(catalog)]
     diagnostics: list[DiagnosticRow] = []
     # Pipelines and their assets by name, as the index lists them, so the
     # report does not change when a chartbook.toml is reordered
     skipped = set(skip_pipelines)
-    pipeline_ids = sorted(p for p in get_pipeline_ids(manifest) if p not in skipped)
+    pipeline_ids = sorted(p for p in _working_pipeline_ids(manifest) if p not in skipped)
     required = get_active_policy(manifest)["required"]
 
     for pipeline_id in pipeline_ids:

@@ -10,7 +10,7 @@ import tomli_w
 
 from chartbook.manifest import (
     find_latest_source_modification,
-    get_pipeline_ids,
+    _working_pipeline_ids,
     get_pipeline_manifest,
     load_manifest,
 )
@@ -111,7 +111,7 @@ def get_pipeline_publishing_plan(manifest, publish_dir):
     :returns: A dictionary mapping source paths to destination paths.
     :rtype: dict
     """
-    pipeline_ids = get_pipeline_ids(manifest)
+    pipeline_ids = _working_pipeline_ids(manifest)
     publishing_plan = {}
 
     def _add_file_to_plan(base_dir, file_path):

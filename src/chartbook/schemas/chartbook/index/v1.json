@@ -55,6 +55,31 @@
           }
         }
       }
+    },
+    "stores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "read_only",
+          "reachable"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "read_only": {
+            "type": "boolean"
+          },
+          "reachable": {
+            "type": "boolean"
+          }
+        }
+      }
     }
   }
 }

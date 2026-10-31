@@ -346,6 +346,7 @@ class TestWhatCannotHaveOne:
 
     def test_a_catalog(self, maker, work):
         _manifest(work, {"project": {"type": "catalog"}, "pipelines": {"maker": {"path": "maker"}}})
+        (work / "chartbook.toml").rename(work / "catalog.toml")
         with pytest.raises(SnapshotError, match="is a catalog"):
             snapshot.make(work)
 
@@ -1207,6 +1208,7 @@ class TestCommands:
             f"acme/maker at {commit[:7]}: 2 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
+            "Stores: default",
         ]
 
     def test_snapshot_again(self, maker, monkeypatch):
@@ -1214,7 +1216,7 @@ class TestCommands:
         self._run("snapshot")
         result = self._run("snapshot")
         assert result.exit_code == 0
-        last = result.output.splitlines()[-1]
+        last = result.output.splitlines()[-2]
         assert last.startswith("Nothing has changed since the snapshot of 20")
         assert last.endswith(" UTC. No new one was made.")
 

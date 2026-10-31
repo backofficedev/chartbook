@@ -23,7 +23,7 @@ from typing import Optional
 import polars as pl
 
 from chartbook import formats
-from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+from chartbook.manifest import _working_pipeline_ids, get_pipeline_manifest, load_manifest
 from chartbook.utils import is_glob_pattern
 
 # Default file size threshold (in MB) above which to use memory-efficient loading
@@ -94,7 +94,31 @@ def find_declared_dataframes(manifest):
     :rtype: list[DeclaredDataframe]
     """
     declared = []
-    for pipeline_id in get_pipeline_ids(manifest):
+    if manifest["project"]["type"] == "catalog":
+        from chartbook import snapshot
+        from chartbook.hubs import selected_snapshots
+        from chartbook.refs import AssetRef
+        from chartbook.resolve import _held_in
+        stores = manifest["stores"]
+        found, _ = snapshot.readable_snapshots(stores)
+        for pipeline_id in manifest.get("store_pipelines", []):
+            candidates = selected_snapshots(found, pipeline_id, manifest.get("pipeline_notes", {}).get(pipeline_id, {}).get("repository"))
+            if not candidates:
+                continue
+            newest = max(candidates, key=lambda t: t.made_at)
+            names = {r["id"]: r["name"] for r in snapshot.stored_assets(newest, stores)}
+            for record in newest.assets.values():
+                if record.get("kind") != "Dataframe" or not record.get("content_hash"):
+                    continue
+                name = record["ref"]["name"]
+                location, why = _held_in(AssetRef(name=name).in_pipeline(pipeline_id), newest, found, stores)
+                if location is None:
+                    raise ValueError(f"{pipeline_id}:{name}: {why}")
+                declared.append(DeclaredDataframe(pipeline_id=pipeline_id, dataframe_id=name,
+                    name=names.get(record["id"]) or name, path=location.path,
+                    format=location.format, read_options=location.read_options))
+        return sorted(declared, key=lambda r: (r.pipeline_id, r.dataframe_id))
+    for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for dataframe_id, dataframe in pipeline_manifest.get("dataframes", {}).items():
             resolved_path = dataframe.get("_resolved_path")

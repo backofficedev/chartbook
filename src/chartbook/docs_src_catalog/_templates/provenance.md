@@ -1,6 +1,13 @@
 {% if provenance %}
 ## Provenance
 
+{% if provenance.links %}
+**This build reads working copies; their pins are not in use.**
+{% for link in provenance.links %}
+- `{{link.pipeline}}` at `{{link.path}}`, commit `{{link.commit}}`{% if link.uncommitted %}, with uncommitted changes{% endif %}.
+{% endfor %}
+{% endif %}
+
 What this is, where it is, what made it and from what, as `index.json` records it.
 
 | | |

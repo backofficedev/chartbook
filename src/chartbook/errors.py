@@ -268,7 +268,7 @@ class DependencyNotDeclaredError(LookupError):
         pipeline: str,
         manifest_path: Path,
         declared: list[str],
-        found_at: Optional[tuple[str, str]] = None,
+        found_at: Optional[tuple[str, Optional[str]]] = None,
         known: Mapping[str, Optional[str]] = {},
     ):
         """
@@ -316,7 +316,7 @@ class DependencyNotDeclaredError(LookupError):
                 "To read from another pipeline, say where it is, then pin it:",
                 "",
                 "    [dependencies]",
-                f'    "{key}" = {{ path = "{where}" }}',
+                (f'    "{key}" = {{ id = "{key}" }}' if found_at and where is None else f'    "{key}" = {{ path = "{where}" }}'),
                 "",
                 "    $ chartbook pin",
             ]

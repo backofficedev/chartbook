@@ -21,6 +21,14 @@ def fake_config_dir(tmp_path, monkeypatch):
     return fake_dir
 
 
+@pytest.fixture(autouse=True)
+def published_catalogs(request):
+    from tests.fixtures import publish_catalog
+    for name in ("catalog_project", "catalog_project_inline_docs", "catalog_project_glob"):
+        if name in request.fixturenames:
+            publish_catalog(request.getfixturevalue(name))
+
+
 # --- Loading with explicit catalog_path ---
 
 

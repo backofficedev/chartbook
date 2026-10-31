@@ -1,10 +1,16 @@
 # Versions 🕰️
 
+{% if from_stores %}
+Every snapshot of every pipeline in the catalog's stores, newest first. Each version's site
+is rendered from its stored documents and built files, with the data dictionary as it was then.
+{% else %}
 Every pipeline of this catalog, in two kinds of version. The **working version** is the
 pipeline's folder as it is now, which the rest of this site shows. A **snapshot** is a version
 its owner declared ready (`chartbook snapshot`); a pipeline that depends on another reads the
 snapshot it pinned, never the folder. Each snapshot's site is built from the store alone, as the
 pipeline's own site, with the write-ups and the data dictionary as they were then.
+
+{% endif %}
 
 {% for p in pipelines %}
 ## {{ p.name }}
@@ -14,7 +20,7 @@ pipeline's own site, with the write-ups and the data dictionary as they were the
 {% if p.versions %}
 ```{raw} html
 <ul class="cb-versions">
-{% for v in p.versions %}<li><a href="{{ v.link }}"><code>{{ v.short }}</code>, made {{ v.made }}</a>{% if v.tags %} · tagged {% for t in v.tags %}<code>{{ t|e }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% if v.built_by_run %} · built by <code>chartbook run</code>{% endif %}{% if v.pinned_by %} · pinned by {% for o in v.pinned_by %}<code>{{ o }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</li>
+{% for v in p.versions %}<li><a href="{{ v.link }}"><code>{{ v.short }}</code>, made {{ v.made }}</a> · store <code>{{ v.store|e }}</code>{% if v.tags %} · tagged {% for t in v.tags %}<code>{{ t|e }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}{% if v.built_by_run %} · built by <code>chartbook run</code>{% endif %}{% if v.pinned_by %} · pinned by {% for o in v.pinned_by %}<code>{{ o }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</li>
 {% endfor %}</ul>
 ```
 {% else %}

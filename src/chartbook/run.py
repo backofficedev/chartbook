@@ -451,12 +451,8 @@ def plan(
     except FileNotFoundError:
         raise RunError(f"No {MANIFEST_NAME} in {start}.") from None
     if resolve_project_type(raw, source=str(start / MANIFEST_NAME)) == "catalog":
-        roots = [
-            directory.resolve()
-            for directory in get_pipeline_dirs(load_manifest(start)).values()
-        ]
-    else:
-        roots = [start]
+        raise RunError("A catalog lists stored snapshots. Run `chartbook run` in a pipeline, or orchestrate pipelines with doit.")
+    roots = [start]
     asked = set(roots)
 
     order: list[Step] = []
@@ -1024,6 +1020,8 @@ def run(
         and the report says so.
     """
     here = Path(project_dir).resolve()
+    if snapshot and os.path.lexists(here / "chartbook.links.toml"):
+        raise RunError("Cannot snapshot while chartbook.links.toml exists. Remove it, update pins, then snapshot.")
     building = script == BUILD_SCRIPT
     if frozen and snapshot:
         raise RunError(
@@ -1305,7 +1303,17 @@ def run(
 
             where = "" if step.directory == here else f"    in {step.directory}"
             echo(f"{step.id}: {script}{where}")
-            code = execute(command, step.directory, script, foreign=step.source == "git")
+            old_frozen = os.environ.get("CHARTBOOK_FROZEN")
+            if frozen:
+                os.environ["CHARTBOOK_FROZEN"] = "1"
+            try:
+                code = execute(command, step.directory, script, foreign=step.source == "git")
+            finally:
+                if frozen:
+                    if old_frozen is None:
+                        os.environ.pop("CHARTBOOK_FROZEN", None)
+                    else:
+                        os.environ["CHARTBOOK_FROZEN"] = old_frozen
             if code != 0:
                 report.failed, report.exit_code = step, code
                 report.reason = f"its {script!r} script exited with {code}"

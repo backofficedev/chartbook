@@ -338,17 +338,6 @@ class TestTheStopBeforeABuild:
         (costly / "_data" / "summary.parquet").unlink()
         assert self._run(costly).failed is None
 
-    def test_a_catalog_is_checked_whole_before_anything_runs(self, costly, work):
-        snapshot.make(costly)
-        cheap = _manifest(work / "cheap", {"project": {"id": "acme/cheap"}, "scripts": {"build": "echo built >> build.log"}})
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"cheap": {"path": "cheap"}, "docs": {"path": "docs"}}}), encoding="utf-8", newline="\n"
-        )
-        _commit(work)
-        (costly / "_data" / "embeddings.parquet").unlink()
-        with pytest.raises(RunError, match="acme/docs: embeddings is kept"):
-            self._run(work)
-        assert not (cheap / "build.log").exists() and not (costly / "build.log").exists()
 
     def test_the_commands_say_it(self, costly, monkeypatch):
         snapshot.make(costly)
@@ -360,8 +349,8 @@ class TestTheStopBeforeABuild:
         assert "chartbook run --remake      runs the build without it" in result.output
         assert not (costly / "build.log").exists()
         result = CliRunner().invoke(main, ["build", "./site", "-f"])
-        assert result.exit_code == 1
-        assert "chartbook build --remake    runs the build without it" in result.output
+        assert result.exit_code == 2
+        assert "`chartbook build` is gone" in result.output
         assert not (costly / "site").exists()
         result = CliRunner().invoke(main, ["run", "--remake"])
         assert result.exit_code == 0, result.output
@@ -497,7 +486,7 @@ class TestAfterReview:
         snapshot.make(costly)
         (costly / "_data" / "embeddings.parquet").unlink()
         monkeypatch.chdir(costly)
-        result = CliRunner().invoke(main, ["build", "./site", "-f", "--remake"])
+        result = CliRunner().invoke(main, ["run", "--remake"])
         assert "is kept, and is not on disk" not in result.output
         assert (costly / "build.log").read_text(encoding="utf-8").split() == ["built"]  # the script ran; the render then finds the file still missing
 

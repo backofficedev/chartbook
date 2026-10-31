@@ -47,7 +47,7 @@ from tests.fixtures import create_catalog_project, create_pipeline_project, pin_
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = Path(project_dir) / "chartbook.toml"
+    toml_path = Path(project_dir) / ("catalog.toml" if (Path(project_dir) / "catalog.toml").is_file() else "chartbook.toml")
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
     toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
@@ -215,6 +215,7 @@ class TestDeclaring:
     def test_a_catalog_has_no_dependencies(self, tmp_path):
         catalog = create_catalog_project(tmp_path / "cat")
         _depend(catalog, rates={"path": "../rates"})
+        (catalog / "chartbook.toml").rename(catalog / "catalog.toml")
         with pytest.raises(ValueError, match=r"a catalog has no \[dependencies\]"):
             load_manifest(catalog)
 
@@ -361,10 +362,12 @@ class TestTheChain:
     def test_a_catalog_lookup_enters_at_the_second_step(self, catalog_project):
         manifest = load_manifest(catalog_project)
         assert locate_in_catalog(manifest, "pipeline_a") == "pipeline_a"
-        with pytest.raises(PipelineNotFoundError, match="In the catalog: pipeline_a"):
+        with pytest.raises(KeyError, match="pipeline_a"):
             locate_in_catalog(manifest, "nope")
 
     def test_loading_through_a_catalog_is_unchanged(self, catalog_project):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         frame = data.load("pipeline_a", "dataframe_0", catalog_path=catalog_project)
         assert frame.collect().height > 0
         with pytest.raises(KeyError, match="not_a_pipeline"):
@@ -579,38 +582,13 @@ class TestInTheIndex:
             "acme/rates:dataframe_0",
         ]
 
-    def test_in_a_catalog_a_dependency_goes_by_the_catalogs_name(self, tmp_path):
-        """One directory, two names: the build's is the one its records use."""
-        catalog = create_catalog_project(tmp_path / "cat")
-
-        def scope(config):
-            for name in ("pipeline_a", "pipeline_b"):
-                config["pipelines"][f"acme/{name}"] = config["pipelines"].pop(name)
-
-        _edit_toml(catalog, scope)
-        pipeline_a = catalog / "pipelines" / "pipeline_a"
-        _depend(pipeline_a, upstream={"path": "../pipeline_b"})
-        _add_model(pipeline_a, ["upstream:dataframe_0"])
-
-        built = index.build_index(load_manifest(catalog))
-        (dependency,) = self._pipeline_record(built, "acme/pipeline_a")["dependencies"]
-        assert dependency["id"] == "acme/pipeline_b"
-        assert self._model_record(built)["inputs"] == ["acme/pipeline_b:dataframe_0"]
-        ids = [r.get("id") for r in built["records"]]
-        assert dependency["id"] in ids and "acme/pipeline_b:dataframe_0" in ids
-
-        # Alone, the same pipeline writes the name it declared
-        alone = index.build_index(load_manifest(pipeline_a))
-        (dependency,) = self._pipeline_record(alone, "pipeline_a")["dependencies"]
-        assert dependency["id"] == "upstream"
-        assert self._model_record(alone)["inputs"] == ["upstream:dataframe_0"]
 
     def test_a_build_writes_it_beside_the_site(self, two_pipelines, monkeypatch):
         downstream, _ = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
         _add_model(downstream, ["rates:dataframe_0"])
         monkeypatch.chdir(downstream)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
         built = json.loads((downstream / "docs" / "index.json").read_text(encoding="utf-8"))
@@ -666,12 +644,6 @@ class TestCheck:
         assert "no chartbook.toml in" in problem.message
         assert "a dependency is a pipeline" in problem.message
 
-    def test_a_catalog_is_not_a_pipeline(self, two_pipelines):
-        downstream, _ = two_pipelines
-        create_catalog_project(downstream.parent / "cat")
-        _depend(downstream, cat={"path": "../cat"})
-        (problem,) = self._problems(downstream)
-        assert "is a catalog, not a pipeline" in problem.message
 
     def test_a_manifest_that_cannot_be_read(self, two_pipelines):
         downstream, rates = two_pipelines
@@ -784,40 +756,8 @@ class TestCheck:
         problems = run_checks(load_manifest(downstream), downstream)
         assert not [p for p in problems if p.field == "trained_on"]
 
-    def test_one_id_for_two_directories_in_a_catalog(self, tmp_path):
-        catalog = create_catalog_project(tmp_path / "cat").resolve()
-        pipeline_a = catalog / "pipelines" / "pipeline_a"
-        other = create_pipeline_project(tmp_path / "other", pipeline_id="pipeline_b").resolve()
-        _depend(pipeline_a, pipeline_b={"path": str(other)})
-        (problem,) = self._problems(catalog)
-        assert problem.file == pipeline_a / "chartbook.toml"
-        assert problem.table == "dependencies.pipeline_b"
-        assert "one ID for two pipelines" in problem.message
-        assert str(other) in problem.message
-        assert str(catalog / "pipelines" / "pipeline_b") in problem.message
 
-        # The same directory under the same ID is what a catalog expects
-        _depend(pipeline_a, pipeline_b={"path": "../pipeline_b"})
-        assert self._problems(catalog) == []
 
-        # Alone, the pipeline has nothing to collide with
-        _depend(pipeline_a, pipeline_b={"path": str(other)})
-        assert self._problems(pipeline_a) == []
-
-    def test_every_pipeline_of_a_catalog_is_checked(self, tmp_path):
-        catalog = create_catalog_project(tmp_path / "cat").resolve()
-        _depend(catalog / "pipelines" / "pipeline_b", gone={"path": "../gone"})
-        (problem,) = self._problems(catalog)
-        assert problem.file == catalog / "pipelines" / "pipeline_b" / "chartbook.toml"
-
-    def test_get_pipeline_dirs(self, tmp_path, two_pipelines):
-        downstream, _ = two_pipelines
-        assert get_pipeline_dirs(load_manifest(downstream)) == {"downstream": downstream}
-        catalog = create_catalog_project(tmp_path / "cat").resolve()
-        assert get_pipeline_dirs(load_manifest(catalog)) == {
-            "pipeline_a": catalog / "pipelines" / "pipeline_a",
-            "pipeline_b": catalog / "pipelines" / "pipeline_b",
-        }
 
 
 class TestCheckCommand:
@@ -891,9 +831,19 @@ class TestPages:
         _depend(pipeline_a, upstream={"path": "../pipeline_b"})
         _add_model(pipeline_a, ["upstream:dataframe_0"])
 
+        from tests.test_model_versions import _git
+        from chartbook import snapshot, lock
+        _git(catalog, "init", "--quiet", "-b", "main")
+        _git(catalog, "add", "-A")
+        _git(catalog, "commit", "--quiet", "-m", "Catalog")
+        snapshot.make(catalog / "pipelines" / "pipeline_b")
+        lock.pin(pipeline_a)
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
-        page = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
-        assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page.read_text(encoding="utf-8")
-        assert "acme/pipeline_b:dataframe_0 - Dataframe 0" in _page_text(page)
+        page = catalog / "docs" / "cb" / "models" / "pipeline_a" / "m.html"
+        assert "versions/pipeline_b/" in page.read_text(encoding="utf-8")
+        assert "/cb/dataframes/pipeline_b/dataframe_0.html" in page.read_text(encoding="utf-8")
+        assert "pipeline_b:dataframe_0 - Dataframe 0" in _page_text(page)

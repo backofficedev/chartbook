@@ -39,7 +39,7 @@ PNG = base64.b64decode(
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = Path(project_dir) / "chartbook.toml"
+    toml_path = Path(project_dir) / ("catalog.toml" if (Path(project_dir) / "catalog.toml").is_file() else "chartbook.toml")
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
     toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
@@ -450,7 +450,7 @@ class TestPages:
         before = Path.cwd()
         os.chdir(project)
         try:
-            result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+            result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         finally:
             os.chdir(before)
         assert result.exit_code == 0, result.output
@@ -507,11 +507,17 @@ class TestCatalog:
     def test_a_catalog_lists_files_only_when_some_pipeline_has_them(self, catalog_project, monkeypatch):
         catalog = catalog_project.resolve()
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert not (catalog / "docs" / "cb" / "files.html").exists()
         add_files(catalog / "pipelines" / "pipeline_a")
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        from chartbook import snapshot
+        from tests.fixtures import publish_catalog
+        import subprocess
+        subprocess.run(["git", "add", "-A"], cwd=catalog / "pipelines" / "pipeline_a", check=True)
+        subprocess.run(["git", "commit", "-qm", "Publish files"], cwd=catalog / "pipelines" / "pipeline_a", check=True)
+        snapshot.make(catalog / "pipelines" / "pipeline_a")
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         listing = (catalog / "docs" / "cb" / "files.html").read_text(encoding="utf-8")
         assert "files/pipeline_a/releases.html" in listing
@@ -610,7 +616,7 @@ class TestMkDocs:
         pytest.importorskip("material")
         _edit_toml(project, lambda config: config["project"].update(writer="mkdocs"))
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         assert "contains a link" not in result.output, result.output
         site = project / "docs"
@@ -635,7 +641,7 @@ class TestWhatTheReviewFound:
         assert "files" not in record and "file_count" not in record
         _valid(record)
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
     def test_a_page_passes_over_a_listing_it_cannot_read(self):

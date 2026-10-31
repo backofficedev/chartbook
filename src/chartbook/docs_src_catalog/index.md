@@ -81,6 +81,7 @@ cb/dataframes.md
 {% endif %}{% if files_file_list %}cb/files.md
 {% endif %}cb/pipelines.md
 {% if has_versions %}cb/versions.md
+{% endif %}{% if has_stores %}cb/stores.md
 {% endif %}cb/diagnostics.md
 contributing.md
 ```

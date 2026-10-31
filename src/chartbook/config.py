@@ -13,7 +13,7 @@ key, so an organization sets the store once for every machine and a user
 keeps their own choices for everything else::
 
     ~/.chartbook/
-    ├── chartbook.toml       # the global catalog (optional)
+    ├── catalog.toml         # the global catalog (optional)
     ├── settings.toml        # the user's settings
     ├── sources.toml         # the machine's urls and credentials for [sources]
     ├── trust.toml           # the pipelines and repositories this user trusts a build of
@@ -82,7 +82,7 @@ def get_global_catalog_path() -> Path:
     :returns: ``~/.chartbook/chartbook.toml``
     :rtype: Path
     """
-    return get_global_config_dir() / "chartbook.toml"
+    return get_global_config_dir() / "catalog.toml"
 
 
 def get_global_artifacts_dir() -> Path:
@@ -330,7 +330,7 @@ def get_default_catalog_path() -> Optional[Path]:
     Resolution order:
 
     1. ``catalog.path`` from ``~/.chartbook/settings.toml`` (explicit override).
-    2. ``~/.chartbook/chartbook.toml`` if it exists (global catalog).
+    2. ``~/.chartbook/catalog.toml`` if it exists (global catalog).
     3. ``None`` if neither is available.
 
     :returns: The resolved catalog path, or ``None`` if not found.
@@ -339,13 +339,17 @@ def get_default_catalog_path() -> Optional[Path]:
     settings = read_settings()
     raw = (settings.get("catalog") or {}).get("path")
     if raw:
-        return Path(raw)
+        path = Path(raw).expanduser()
+        return path / "catalog.toml" if path.is_dir() else path
 
     # Fall back to the global catalog if it exists
     global_catalog = get_global_catalog_path()
     if global_catalog.is_file():
         return global_catalog
 
+    legacy = get_global_config_dir() / "chartbook.toml"
+    if legacy.is_file():
+        raise ValueError(f"{legacy} is an old catalog. Run `chartbook catalog migrate`.")
     return None
 
 
@@ -1176,7 +1180,7 @@ def set_default_catalog_path(catalog_path: Path) -> None:
 
     # If a directory is given, append chartbook.toml
     if catalog_path.is_dir():
-        catalog_path = catalog_path / "chartbook.toml"
+        catalog_path = catalog_path / "catalog.toml"
 
     if not catalog_path.is_file():
         raise FileNotFoundError(f"File not found: {catalog_path}")
@@ -1230,7 +1234,7 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
             "name": title,
             "maintainer": author,
         },
-        "pipelines": {},
+        "stores": {"default": {"url": get_store_url()}},
     }
 
     with open(catalog_path, "wb") as f:

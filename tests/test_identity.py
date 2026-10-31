@@ -151,13 +151,10 @@ class TestWhereIdsEnterTheSystem:
             load_manifest(pipeline_project)
 
     def test_catalog_key(self, catalog_project):
-        toml_path = catalog_project / "chartbook.toml"
-        config = tomli.loads(toml_path.read_text(encoding="utf-8"))
-        config["pipelines"]["charthub.example/acme/rates"] = config["pipelines"].pop(
-            "pipeline_a"
-        )
-        toml_path.write_bytes(tomli_w.dumps(config).encode())
-        with pytest.raises(UnsupportedRegistryError, match="not yet supported"):
+        config = tomli.loads((catalog_project / "catalog.toml").read_text(encoding="utf-8"))
+        config["pipelines"] = {"charthub.example/acme/rates": {"disabled": True}}
+        (catalog_project / "catalog.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
+        with pytest.raises(UnsupportedRegistryError):
             load_manifest(catalog_project)
 
     def test_data_load(self, catalog_project):

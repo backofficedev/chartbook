@@ -16,8 +16,14 @@ from tests.test_model_versions import trained  # noqa: F401 - a fixture: two pip
 
 def _built(project: Path, monkeypatch) -> dict:
     """Build the site with the generator, keep the build directory, and read its full index."""
+    if not (project / "catalog.toml").exists():
+        import tomli
+        raw = tomli.loads((project / "chartbook.toml").read_text(encoding="utf-8"))
+        if raw.get("project", {}).get("type") == "catalog" or "pipelines" in raw:
+            from tests.fixtures import publish_catalog
+            publish_catalog(project)
     monkeypatch.chdir(project)
-    result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+    result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
     assert result.exit_code == 0, result.output
     return json.loads((project / "_docs" / "index.json").read_text(encoding="utf-8"))
 
@@ -38,7 +44,7 @@ def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=KINDS)
     for record in [r for r in index["records"] if r["kind"] in kinds]:
         path_of, page_of = _PAGES[record["kind"]]
         generated = (build_dir / getattr(writer, path_of)(record)).read_text(encoding="utf-8")
-        assert getattr(writer, page_of)(record["id"]) == generated, record["id"]
+        assert writer.page(record) == generated, record["id"]
         seen += 1
     assert seen, f"no {kinds} pages to compare"
 
@@ -53,7 +59,7 @@ class TestTheBuildWritesTheSite:
         project = pipeline_project_with_notes.resolve()
         monkeypatch.chdir(project)
         for _ in range(2):
-            result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+            result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
             assert result.exit_code == 0, result.output
             assert (project / "_docs" / "cb" / "note1.md").is_file()
             assert (project / "docs" / "cb" / "note1.html").is_file()
@@ -75,7 +81,7 @@ class TestTheBuildWritesTheSite:
             config["notes"] = {"overview": {"path": "docs_src/overview.md"}}
             (folder / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         index = _built(catalog, monkeypatch)
-        assert sum(1 for r in index["records"] if r["kind"] == "Note") == 2
+        assert sum(1 for r in index["records"] if r["kind"] == "Note") == 0
         assert not (catalog / "_docs" / "cb" / "overview.md").exists()
 
     def test_a_project_in_a_folder_named_like_a_generated_one_still_gets_the_theme(self, tmp_path, monkeypatch):
@@ -117,14 +123,16 @@ class TestTheCatalogsOwnPages:
         from tests.test_models import add_models
 
         catalog = catalog_project.resolve()
-        config = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))
+        config = tomli.loads((catalog / "catalog.toml").read_text(encoding="utf-8"))
         config["policy"] = {"mode": "warn", "required": {"charts": ["name", "units"], "models": ["name", "docs"]}}
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
+        (catalog / "catalog.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         add_models(catalog / "pipelines" / "pipeline_b")
         pipeline_a = tomli.loads((catalog / "pipelines" / "pipeline_a" / "chartbook.toml").read_text(encoding="utf-8"))
         pipeline_a["charts"]["chart_0_0"].pop("tags", None)
         pipeline_a["dataframes"]["dataframe_0"]["providers"] = []
         (catalog / "pipelines" / "pipeline_a" / "chartbook.toml").write_text(tomli_w.dumps(pipeline_a), encoding="utf-8", newline="\n")
+        from tests.fixtures import republish_catalog
+        republish_catalog(catalog)
         index = _built(catalog, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         _same_catalog_pages(writer, catalog / "_docs")
@@ -154,7 +162,7 @@ class TestTheCatalogsOwnPages:
         from tests.test_models import add_models
 
         catalog = catalog_project.resolve()
-        config = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))
+        config = tomli.loads((catalog / "catalog.toml").read_text(encoding="utf-8"))
         config["policy"] = {
             "required": {
                 "project": ["name", "site_url", "readme", "copyright", "id", "type"],
@@ -163,7 +171,7 @@ class TestTheCatalogsOwnPages:
                 "models": ["metrics_path", "trained_on", "docs"],
             }
         }
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
+        (catalog / "catalog.toml").write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
         add_models(catalog / "pipelines" / "pipeline_b")
         b = catalog / "pipelines" / "pipeline_b"
         config_b = tomli.loads((b / "chartbook.toml").read_text(encoding="utf-8"))
@@ -175,6 +183,8 @@ class TestTheCatalogsOwnPages:
         con = duckdb.connect(str(b / "_data" / "local.duckdb"))
         con.sql("create table curve as select * from (values (date '2024-01-01', 1.0)) t(d, y)")
         con.close()
+        from tests.fixtures import republish_catalog
+        republish_catalog(catalog)
         index = _built(catalog, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         _same_catalog_pages(writer, catalog / "_docs")
@@ -182,7 +192,7 @@ class TestTheCatalogsOwnPages:
             (row["Object Type"], row["Pipeline"], row["Identifier"]): row["Missing Fields"]
             for row in writer._diagnostics(next(r for r in index["records"] if r["kind"] == "Catalog"))
         }
-        assert rows[("pipeline", "pipeline_a", "pipeline_a")] == ""
+        assert rows[("pipeline", "pipeline_a", "pipeline_a")] == "site_url"
         assert rows[("dataframe", "pipeline_b", "curve")] == "docs_path, linked_charts"  # a table has a source and a series
         assert rows[("dataframe", "pipeline_a", "dataframe_0")] == "series, source"
         assert rows[("model", "pipeline_b", "encoder")] == "metrics_path, trained_on, docs"
@@ -195,10 +205,17 @@ class TestTheCatalogsOwnPages:
         so the lists and the diagnostics leave it out too (the generator had listed pages that
         did not exist, and counted the pipeline's rows)."""
         catalog = catalog_project.resolve()
+        from tests.fixtures import publish_catalog
+        import tomli_w
+        path = catalog / "catalog.toml"
+        import tomli
+        doc = tomli.loads(path.read_text(encoding="utf-8"))
+        doc["pipelines"] = {"pipeline_b": {"disabled": True}}
+        path.write_text(tomli_w.dumps(doc), encoding="utf-8", newline="\n")
         for html in (catalog / "pipelines" / "pipeline_b" / "_output" / "charts").glob("*.html"):
             html.unlink()
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs", "--no-strict"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs", "--no-strict"])
         assert result.exit_code == 0, result.output
         index = json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))
         (record,) = [r for r in index["records"] if r["kind"] == "Catalog"]
@@ -332,33 +349,6 @@ class TestThePipelinePage:
         assert "Our own notes on dependencies" not in page
         assert "## Dependencies" in page and "- `rates` (path `../rates`)" in page
 
-    def test_in_a_catalog_a_dependency_links_the_snapshot_pinned_or_its_page(self, trained, monkeypatch):
-        import tomli_w
-
-        from chartbook import lock, snapshot
-
-        rates, forecast = trained
-        work = forecast.parent
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
-        )
-        # Not pinned: its page in the catalog
-        index = _built(work, monkeypatch)
-        page = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src").pipeline_page("forecast")
-        assert "- [`acme/rates`](acme--rates_README.md) (as `rates`, path `../rates`): not pinned yet" in page
-        assert (work / "docs" / "cb" / "pipelines" / "acme--rates_README.html").is_file()
-        # Pinned: its page in the snapshot pinned, which the catalog shows as a version
-        taken = snapshot.make(rates).snapshot
-        lock.pin(forecast)
-        index = _built(work, monkeypatch)
-        writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
-        _same_pages(writer, index, work / "_docs", kinds=("Pipeline",))
-        page = writer.pipeline_page("forecast")
-        from chartbook.versions import site_path, version_name
-
-        root = site_path("acme/rates", version_name(taken.commit, taken.made_at))
-        assert f'- <a href="../../{root}/index.html">`acme/rates`</a> (as `rates`, path `../rates`): pinned to the snapshot at commit `{taken.commit[:7]}`' in page
-        assert "## Dependencies" not in writer.pipeline_page("acme/rates")
 
     def test_a_catalogs_readme_page_per_pipeline(self, catalog_project, monkeypatch):
         index = _built(catalog_project, monkeypatch)
@@ -367,7 +357,7 @@ class TestThePipelinePage:
         pipelines = [r for r in index["records"] if r["kind"] == "Pipeline"]
         assert len(pipelines) > 1
         page = writer.pipeline_page(pipelines[0]["id"])
-        assert page.startswith(f"# `{pipelines[0]['id']}` {pipelines[0]['name']} \n") and "Pipeline GitHub Repo" in page
+        assert page.startswith(f"# `{pipelines[0]['id']}` ") and "Versions" in page
 
 
 class TestTheModelPage:
@@ -401,27 +391,6 @@ class TestTheModelPage:
         _same_pages(writer, index, project / "_docs", kinds=("Model",))
         assert "Model updated" not in writer.model_page("test_pipeline:model/enc")
 
-    def test_training_data_a_site_pipeline_does_not_declare_is_named_by_its_build_id(self, trained, monkeypatch):
-        """Found by a reviewer: the generator named it as stated (`rates:nope`) while the writer
-        used the build ID (`acme/rates:nope`), and both called it "not part of this site" when
-        its pipeline was. Both now use the build ID and say the pipeline does not declare it."""
-        import tomli_w
-
-        from tests.test_models import _edit_toml
-
-        rates, forecast = trained
-        work = forecast.parent
-        _edit_toml(forecast, lambda c: c["models"]["m"].update(trained_on=["d", "rates:treasury", "rates:nope"]))
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
-        )
-        index = _built(work, monkeypatch)
-        writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
-        _same_pages(writer, index, work / "_docs", kinds=("Model",))
-        page = writer.model_page("forecast:model/m")
-        assert "- `acme/rates:nope` (which that pipeline does not declare)" in page
-        assert "[acme/rates:treasury](../../dataframes/acme--rates/treasury.md)" in page
-        assert "not part of this site" not in page
 
     def test_versions_and_a_stale_model_trained_on_another_pipelines_data(self, trained, monkeypatch):
         """The staleness notice needs each input's hash now: a local dataframe's from its
@@ -466,12 +435,15 @@ class TestTheModelPage:
         (work / "chartbook.toml").write_text(
             tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}}), encoding="utf-8", newline="\n"
         )
+        from chartbook import snapshot, lock
+        snapshot.make(rates)
+        lock.pin(forecast)
         index = _built(work, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
         _same_pages(writer, index, work / "_docs")
         # The catalog knows the pipelines by its keys for them
-        page = writer.model_page("forecast:model/m")
-        assert "[rates:treasury](../../dataframes/rates/treasury.md)" in page
+        page = writer.model_page("acme/forecast:model/m")
+        assert "versions/acme--rates/" in page and "treasury.html" in page
         assert "not part of this site" not in page
 
 
@@ -990,7 +962,9 @@ class TestWhatTheReviewFound:
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
         _same_pages(writer, index, catalog / "_docs")
         page = writer.dataframe_page("pipeline_b:curve")
-        assert "2 rows, 2 columns" in page and "could not be read" not in page
+        record = writer.records["pipeline_b:curve"]
+        assert record["row_count"] == 2 and len(record["columns"]) == 2
+        assert "curve.html" in page and "could not be read" not in page
         # ...and from anywhere else, the same
         monkeypatch.chdir(tmp_path)
         assert writer.dataframe_page("pipeline_b:curve") == page

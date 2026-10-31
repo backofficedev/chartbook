@@ -196,6 +196,29 @@ def _get_dataframe_docs_info_from_catalog(
     manifest = load_manifest(base_dir=catalog_path.parent)
 
     pipeline_key = locate_in_catalog(manifest, pipeline)
+    if manifest.get("stores") is not None:
+        from chartbook import snapshot
+        from chartbook.hubs import selected_snapshots
+        import tomli
+        stores = manifest["stores"]
+        found, _ = snapshot.readable_snapshots(stores)
+        chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
+        if not chosen:
+            raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
+        taken = max(chosen, key=lambda t: t.made_at)
+        if not taken.documents:
+            raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
+        held = Path(stores.get(taken.documents["content_hash"], pipeline_key))
+        raw = tomli.loads((held / "chartbook.toml").read_text(encoding="utf-8"))
+        entry = raw.get("dataframes", {}).get(dataframe)
+        if not isinstance(entry, dict):
+            raise KeyError(f"{pipeline_key} declares no dataframe {dataframe!r} in its newest snapshot")
+        if entry.get("docs_path"):
+            plain = snapshot.safe_relative(entry["docs_path"])
+            if plain is None or snapshot._through_a_link(held, plain):
+                raise ValueError("The documentation path is not inside the snapshot's documents")
+            return "path", plain, held
+        return "str", entry.get("docs", ""), held
 
     pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())

@@ -20,7 +20,7 @@ For plotting:
 
 For CLI (install via pipx):
     pipx install chartbook
-    chartbook docs generate
+    chartbook docs build
 """
 
 import importlib

@@ -40,7 +40,7 @@ from typing import Callable, Iterable, Optional
 from importlib import metadata
 
 from chartbook.__about__ import __version__
-from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+from chartbook.manifest import _working_pipeline_ids, get_pipeline_manifest
 from chartbook.utils import is_glob_pattern
 
 #: Records what the build tree was built from. Lives at its root.
@@ -370,7 +370,7 @@ def plan_build(
     """
     build_dir = Path(build_dir)
     skipped = set(skip_pipelines)
-    pipeline_ids = [p for p in get_pipeline_ids(manifest) if p not in skipped]
+    pipeline_ids = [p for p in _working_pipeline_ids(manifest) if p not in skipped]
     fingerprints = {
         pipeline_id: pipeline_fingerprint(
             pipeline_id, get_pipeline_manifest(manifest, pipeline_id), (salts or {}).get(pipeline_id, "")
@@ -578,12 +578,15 @@ def snapshot_inputs(manifest: dict, project_dir: Path) -> dict[str, Optional[tup
     :returns: Mapping of path to (mtime in ns, size), or None if missing.
     """
     project_dir = Path(project_dir)
-    files = {project_dir / "chartbook.toml"}
+    files = {project_dir / ("catalog.toml" if (project_dir / "catalog.toml").is_file() else "chartbook.toml")}
+    stores = manifest.get("stores")
+    if stores is not None:
+        files.update(stores.all_snapshot_files())
     for key in ("logo", "favicon"):
         declared = manifest.get("project", {}).get(key)
         if declared:
             files.add(project_dir / declared)
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         files.update(pipeline_input_files(get_pipeline_manifest(manifest, pipeline_id)))
     return {str(path): _stamp(path) for path in sorted(files)}
 

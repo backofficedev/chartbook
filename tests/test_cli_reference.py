@@ -106,7 +106,7 @@ def _own_subsection(page: str, words: tuple) -> str:
     """The ``###`` subsection of a subcommand, if the page gives it one; else its group's section.
 
     The heading names the group as well as the subcommand: two groups may
-    have a subcommand of one name, as `docs generate` and `catalog generate`
+    have a subcommand of one name, as `docs build` and `catalog build`
     do, and the first `### … generate` on the page was the wrong one.
     """
     if len(words) > 1:
@@ -226,7 +226,7 @@ def test_a_usage_line_shows_every_option(words, command, page):
 def test_the_size_threshold_says_what_it_governs(page):
     """Found by a reviewer: `docs --help` still said "memory-efficient loading" after
     the glimpse stopped depending on the size; the page and the help now say the same."""
-    (option,) = [p for p in main.commands["docs"].commands["generate"].params if "--size-threshold" in getattr(p, "opts", [])]
+    (option,) = [p for p in main.commands["docs"].commands["build"].params if "--size-threshold" in getattr(p, "opts", [])]
     assert "date range" in option.help and "memory-efficient" not in option.help
     (row,) = [line for line in page.splitlines() if line.startswith("| `--size-threshold FLOAT`")]
     assert "date range" in row

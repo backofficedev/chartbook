@@ -424,7 +424,7 @@ class TestStaleness:
         assert version.trained_on == taken.assets["model/m"]["trained_on"]
         assert record["versions"][0]["trained_on"] == version.trained_on
         monkeypatch.chdir(forecast)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text(encoding="utf-8")
         assert "**Out of date.** This file is version `" in page
@@ -467,7 +467,7 @@ class TestStaleness:
         assert result.exception is None or isinstance(result.exception, SystemExit), result.output
         assert "trained_on: not checked" in result.output
         # A site of a pipeline with a model needs the store: it stops, saying what to do
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 1 and isinstance(result.exception, SystemExit), result.output
         assert "Error: The store at" in result.output and "chartbook store migrate" in result.output
 
@@ -911,7 +911,7 @@ class TestCommands:
         second = _version(forecast)
         _manifest(forecast, {"champion": second})
         monkeypatch.chdir(forecast)
-        result = self._run("docs", "generate", "./docs", "-f", "--keep-build-dirs")
+        result = self._run("docs", "build", "./docs", "-f", "--keep-build-dirs")
         assert result.exit_code == 0, result.output
         text = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text(encoding="utf-8")
         assert "## Versions" in text

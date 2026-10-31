@@ -273,22 +273,6 @@ class TestCheckSaysTheIdChanged:
         _depending_on(second, "first_pipeline", '{ id = "testorg/first_pipeline" }')
         assert "calls itself" not in _check(second)
 
-    def test_a_catalog_key_its_folder_no_longer_gives_itself(self, renamed, tmp_path):
-        """Found by a new-user test: the entry `catalog add` wrote showed only the old ID's versions."""
-        first, second, old, new = renamed
-        catalog = tmp_path / "catalog"
-        catalog.mkdir()
-        (catalog / "chartbook.toml").write_text(
-            '[project]\ntype = "catalog"\n\n[pipelines.first_pipeline]\npath = "../first_pipeline"\n\n'
-            '[pipelines.second]\npath = "../second"\n', encoding="utf-8", newline="\n"
-        )
-        output = _check(catalog)
-        assert '[pipelines.first_pipeline] the pipeline in' in output
-        assert "calls itself testorg/first_pipeline now" in output
-        assert 'Name the entry "testorg/first_pipeline" to show them' in output
-        # And the dependency on it, by the catalog's own folder of it
-        assert 'Write "first_pipeline" = { id = "testorg/first_pipeline" }' in output
-        assert "pipelines.second" not in output
 
 
 def _catalog(folder: Path, pipelines: str) -> Path:
@@ -311,89 +295,11 @@ class TestTwoCheckoutsOfOneRepository:
     """Found by a review: under the new rule two checkouts of one repository derive one ID, and a
     `members` glob covering both made the whole catalog fail to load."""
 
-    def test_members_show_the_main_worktree_once(self, two_checkouts):
-        from chartbook.manifest import load_manifest
 
-        root, main, feature = two_checkouts
-        catalog = _catalog(root / "catalog", '[pipelines]\nmembers = ["../repos/*"]\n')
-        with pytest.warns(UserWarning, match="are checkouts of one repository") as said:
-            loaded = load_manifest(catalog)
-        assert list(loaded["pipelines"]) == ["testorg/first_pipeline"]
-        assert Path(loaded["pipelines"]["testorg/first_pipeline"]["pipeline_base_dir"]) == main.resolve()
-        assert str(feature.resolve()) in str(said[0].message)
 
-    def test_two_clones_show_the_one_found_first(self, two_checkouts, tmp_path):
-        from chartbook.manifest import load_manifest
-        from tests.fixtures import _git as run
 
-        root, main, feature = two_checkouts
-        run(root / "repos", "clone", "--quiet", str(main), str(root / "repos" / "zz-clone"))
-        run(root / "repos" / "zz-clone", "remote", "set-url", "origin", "git@github.com:testorg/first_pipeline.git")
-        catalog = _catalog(root / "catalog", '[pipelines]\nmembers = ["../repos/first_pipeline", "../repos/zz-clone"]\n')
-        with pytest.warns(UserWarning, match="are checkouts of one repository"):
-            loaded = load_manifest(catalog)
-        assert Path(loaded["pipelines"]["testorg/first_pipeline"]["pipeline_base_dir"]) == main.resolve()
 
-    def test_an_explicit_entry_wins_over_another_checkout(self, two_checkouts):
-        from chartbook.manifest import load_manifest
 
-        root, main, feature = two_checkouts
-        catalog = _catalog(
-            root / "catalog",
-            '[pipelines]\nmembers = ["../repos/*"]\n\n[pipelines."testorg/first_pipeline"]\npath = "../repos/first_pipeline"\n',
-        )
-        with pytest.warns(UserWarning, match="another checkout of the repository"):
-            loaded = load_manifest(catalog)
-        assert Path(loaded["pipelines"]["testorg/first_pipeline"]["pipeline_base_dir"]) == main.resolve()
-
-    def test_two_repositories_of_one_id_are_still_refused(self, tmp_path):
-        from chartbook.manifest import load_manifest
-
-        # One ID from two hosts: two repositories
-        for name, host in (("a", "github.com"), ("b", "gitlab.com")):
-            (tmp_path / "repos" / name).mkdir(parents=True)
-            (tmp_path / "repos" / name / "chartbook.toml").write_text(f"# {name}\n", encoding="utf-8", newline="\n")
-            _repository(tmp_path / "repos" / name, f"https://{host}/testorg/first_pipeline")
-        catalog = _catalog(tmp_path / "catalog", '[pipelines]\nmembers = ["../repos/*"]\n')
-        with pytest.raises(ValueError, match="two catalog members resolve to the same pipeline"):
-            load_manifest(catalog)
-
-    def test_catalog_add_of_both_adds_one(self, two_checkouts):
-        from click.testing import CliRunner
-
-        from chartbook.cli import main as cli
-
-        root, main, feature = two_checkouts
-        catalog = _catalog(root / "catalog", "[pipelines]\n")
-        result = CliRunner().invoke(
-            cli, ["catalog", "add", str(root / "repos" / "*"), "--catalog", str(catalog), "-y"]
-        )
-        assert result.exit_code == 0, result.output
-        assert "Already in catalog as 'testorg/first_pipeline' (another checkout of the same repository" in result.output
-        import tomli
-
-        assert list(tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]) == ["testorg/first_pipeline"]
-        # And once it is listed, adding the other checkout adds nothing
-        again = CliRunner().invoke(cli, ["catalog", "add", str(feature), "--catalog", str(catalog)])
-        assert "another checkout of the same repository" in again.output and "No new pipelines" in again.output
-
-    def test_catalog_add_lists_the_main_worktree_whatever_order_the_folders_come_in(self, two_checkouts):
-        """Found by CI: a glob's matches come in the filesystem's order, and on one filesystem the
-        worktree came first and became the entry, so the test above failed there and not elsewhere.
-        The main worktree is the entry, whatever the order; the other is another checkout of it."""
-        import tomli
-        from click.testing import CliRunner
-
-        from chartbook.cli import main as cli
-
-        root, main, feature = two_checkouts
-        catalog = _catalog(root / "catalog", "[pipelines]\n")
-        result = CliRunner().invoke(cli, ["catalog", "add", str(feature), str(main), "--catalog", str(catalog), "-y"])
-        assert result.exit_code == 0, result.output
-        pipelines = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]
-        assert list(pipelines) == ["testorg/first_pipeline"]
-        assert (catalog / pipelines["testorg/first_pipeline"]["path"]).resolve() == main.resolve()
-        assert f"(another checkout of the same repository, {main.resolve()}): first-feature/" in result.output
 
 
 class TestAForkIsNotTheSamePipeline:
@@ -525,20 +431,6 @@ class TestWhatCheckSaysOfIds:
 
 
 class TestWhatTheSecondReviewFound:
-    def test_two_repositories_from_one_template_are_two(self, tmp_path):
-        """Two repositories made from one template share its first commit, and have two addresses."""
-        from chartbook.manifest import load_manifest
-        from tests.fixtures import _git as run
-
-        alpha = tmp_path / "repos" / "alpha"
-        (alpha / "pipeline").mkdir(parents=True)
-        (alpha / "pipeline" / "chartbook.toml").write_text("", encoding="utf-8", newline="\n")
-        _repository(alpha, "https://github.com/acme/alpha")
-        run(tmp_path / "repos", "clone", "--quiet", str(alpha), str(tmp_path / "repos" / "beta"))
-        run(tmp_path / "repos" / "beta", "remote", "set-url", "origin", "https://github.com/acme/beta")
-        catalog = _catalog(tmp_path / "catalog", '[pipelines]\nmembers = ["../repos/*/pipeline"]\n')
-        with pytest.raises(ValueError, match="two catalog members resolve to the same pipeline"):
-            load_manifest(catalog)
 
     @pytest.fixture
     def transferred(self, tmp_path):
@@ -657,31 +549,3 @@ class TestWhatTheSecondReviewFound:
         result = CliRunner().invoke(cli, ["catalog", "add", str(folder), "--catalog", str(catalog)])
         assert result.exit_code == 0, result.output
         return result.output
-
-    def test_catalog_add_knows_a_checkout_members_found(self, two_checkouts):
-        root, main, feature = two_checkouts
-        catalog = _catalog(root / "catalog", '[pipelines]\nmembers = ["../repos/first_pipeline"]\n')
-        output = self._add(catalog, feature)
-        assert "Already in catalog as 'testorg/first_pipeline' (found by pipelines.members pattern" in output
-        assert "another checkout of the same repository" in output
-        assert "first-feature" not in (catalog / "chartbook.toml").read_text(encoding="utf-8")
-
-    def test_and_one_listed_under_another_key(self, two_checkouts):
-        """A key written before the ID changed, `testorg/first_copy`, still names the pipeline."""
-        root, main, feature = two_checkouts
-        catalog = _catalog(root / "catalog", '[pipelines."testorg/first_copy"]\npath = "../repos/first_pipeline"\n')
-        output = self._add(catalog, feature)
-        assert "Already in catalog as 'testorg/first_copy' (another checkout of the same repository" in output
-        assert "first-feature" not in (catalog / "chartbook.toml").read_text(encoding="utf-8")
-
-    def test_and_enables_a_disabled_one(self, two_checkouts):
-        import tomli
-
-        root, main, feature = two_checkouts
-        catalog = _catalog(
-            root / "catalog", '[pipelines."testorg/first_pipeline"]\npath = "../repos/first_pipeline"\ndisabled = true\n'
-        )
-        output = self._add(catalog, feature)
-        assert "Re-enabled 'testorg/first_pipeline' (another checkout of the same repository" in output
-        entry = tomli.loads((catalog / "chartbook.toml").read_text(encoding="utf-8"))["pipelines"]["testorg/first_pipeline"]
-        assert entry == {"path": "../repos/first_pipeline"}

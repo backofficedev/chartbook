@@ -1012,15 +1012,15 @@ class TestARenderedProjectBuilds:
         # `chartbook build` renders the site after `doit`; doit rendering it
         # too was every build rendering it twice. And `chartbook build`
         # there would run this file again
-        assert not [line for line in code if "chartbook" in line]
+        assert any("chartbook docs build -f" in line for line in code)
 
     def test_chartbook_docs_renders_it_before_anything_is_built(self, project):
         """The first thing the getting-started page has a new user run."""
-        result = _chartbook(project, "docs", "generate")
+        result = _chartbook(project, "docs", "build")
         assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
         assert "scaffold_test has built nothing it declares yet" in result.stderr
         assert f"  - notebook: _output/{NOTEBOOK}.ipynb" in result.stderr
-        assert "`chartbook build` runs its build script" in result.stderr
+        assert "`chartbook run` runs its build script" in result.stderr
         assert (project / "docs" / "index.html").is_file()
         page = project / "docs" / "cb" / "notebooks" / "scaffold_test" / f"{NOTEBOOK}.html"
         assert "Not built yet" in page.read_text(encoding="utf-8")
@@ -1028,7 +1028,7 @@ class TestARenderedProjectBuilds:
 
     def test_chartbook_build_builds_it(self, project):
         """`chartbook build` runs its `doit`, and then renders its site."""
-        result = _chartbook(project, "build", "-f")
+        result = _chartbook(project, "run")
         assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
         assert "scaffold_test: build" in result.stdout
         assert "Ran build in 1 pipeline(s)." in result.stdout
@@ -1036,7 +1036,7 @@ class TestARenderedProjectBuilds:
         assert "was called from this pipeline's own build script" not in result.stderr
         # doit ran what a first project needs, once each: not the tests, and
         # not the site, which `chartbook build` renders after it
-        assert _doit_lines(result.stdout + result.stderr) == ["config", f"run_notebooks:{NOTEBOOK}.ipynb.py"]
+        assert _doit_lines(result.stdout + result.stderr) == ["chartbook_docs", "config", f"run_notebooks:{NOTEBOOK}.ipynb.py"]
         assert not (project / "_output" / "pytest_results.xml").exists()
         assert (project / "docs" / "index.html").is_file()
         assert (project / "docs" / "index.json").is_file()
@@ -1162,7 +1162,7 @@ class TestTheQuestions:
         assert not (project / "reports").exists()
         assert (project / "chartbook.toml").is_file()
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate"])
+        result = CliRunner().invoke(main, ["docs", "build"])
         assert result.exit_code == 0, result.output
         assert (project / "docs" / "index.html").is_file()
 
@@ -1189,18 +1189,18 @@ class TestTheQuestions:
         generate_project(template_dir, temp_dir, WITH_CHARTBOOK)
         said = capfd.readouterr().out
         steps = said[said.index("Next steps:"):]
-        for command in ("chartbook docs generate", "chartbook build -f", "chartbook docs open", "chartbook check"):
+        for command in ("chartbook docs build", "chartbook run", "chartbook docs open", "chartbook check"):
             assert f"  {command}" in steps
         # The site comes first, before anything is installed
-        assert steps.index("chartbook docs generate") < steps.index("pip install -r requirements.txt")
+        assert steps.index("chartbook docs build") < steps.index("pip install -r requirements.txt")
 
     def test_with_uv_the_readme_activates_the_environment_before_chartbook_build(self, template_dir, temp_dir):
         """After `uv sync` alone, a chartbook installed elsewhere ran a `doit` that is not on PATH."""
         project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": "uv"}))
         readme = (project / "README.md").read_text(encoding="utf-8")
         quick_start = readme[readme.index("uv sync"):readme.index("And that's it!")]
-        assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook build -f")
-        assert "uv run chartbook build -f" in readme
+        assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook run")
+        assert "uv run chartbook run" in readme
 
     def test_without_chartbook_the_next_step_is_doit(self, template_dir, temp_dir, capfd):
         generate_project(template_dir, temp_dir, MINIMAL_CONTEXT)

@@ -3313,4 +3313,17 @@ def default_store() -> Store:
     """
     from chartbook.config import get_store_url
 
-    return store_for_url(get_store_url())
+    from chartbook.multi_store import Stores, selected_store
+
+    selected = selected_store.get()
+    if selected is not None:
+        return selected
+    stores = Stores.configured()
+    return stores.default() if len(stores.entries) == 1 and stores.catalog is None else stores
+
+
+def __getattr__(name):
+    if name == "Stores":
+        from chartbook.multi_store import Stores
+        return Stores
+    raise AttributeError(name)

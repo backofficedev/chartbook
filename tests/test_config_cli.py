@@ -9,6 +9,14 @@ from chartbook import config
 from chartbook.cli import main
 
 
+@pytest.fixture(autouse=True)
+def modern_catalog_file(request):
+    if "catalog_project" in request.fixturenames:
+        root = request.getfixturevalue("catalog_project")
+        if (root / "chartbook.toml").exists():
+            (root / "chartbook.toml").rename(root / "catalog.toml")
+
+
 @pytest.fixture
 def fake_config_dir(tmp_path, monkeypatch):
     """Redirect the global config directory to a temporary path."""

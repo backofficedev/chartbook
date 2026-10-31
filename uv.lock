@@ -704,6 +704,7 @@ dependencies = [
     { name = "sphinx-external-toc" },
     { name = "tomli" },
     { name = "tomli-w" },
+    { name = "tomlkit" },
 ]
 
 [package.optional-dependencies]
@@ -784,6 +785,7 @@ requires-dist = [
     { name = "sphinx-external-toc", specifier = ">=1.0.1" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "tomli-w", specifier = ">=1.1.0" },
+    { name = "tomlkit", specifier = ">=0.13" },
 ]
 provides-extras = ["databricks", "mkdocs", "s3"]
 

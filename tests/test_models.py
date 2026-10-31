@@ -34,7 +34,7 @@ METRICS = {"rmse": 0.2123456789, "mae": 0.17, "n_train": 5120, "converged": True
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = Path(project_dir) / "chartbook.toml"
+    toml_path = Path(project_dir) / ("catalog.toml" if (Path(project_dir) / "catalog.toml").is_file() else "chartbook.toml")
     config = tomli.loads(toml_path.read_text(encoding="utf-8"))
     edit(config)
     toml_path.write_text(tomli_w.dumps(config), encoding="utf-8", newline="\n")
@@ -428,7 +428,7 @@ class TestModelPage:
     @pytest.fixture
     def site(self, project, monkeypatch):
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         return project / "docs"
 
@@ -474,7 +474,7 @@ class TestModelPage:
 
     def test_a_pipeline_without_models_is_unchanged(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Pipeline Models" not in (pipeline_project / "docs" / "index.html").read_text(encoding="utf-8")
         assert not (pipeline_project / "docs" / "cb" / "models").exists()
@@ -482,7 +482,7 @@ class TestModelPage:
     def test_malformed_metrics_do_not_break_the_build(self, project, monkeypatch):
         (project / "_output" / "forecaster_metrics.json").write_text("not json", encoding="utf-8", newline="\n")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         text = _page_text(
             project / "docs" / "cb" / "models" / "test_pipeline" / "forecaster.html"
@@ -492,8 +492,10 @@ class TestModelPage:
 
 class TestCatalogSite:
     def _build(self, catalog, monkeypatch):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         return catalog / "docs"
 
@@ -575,26 +577,6 @@ class TestCheck:
         missing = [f for t, f, _ in self._problems(project) if t == "models.encoder"]
         assert "docs" not in missing
 
-    def test_a_catalog_policy_can_set_what_models_require(self, tmp_path):
-        catalog = create_catalog_project(tmp_path / "cat")
-        add_models(catalog / "pipelines" / "pipeline_a")
-
-        def edit(config):
-            config.setdefault("policy", {})["required"] = {"models": ["name", "owner"]}
-
-        _edit_toml(catalog, edit)
-        manifest = load_manifest(catalog)
-        assert manifest["policy"]["required"]["models"] == ["name", "owner"]
-        found = sorted(
-            (p.table, p.field)
-            for p in run_checks(manifest, catalog)
-            if p.table.startswith("models.")
-        )
-        assert found == [
-            ("models.encoder", "name"),
-            ("models.encoder", "owner"),
-            ("models.forecaster", "owner"),
-        ]
 
     def test_summary_counts_models_only_where_there_are_some(
         self, pipeline_project, monkeypatch
@@ -683,12 +665,12 @@ class TestIncremental:
     def test_second_incremental_build_keeps_the_model_pages(self, project, monkeypatch):
         monkeypatch.chdir(project)
         runner = CliRunner()
-        first = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        first = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         page = project / "_docs" / "cb" / "models" / "test_pipeline" / "forecaster.md"
         written_at = page.stat().st_mtime_ns
 
-        second = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        second = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert second.exit_code == 0, second.output
         assert "regenerated 0 of 1 pipeline(s)" in second.output
         assert page.stat().st_mtime_ns == written_at
@@ -697,12 +679,12 @@ class TestIncremental:
     def test_new_scores_reach_the_page(self, project, monkeypatch):
         monkeypatch.chdir(project)
         runner = CliRunner()
-        assert runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"]).exit_code == 0
+        assert runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"]).exit_code == 0
 
         metrics_file = project / "_output" / "forecaster_metrics.json"
         metrics_file.write_text(json.dumps({"rmse": 0.05}), encoding="utf-8", newline="\n")
         self._touch(metrics_file)
-        result = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        result = runner.invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
         assert "regenerated 1 of 1 pipeline(s)" in result.output
         text = _page_text(
@@ -770,19 +752,6 @@ class TestTrainedOnAnotherPipeline:
         record = self._model_record(index.build_index(load_manifest(pipeline_project)))
         assert record["inputs"] == ["test_pipeline:dataframe_0", "acme/rates:treasury"]
 
-    def test_in_a_catalog_the_input_gets_the_id_it_has_there(self, tmp_path):
-        catalog = _scoped_catalog(tmp_path)
-        self._add_model(
-            catalog / "pipelines" / "pipeline_a",
-            ["pipeline_b:dataframe_0"],
-            pipeline_b={"path": "../pipeline_b"},
-        )
-        built = index.build_index(load_manifest(catalog))
-        record = self._model_record(built)
-        assert record["id"] == "acme/pipeline_a:model/m"
-        assert record["inputs"] == ["acme/pipeline_b:dataframe_0"]
-        # ...which is the ID of a record in the same index
-        assert "acme/pipeline_b:dataframe_0" in [r.get("id") for r in built["records"]]
 
     def test_a_catalog_page_links_to_the_other_pipelines_dataframe(
         self, tmp_path, monkeypatch
@@ -790,50 +759,41 @@ class TestTrainedOnAnotherPipeline:
         catalog = _scoped_catalog(tmp_path)
         self._add_model(
             catalog / "pipelines" / "pipeline_a",
-            ["pipeline_b:dataframe_0", "elsewhere:rates"],
+            ["pipeline_b:dataframe_0"],
             pipeline_b={"path": "../pipeline_b"},
-            elsewhere={"git": "https://example.org/acme/elsewhere.git"},
         )
+        from tests.test_model_versions import _git
+        from chartbook import snapshot, lock
+        _git(catalog, "init", "--quiet", "-b", "main")
+        _git(catalog, "add", "-A")
+        _git(catalog, "commit", "--quiet", "-m", "Catalog")
+        snapshot.make(catalog / "pipelines" / "pipeline_b")
+        lock.pin(catalog / "pipelines" / "pipeline_a")
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
-        page_file = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
+        page_file = catalog / "docs" / "cb" / "models" / "pipeline_a" / "m.html"
         page = page_file.read_text(encoding="utf-8")
-        assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page
+        assert "versions/pipeline_b/" in page
+        assert "/cb/dataframes/pipeline_b/dataframe_0.html" in page
         assert (
-            catalog / "docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.html"
+            catalog / "docs" / "cb" / "dataframes" / "pipeline_b" / "dataframe_0.html"
         ).is_file()
         text = _page_text(page_file)
-        assert "acme/pipeline_b:dataframe_0 - Dataframe 0" in text
-        assert "elsewhere:rates (in another pipeline, which is not part of this site)" in text
+        assert "pipeline_b:dataframe_0 - Dataframe 0" in text
 
     def test_alone_the_page_names_it_without_a_link(self, pipeline_project, monkeypatch):
         self._add_model(pipeline_project, ["rates:treasury"], rates={"path": "../rates"})
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         page_file = pipeline_project / "docs" / "cb" / "models" / "test_pipeline" / "m.html"
         assert "rates:treasury (in another pipeline" in _page_text(page_file)
         assert "dataframes/rates" not in page_file.read_text(encoding="utf-8")
 
-    def test_check_catches_a_dataframe_the_other_pipeline_does_not_have(self, tmp_path):
-        catalog = _scoped_catalog(tmp_path)
-        self._add_model(
-            catalog / "pipelines" / "pipeline_a",
-            ["pipeline_b:no_such_table"],
-            pipeline_b={"path": "../pipeline_b"},
-        )
-        problems = [
-            p
-            for p in run_checks(load_manifest(catalog), catalog)
-            if p.field == "trained_on" and "does not declare" in p.message
-        ]
-        (problem,) = problems
-        assert problem.table == "models.m"
-        assert "'pipeline_b:no_such_table'" in problem.message
-        assert "'acme/pipeline_b'" in problem.message
-        assert "dataframe_0" in problem.message
 
     def test_check_says_nothing_about_a_pipeline_it_cannot_see(self, pipeline_project):
         """A git dependency is not fetched, so there is no manifest to read."""
@@ -867,14 +827,6 @@ class TestPolicy:
             if p.table.startswith("models.") and "required by" in p.message
         )
 
-    def test_a_catalog_can_drop_the_write_up(self, tmp_path):
-        catalog = create_catalog_project(tmp_path / "cat")
-        add_models(catalog / "pipelines" / "pipeline_a")
-        _edit_toml(
-            catalog,
-            lambda c: c.setdefault("policy", {}).update(required={"models": ["name"]}),
-        )
-        assert self._model_problems(catalog) == [("models.encoder", "name")]
 
     def test_a_pipeline_may_set_its_own_policy(self, project):
         """It applies when the pipeline is checked alone."""
@@ -886,16 +838,11 @@ class TestPolicy:
         assert "sources" in manifest["policy"]["required"]["dataframes"]
         assert self._model_problems(project) == []
 
-    def test_a_pipelines_policy_does_not_bind_the_catalog(self, tmp_path):
-        catalog = create_catalog_project(tmp_path / "cat")
-        pipeline = add_models(catalog / "pipelines" / "pipeline_a")
-        _edit_toml(pipeline, lambda c: c.update(policy={"required": {"models": []}}))
-        assert ("models.encoder", "name") in self._model_problems(catalog)
 
     def test_a_pipeline_with_a_policy_builds(self, project, monkeypatch):
         _edit_toml(project, lambda c: c.update(policy={"required": {"models": ["path"]}}))
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
     def test_a_strict_pipeline_policy_fails_its_own_build(self, project, monkeypatch):
@@ -906,7 +853,7 @@ class TestPolicy:
             ),
         )
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 1
         assert "The policy is 'strict'" in result.output
         assert "model 'test_pipeline:encoder' missing: name" in result.output

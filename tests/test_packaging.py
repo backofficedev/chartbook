@@ -430,7 +430,8 @@ def test_the_examples_dodo_builds_every_member_of_its_catalog():
     from chartbook.manifest import catalog_member_dirs
 
     examples = _dodo("examples/dodo.py")
-    assert set(examples.PIPELINE_DIRS) == set(catalog_member_dirs(examples.CATALOG_DIR).values())
+    expected = {path.parent for path in examples.BASE_DIR.glob("*/chartbook.toml")}
+    assert set(examples.PIPELINE_DIRS) == expected
 
 
 def test_unchanged_compares_with_what_the_task_left():

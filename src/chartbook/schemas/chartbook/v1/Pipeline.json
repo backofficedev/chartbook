@@ -57,7 +57,8 @@
         "kind": {
           "enum": [
             "path",
-            "git"
+            "git",
+            "store"
           ]
         },
         "value": {
@@ -271,6 +272,9 @@
               "type": "string"
             },
             "description": "The git tags on the snapshot's commit when it was made: its names."
+          },
+          "store": {
+            "type": "string"
           }
         }
       }
@@ -290,6 +294,10 @@
           "type": "string"
         }
       }
+    },
+    "links": {
+      "type": "array",
+      "description": "Working-copy overrides used by this build; never part of a snapshot."
     }
   },
   "additionalProperties": true

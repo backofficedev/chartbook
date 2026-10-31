@@ -34,7 +34,7 @@ from chartbook.manifest import (
     _read_manifest_file,
     _resolve_policy,
     get_pipeline_dirs,
-    get_pipeline_ids,
+    _working_pipeline_ids,
     get_pipeline_manifest,
     resolve_project_type,
 )
@@ -82,13 +82,13 @@ def _kept(manifest: dict, missing) -> bool:
 def not_built_hint(manifest: dict) -> str:
     """What to run when :func:`check_paths` found a lone pipeline that has built nothing yet.
 
-    `chartbook build` is named only when there is a build script for it to
-    run, as `chartbook docs generate` names it.
+    `chartbook run` is named only when there is a build script for it to
+    run, as `chartbook docs build` names it.
     """
     build = (
-        "`chartbook build` builds it"
+        "`chartbook run` builds it"
         if manifest["project"].get("build")
-        else "build its outputs (it has no build script for `chartbook build` to run)"
+        else "build its outputs (it has no build script for `chartbook run` to run)"
     )
     return f"Nothing is built yet: {build}, and the same check with --skip-outputs checks the rest without it."
 
@@ -167,7 +167,7 @@ def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
     """
     path = Path(path)
     if path.is_dir():
-        path = path / "chartbook.toml"
+        path = path / ("catalog.toml" if (path / "catalog.toml").is_file() else "chartbook.toml")
     if not path.is_file():
         raise FileNotFoundError(f"No policy file found at {path}")
     raw = _parse_toml_file(path)  # a syntax error names the file
@@ -258,7 +258,7 @@ def check_paths(
     missing_files = validate_source_files(manifest, base_dir)
     # A lone pipeline that has built nothing yet (a project just made, a
     # fresh clone) lacks every output, which is not a mistake in its
-    # manifest; told as `chartbook docs generate` tells it
+    # manifest; told as `chartbook docs build` tells it
     unbuilt = (
         not skip_outputs
         and manifest["project"].get("type") == "pipeline"
@@ -293,7 +293,7 @@ def check_paths(
 
     # A series' write-up. The build does not render these yet, so nothing
     # else notices when one is missing.
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
         for dataframe_id, dataframe in (pipeline_manifest.get("dataframes") or {}).items():
@@ -320,7 +320,7 @@ def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
     from chartbook.models import read_metrics
 
     problems = []
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
         for model_id, model in (pipeline_manifest.get("models") or {}).items():
@@ -969,7 +969,7 @@ def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
     from chartbook.run import build_tool_runs_chartbook_build
 
     problems = []
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         directory = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
         command = str((pipeline_manifest.get("project") or {}).get("build") or "").strip()
@@ -992,14 +992,14 @@ def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
                     f"{name}, line {number}, runs `chartbook build` ({line}), and the build command runs "
                     f"{name}: under `chartbook build` the site would be rendered twice, and under a plain "
                     f"build-tool run the build would run inside itself. Since 0.2.0 the command that renders "
-                    f"the site is `chartbook docs generate -f`: say that in {name}",
+                    f"the site is `chartbook docs build -f`: say that in {name}",
                 )
             )
         else:
             warnings.warn(
                 f"{display_path(directory / name, Path.cwd())}, line {number}: `chartbook build` renders the "
                 f"site here only because no build command is declared; the command that renders is "
-                f"`chartbook docs generate -f`, and with a build command `chartbook build` would run it first",
+                f"`chartbook docs build -f`, and with a build command `chartbook build` would run it first",
                 UserWarning,
                 stacklevel=2,
             )
@@ -1272,7 +1272,7 @@ def check_licenses(
     """
     today = today or date.today()
     problems = []
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         toml_file = _manifest_file(manifest, pipeline_id, base_dir)
         licensed = [
@@ -1476,8 +1476,11 @@ def run_checks(
     :returns: Every problem found, sorted by file then table; empty for a
         healthy project.
     """
+    if manifest["project"]["type"] == "catalog":
+        raise ValueError("Catalog member checks are gone. Use snapshot metadata on the Diagnostics page.")
     base_dir = Path(base_dir).resolve()
     problems = [
+        *check_links(manifest, base_dir),
         *check_required_fields(
             manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
         ),
@@ -1496,3 +1499,23 @@ def run_checks(
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))
+
+
+def check_links(manifest, base_dir):
+    from chartbook.links import NAME, read
+    import subprocess
+    if manifest["project"]["type"] != "pipeline":
+        return []
+    path = Path(base_dir) / NAME
+    if not path.exists():
+        return []
+    try:
+        linked = read(base_dir, active=False)
+    except ValueError as error:
+        return [Problem(path, "links", "", str(error))]
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", "--", NAME], cwd=base_dir, capture_output=True).returncode == 0
+    if tracked:
+        return [Problem(path, "links", "", "A tracked chartbook.links.toml is not portable. Remove it from git and add it to .gitignore.")]
+    for pipeline, folder in linked.items():
+        warnings.warn(f"Linked dependency {pipeline}: {folder}; its pin is not in use.", stacklevel=2)
+    return []
