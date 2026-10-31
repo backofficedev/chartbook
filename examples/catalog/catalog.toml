@@ -1,0 +1,12 @@
+[project]
+requires_chartbook = ">=0.4.0"
+type = "catalog"
+name = "ChartBook Catalog"
+maintainer = "Jeremy Bejarano"
+copyright = "2025"
+logo = "./logo.png"
+
+# Replace this URL with the folder or bucket that holds the published examples.
+# CHARTBOOK_STORE overrides it for an isolated example run.
+[stores.examples]
+url = "~/.chartbook/store"

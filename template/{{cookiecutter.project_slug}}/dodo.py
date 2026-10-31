@@ -522,12 +522,24 @@ def task_run_pytest():
     }
 
 
-## `doit` on its own (and so `chartbook build`) runs every task in this file
+{% if cookiecutter.include_chartbook %}
+def task_chartbook_docs():
+    """Render the pipeline site after its data and charts have been built."""
+    return {
+        "actions": ["chartbook docs build -f"],
+        "task_dep": [name for name in _doit_tasks(globals()) if name not in ("chartbook_docs", "run_pytest")],
+        "verbosity": 2,
+    }
+
+
+{% endif %}
+
+## `doit` on its own (and so `chartbook run`) runs every task in this file
 ## but the tests, which run with `doit run_pytest`.
 ##
 ## This block must stay the last thing in the file. It lists the tasks
 ## defined above it, as the file is read, so a task added below it is not
-## in the list: plain `doit` and `chartbook build` do not run it, and what
+## in the list: plain `doit` and `chartbook run` do not run it, and what
 ## it makes is not built. A task is what doit takes for one: a function whose
 ## name starts with `task_` (or a method), defined here or imported, or
 ## anything with a `create_doit_tasks`; but not doit's own `task_params`.

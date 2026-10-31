@@ -140,7 +140,7 @@ conda activate my_project
 pip install -r requirements.txt
 
 # Run every task but the tests, then render the ChartBook site
-chartbook build -f
+chartbook run
 
 # Or run every task but the tests, without the site
 doit

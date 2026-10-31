@@ -212,16 +212,37 @@ def task_build_rate_forecast():
     }
 
 
+def task_snapshot_fred_charts():
+    """Publish the FRED pipeline for the store catalog."""
+    return {
+        "actions": [f"chartbook snapshot --project-dir {FRED_CHARTS_DIR}"],
+        "file_dep": [*git_files(FRED_CHARTS_DIR), *made_by(FRED_CHARTS_DIR)],
+        "uptodate": [AT_COMMIT, IN_STORE],
+        "task_dep": ["build_fred_charts"],
+        "verbosity": 2,
+    }
+
+
+def task_snapshot_rate_forecast():
+    """Publish the consumer after its upstream pin and model are built."""
+    return {
+        "actions": [f"chartbook snapshot --project-dir {RATE_FORECAST_DIR}"],
+        "file_dep": [*git_files(RATE_FORECAST_DIR), *made_by(RATE_FORECAST_DIR)],
+        "uptodate": [AT_COMMIT, IN_STORE],
+        "task_dep": ["build_rate_forecast"],
+        "verbosity": 2,
+    }
+
+
 def task_generate_catalog():
     """Render the catalog's site"""
     return {
-        # The catalog shows each pipeline as its folder has it, what it
-        # pinned, and every snapshot of it in the store
-        "actions": [f"cd {CATALOG_DIR} && chartbook docs generate -f"],
+        # The catalog shows only published snapshots in its stores.
+        "actions": [f"cd {CATALOG_DIR} && chartbook docs build -f"],
         "file_dep": catalog_inputs(),
         "uptodate": context(),
         "targets": [CATALOG_DOCS / "index.html"],
-        "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
+        "task_dep": ["snapshot_yield_curve", "snapshot_fred_charts", "snapshot_rate_forecast"],
         "verbosity": 2,
     }
 
@@ -243,7 +264,7 @@ def task_check():
         # Checking the catalog checks every member pipeline against its
         # policy. Like the tests, it is run again when what it checks has
         # changed, not on every build.
-        "actions": [f"chartbook check --project-dir {CATALOG_DIR}"],
+        "actions": [f"chartbook check --project-dir {folder}" for folder in PIPELINE_DIRS],
         "file_dep": catalog_inputs(),
         "uptodate": context(),
         "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
