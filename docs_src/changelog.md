@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
 ### Read this first: upgrading from 0.3.0
 
 0.4.0 makes a catalog a view of stored snapshots. Its file is `catalog.toml`, and its `[stores]` table lists the stores to read. A pipeline appears after its owner makes a snapshot; the catalog no longer reads working folders. The snapshot layout, plugin Store contract, content hashes, and lockfile format are unchanged, so a 0.3.0 store needs no store migration.

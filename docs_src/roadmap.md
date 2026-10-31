@@ -34,7 +34,7 @@ moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read thi
 
 ## 0.4.0
 
-0.4.0 is planned in {doc}`design/plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
+0.4.0 carries out {doc}`design/plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
 every pipeline with a snapshot in any of them, every version of each rendered from the store alone,
 with the data dictionary as it was then and what changed between versions, and a page for the
 stores themselves. A machine may have several stores, one Drive folder per collaborator, say, with

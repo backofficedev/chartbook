@@ -1320,7 +1320,7 @@ _PROJECT_EXAMPLES = {
     "favicon": "./docs_src/favicon.ico",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
-    "requires_chartbook": ">=0.3.0",
+    "requires_chartbook": ">=0.4.0",
     "site_dir": "./docs_src/site/",
     "writer": "sphinx",
 }

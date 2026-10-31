@@ -3,11 +3,11 @@
 ```{note}
 A plan, written 2026-10-30, the day after 0.3.0 was released, from a conversation with the
 maintainer that day. It says what 0.4.0 is for, the rule at its centre (a catalog is its stores,
-and a machine may have several), and the order of the work. Status: **implemented in 0.4.0**. What the
+and a machine may have several), and the order of the work. Status: **built and released as 0.4.0** (2026-10-30). What the
 maintainer decided on 2026-10-30 is marked *decided*; the original proposal labels below
 are retained as design history. The fix for a
-pipeline's page in a catalog, found the same day, is not part of this plan: it ships first, as
-0.3.1 (the {doc}`../changelog`).
+pipeline's page in a catalog, found the same day, was planned as a separate 0.3.1 and instead
+folded into the hubs: no 0.3.1 was released.
 ```
 
 ## As built

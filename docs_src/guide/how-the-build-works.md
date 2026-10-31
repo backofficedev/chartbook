@@ -46,7 +46,7 @@ says. It is a flat list of records:
 {
   "schema": "chartbook/index/v1",
   "generated_at": "2026-10-15T19:02:11Z",
-  "generator": { "name": "chartbook", "version": "0.3.0" },
+  "generator": { "name": "chartbook", "version": "0.4.0" },
   "root": "ftsfr/fed_yield_curve",
   "records": [
     { "kind": "Pipeline", "version": "chartbook/v1", "id": "ftsfr/fed_yield_curve", "…": "…" },
