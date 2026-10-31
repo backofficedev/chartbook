@@ -579,6 +579,8 @@ def clear_keeping_its_bytes(store, taken) -> None:
     clears a snapshot whose bytes a lockfile pins.
     """
     import os
+    import shutil
+    import tempfile
 
     from chartbook.snapshot import materialized_name
     from chartbook.store import declared_name
@@ -595,8 +597,15 @@ def clear_keeping_its_bytes(store, taken) -> None:
             name = None
         else:
             name = declared_name(location.get("path", ""))
-        held = Path(store.get(content_hash, taken.pipeline, name=name))
-        store.put(held / name if name else held, links=("copy",))
+        kept = store.files(content_hash, taken.pipeline, name=name)
+        # Laid out whole in a scratch folder, as a 0.2 object was, and put from there
+        with tempfile.TemporaryDirectory() as scratch:
+            whole = Path(scratch) / "asset"
+            for file in kept.files:
+                target = whole.joinpath(*file.relative.split("/"))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(file.location, target)
+            store.put(whole / name if name else whole, links=("copy",))
     os.chmod(taken.path, 0o600)
     taken.path.unlink()
 

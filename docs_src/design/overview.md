@@ -340,7 +340,7 @@ $ chartbook store verify
 
 | What | Where |
 |---|---|
-| The store: `has`, `get`, `put`, `delete`, and `verify` | `chartbook/store.py`, `Store` |
+| The store: `has`, `files` (`get` until 0.5, which handed out a folder), `put`, `delete`, and `verify` | `chartbook/store.py`, `Store` |
 | The four kinds of link, and the one place they are tried in order | `chartbook/store.py`: `LINKS`, `_link()`, `_reflink()` |
 | Where the store is: `CHARTBOOK_STORE`, then `[store] url` in the user's `settings.toml`, then in the organization's, then `~/.chartbook/store/` | `chartbook/config.py`, `get_store_path()` |
 | `chartbook store verify` | `chartbook/cli.py` |

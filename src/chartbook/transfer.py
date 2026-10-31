@@ -38,9 +38,10 @@ def copy_snapshot(taken, source, target):
             if not files:
                 raise StoreError("Snapshot has an empty file listing")
             name = Path(files[0]["path"]).name if single else None
-            held = Path(source.get(part["content_hash"], taken.pipeline, name=name))
+            kept = source.files(part["content_hash"], taken.pipeline, name=name)
             place = files[0]["path"] if single else stored.get("at", "")
-            result = pending.put(held / name if single else held, place=place)
+            # Each file from where the source keeps it, by its path inside the asset: no folder is gathered
+            result = pending.put_listed([(file.relative, str(file.location)) for file in kept.files], place, single)
             if result.content_hash != part["content_hash"]:
                 raise StoreError(f"Copy of {part.get('id', 'documents')} failed hash verification")
             part["stored"] = result.stored

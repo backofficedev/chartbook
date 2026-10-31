@@ -45,8 +45,8 @@ class TestObjects:
         stored = store.put(a_file)
         assert stored.content_hash.startswith("sha256:") and stored.size_bytes == 7
         assert store.has(stored.content_hash)
-        held = store.get(stored.content_hash)
-        assert (Path(held) / "rates.parquet").read_bytes() == b"rates-1"
+        held = store.files(stored.content_hash)
+        assert held.one.relative == "rates.parquet" and held.one.location.read_bytes() == b"rates-1"
         assert list(store.hashes()) == [stored.content_hash]
         assert store.size_of(stored.content_hash) == 7
         assert store.age_of(stored.content_hash) >= 0
@@ -59,12 +59,13 @@ class TestObjects:
         other.write_bytes(b"rates-1")
         first, second = store.put(a_file), store.put(other)
         assert first.content_hash == second.content_hash
-        assert sorted(p.name for p in Path(store.get(first.content_hash)).iterdir()) == ["other.parquet", "rates.parquet"]
+        assert sorted(f.relative for f in store.files(first.content_hash).files) == ["other.parquet", "rates.parquet"]
+        assert store.files(first.content_hash, name="other.parquet").one.location.read_bytes() == b"rates-1"
 
     def test_a_missing_object_is_said(self, store):
         assert not store.has("sha256:" + "0" * 64)
         with pytest.raises(store_module.ObjectNotFoundError):
-            store.get("sha256:" + "0" * 64)
+            store.files("sha256:" + "0" * 64)
         # Gone since it was listed (another gc at the same time, a put replacing it): the same error
         with pytest.raises(store_module.ObjectNotFoundError, match="has no object sha256:0000"):
             store.age_of("sha256:" + "0" * 64)
@@ -163,8 +164,8 @@ class TestSnapshotFolders:
         here = "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa"
         assert store.files_of(one.content_hash) == [(f"{here}/_data/rates.parquet", 7)]
         assert store.has(one.content_hash) and store.has(many.content_hash)
-        assert (Path(store.get(one.content_hash)) / "rates.parquet").read_bytes() == b"rates-1"
-        assert sorted(p.name for p in Path(store.get(many.content_hash)).iterdir()) == ["a.txt", "b.txt"]
+        assert store.files(one.content_hash).one.location.read_bytes() == b"rates-1"
+        assert [f.relative for f in store.files(many.content_hash).files] == ["a.txt", "b.txt"]
         assert store.incomplete(one.content_hash, 7) is None and store.incomplete(many.content_hash, 2) is None
         assert store.verify() == []
 
@@ -186,9 +187,10 @@ class TestSnapshotFolders:
             "pipelines/acme+rates/2026-10-16T010203Z_aaaaaaaaaaaa/_data/parts/b.txt",
             "pipelines/acme+rates/2026-10-17T010203Z_bbbbbbbbbbbb/_data/parts/c.txt",
         }
-        # Gathered for a reader, from the two folders that keep them
-        gathered = Path(store.get(again.content_hash))
-        assert {p.name: p.read_bytes() for p in gathered.iterdir()} == {"a.txt": b"a", "b.txt": b"b", "c.txt": b"c"}
+        # Handed to a reader as its files, each where it is kept: nothing is gathered into one folder
+        kept = store.files(again.content_hash)
+        assert {f.relative: f.location.read_bytes() for f in kept.files} == {"a.txt": b"a", "b.txt": b"b", "c.txt": b"c"}
+        assert not kept.in_place()
         assert store.verify() == []
 
     def test_one_not_written_leaves_nothing(self, store, tmp_path):
@@ -208,7 +210,7 @@ class TestSnapshotFolders:
         second.write(self._record(second, "b" * 40, parts=again))
         assert store.remove_snapshot(record) is True
         assert not store.has(one.content_hash)
-        assert store.has(parts.content_hash) and (Path(store.get(parts.content_hash)) / "a.txt").read_bytes() == b"a"
+        assert store.has(parts.content_hash) and store.files(parts.content_hash).one.location.read_bytes() == b"a"
         assert store.verify() == []
 
     def test_one_whose_record_was_written_is_kept_by_a_discard(self, store, tmp_path):

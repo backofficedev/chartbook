@@ -99,8 +99,7 @@ class TestTheWalk:
         fred, rates, forecast = chain
         store = default_store()
         series = _snapshot_of("acme/fred").assets["series"]["content_hash"]
-        held = Path(store.get(series))
-        for file in held.rglob("*"):
+        for file in (f.location for f in store.files(series).files):
             os.chmod(file, stat.S_IRUSR | stat.S_IWUSR)
             file.write_bytes(b"changed")
         assert lineage.walk(forecast).gaps() == []  # present, and not read again
@@ -260,7 +259,7 @@ class TestWhatTheReviewFound:
         work, model, serve, top, first = labelled
         store = default_store()
         (version,) = [h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]
-        for file in Path(store.get(version)).rglob("*"):
+        for file in (f.location for f in store.files(version).files):
             os.chmod(file, stat.S_IRUSR | stat.S_IWUSR)
             file.write_bytes(b"changed")
         assert any("is not what its name says" in gap for _, gap in lineage.walk(top, rehash=True).gaps())
@@ -309,10 +308,10 @@ class TestWhatTheThirdReviewFound:
         found, _ = snapshot.readable_snapshots(store)
         (maker,) = [t for t in found if t.pipeline == "acme/model" and t.assets["model/m"]["content_hash"] == version]
         clear_keeping_its_bytes(store, maker)
-        twin = Path(store.get(version)).parent / (version.split(":", 1)[1][:12] + "f" * 52)
+        twin = store.object_path(version).parent / (version.split(":", 1)[1][:12] + "f" * 52)
         import shutil
 
-        shutil.copytree(store.get(version), twin)
+        shutil.copytree(store.object_path(version), twin)
         assert len([h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]) == 2
         assert lineage.walk(top).gaps() == []
 

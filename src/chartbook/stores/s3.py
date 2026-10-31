@@ -16,11 +16,12 @@ cache folder for the bucket. The records are downloaded into it at their
 own names, each with the ETag the bucket gave it. Each file a reader asks
 for is downloaded once, into the cache's ``files/``, named by its hash and
 checked against it as it arrives: a file there is one whose bytes were
-checked, whichever record names it now. :meth:`S3Store.get` hands over a
-view in the cache that lays an asset's files out under their own names
-(:func:`chartbook.store.gather`). Offline, what was downloaded and checked
-before is served from the cache. Nothing else in ChartBook changes for a
-store that is remote; ``data.path()`` gives the path in the cache.
+checked, whichever record names it now. :meth:`S3Store.files` hands a
+reader those checked files, each by its path inside the asset
+(:class:`chartbook.store.KeptFiles`). Offline, what was downloaded and
+checked before is served from the cache. Nothing else in ChartBook changes
+for a store that is remote; ``data.path()`` of one file gives the checked
+file in the cache, named by its hash.
 
 A question of the store is one listing of ``pipelines/``, or of one
 pipeline's folder when the pipeline is known, and the records are read
@@ -104,9 +105,9 @@ from chartbook.store import (
     TMP_DIR,
     UNOWNED_DIR,
     V1_SCHEMA,
-    VIEWS_DIR,
     FolderStore,
     KeptAsset,
+    KeptFiles,
     KeptRecord,
     ObjectNotFoundError,
     PendingSnapshot,
@@ -130,7 +131,6 @@ from chartbook.store import (
     _split_hash,
     _unreadable_note_remedy,
     declared_name,
-    gather,
     is_snapshot_folder,
     kept_listing,
     pipeline_folder,
@@ -143,6 +143,7 @@ from chartbook.store import (
     this_machine,
     what_is_wrong,
     what_is_wrong_with,
+    unowned_files,
 )
 
 #: The query keys a store URL may carry. Never a credential.
@@ -479,11 +480,6 @@ class S3Store(Store):
     def cache(self) -> Path:
         """The folder on this machine that holds what was downloaded."""
         return self._root
-
-    @property
-    def views(self) -> Path:
-        """Where assets are laid out for readers, their files under their own names: ``views/`` in the cache."""
-        return self._root / VIEWS_DIR
 
     # -- talking to the bucket -------------------------------------------
 
@@ -1295,13 +1291,15 @@ class S3Store(Store):
             for asset in self._held(seen, content_hash, pipeline) for file in asset.files
         )
 
-    def get(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> Path:
-        """A folder on this machine with the asset's files under their own names, downloaded if they were not yet.
+    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
+        """The asset's files, each where the cache keeps it checked, downloaded if they were not yet (:meth:`chartbook.store.Store.files`).
 
-        Each file is downloaded once into the cache, and its hash checked
-        against its record's as it arrives; a copy whose sizes in the
-        bucket are not its record's, or whose bytes are not, is passed over
-        for the next. Offline, what the cache has whole is served.
+        Each file is downloaded once into the cache, by its hash, and its
+        hash checked against its record's as it arrives; a copy whose sizes
+        in the bucket are not its record's, or whose bytes are not, is
+        passed over for the next. Offline, what the cache has whole is
+        served. A file is kept under its hash, not its name: a reader is
+        told its path inside the asset, and reads the bytes where they are.
 
         :param pipeline: The pipeline the asset is of, whose folder is
             looked in first.
@@ -1320,8 +1318,8 @@ class S3Store(Store):
                 return cached
             raise
 
-    def _fetch(self, content_hash: str, pipeline: Optional[str], name: Optional[str]) -> Path:
-        """The rest of :meth:`get`, online: its pipeline's folder first, then every one."""
+    def _fetch(self, content_hash: str, pipeline: Optional[str], name: Optional[str]) -> KeptFiles:
+        """The rest of :meth:`files`, online: its pipeline's folder first, then every one."""
         missing = wrong = None
         tried: set = set()
         own = self._pipeline_seen(pipeline)
@@ -1361,7 +1359,7 @@ class S3Store(Store):
             )
         if not remote:
             raise ObjectNotFoundError(f"The store {self} has no object {content_hash}.")
-        return self._fetch_unowned(content_hash, remote)
+        return unowned_files(content_hash, self._fetch_unowned(content_hash, remote), name)
 
     def _bring(self, asset: KeptAsset, seen: _Seen) -> KeptAsset:
         """An asset with each of its files in the cache's checked files, downloaded and checked where one is not.
@@ -1380,17 +1378,22 @@ class S3Store(Store):
                 )
         return self._as_checked(asset)
 
-    def _for_a_reader(self, asset: KeptAsset, name: Optional[str]) -> Path:
-        """The folder a reader opens an asset in, laid out from the cache's checked files (:func:`chartbook.store.gather`)."""
-        return gather(_read_as(asset, name), self.views)
+    def _for_a_reader(self, asset: KeptAsset, name: Optional[str]) -> KeptFiles:
+        """An asset as a reader is handed it: its files where the cache keeps them checked, by their paths inside it."""
+        from chartbook.store import plain_parts
+
+        asset = _read_as(asset, name)
+        at = plain_parts(asset.at) if asset.at else []
+        home = asset.record.folder.joinpath(*at) if at else asset.record.folder
+        return KeptFiles(asset.content_hash, asset.single, tuple(sorted(asset.files, key=lambda file: file.relative)), home)
 
     def _from_the_cache(
         self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None, lay_out: bool = True
-    ) -> Optional[Path]:
-        """Where the cache has an asset whole, as it was downloaded and checked; None if it has not.
+    ) -> Optional[Union[Path, KeptFiles]]:
+        """What the cache has of an asset whole, as it was downloaded and checked; None if it has not.
 
-        :param lay_out: Whether to lay it out for a reader. Without, nothing
-            is made, and the path returned only says that it is there.
+        :param lay_out: Whether to hand it to a reader, as its files.
+            Without, the path returned only says that it is there.
         """
         held = [
             asset for record in self._cached_records() if record.readable for asset in record.assets
@@ -1401,7 +1404,9 @@ class S3Store(Store):
             if all(_is_there(self._checked(file.content_hash), file.size_bytes) for file in asset.files):
                 return self._for_a_reader(self._as_checked(asset), name) if lay_out else asset.record.path
         local = self._unowned_cache(content_hash)
-        return local if local.is_dir() else None
+        if not local.is_dir():
+            return None
+        return unowned_files(content_hash, local, name) if lay_out else local
 
     def _fetch_unowned(self, content_hash: str, remote: dict[str, dict]) -> Path:
         """Bring an object no pipeline owns into the cache, whole and checked, and return its folder.
@@ -1546,10 +1551,10 @@ class S3Store(Store):
         return True
 
     def _forget_cached(self, content_hash: str) -> None:
-        """Remove the cache's object of this hash and its view, the bucket's being gone."""
-        for folder in (self._unowned_cache(content_hash), self.views / content_hash.split(":", 1)[1]):
-            if folder.exists() and not folder.is_symlink():
-                _remove_tree(folder, own=True)
+        """Remove the cache's object of this hash, the bucket's being gone."""
+        folder = self._unowned_cache(content_hash)
+        if folder.exists() and not folder.is_symlink():
+            _remove_tree(folder, own=True)
         _found_whole.difference_update({(self.url, content_hash, True), (self.url, content_hash, False)})
 
     def hashes(self) -> Iterator[str]:

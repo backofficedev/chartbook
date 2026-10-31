@@ -118,21 +118,28 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
-        files: For a directory pinned from another pipeline, its parquet
-            files its record lists, under *path*: each named ``.parquet``,
+        files: For a folder or a glob read from the store, its parquet
+            files, each where the store keeps it: each named ``.parquet``,
             and each named otherwise that begins or ends as parquet does (Hive's
             ``000000_0``), but none that is plainly not a table (a
             ``README.txt``; :data:`NOT_TABLES`) or named as an engine's
             scan passes over (``.``, ``_``). What a reader reads, and
-            nothing else the folder may hold (a Finder ``.DS_Store``, a
-            sync service's copy). Empty otherwise.
-        listed: The files the record lists, by their path in the object,
-            whether or not they are read. Empty when the record lists none
-            (a file, a glob, a directory pinned before records listed files).
-            A directory whose listed files are all passed over (a folder of
-            CSVs) has *listed* and no *files*: ``data.path()`` gives the
-            folder, and a read of it as parquet is refused
+            nothing else. Empty otherwise.
+        listed: For a folder or a glob read from the store, every file of
+            it, by its path inside the asset, whether or not it is read.
+            Empty for a file, and for an asset read where it is.
+            A folder whose files are all passed over (a folder of CSVs) has
+            *listed* and no *files*: a read of it as parquet is refused
             (:func:`nothing_to_read`).
+        inside: For an asset read from the store, where each of its files
+            is, by its path inside the asset: the store keeps each file
+            once, so a later snapshot's files may sit in earlier snapshots'
+            folders, and none need be under *path*. Readers take the files
+            from here; *path* is then the folder the asset is listed from
+            in the snapshot that recorded it, which need not exist, and
+            ``data.path()`` refuses to hand it out
+            (:class:`chartbook.errors.NoSinglePathError`). Empty for an
+            asset read where it is.
         content_hash: The asset's hash when the store holds what is read
             (a pin, a version, a snapshot), so that its files' hashes can be
             taken from the store's record rather than read. None for what is
@@ -148,6 +155,7 @@ class FileLocation(Location):
     path: Path
     files: tuple = dataclasses.field(default=(), compare=False)
     listed: tuple = dataclasses.field(default=(), compare=False)
+    inside: Mapping = dataclasses.field(default_factory=dict, compare=False)
     content_hash: Optional[str] = dataclasses.field(default=None, compare=False)
     format: Optional[str] = dataclasses.field(default=None, compare=False)
     read_options: Mapping = dataclasses.field(default_factory=dict, compare=False)
@@ -943,7 +951,7 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
     unsynced = not_whole(store, record)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
-    from chartbook.formats import kept
+    from chartbook.formats import kept as kept_reading
     from chartbook.snapshot import materialized_name
     from chartbook.store import declared_name as _declared_name
     from chartbook.utils import is_glob_pattern as _is_glob
@@ -955,13 +963,13 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
         one = None
     else:
         one = _declared_name(record["location"].get("path", "")) or None
-    held = store.get(record["content_hash"], pipeline, name=one)
+    kept = store.files(record["content_hash"], pipeline, name=one)
     content_hash = record["content_hash"]
     # How its owner said to read it: the format and options its entry gave, or its declared path's ending
-    said = kept(record["location"])
+    said = kept_reading(record["location"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
-        return FileLocation(held / materialized_name(record), content_hash=content_hash)
+        return FileLocation(kept.one.location, content_hash=content_hash, inside={kept.one.relative: kept.one.location})
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
         # The files are laid out from the glob's fixed prefix. What follows
@@ -978,50 +986,44 @@ def _held(store, record: dict, pipeline: Optional[str] = None) -> Location:
                 f"{record.get('id')!r}: its record's path, {declared_path!r}, is not plain after its "
                 f"wildcard. The record is not one a store wrote, and is not read."
             )
-        return FileLocation(held.joinpath(*parts), content_hash=content_hash, **said)
-    from chartbook.store import declared_name
+        return _spread(record, kept, kept.home.joinpath(*parts), content_hash, said)
+    if isinstance(record.get("files"), list) or not kept.single:
+        # A directory, read as the files its record lists and nothing else
+        return _spread(record, kept, kept.home, content_hash, said)
+    return FileLocation(kept.one.location, content_hash=content_hash, inside={kept.one.relative: kept.one.location}, **said)
 
-    name = declared_name(declared_path) or Path(declared_path).name  # as put named it, on every system
-    if isinstance(record.get("files"), list):
-        # A directory, read as the files its record lists and nothing else in
-        # the folder; and, as an engine's scan of a folder does, none under a
-        # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
-        # nor one that is plainly not a table (a README.txt, a schema.json).
-        # A file named otherwise than .parquet is read if it begins or ends as
-        # parquet does (Hive's 000000_0, a .pq), and passed over if not (a
-        # schema.avsc, a plot.png, an Iceberg snap-1.avro), as DuckDB's read of
-        # the folder took only its parquet: no table is left out, not even one
-        # half written, and no file breaks the read
-        from chartbook.snapshot import files_read
-        from chartbook.store import StoreError, on_disk, plain_parts
 
-        read = []
-        for relative in sorted(files_read(record) or {}):
-            parts = plain_parts(relative)
-            if parts is None:
-                raise StoreError(
-                    f"{record.get('id')!r}: its record lists {relative!r}, which is not a plain path "
-                    f"in its object. The record is not one a store wrote, and is not read."
-                )
-            if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
-                continue
-            file = on_disk(held, parts)
-            if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
-                read.append(file)
-        # With what was listed: a folder none of whose files is a table (a
-        # folder of CSVs, a model's files) is still the folder for
-        # data.path(), and a parquet read of it is refused (nothing_to_read)
-        # rather than handed the folder, which would take whatever it holds
-        return FileLocation(
-            held, tuple(read), listed=tuple(sorted(files_read(record) or {})), content_hash=content_hash, **said
-        )
-    from chartbook.store import on_disk
+def _spread(record: dict, kept, path: Path, content_hash: str, said: dict) -> "FileLocation":
+    """A folder or a glob read from the store, as its files where the store keeps them.
 
-    own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
-    if not own.is_file():
-        # A directory pinned before records listed its files: the folder
-        return FileLocation(held, content_hash=content_hash, **said)
-    return FileLocation(own, content_hash=content_hash, **said)
+    The tables among them are read (:attr:`FileLocation.files`): as an
+    engine's scan of a folder does, none under a name starting "." or "_"
+    (Spark's _SUCCESS, Hadoop's .crc files), nor one that is plainly not a
+    table (a README.txt, a schema.json). A file named otherwise than
+    .parquet is read if it begins or ends as parquet does (Hive's 000000_0,
+    a .pq), and passed over if not (a schema.avsc, a plot.png, an Iceberg
+    snap-1.avro), as DuckDB's read of the folder took only its parquet: no
+    table is left out, not even one half written, and no file breaks the
+    read. Every file is listed, and where each is said, for a reader of
+    files that are not tables (:func:`chartbook.assets.files`).
+    """
+    from chartbook.store import StoreError, plain_parts
+
+    inside = {}
+    read = []
+    for file in kept.files:
+        parts = plain_parts(file.relative)
+        if parts is None:
+            raise StoreError(
+                f"{record.get('id')!r}: its record lists {file.relative!r}, which is not a plain path "
+                f"in its object. The record is not one a store wrote, and is not read."
+            )
+        inside[file.relative] = file.location
+        if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
+            continue
+        if parts[-1].lower().endswith(".parquet") or _is_parquet(file.location):
+            read.append(file.location)
+    return FileLocation(path, tuple(read), listed=tuple(sorted(inside)), inside=inside, content_hash=content_hash, **said)
 
 
 #: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.

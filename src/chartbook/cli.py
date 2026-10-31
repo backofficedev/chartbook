@@ -117,6 +117,44 @@ def main(ctx):
     # `install` is what mends it, and `check` says it as a warning of its own
     if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "check"):
         _say_if_the_skill_is_stale()
+    if not ctx.resilient_parsing:
+        _remove_old_views()
+
+
+def _remove_old_views() -> None:
+    """Remove what ChartBook 0.4 gathered into this machine's cache for reading, once; this version reads files where the store keeps them.
+
+    0.4 laid an asset whose files sit in several snapshot folders out
+    together under ``cache/views/<hash>/``, and nothing removed the folder.
+    The cache is disposable by definition, so the folder goes the first time
+    a command finds it, and one line on stderr says so. A read-only file in
+    it (Windows) goes too.
+    """
+    import os
+
+    from chartbook.config import get_cache_path
+    from chartbook.store import OLD_VIEWS_DIR, _remove_tree
+
+    try:
+        cache = get_cache_path()
+    except (ValueError, OSError):
+        return
+    leftovers = [cache / OLD_VIEWS_DIR]
+    for depth in ("*", "*/*", "*/*/*"):
+        leftovers.extend(cache.glob(f"s3/{depth}/{OLD_VIEWS_DIR}"))  # a bucket's cache, laid out as a folder store
+    for folder in leftovers:
+        if not folder.is_dir() or folder.is_symlink():
+            continue
+        try:
+            _remove_tree(folder, own=True)
+        except OSError:
+            continue
+        if not os.path.lexists(folder):
+            click.echo(
+                f"Removed {folder}: ChartBook 0.4 gathered copies of data there for reading, and this version "
+                f"reads files where the store keeps them.",
+                err=True,
+            )
 
 
 def _stderr_is_a_terminal() -> bool:
@@ -1227,7 +1265,10 @@ def path_command(ref, kind, project_dir, list_files):
     The pipeline must be in [dependencies], and what is printed is the path
     of the copy that chartbook.lock pins, in the store: not the other
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
-    it is until `chartbook update`.
+    it is until `chartbook update`. Another pipeline's folder or glob of
+    files has no one path, since the store keeps each file once and a later
+    snapshot's files may sit in earlier snapshot folders: print them with
+    --files.
 
     With --files, the asset's files are printed instead, one per line: the
     file, a folder's files, or a glob's matches, as
@@ -1242,11 +1283,18 @@ def path_command(ref, kind, project_dir, list_files):
     """
     from chartbook.assets import files as resolve_files
     from chartbook.assets import path as resolve_path
+    from chartbook.errors import NoSinglePathError
     from chartbook.store import StoreError
 
     resolver = resolve_files if list_files else resolve_path
     try:
         found = resolver(ref, kind=kind, project_dir=project_dir or Path.cwd())
+    except NoSinglePathError as e:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True) + _said(e) + f" `chartbook path {ref} --files` prints them, one per line.",
+            err=True,
+        )
+        raise SystemExit(1)
     except (LookupError, FileNotFoundError, ValueError, TypeError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)

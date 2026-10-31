@@ -76,7 +76,7 @@ def _snapshot_again(rates: Path, value: float, made_at=None) -> snapshot.Snapsho
 
 def _object_file(taken: snapshot.Snapshot) -> Path:
     """The treasury file of a snapshot's object, writable, as a sync service would write it."""
-    held = default_store().get(taken.assets["treasury"]["content_hash"]) / "treasury.parquet"
+    held = default_store().files(taken.assets["treasury"]["content_hash"], name="treasury.parquet").one.location
     os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
     return held
 
@@ -647,7 +647,7 @@ class TestAPathDependencyOnAnotherMachine:
         from chartbook.manifest import load_manifest
 
         (record,) = [r for r in lock.read_lock(cloned).assets.values() if r.get("content_hash")]
-        held = default_store().get(record["content_hash"]) / "treasury.parquet"
+        held = default_store().files(record["content_hash"]).one.location
         os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
         _cut(held, b"PAR1")  # not synced to this machine yet
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
@@ -753,7 +753,7 @@ class TestAFileADirectorysRecordDoesNotList:
         machine("b")
         forecast = _forecast(work / "b" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        held = default_store().get(taken.assets["parts"]["content_hash"])
+        held = default_store().files(taken.assets["parts"]["content_hash"]).home
         os.chmod(held, stat.S_IRWXU)
         shutil.copy(held / "part-0.parquet", held / "part-0 (1).parquet")
         _forget_whole()
@@ -761,7 +761,7 @@ class TestAFileADirectorysRecordDoesNotList:
         assert lock.verify(forecast).problems == []
         monkeypatch.chdir(forecast)
         assert data.load("acme/rates:parts").collect()["a"].to_list() == [1, 2]
-        assert "part-0 (1).parquet" not in {p.name for p in Path(default_store().get(taken.assets["parts"]["content_hash"])).iterdir()}
+        assert "part-0 (1).parquet" not in {f.relative for f in default_store().files(taken.assets["parts"]["content_hash"]).files}
 
 
 class TestAFilesOwnNameNotThereYet:
@@ -773,7 +773,7 @@ class TestAFilesOwnNameNotThereYet:
         (tmp_path / "b.csv").write_text("x,y\n1,2\n", encoding="utf-8", newline="\n")
         stored = store.put(tmp_path / "a.csv", links=("copy",))
         assert store.put(tmp_path / "b.csv", links=("copy",)).content_hash == stored.content_hash
-        held = store.get(stored.content_hash)
+        held = store.object_path(stored.content_hash)
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "b.csv", stat.S_IRWXU)  # read-only, which Windows will not remove
         (held / "b.csv").unlink()  # this name not synced yet
@@ -979,7 +979,7 @@ class TestWhatADirectorysReaderReads:
         taken = snapshot.make(rates).snapshot
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
-        held = default_store().get(taken.assets["parts"]["content_hash"])
+        held = default_store().files(taken.assets["parts"]["content_hash"]).home
         os.chmod(held, stat.S_IRWXU)
         (held / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1" + b"\x00" * 600)
         (held / "Thumbs.db").write_bytes(b"x" * 10)
@@ -1141,7 +1141,7 @@ class TestADirectorysListedFiles:
             "files": [{"path": "../../a.parquet", "size_bytes": 3, "content_hash": "sha256:" + "0" * 64}],
         }
         record_ok = {**record, "files": [{"path": "a.parquet", "size_bytes": 3, "content_hash": "sha256:" + "0" * 64}]}
-        assert _held(store, record_ok).files == (store.get(stored.content_hash) / "a.parquet",)
+        assert _held(store, record_ok).files == (store.object_path(stored.content_hash) / "a.parquet",)
         with pytest.raises((StoreError, AssetNotPinnedError), match="not a plain path"):
             _held(store, record)
 

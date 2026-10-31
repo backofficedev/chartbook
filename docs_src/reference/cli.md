@@ -354,9 +354,15 @@ $ chartbook path fed_yield_curve:chart/curve_today
 ```
 
 The path is into the store, where the snapshot that first had the file keeps it, under its own
-name. An asset whose files are kept in more than one snapshot's folder (a folder of files, some of
-them new in a later snapshot) is gathered into this machine's cache instead, as links where the
-disk allows, and the path is the cache's.
+name. An asset of several files, a folder or a glob, has no one path: the store keeps each file
+once, so a later snapshot's files may sit in earlier snapshots' folders. Asking exits `1` and says
+so, whatever the folders happen to hold today; `--files` prints the files, each where the store
+keeps it, and `data.load` reads them. Nothing is gathered into this machine's cache.
+
+```console
+$ chartbook path news_headlines:articles
+Error: 'news_headlines:articles' is a dataset of 14 files, kept in 3 places in the store, so there is no one folder. Read it with data.load('news_headlines:articles'), or hand data.files('news_headlines:articles') to your own reader. `chartbook path news_headlines:articles --files` prints them, one per line.
+```
 
 This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, not to that pipeline's working directory (before a pin, by the rules in {doc}`../guide/depending-on-pipelines`). So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
 

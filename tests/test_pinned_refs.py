@@ -6,7 +6,6 @@ dependency resolves through ``chartbook.lock`` to the pinned copy in the
 store, and never to the other pipeline's working directory.
 """
 
-import glob
 import json
 import os
 from pathlib import Path
@@ -20,7 +19,7 @@ from click.testing import CliRunner
 from chartbook import assets, config, data, hashing, index, lock, models
 from chartbook import resolve as resolve_module
 from chartbook.cli import main
-from chartbook.errors import AssetNotPinnedError, DependencyNotDeclaredError
+from chartbook.errors import AssetNotPinnedError, DependencyNotDeclaredError, NoSinglePathError
 from chartbook.identity import UnsupportedRegistryError, UnsupportedRevisionError
 from chartbook.manifest import load_manifest
 from chartbook.refs import KindMismatchError
@@ -120,7 +119,7 @@ def pinned(downstream, store):
 class TestResolving:
     def test_another_pipelines_dataframe_is_its_pinned_copy(self, pinned, store, rates):
         path = data.path("rates:treasury", project_dir=pinned)
-        assert path == store.get(HELLO) / "treasury.parquet"
+        assert path == store.files(HELLO).one.location and path.name == "treasury.parquet"
         assert path.read_bytes() == b"hello"
         # In the store, not in the other pipeline's working directory
         assert rates not in path.parents
@@ -137,29 +136,37 @@ class TestResolving:
         assert chart.name == "curve.html" and chart.read_bytes() == b"<html>curve</html>"
         assert assets.path("rates:curve", kind="chart", project_dir=pinned) == chart
 
-    def test_a_partitioned_dataframe_keeps_its_glob(self, pinned, store):
-        path = data.path("rates:by_year", project_dir=pinned)
-        held = store.get(lock.read_lock(pinned).assets["acme/rates:by_year"]["content_hash"])
-        assert path == held / "**" / "*.parquet"
-        found = sorted(Path(p).relative_to(held).as_posix() for p in glob.glob(str(path), recursive=True))
-        assert found == ["year=2023/part-0.parquet", "year=2024/part-0.parquet"]
+    def test_a_partitioned_dataframe_is_its_files_and_has_no_one_path(self, pinned, store):
+        """The store keeps each file once, so a later snapshot's files may sit in earlier folders: a list, by declaration."""
+        with pytest.raises(NoSinglePathError, match="is a dataset of 2 files, kept in one place in the store today") as e:
+            data.path("rates:by_year", project_dir=pinned)
+        assert "data.load('rates:by_year')" in str(e.value) and "data.files('rates:by_year')" in str(e.value)
+        found = data.files("rates:by_year", project_dir=pinned)
+        kept = store.files(lock.read_lock(pinned).assets["acme/rates:by_year"]["content_hash"])
+        assert found == [f.location for f in kept.files]
+        assert [f.relative for f in kept.files] == ["year=2023/part-0.parquet", "year=2024/part-0.parquet"]
 
-    def test_a_model_that_is_a_directory_is_the_objects_directory(self, pinned, store):
-        path = models.path("rates:ar1", project_dir=pinned)
+    def test_a_model_that_is_a_directory_is_its_files_and_is_gathered_on_request(self, pinned, store):
+        with pytest.raises(NoSinglePathError, match="is a model of 2 files") as e:
+            models.path("rates:ar1", project_dir=pinned)
+        assert "assets.gathered('rates:ar1')" in str(e.value)
         record = lock.read_lock(pinned).assets["acme/rates:model/ar1"]
-        assert path == store.get(record["content_hash"])
-        assert (path / "config.json").read_bytes() == b"{}"
-        assert (path / "weights" / "best.pt").stat().st_size == 100
+        kept = store.files(record["content_hash"]).by_relative()
+        assert assets.files("rates:model/ar1", project_dir=pinned) == [kept["config.json"], kept["weights/best.pt"]]
         # The lockfile lists a directory's files, as the index lists a model's
         assert [f["path"] for f in record["files"]] == ["config.json", "weights/best.pt"]
-        assert assets.path("rates:model/ar1", project_dir=pinned) == path
+        with assets.gathered("rates:model/ar1", project_dir=pinned) as folder:
+            assert (folder / "config.json").read_bytes() == b"{}"
+            assert (folder / "weights" / "best.pt").stat().st_size == 100
+            assert sorted(p.relative_to(folder).as_posix() for p in folder.rglob("*") if p.is_file()) == ["config.json", "weights/best.pt"]
+        assert not folder.exists()  # nothing is kept once the block ends
 
     def test_a_directory_pinned_before_files_were_listed_still_resolves(self, pinned, store):
         locked = lock.read_lock(pinned)
         del locked.assets["acme/rates:model/ar1"]["files"]
         lock.write_lock(locked, pinned / lock.LOCK_FILE)
-        path = models.path("rates:ar1", project_dir=pinned)
-        assert (path / "config.json").is_file()
+        found = assets.files("rates:model/ar1", project_dir=pinned)
+        assert [p.name for p in found] == ["config.json", "best.pt"] and found[0].is_file()
 
     def test_the_front_doors_still_answer_for_one_kind_each(self, pinned):
         with pytest.raises(KindMismatchError, match="data.path\\(\\) answers for dataframes only"):
@@ -175,7 +182,7 @@ class TestResolving:
     def test_resolve_returns_a_file_location(self, pinned, store):
         location = resolve("rates:treasury", start_dirs=[pinned])
         assert location.kind == "file"
-        assert location.path == store.get(HELLO) / "treasury.parquet"
+        assert location.path == store.files(HELLO).one.location
 
 
 class TestFrozen:
@@ -348,8 +355,9 @@ class TestCheap:
             raise AssertionError(f"hashed {path}")
 
         monkeypatch.setattr(hashing, "_file_hex", never)
-        for reference in ("rates:treasury", "rates:by_year", "rates:model/ar1"):
-            assets.path(reference, project_dir=pinned)
+        assets.path("rates:treasury", project_dir=pinned)
+        for reference in ("rates:by_year", "rates:model/ar1"):
+            assets.files(reference, project_dir=pinned)
 
     def test_the_lockfile_is_read_once_while_it_is_unchanged(self, pinned, monkeypatch, store):
         reads = []
@@ -382,7 +390,7 @@ class TestPathCommand:
         monkeypatch.chdir(pinned)
         result = self._path("rates:treasury")
         assert result.exit_code == 0, result.output
-        assert result.stdout.strip() == str(store.get(HELLO) / "treasury.parquet")
+        assert result.stdout.strip() == str(store.files(HELLO).one.location)
 
     def test_kind_and_project_dir(self, pinned, work, monkeypatch):
         monkeypatch.chdir(work)
