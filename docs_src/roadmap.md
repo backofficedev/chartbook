@@ -44,6 +44,17 @@ lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` besid
 manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
 the build script, `chartbook docs build` renders the site.
 
+## Next: data reads
+
+{doc}`design/plan-data-reads` (proposed 2026-10-31). A version of a dataset whose files are kept
+in several snapshot folders is read from where they sit: no gathered copy on each machine, so
+nothing under `~/.chartbook` grows with every catalog build. The catalog renders a version from
+its snapshot's index and documents alone, reading no data. `data.path` writes your own outputs
+and gives one path, `data.load` and `data.sql` read anyone's data in any shape, and `data.files`
+lists the files for a build tool. The store says in plain words which snapshot folders stand
+alone and which share files, and `store gc` is the one way to remove them. The guide is
+rewritten around what a person is trying to do.
+
 ## Experimental: Databricks
 
 A dataframe can be a table or a query in a Databricks SQL warehouse
