@@ -88,6 +88,15 @@ class _Docs(_Group):
 class _Catalog(_Group):
     renamed = {"generate": "build", "browse": "open"}
 
+    def parse_args(self, ctx, args):
+        if args and args[0] == "add" and not ctx.resilient_parsing:
+            raise click.UsageError(
+                "`chartbook catalog add` is gone. Run `chartbook snapshot` in the pipeline's "
+                "folder to add its snapshot to the catalog. To connect an existing store, "
+                "use `chartbook store add NAME URL`.", ctx
+            )
+        return super().parse_args(ctx, args)
+
 
 class _Install(_Group):
     renamed = {"skill": "claude-skill"}
@@ -375,7 +384,7 @@ def _render_site(
     _check_sphinx_installed()
 
     # The project, before anything is asked or written: with no manifest
-    # there is nothing to render, as `chartbook build` says it
+    # there is nothing to render, as `chartbook docs build` says it
     project_dir = resolve_project_dir(project_dir)
     if not (project_dir / "chartbook.toml").is_file() and not (project_dir / "catalog.toml").is_file():
         click.echo(click.style("Error: ", fg="red", bold=True) + f"No chartbook.toml in {project_dir}.", err=True)
@@ -587,7 +596,7 @@ def _ask_to_trust_a_folder(folder, command=None, may_render=True, script="build"
     """Ask once whether a pipeline's folder is the user's: ``y`` (recorded at run), ``r`` (render only) or ``n``.
 
     A yes is trust at `run`, as `chartbook trust` records it: the question
-    says so, and shows the build command a later `chartbook build` would
+    says so, and shows the build command a later `chartbook run` would
     then run without asking, even where only the site is rendered now.
 
     :param command: The command about to run (the *script*), shown in the
@@ -640,7 +649,7 @@ def _ask_to_trust_a_folder(folder, command=None, may_render=True, script="build"
 def _ask_to_trust_folders(folders: list, running: bool, script: str = "build") -> bool:
     """Ask once whether every listed folder is the user's, a catalog's; True when they are, and recorded at run.
 
-    Each folder is shown with the build command a later `chartbook build`
+    Each folder is shown with the build command a later `chartbook run`
     would run without asking, since a yes is trust at `run`.
 
     :param folders: ``(folder, pipeline ID or None, what it is)`` for each;
@@ -660,7 +669,7 @@ def _ask_to_trust_folders(folders: list, running: bool, script: str = "build") -
         f"Building them as your own runs their {what} and their manifests' SQL queries, and reads the files they "
         f"name, wherever they are." if running else
         "Rendering them as your own runs their manifests' SQL queries and reads the files they name, wherever they "
-        "are; trusting them also lets `chartbook build` run their build commands, without asking."
+        "are; trusting them also lets `chartbook run` run their build commands, without asking."
     )
     lines += ["  y  they're mine: trust them and the folders inside them, and don't ask again", "  n  stop"]
     click.echo("\n".join(lines), err=True)
@@ -676,8 +685,8 @@ def _ask_to_trust_folders(folders: list, running: bool, script: str = "build") -
 def _ask_before_running(project_dir, script, may_render, upstream=False) -> str:
     """At a terminal, ask about each folder whose script would run and is not trusted to run: ``"go"`` or ``"render"``.
 
-    ``"render"``, for `chartbook build` alone, is the answer r: the site is
-    rendered without running the folder's code. ``n`` stops here. Where no
+    ``"render"`` is the answer r when the caller allows rendering without
+    running the folder's code. ``n`` stops here. Where no
     one can be asked, nothing is asked, and the run refuses as it always
     did (:func:`chartbook.run._require_trust_to_run`).
     """
@@ -1412,7 +1421,7 @@ def index_diff(before, after, as_json, exit_code):
 
 
 #: How `chartbook ls` shows a pipeline the catalog names with no folder here
-STORE_ONLY = "(store only: not on this machine; the catalog shows its snapshots)"
+STORE_ONLY = "(stored snapshots)"
 
 
 def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
@@ -1721,7 +1730,7 @@ def catalog():
 @catalog.command("init")
 @click.option("--title", default=None, help="Title for the catalog site")
 def catalog_init(title):
-    """Initialize the global catalog at ~/.chartbook/chartbook.toml.
+    """Initialize the global catalog at ~/.chartbook/catalog.toml.
 
     Creates a catalog with the default store.
     A pipeline enters it when its owner runs ``chartbook snapshot``.
@@ -1846,10 +1855,10 @@ def catalog_enable(pipeline_id, catalog_path):
     help="How often --watch checks for changes (default: 1)",
 )
 def catalog_generate(force_write, strict, clean, watch, watch_interval):
-    """Render the global catalog's site, into docs/ beside its chartbook.toml.
+    """Render the global catalog's site, into docs/ beside its catalog.toml.
 
     The catalog is the one ~/.chartbook/settings.toml names, or else
-    ~/.chartbook/chartbook.toml. `chartbook catalog open` opens the site.
+    ~/.chartbook/catalog.toml. `chartbook catalog open` opens the site.
 
     The build is incremental. Its working files are kept next to the catalog
     (in ``_docs/``), and the next build redoes only the pipelines whose files
@@ -2856,27 +2865,24 @@ def restore_command(names, project_dir):
 
 @main.group()
 def store():
-    """Look after the store: where pinned files and snapshots are kept.
+    """Look after the named stores that keep pinned files and snapshots.
 
-    The store keeps files under the hash of what is in them. It is a folder
-    on this machine, or one machines share (on a shared disk, or synced by
-    a service such as Google Drive), or a bucket. It is ~/.chartbook/store
-    unless CHARTBOOK_STORE, or [store] url in ~/.chartbook/settings.toml or
-    in the organization's settings file (/etc/chartbook/settings.toml, or
-    what CHARTBOOK_SYSTEM_SETTINGS names), says otherwise. `chartbook store
-    info` says which it is.
+    Define stores in catalog.toml under [stores]. Each can be a local or
+    shared folder, or a bucket. CHARTBOOK_STORE selects the process's only
+    store. Without catalog stores, [store] url in user or system settings
+    is the fallback, then ~/.chartbook/store. `chartbook store info` lists
+    the configured stores; --store NAME selects one for maintenance.
     """
 
 
 @store.command("info")
 @click.option("--store", "store_name", help="Show one named catalog store")
 def store_info(store_name):
-    """Say which store this machine uses, and what set it.
+    """List configured stores, their reachability and snapshot counts.
 
-    The store is a setting of the machine, read in layers: CHARTBOOK_STORE,
-    then [store] url in your settings file, then in the organization's,
-    then the default. On a machine that is to share a store with another,
-    this is what to check first.
+    CHARTBOOK_STORE overrides the catalog's [stores]. Without catalog
+    stores, user and system settings supply the fallback, then the default.
+    Use --store NAME to inspect one named store.
 
     \b
     Examples:
@@ -3631,7 +3637,7 @@ def _trust_new_project(project_dir, repository=None) -> bool:
 def _record_trust_or_say(folder, level, id=None, repository=None) -> bool:
     """Record a folder the user made or added as trusted, or say in one line why that could not be done and go on.
 
-    For `init`, `catalog init` and `catalog add`: the command's own work
+    For `init`: the command's own work
     is done, and a record that cannot be written (no home folder) is not a
     reason to undo it.
 
@@ -3706,8 +3712,8 @@ def trust(path, render_only, repository, members, list_, forget):
 
     A build of a folder you have not trusted runs as a build of files from
     a store does: `chartbook docs build` renders its site with no query
-    run and no template or file from outside the folder, and `chartbook build` and
-    `chartbook run` refuse to run its build script, which is code. A
+    run and no template or file from outside the folder, and `chartbook run`
+    refuses to run its build script, which is code. A
     project `chartbook init` made is trusted as it is made. One you cloned
     is trusted when you say so, here.
 
@@ -4015,6 +4021,15 @@ def catalog_migrate(catalog_path):
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from None
     click.echo(f"Migrated to {target}")
+    from chartbook.config import get_store_setting, get_global_settings_path, get_system_settings_path
+    _, origin = get_store_setting()
+    if origin in ("user", "system"):
+        settings_path = get_global_settings_path() if origin == "user" else get_system_settings_path()
+        click.echo(
+            f"The catalog now defines [stores]. Remove the obsolete [store] table from "
+            f"{settings_path} if it is no longer needed as a fallback for other catalogs; "
+            "it is ignored by this catalog and otherwise warns on each command."
+        )
     for pipeline, folder in missing:
         click.echo(f"{pipeline} has no snapshot. Run: chartbook snapshot --project-dir {str(folder)!r}")
 
@@ -4179,9 +4194,7 @@ for _command_name in ("gc", "verify", "migrate", "export", "import"):
 
 # Retired commands retain actionable errors, without executing their old behavior.
 main.commands.pop("build", None)
-_Main.renamed["build"] = "run (runs the build script); `chartbook docs build` renders the site alone"
 catalog.commands.pop("add", None)
-_Catalog.renamed["add"] = "store add NAME URL; a pipeline enters the catalog with `chartbook snapshot`"
 
 
 @store.command("move")

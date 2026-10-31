@@ -138,13 +138,13 @@ def _manifest_file(manifest: dict, pipeline_id: str, base_dir: Path) -> Path:
 
 
 def load_policy(path: Union[str, Path]) -> dict:
-    """Read the resolved ``[policy]`` of a catalog's chartbook.toml.
+    """Read the resolved ``[policy]`` of a catalog's catalog.toml.
 
     Only the policy table is read — the catalog's member pipelines are not
     loaded and need not exist on this machine, so a pipeline's own CI can
     check itself against the policy of a catalog it is published to.
 
-    :param path: A catalog ``chartbook.toml`` or the directory holding one.
+    :param path: A catalog ``catalog.toml`` or the directory holding one.
     :returns: Dict with ``mode`` and per-object-type ``required`` field lists.
     :raises FileNotFoundError: If there is no such file.
     :raises ValueError: If the file is not valid TOML or its policy is invalid.
@@ -160,7 +160,7 @@ def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
     that ``chartbook check --policy`` on a catalog that sets no policy
     gives none.
 
-    :param path: A catalog ``chartbook.toml`` or the directory holding one.
+    :param path: A catalog ``catalog.toml`` or the directory holding one.
     :returns: The policy, and True if the file has a ``[policy]`` table.
     :raises FileNotFoundError: If there is no such file.
     :raises ValueError: If the file is not valid TOML or its policy is invalid.
@@ -881,7 +881,7 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report a pipeline that depends, through what it depends on, on itself.
 
     Dependencies between pipelines must form a directed acyclic graph:
-    ``chartbook run``, ``chartbook build`` and ``chartbook snapshot`` refuse
+    ``chartbook run`` and ``chartbook snapshot`` refuse
     a cycle, and this says so without building. The graph is walked as
     :func:`chartbook.lineage.cycle` walks it: through the folders on this
     machine, and through the pins in the store when the store is a folder
@@ -956,14 +956,11 @@ def check_dependency_cycles(manifest: dict, base_dir: Path) -> list[Problem]:
 
 
 def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
-    """A build tool's task that says ``chartbook build``, as one written before 0.2.0 did to render the site.
+    """Report a build task that still calls the removed ``chartbook build``.
 
-    With a build command declared (``[scripts] build``), ``chartbook build``
-    runs that command first, which is the same build tool: the build would
-    run inside itself, and ``chartbook build`` refuses. That is a problem,
-    on the ``build`` field. Without one, ``chartbook build`` there only
-    renders the site, as it did; a warning says that ``chartbook docs
-    generate`` is the command that renders (:func:`chartbook.run.build_tool_runs_chartbook_build`).
+    A task that renders documentation must use ``chartbook docs build -f``.
+    Check the declared build tool's task file, or warn about known task
+    files when the manifest has no build command.
     """
     from chartbook.manifest import _read_manifest_file
     from chartbook.run import build_tool_runs_chartbook_build
@@ -989,17 +986,14 @@ def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
                     directory / "chartbook.toml",
                     table,
                     "build",
-                    f"{name}, line {number}, runs `chartbook build` ({line}), and the build command runs "
-                    f"{name}: under `chartbook build` the site would be rendered twice, and under a plain "
-                    f"build-tool run the build would run inside itself. Since 0.2.0 the command that renders "
-                    f"the site is `chartbook docs build -f`: say that in {name}",
+                    f"{name}, line {number}, runs `chartbook build` ({line}), which was removed in 0.4.0; "
+                    f"the command that renders the site is `chartbook docs build -f`: say that in {name}",
                 )
             )
         else:
             warnings.warn(
-                f"{display_path(directory / name, Path.cwd())}, line {number}: `chartbook build` renders the "
-                f"site here only because no build command is declared; the command that renders is "
-                f"`chartbook docs build -f`, and with a build command `chartbook build` would run it first",
+                f"{display_path(directory / name, Path.cwd())}, line {number}: `chartbook build` was removed "
+                f"in 0.4.0; use `chartbook docs build -f` to render the site",
                 UserWarning,
                 stacklevel=2,
             )

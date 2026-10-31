@@ -414,9 +414,9 @@ def locate_in_catalog(catalog_manifest: dict, pipeline: str) -> str:
         if named:
             raise KeyError(
                 f"The catalog names {named[0]!r}, but it has no folder on this machine: the "
-                f"catalog only shows its snapshots in the store. To read its data here, add its "
-                f"folder to the catalog (chartbook catalog add), or read it from a pipeline that "
-                f"declares it in [dependencies] and pins it."
+                f"catalog only shows its snapshots in the store. Read it from a pipeline that "
+                f"declares it in [dependencies] and pins it, or use `chartbook link ID FOLDER` "
+                f"in that consumer to read a working copy."
             ) from None
         raise
 
@@ -437,9 +437,9 @@ def resolve_catalog_path(catalog_path: Optional[Union[str, Path]] = None) -> Pat
     2. Global settings (``~/.chartbook/settings.toml``)
     3. Raise :class:`CatalogNotConfiguredError`
 
-    :param catalog_path: Explicit path to a catalog ``chartbook.toml`` or its parent directory.
+    :param catalog_path: Explicit path to a catalog ``catalog.toml`` or its parent directory.
     :type catalog_path: Optional[Union[str, Path]]
-    :returns: Resolved path to the catalog's ``chartbook.toml``.
+    :returns: Resolved path to the catalog's ``catalog.toml``.
     :rtype: Path
     :raises CatalogNotConfiguredError: If no catalog is configured.
     """

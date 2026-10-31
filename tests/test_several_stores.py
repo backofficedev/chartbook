@@ -276,3 +276,23 @@ def test_migration_follows_a_configured_catalog_and_updates_its_path(tmp_path, m
     assert target == custom / "catalog.toml"
     assert config.get_default_catalog_path() == target
     assert old.with_suffix(".toml.pre-0.4.bak").exists()
+
+
+@pytest.mark.parametrize("origin", ["user", "system"])
+def test_catalog_migration_explains_how_to_retire_old_store_settings(tmp_path, monkeypatch, origin):
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(config, "get_global_config_dir", lambda: home)
+    monkeypatch.delenv("CHARTBOOK_STORE", raising=False)
+    settings = home / "settings.toml" if origin == "user" else tmp_path / "system-settings.toml"
+    if origin == "system":
+        monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(settings))
+    original_settings = tomli_w.dumps({"store": {"url": str(tmp_path / "store")}})
+    settings.write_text(original_settings)
+    (home / "chartbook.toml").write_text('[project]\ntype="catalog"\n[pipelines]\n')
+    result = CliRunner().invoke(main, ["catalog", "migrate"])
+    assert result.exit_code == 0, result.output
+    assert "Remove the obsolete [store] table" in result.output
+    assert str(settings) in result.output
+    assert "fallback for other catalogs" in result.output
+    assert settings.read_text() == original_settings

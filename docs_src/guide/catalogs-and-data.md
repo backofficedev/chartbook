@@ -67,4 +67,4 @@ The catalog does not run build scripts or check working members. Use `chartbook 
 
 ## Upgrading a folder catalog
 
-Run `chartbook catalog migrate` once on each machine. It keeps an exact backup, writes `catalog.toml` with the former machine store, retains project metadata, policy, and disabled notes, and lists the working pipelines that need snapshots before they appear. It does not change store layout, snapshot hashes, or lockfiles.
+Run `chartbook catalog migrate` once on each machine. It keeps an exact backup, writes `catalog.toml` with the former machine store, retains project metadata, policy, and disabled notes, and lists the working pipelines that need snapshots before they appear. It does not change store layout, snapshot hashes, or lockfiles. After checking the new catalog's `[stores]`, remove the old `[store]` table from `~/.chartbook/settings.toml` if no other catalog needs it as a fallback. Migration names the settings file to edit; keeping the table produces an ignored-setting warning for catalogs that define stores.

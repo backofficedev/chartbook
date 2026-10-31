@@ -196,5 +196,5 @@ class TestABuildToolThatSaysChartbookBuild:
     def test_check_warns_of_it_with_no_build_command_by_a_relative_path(self, pipeline_project, monkeypatch):
         (pipeline_project / "dodo.py").write_text(DODO_0_1, encoding="utf-8", newline="\n")
         monkeypatch.chdir(pipeline_project)
-        with pytest.warns(UserWarning, match=r"^dodo.py, line 2: `chartbook build` renders the site here only because no build command is declared"):
+        with pytest.warns(UserWarning, match=r"^dodo.py, line 2: `chartbook build` was removed in 0.4.0"):
             assert check_build_tool(load_manifest(pipeline_project), pipeline_project) == []

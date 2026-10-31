@@ -258,3 +258,24 @@ def test_docs_with_no_manifest_is_a_clean_error(tmp_path, monkeypatch):
     assert result.exit_code == 1
     assert f"Error: No chartbook.toml in {elsewhere.resolve()}." in result.output
 
+
+
+@pytest.mark.parametrize("words,replacement", [
+    (["docs", "generate", "-f"], "chartbook docs build -f"),
+    (["catalog", "generate", "-f"], "chartbook catalog build -f"),
+    (["catalog", "add", "../pipeline"], "chartbook store add NAME URL"),
+])
+def test_removed_commands_explain_replacements_in_a_real_process(tmp_path, words, replacement):
+    import subprocess
+
+    result = subprocess.run(
+        [sys.executable, "-m", "chartbook.cli", *words],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+    assert result.returncode == 2
+    assert replacement in result.stderr
+    assert "No such command" not in result.stderr
+    assert "chartbook catalog store add" not in result.stderr
+    assert not (tmp_path / "docs").exists()
+    if words[:2] == ["catalog", "add"]:
+        assert "chartbook snapshot" in result.stderr
