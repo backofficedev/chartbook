@@ -27,30 +27,30 @@ It then creates the project from the [cookiecutter template](https://github.com/
 
 ```console
 cd rates_study
-chartbook docs generate
+chartbook docs build
 chartbook docs open
 ```
 
-You already have a documentation site: the README as its front page, the project's own pages, and the example notebook. Nothing is built yet, so the notebook's page says "Not built yet", and `chartbook docs generate` warns:
+You already have a documentation site: the README as its front page, the project's own pages, and the example notebook. Nothing is built yet, so the notebook's page says "Not built yet", and `chartbook docs build` warns:
 
 ```text
 Warning: rates_study has built nothing it declares yet, so the site shows each as not built:
   - notebook: _output/01_example_notebook_interactive.ipynb
-`chartbook build` runs its build script and renders the site again.
+`chartbook run` runs its build script. `chartbook docs build` renders the site.
 With --strict, this is an error.
 ```
 
-To build it, install the project's dependencies (with pip here; the project's README says how for uv, conda and pixi) and run `chartbook build`:
+To build it, install the project's dependencies (with pip here; the project's README says how for uv, conda and pixi) and run `chartbook run`:
 
 ```console
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-chartbook build -f
+chartbook run
 chartbook docs open
 ```
 
-`chartbook build` runs the build script that `chartbook.toml` names, `[scripts] build = "doit"`. `doit` runs every task in `dodo.py` but the tests (`doit run_pytest` runs those): here it executes the notebook into `_output/`. Then `chartbook build` renders the site again, now with the notebook in it; `-f` replaces the site that is there.
+`chartbook run` runs the build script that `chartbook.toml` names, `[scripts] build = "doit"`. `doit` runs every task in `dodo.py` but the tests (`doit run_pytest` runs those): here it executes the notebook into `_output/`. The final documentation task runs `chartbook docs build -f`, replacing the site with one that includes the executed notebook. Your build script owns that documentation step; `chartbook run` only runs the script.
 
 ```console
 chartbook check
@@ -143,11 +143,11 @@ Every chart and dataframe carries a short write-up: inline `docs` as above, or `
 **4. Build and view.**
 
 ```console
-chartbook docs generate
+chartbook docs build
 chartbook docs open
 ```
 
-The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook docs generate -f`.
+The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook docs build -f`.
 
 Beside the site is `docs/index.json`, the **index**: one record for the pipeline, the dataframe, each of its columns and the chart, with an ID (`my_pipeline:walks`, `my_pipeline:chart/random_walks`: the folder's name with `-` written `_`, until `[project] id` or a git remote gives the pipeline a scoped one), a content hash for each file and what each asset was made from. The pages were written from it, and anything else can read it too. {doc}`guide/vocabulary` says what the words mean; {doc}`guide/how-the-build-works` says what happened.
 

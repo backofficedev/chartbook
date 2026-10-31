@@ -7,8 +7,8 @@ os_compatibility = ["Windows", "Linux", "macOS"]
 # The ChartBook this project needs: an older one stops, and says how to upgrade
 requires_chartbook = ">={{ cookiecutter._chartbook_version }}"
 
-# Named commands. `chartbook run` runs `build`; `chartbook run` runs it
-# and then renders the site.
+# Named commands. `chartbook run` runs `build`. The build script owns
+# the final documentation step: `chartbook docs build -f`.
 [scripts]
 build = "doit"
 

@@ -83,7 +83,7 @@ chartbook ls versions
 chartbook link acme/rates ../rates # Local working-copy override; delete chartbook.links.toml to restore pins
 chartbook catalog disable <id>   # Disable a pipeline (skip during builds)
 chartbook catalog enable <id>    # Re-enable a disabled pipeline
-chartbook catalog build       # Render the global catalog's site (was `catalog build`)
+chartbook catalog build       # Render the global catalog's site (was `catalog generate`)
 chartbook catalog open           # Open the global catalog's site in the browser (was `catalog browse`)
 chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
@@ -101,7 +101,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 ```
 ~/.chartbook/
 ├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
-├── chartbook.toml       # Default global catalog
+├── catalog.toml         # Default global catalog; [stores] lists named stores
 ├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
 ├── trust.toml           # Pipelines and repositories this user trusts a build of (chartbook trust); CI trusts the checkout, CHARTBOOK_TRUST=all every folder
 ├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)

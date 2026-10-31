@@ -10,6 +10,20 @@ pipeline's page in a catalog, found the same day, is not part of this plan: it s
 0.3.1 (the {doc}`../changelog`).
 ```
 
+## As built
+
+Implemented on 2026-10-30. The plan's twelve pieces landed together in the working checkout and were committed by topic, rather than as twelve stacked pull requests. These choices settle details of the plan:
+
+- `Stores` is a federation above the existing `Store` contract. Folder and S3 backends retain the 0.3 snapshot layout; copies rewrite physical file locations and verify hashes without changing content identities or lockfiles.
+- The first configured store is the default write destination. `CHARTBOOK_STORE` replaces the entire configured set for a process. User and system `[store]` settings remain fallbacks when no catalog stores are defined. Migration preserves those settings and tells the user how to remove an obsolete table after checking the new catalog.
+- Migration preserves project and policy settings, keeps an exact backup, translates disabled aliases to the pipeline identities where their folders are available, and reports pipelines without snapshots. It does not build those pipelines or snapshot them automatically.
+- Catalog records and diagnostics come from stored metadata. Repository notes disambiguate identical pipeline IDs. Materialized tables and queries render from stored parquet, without opening the original database. Hubs put current metadata, data dictionaries and dependency details before the Versions list; version entries and their change notes share that section.
+- A links file belongs to its consumer and is never catalog membership. CI and frozen runs ignore it; snapshotting refuses while the file exists, including a broken symlink. Build provenance records active links.
+- Removed commands fail rather than execute compatibility aliases. `docs generate` and `catalog generate` name their new spellings; `catalog add` explains snapshotting a pipeline and connecting a store; `build` explains `run` and `docs build`. Pipeline task runners own the final documentation step.
+- The package, template and bundled skills were set to 0.4.0 before publication. The maintainer approved committing it that way after local validation, an exception to the overview's rule against version bumps during implementation. Release notes remain under **Unreleased** until publication.
+
+The original proposal and its sequencing below are retained as design history. The implemented catalog was also exercised against the maintainer's existing store: five pipelines and eight snapshots, including data and documentation reads from each pipeline.
+
 ## What 0.4.0 is for
 
 Three things came out of using 0.3.0.
