@@ -51,6 +51,10 @@
   - ```{autodoc2-docstring} chartbook.check.check_licenses
     :summary:
     ```
+* - {py:obj}`check_links <chartbook.check.check_links>`
+  - ```{autodoc2-docstring} chartbook.check.check_links
+    :summary:
+    ```
 * - {py:obj}`check_model_labels <chartbook.check.check_model_labels>`
   - ```{autodoc2-docstring} chartbook.check.check_model_labels
     :summary:
@@ -274,6 +278,13 @@
 :canonical: chartbook.check.check_licenses
 
 ```{autodoc2-docstring} chartbook.check.check_licenses
+```
+````
+
+````{py:function} check_links(manifest, base_dir)
+:canonical: chartbook.check.check_links
+
+```{autodoc2-docstring} chartbook.check.check_links
 ```
 ````
 

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.check';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="chartbook.diagnostics" href="chartbook.diagnostics.html" />
     <link rel="prev" title="chartbook.build_docs" href="chartbook.build_docs.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -321,7 +321,7 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,12 +507,12 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.DEFAULT_WITHIN_DAYS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_WITHIN_DAYS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.NOT_BUILT_YET"><code class="docutils literal notranslate"><span class="pre">NOT_BUILT_YET</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.NO_EXPIRATION_VALUES"><code class="docutils literal notranslate"><span class="pre">NO_EXPIRATION_VALUES</span></code></a></li>
@@ -529,6 +531,7 @@
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_glob_names"><code class="docutils literal notranslate"><span class="pre">check_glob_names()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_ids"><code class="docutils literal notranslate"><span class="pre">check_ids()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_licenses"><code class="docutils literal notranslate"><span class="pre">check_licenses()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_links"><code class="docutils literal notranslate"><span class="pre">check_links()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_labels"><code class="docutils literal notranslate"><span class="pre">check_model_labels()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_lineage"><code class="docutils literal notranslate"><span class="pre">check_model_lineage()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_metrics"><code class="docutils literal notranslate"><span class="pre">check_model_metrics()</span></code></a></li>
@@ -593,7 +596,7 @@ checks (row counts, null rates, schema assertions) are a separate concern.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_build_tool" title="chartbook.check.check_build_tool"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_build_tool</span></code></a></p></td>
-<td><p>A build tool’s task that says <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, as one written before 0.2.0 did to render the site.</p></td>
+<td><p>Report a build task that still calls the removed <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_dependencies" title="chartbook.check.check_dependencies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_dependencies</span></code></a></p></td>
 <td><p>Report every declared dependency that cannot be found.</p></td>
@@ -610,46 +613,49 @@ checks (row counts, null rates, schema assertions) are a separate concern.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_licenses" title="chartbook.check.check_licenses"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_licenses</span></code></a></p></td>
 <td><p>Report the licenses of dataframes and files assets that are expired or expire within the window.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_labels" title="chartbook.check.check_model_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_labels</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_links" title="chartbook.check.check_links"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_links</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_labels" title="chartbook.check.check_model_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_labels</span></code></a></p></td>
 <td><p>Look at each model’s labels: does each point at a version that is here?</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_lineage" title="chartbook.check.check_model_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_lineage</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_lineage" title="chartbook.check.check_model_lineage"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_lineage</span></code></a></p></td>
 <td><p>Report training data that names a dataframe which is known not to exist.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_metrics" title="chartbook.check.check_model_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_metrics</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_metrics" title="chartbook.check.check_model_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_metrics</span></code></a></p></td>
 <td><p>Report every model metrics file that is there and is not well formed.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_model_staleness" title="chartbook.check.check_model_staleness"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_staleness</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_model_staleness" title="chartbook.check.check_model_staleness"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_model_staleness</span></code></a></p></td>
 <td><p>Warn about a model trained on inputs that have since moved.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_paths" title="chartbook.check.check_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_paths</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_paths" title="chartbook.check.check_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_paths</span></code></a></p></td>
 <td><p>Report every declared file that does not exist on disk.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_required_fields" title="chartbook.check.check_required_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_required_fields</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_required_fields" title="chartbook.check.check_required_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_required_fields</span></code></a></p></td>
 <td><p>Report every field the active policy requires that is missing or empty.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_siblings" title="chartbook.check.check_siblings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_siblings</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_siblings" title="chartbook.check.check_siblings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_siblings</span></code></a></p></td>
 <td><p>Warn about a dataframe whose path names one file of a set.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.check_sources" title="chartbook.check.check_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_sources</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.check_sources" title="chartbook.check.check_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_sources</span></code></a></p></td>
 <td><p>Report a source that is not there: a DuckDB file that does not exist.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.display_path" title="chartbook.check.display_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">display_path</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.display_path" title="chartbook.check.display_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">display_path</span></code></a></p></td>
 <td><p>Return <em>path</em> relative to <em>relative_to</em> when it lies beneath it.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.load_policy" title="chartbook.check.load_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_policy</span></code></a></p></td>
-<td><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a catalog’s chartbook.toml.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.load_policy" title="chartbook.check.load_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_policy</span></code></a></p></td>
+<td><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a catalog’s catalog.toml.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.not_built_hint" title="chartbook.check.not_built_hint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">not_built_hint</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.not_built_hint" title="chartbook.check.not_built_hint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">not_built_hint</span></code></a></p></td>
 <td><p>What to run when :func:<code class="docutils literal notranslate"><span class="pre">check_paths</span></code> found a lone pipeline that has built nothing yet.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.parse_expiration" title="chartbook.check.parse_expiration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_expiration</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.parse_expiration" title="chartbook.check.parse_expiration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_expiration</span></code></a></p></td>
 <td><p>Interpret a <code class="docutils literal notranslate"><span class="pre">license_expiration</span></code> value.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.read_policy" title="chartbook.check.read_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_policy</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.read_policy" title="chartbook.check.read_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">read_policy</span></code></a></p></td>
 <td><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a file, and whether it has one.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.check.run_checks" title="chartbook.check.run_checks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_checks</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.check.run_checks" title="chartbook.check.run_checks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_checks</span></code></a></p></td>
 <td><p>Run every check over a loaded manifest.</p></td>
 </tr>
 </tbody>
@@ -704,7 +710,7 @@ checks (row counts, null rates, schema assertions) are a separate concern.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.check.Problem">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">Problem</span></span><a class="reference internal" href="../../_modules/chartbook/check.html#Problem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.Problem" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">Problem</span></span><a class="reference internal" href="../../_modules/chartbook/check.html#Problem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.Problem" title="Link to this definition">#</a></dt>
 <dd><p>One finding, addressed by the file and field that needs editing.</p>
 <p>Attributes:
 file: The <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> that declares the offending entry.
@@ -713,13 +719,13 @@ field: The key within that table, e.g. <code class="docutils literal notranslate
 message: What is wrong with it.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.check.Problem.field">
-<span class="sig-name descname"><span class="pre">field</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.check.Problem.field" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">field</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.check.Problem.field" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.check.Problem.file">
-<span class="sig-name descname"><span class="pre">file</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.check.Problem.file" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">file</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></em><a class="headerlink" href="#chartbook.check.Problem.file" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -737,13 +743,13 @@ directory when it lies beneath it (shorter CI logs).</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.check.Problem.message">
-<span class="sig-name descname"><span class="pre">message</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.check.Problem.message" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">message</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.check.Problem.message" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.check.Problem.table">
-<span class="sig-name descname"><span class="pre">table</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.check.Problem.table" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">table</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.check.Problem.table" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -752,12 +758,10 @@ directory when it lies beneath it (shorter CI logs).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.check.check_build_tool">
 <span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">check_build_tool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.check.Problem" title="chartbook.check.Problem"><span class="pre">chartbook.check.Problem</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/check.html#check_build_tool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.check_build_tool" title="Link to this definition">#</a></dt>
-<dd><p>A build tool’s task that says <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, as one written before 0.2.0 did to render the site.</p>
-<p>With a build command declared (<code class="docutils literal notranslate"><span class="pre">[scripts]</span> <span class="pre">build</span></code>), <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>
-runs that command first, which is the same build tool: the build would
-run inside itself, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> refuses. That is a problem,
-on the <code class="docutils literal notranslate"><span class="pre">build</span></code> field. Without one, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> there only
-renders the site, as it did; a warning says that <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> is the command that renders (:func:<code class="docutils literal notranslate"><span class="pre">chartbook.run.build_tool_runs_chartbook_build</span></code>).</p>
+<dd><p>Report a build task that still calls the removed <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>.</p>
+<p>A task that renders documentation must use <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span> <span class="pre">-f</span></code>.
+Check the declared build tool’s task file, or warn about known task
+files when the manifest has no build command.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -786,7 +790,7 @@ problem because a fresh clone is in that state on purpose, and
 <span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">check_dependency_cycles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.check.Problem" title="chartbook.check.Problem"><span class="pre">chartbook.check.Problem</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/check.html#check_dependency_cycles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.check_dependency_cycles" title="Link to this definition">#</a></dt>
 <dd><p>Report a pipeline that depends, through what it depends on, on itself.</p>
 <p>Dependencies between pipelines must form a directed acyclic graph:
-<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> refuse
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> refuse
 a cycle, and this says so without building. The graph is walked as</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Func<span class="colon">:</span></dt>
@@ -849,6 +853,11 @@ expiring today.</p></li>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.check.check_links">
+<span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">check_links</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">base_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/check.html#check_links"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.check_links" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.check.check_model_labels">
@@ -982,13 +991,13 @@ whether a table or query in it runs is found out when it is read.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.check.load_policy">
 <span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">load_policy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.15)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/check.html#load_policy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.load_policy" title="Link to this definition">#</a></dt>
-<dd><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a catalog’s chartbook.toml.</p>
+<dd><p>Read the resolved <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> of a catalog’s catalog.toml.</p>
 <p>Only the policy table is read — the catalog’s member pipelines are not
 loaded and need not exist on this machine, so a pipeline’s own CI can
 check itself against the policy of a catalog it is published to.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> – A catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or the directory holding one.</p>
+<dd class="field-odd"><p><strong>path</strong> – A catalog <code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code> or the directory holding one.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Dict with <code class="docutils literal notranslate"><span class="pre">mode</span></code> and per-object-type <code class="docutils literal notranslate"><span class="pre">required</span></code> field lists.</p>
@@ -1006,8 +1015,8 @@ check itself against the policy of a catalog it is published to.</p>
 <dt class="sig sig-object py" id="chartbook.check.not_built_hint">
 <span class="sig-prename descclassname"><span class="pre">chartbook.check.</span></span><span class="sig-name descname"><span class="pre">not_built_hint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/check.html#not_built_hint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.check.not_built_hint" title="Link to this definition">#</a></dt>
 <dd><p>What to run when :func:<code class="docutils literal notranslate"><span class="pre">check_paths</span></code> found a lone pipeline that has built nothing yet.</p>
-<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> is named only when there is a build script for it to
-run, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> names it.</p>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> is named only when there is a build script for it to
+run, as <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> names it.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -1046,7 +1055,7 @@ that <code class="docutils literal notranslate"><span class="pre">chartbook</spa
 gives none.</p>
 </dd>
 <dt class="field-even">Parameters<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>path</strong> – A catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> or the directory holding one.</p>
+<dd class="field-even"><p><strong>path</strong> – A catalog <code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code> or the directory holding one.</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The policy, and True if the file has a <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> table.</p>
@@ -1132,8 +1141,7 @@ healthy project.</p>
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1141,12 +1149,12 @@ healthy project.</p>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.DEFAULT_WITHIN_DAYS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_WITHIN_DAYS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.NOT_BUILT_YET"><code class="docutils literal notranslate"><span class="pre">NOT_BUILT_YET</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.NO_EXPIRATION_VALUES"><code class="docutils literal notranslate"><span class="pre">NO_EXPIRATION_VALUES</span></code></a></li>
@@ -1165,6 +1173,7 @@ healthy project.</p>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_glob_names"><code class="docutils literal notranslate"><span class="pre">check_glob_names()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_ids"><code class="docutils literal notranslate"><span class="pre">check_ids()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_licenses"><code class="docutils literal notranslate"><span class="pre">check_licenses()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_links"><code class="docutils literal notranslate"><span class="pre">check_links()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_labels"><code class="docutils literal notranslate"><span class="pre">check_model_labels()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_lineage"><code class="docutils literal notranslate"><span class="pre">check_model_lineage()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.check.check_model_metrics"><code class="docutils literal notranslate"><span class="pre">check_model_metrics()</span></code></a></li>
@@ -1231,8 +1240,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'guide/how-the-build-works';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Examples" href="../examples.html" />
     <link rel="prev" title="ChartBook Plotting Gallery" href="gallery.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../_static/searchtools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script src="../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -267,7 +267,7 @@
 <li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">How the Build Works</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">How the Build Works</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,9 +507,9 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolve-the-index">1. Resolve: the index</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#write-the-writer">2. Write: the writer</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#write-the-writer">2. Write: the writer</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#templates-and-overrides">Templates and overrides</a></li>
 </ul>
 </li>
@@ -529,10 +531,10 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="how-the-build-works">
 <h1>How the Build Works<a class="headerlink" href="#how-the-build-works" title="Link to this heading">#</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> turns a repository into a site in three steps. Each is a transformation of the
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> turns a repository into a site in three steps. Each is a transformation of the
 one before, and each leaves something you can look at.</p>
-<img alt="repository, resolved into an index, written into pages, built into a site" class="align-center only-light" src="../_images/chain-light.svg" />
-<img alt="repository, resolved into an index, written into pages, built into a site" class="align-center only-dark" src="../_images/chain-dark.svg" />
+<img alt="repository, resolved into an index, written into pages, built into a site" class="only-light align-center" src="../_images/chain-light.svg" />
+<img alt="repository, resolved into an index, written into pages, built into a site" class="only-dark align-center" src="../_images/chain-dark.svg" />
 <ol class="arabic simple">
 <li><p><strong>Resolve.</strong> Read <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and the files it names, and write the <strong>index</strong>: one record
 for every pipeline, dataframe, column, chart, notebook, note and model, each with an ID; a
@@ -548,7 +550,7 @@ beside the site.</p></li>
 when a value on a page looks wrong (the index says what the build recorded), and when you want to
 change how a page looks (templates can be overridden).</p>
 <p>One thing comes before the three steps: whose folder this is. A build reads the files the manifest
-names, runs a dataframe’s <code class="docutils literal notranslate"><span class="pre">query</span></code> for its first rows, and (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>) runs the build
+names, runs a dataframe’s <code class="docutils literal notranslate"><span class="pre">query</span></code> for its first rows, and (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>) runs the build
 script, so a folder you did not make is built as a version from a store is until you say it is
 yours to build: no query run, nothing read from outside the folder, no script run, and a warning
 that says so. The first build of it asks you, at a terminal, whether it is yours; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>
@@ -559,32 +561,32 @@ in the folder says it beforehand, and a project <code class="docutils literal no
 <p>The index is built first, before any page, so that every page is a reader of it and says what it
 says. It is a flat list of records:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/index/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-15T19:02:11Z"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.3.0"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="nt">"…"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Treasury Rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">"modified_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-14T07:54:35Z"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"row_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">15842</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
-<span class="w">      </span><span class="nt">"date_range"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"first"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1962-01-02"</span><span class="p">,</span><span class="w"> </span><span class="nt">"last"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-10"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"sources"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"FRED"</span><span class="p">],</span>
-<span class="w">      </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/treasury_rates.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:9c0e…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Series"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"declared"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">"…"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">],</span><span class="w"> </span><span class="nt">"…"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/index/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-15T19:02:11Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generator&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.4.0&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;records&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pipeline&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;…&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Treasury Rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_data/treasury_rates.parquet&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;modified_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-14T07:54:35Z&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;row_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15842</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float64&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;date_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;first&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1962-01-02&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;last&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-10&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FRED&quot;</span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/treasury_rates.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:9c0e…&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Series&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;declared&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;…&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;…&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
@@ -778,7 +780,7 @@ cards, <code class="docutils literal notranslate"><span class="pre">sphinx_copyb
 beside it.</p>
 <p>By default <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> and <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> are deleted afterwards, whether the build succeeded or not.
 <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code> keeps them, which is what you want when a build fails:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook docs generate --keep-build-dirs</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook docs build --keep-build-dirs</span>
 <span class="go">cat _docs/cb/charts/acme--yield_curve.repo_rates.md   # the Markdown Sphinx saw</span>
 <span class="go">cat _docs/index.json                                    # the full index, with resolved paths</span>
 <span class="go">cat _docs/conf.py</span>
@@ -788,7 +790,7 @@ beside it.</p>
 <section id="incremental-builds-and-watch-mode">
 <h2>Incremental builds and watch mode<a class="headerlink" href="#incremental-builds-and-watch-mode" title="Link to this heading">#</a></h2>
 <p>Everything above is a <strong>clean build</strong>: both directories start empty, every page is written, Sphinx
-renders all of them. That is the default, and the right thing in CI. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span> <span class="pre">--incremental</span></code> keeps <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> and makes the next build do less, in three places.</p>
+renders all of them. That is the default, and the right thing in CI. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span> <span class="pre">--incremental</span></code> keeps <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> and makes the next build do less, in three places.</p>
 <p><strong>Unchanged pipelines are not rewritten.</strong> Before writing anything, the build takes a
 <em>fingerprint</em> of each pipeline: a hash over the modification time and size of every file its pages
 are made from (its manifest and README, everything under <code class="docutils literal notranslate"><span class="pre">src/</span></code> and <code class="docutils literal notranslate"><span class="pre">docs_src/</span></code> and its
@@ -804,7 +806,7 @@ any more is deleted. Sphinx decides what to re-read from modification times, so 
 is not re-read.</p>
 <p><strong>Sphinx keeps its cache.</strong> <code class="docutils literal notranslate"><span class="pre">_docs/_build/</span></code> survives, so Sphinx re-renders only the pages whose
 source changed; if none did and the last render succeeded, it is not run.</p>
-<p>The fingerprints live in <code class="docutils literal notranslate"><span class="pre">_docs/.chartbook-build-state.json</span></code>. Deleting <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> is always safe:
+<p>The fingerprints live in <code class="docutils literal notranslate"><span class="pre">_docs/.chartbook-run-state.json</span></code>. Deleting <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> is always safe:
 the next incremental build is a full one. An upgrade to ChartBook, Sphinx or a theme, an edit to a
 packaged template, or a different <code class="docutils literal notranslate"><span class="pre">--size-threshold</span></code> can change every page, so any of these starts
 over from nothing. When the <em>set</em> of pages changes, the rendered site is dropped and every page is
@@ -813,14 +815,14 @@ and does not redraw the navigation of pages that did not change.</p>
 <p>“Changed” is decided by modification time and size, which is cheap enough to check every second
 and has the usual blind spot: a file replaced by different content of the same size and timestamp
 is not noticed. A clean build is never wrong; when in doubt, run one.</p>
-<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span> <span class="pre">--watch</span></code> is the incremental build in a loop: build, check the project’s files once
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span> <span class="pre">--watch</span></code> is the incremental build in a loop: build, check the project’s files once
 a second (<code class="docutils literal notranslate"><span class="pre">--watch-interval</span></code>), rebuild when any differs. A build that fails, typically because a
 file was caught half-saved, is reported and the loop carries on. There is no server and no live
 reload: open the site with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">open</span></code> and refresh after a rebuild.</p>
 </section>
 <section id="the-build-directory">
 <h2>The build directory<a class="headerlink" href="#the-build-directory" title="Link to this heading">#</a></h2>
-<p>After <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span> <span class="pre">--keep-build-dirs</span></code>:</p>
+<p>After <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span> <span class="pre">--keep-build-dirs</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>_docs/
 ├── index.md                              # the front page
 ├── index.json                            # the full index
@@ -843,8 +845,8 @@ reload: open the site with <code class="docutils literal notranslate"><span clas
 │   ├── {pipeline}/{name}.html            # charts, for the iframes
 │   ├── diagnostics/chartbook_metadata_diagnostics.csv
 │   └── logo, favicon, custom.css, chartbook-freshness.js
-├── _templates/                           # the theme's templates, as resolved
-└── _build/html/                          # Sphinx's output
+├── _templates/                           # the theme&#39;s templates, as resolved
+└── _build/html/                          # Sphinx&#39;s output
 </pre></div>
 </div>
 </section>
@@ -870,7 +872,7 @@ the Diagnostics page, list every field the policy requires and each asset lacks.
 <ul class="simple">
 <li><p><a class="reference internal" href="vocabulary.html"><span class="doc">Vocabulary</span></a>: the words this page uses, defined once</p></li>
 <li><p><a class="reference internal" href="documenting-a-pipeline.html"><span class="doc">Documenting a Pipeline</span></a>: the manifest that all of this starts from</p></li>
-<li><p><a class="reference internal" href="../reference/cli.html"><span class="doc">CLI Reference</span></a>: every option of <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code></p></li>
+<li><p><a class="reference internal" href="../reference/cli.html"><span class="doc">CLI Reference</span></a>: every option of <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code></p></li>
 <li><p><a class="reference internal" href="../design/writer.html"><span class="doc">Design: the writer, and what every page shows</span></a>: the design of the writer, and what every page shows</p></li>
 </ul>
 </section>
@@ -912,8 +914,7 @@ the Diagnostics page, list every field the policy requires and each asset lacks.
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -921,9 +922,9 @@ the Diagnostics page, list every field the policy requires and each asset lacks.
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resolve-the-index">1. Resolve: the index</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#write-the-writer">2. Write: the writer</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#write-the-writer">2. Write: the writer</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#templates-and-overrides">Templates and overrides</a></li>
 </ul>
 </li>
@@ -980,8 +981,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

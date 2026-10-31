@@ -19,16 +19,8 @@
   - ```{autodoc2-docstring} chartbook.cli.add_command
     :summary:
     ```
-* - {py:obj}`build <chartbook.cli.build>`
-  - ```{autodoc2-docstring} chartbook.cli.build
-    :summary:
-    ```
 * - {py:obj}`catalog <chartbook.cli.catalog>`
   - ```{autodoc2-docstring} chartbook.cli.catalog
-    :summary:
-    ```
-* - {py:obj}`catalog_add <chartbook.cli.catalog_add>`
-  - ```{autodoc2-docstring} chartbook.cli.catalog_add
     :summary:
     ```
 * - {py:obj}`catalog_disable <chartbook.cli.catalog_disable>`
@@ -45,6 +37,10 @@
     ```
 * - {py:obj}`catalog_init <chartbook.cli.catalog_init>`
   - ```{autodoc2-docstring} chartbook.cli.catalog_init
+    :summary:
+    ```
+* - {py:obj}`catalog_migrate <chartbook.cli.catalog_migrate>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_migrate
     :summary:
     ```
 * - {py:obj}`catalog_open <chartbook.cli.catalog_open>`
@@ -115,6 +111,10 @@
   - ```{autodoc2-docstring} chartbook.cli.lineage_command
     :summary:
     ```
+* - {py:obj}`link_command <chartbook.cli.link_command>`
+  - ```{autodoc2-docstring} chartbook.cli.link_command
+    :summary:
+    ```
 * - {py:obj}`ls <chartbook.cli.ls>`
   - ```{autodoc2-docstring} chartbook.cli.ls
     :summary:
@@ -129,6 +129,14 @@
     ```
 * - {py:obj}`ls_pipelines <chartbook.cli.ls_pipelines>`
   - ```{autodoc2-docstring} chartbook.cli.ls_pipelines
+    :summary:
+    ```
+* - {py:obj}`ls_stores <chartbook.cli.ls_stores>`
+  - ```{autodoc2-docstring} chartbook.cli.ls_stores
+    :summary:
+    ```
+* - {py:obj}`ls_versions <chartbook.cli.ls_versions>`
+  - ```{autodoc2-docstring} chartbook.cli.ls_versions
     :summary:
     ```
 * - {py:obj}`main <chartbook.cli.main>`
@@ -171,6 +179,10 @@
   - ```{autodoc2-docstring} chartbook.cli.store
     :summary:
     ```
+* - {py:obj}`store_add <chartbook.cli.store_add>`
+  - ```{autodoc2-docstring} chartbook.cli.store_add
+    :summary:
+    ```
 * - {py:obj}`store_export <chartbook.cli.store_export>`
   - ```{autodoc2-docstring} chartbook.cli.store_export
     :summary:
@@ -189,6 +201,14 @@
     ```
 * - {py:obj}`store_migrate <chartbook.cli.store_migrate>`
   - ```{autodoc2-docstring} chartbook.cli.store_migrate
+    :summary:
+    ```
+* - {py:obj}`store_move <chartbook.cli.store_move>`
+  - ```{autodoc2-docstring} chartbook.cli.store_move
+    :summary:
+    ```
+* - {py:obj}`store_remove <chartbook.cli.store_remove>`
+  - ```{autodoc2-docstring} chartbook.cli.store_remove
     :summary:
     ```
 * - {py:obj}`store_verify <chartbook.cli.store_verify>`
@@ -222,7 +242,7 @@
 ````{py:data} STORE_ONLY
 :canonical: chartbook.cli.STORE_ONLY
 :value: >
-   '(store only: not on this machine; the catalog shows its snapshots)'
+   '(stored snapshots)'
 
 ```{autodoc2-docstring} chartbook.cli.STORE_ONLY
 ```
@@ -236,24 +256,10 @@
 ```
 ````
 
-````{py:function} build(remake, upstream, **site)
-:canonical: chartbook.cli.build
-
-```{autodoc2-docstring} chartbook.cli.build
-```
-````
-
 ````{py:function} catalog()
 :canonical: chartbook.cli.catalog
 
 ```{autodoc2-docstring} chartbook.cli.catalog
-```
-````
-
-````{py:function} catalog_add(paths, catalog_path, yes)
-:canonical: chartbook.cli.catalog_add
-
-```{autodoc2-docstring} chartbook.cli.catalog_add
 ```
 ````
 
@@ -282,6 +288,13 @@
 :canonical: chartbook.cli.catalog_init
 
 ```{autodoc2-docstring} chartbook.cli.catalog_init
+```
+````
+
+````{py:function} catalog_migrate(catalog_path)
+:canonical: chartbook.cli.catalog_migrate
+
+```{autodoc2-docstring} chartbook.cli.catalog_migrate
 ```
 ````
 
@@ -404,6 +417,13 @@
 ```
 ````
 
+````{py:function} link_command(pipeline, folder, project_dir)
+:canonical: chartbook.cli.link_command
+
+```{autodoc2-docstring} chartbook.cli.link_command
+```
+````
+
 ````{py:function} ls(ctx, catalog)
 :canonical: chartbook.cli.ls
 
@@ -429,6 +449,20 @@
 :canonical: chartbook.cli.ls_pipelines
 
 ```{autodoc2-docstring} chartbook.cli.ls_pipelines
+```
+````
+
+````{py:function} ls_stores(ctx)
+:canonical: chartbook.cli.ls_stores
+
+```{autodoc2-docstring} chartbook.cli.ls_stores
+```
+````
+
+````{py:function} ls_versions(ctx)
+:canonical: chartbook.cli.ls_versions
+
+```{autodoc2-docstring} chartbook.cli.ls_versions
 ```
 ````
 
@@ -488,7 +522,7 @@
 ```
 ````
 
-````{py:function} snapshot(project_dir, deep)
+````{py:function} snapshot(project_dir, deep, store_names)
 :canonical: chartbook.cli.snapshot
 
 ```{autodoc2-docstring} chartbook.cli.snapshot
@@ -499,6 +533,13 @@
 :canonical: chartbook.cli.store
 
 ```{autodoc2-docstring} chartbook.cli.store
+```
+````
+
+````{py:function} store_add(name, url, pipelines, read_only, catalog_path)
+:canonical: chartbook.cli.store_add
+
+```{autodoc2-docstring} chartbook.cli.store_add
 ```
 ````
 
@@ -523,7 +564,7 @@
 ```
 ````
 
-````{py:function} store_info()
+````{py:function} store_info(store_name)
 :canonical: chartbook.cli.store_info
 
 ```{autodoc2-docstring} chartbook.cli.store_info
@@ -534,6 +575,20 @@
 :canonical: chartbook.cli.store_migrate
 
 ```{autodoc2-docstring} chartbook.cli.store_migrate
+```
+````
+
+````{py:function} store_move(pipeline, to, keep, dry_run, no_route)
+:canonical: chartbook.cli.store_move
+
+```{autodoc2-docstring} chartbook.cli.store_move
+```
+````
+
+````{py:function} store_remove(name, catalog_path)
+:canonical: chartbook.cli.store_remove
+
+```{autodoc2-docstring} chartbook.cli.store_remove
 ```
 ````
 

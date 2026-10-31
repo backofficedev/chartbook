@@ -284,7 +284,7 @@
 ````{py:data} DEPENDENCY_KEYS
 :canonical: chartbook.manifest.DEPENDENCY_KEYS
 :value: >
-   ('path', 'git', 'rev', 'id', 'commit', 'repository')
+   ('path', 'git', 'rev', 'id', 'commit', 'repository', 'store')
 
 ```{autodoc2-docstring} chartbook.manifest.DEPENDENCY_KEYS
 ```

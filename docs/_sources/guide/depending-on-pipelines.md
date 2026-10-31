@@ -58,7 +58,7 @@ machine only: `chartbook check` warns about one, and shows the line that names i
 the other pipeline is there and that it declares that dataframe.
 
 Dependencies between pipelines form a directed acyclic graph: a pipeline cannot depend, through
-what it depends on, on itself. `chartbook run`, `chartbook build` and `chartbook snapshot` stop
+what it depends on, on itself. `chartbook run`, `chartbook run` and `chartbook snapshot` stop
 when they find a cycle, and say who depends on whom and where each dependency was read, and
 `chartbook check` reports it. A run looks before it pins or builds anything, including at the pins
 it is about to make, so a refused run leaves your lockfile and the store as they were. If what a
@@ -231,3 +231,16 @@ pipeline reads it as `fed_yield_curve:model/x@champion`: the lockfile pins the l
 `chartbook update` moves it when the label does. `chartbook path model/x@<version>` gives the
 path of any version on this machine. {ref}`chartbook pin <chartbook-pin>` has the details, and
 {doc}`../design/models` the reasoning.
+
+## Fetching a published pin on another machine
+
+Bob can clone a consumer and read its pinned upstream without building that upstream. Declare the publishing store beside the repository:
+
+```toml
+[dependencies]
+"acme/rates" = { repository = "https://github.com/acme/rates", store = "s3://acme-public/chartbook?anonymous=true" }
+```
+
+`chartbook run --frozen` finds the locked snapshot in that store and verifies its files. `chartbook update` considers it alongside the machine's stores. Dependency stores are read-only and must be portable URLs; local paths and `file://` are refused. An anonymous S3 bucket must grant listing and read access. Static HTTPS stores are not implemented.
+
+To work on upstream and consumer together, run `chartbook link acme/rates ../rates` in the consumer. Reads use built files there and warn that pins are bypassed. Remove `chartbook.links.toml`, update, and snapshot to publish a reproducible result.

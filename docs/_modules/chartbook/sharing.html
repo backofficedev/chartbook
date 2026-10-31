@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/sharing';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,11 +458,11 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.sharing</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Sending one pipeline's snapshots to someone else: ``chartbook store export`` and ``store import``.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Sending one pipeline&#39;s snapshots to someone else: ``chartbook store export`` and ``store import``.</span>
 
-<span class="sd">A pipeline's folder in a store (``pipelines/&lt;pipeline&gt;/``) is what a person</span>
-<span class="sd">sends a collaborator, and copied by hand into another store's ``pipelines/``</span>
-<span class="sd">it is that pipeline's snapshots there too. These two commands do the same,</span>
+<span class="sd">A pipeline&#39;s folder in a store (``pipelines/&lt;pipeline&gt;/``) is what a person</span>
+<span class="sd">sends a collaborator, and copied by hand into another store&#39;s ``pipelines/``</span>
+<span class="sd">it is that pipeline&#39;s snapshots there too. These two commands do the same,</span>
 <span class="sd">checked:</span>
 
 <span class="sd">- **Export** writes chosen snapshots of one pipeline into a folder laid out</span>
@@ -468,25 +470,25 @@
 <span class="sd">  newest with ``latest``, or the ones named. Each file is kept once, in the</span>
 <span class="sd">  first exported snapshot that has it, so the newest alone is a complete</span>
 <span class="sd">  snapshot, every file it needs in its own folder.</span>
-<span class="sd">- **Import** copies the snapshots of such a folder, or of a pipeline's folder</span>
-<span class="sd">  copied by hand, into this machine's store, oldest first. Every file is</span>
+<span class="sd">- **Import** copies the snapshots of such a folder, or of a pipeline&#39;s folder</span>
+<span class="sd">  copied by hand, into this machine&#39;s store, oldest first. Every file is</span>
 <span class="sd">  hashed as it is copied and checked against its record; a file the store</span>
 <span class="sd">  holds already is not copied again, and nothing there is written over.</span>
 
-<span class="sd">Only what a snapshot's record names goes: its data, its documents and its</span>
+<span class="sd">Only what a snapshot&#39;s record names goes: its data, its documents and its</span>
 <span class="sd">index, never anything that runs. A snapshot a pin made from a clone is not</span>
-<span class="sd">exported: it is the pinning machine's, not the pipeline's.</span>
-<span class="sd">"""</span>
+<span class="sd">exported: it is the pinning machine&#39;s, not the pipeline&#39;s.</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.store</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span> <span class="nn">chartbook.store</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">OWN_DIR</span><span class="p">,</span>
     <span class="n">PIPELINES_DIR</span><span class="p">,</span>
     <span class="n">RECORD_FILE</span><span class="p">,</span>
@@ -503,23 +505,23 @@
 
 <div class="viewcode-block" id="SharingError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.SharingError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">SharingError</span><span class="p">(</span><span class="n">StoreError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Raised when snapshots cannot be exported or imported, saying why."""</span></div>
+<span class="k">class</span> <span class="nc">SharingError</span><span class="p">(</span><span class="n">StoreError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when snapshots cannot be exported or imported, saying why.&quot;&quot;&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="Copied">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.Copied">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">Copied</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""What an export or an import did.</span>
+<span class="k">class</span> <span class="nc">Copied</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What an export or an import did.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        copied: Each snapshot written, as ``(pipeline, commit, made_at)``.</span>
 <span class="sd">        there: Each that the store it went to had already.</span>
 <span class="sd">        refused: Each that was not, with why: a file not what its record says, say.</span>
 <span class="sd">        size_bytes: The size of the files copied; a file the store had is not counted.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">copied</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
     <span class="n">there</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
@@ -528,8 +530,8 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_records_in</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">KeptRecord</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The snapshots' records in one pipeline's folder, oldest first, whatever the folder is named."""</span>
+<span class="k">def</span> <span class="nf">_records_in</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">KeptRecord</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The snapshots&#39; records in one pipeline&#39;s folder, oldest first, whatever the folder is named.&quot;&quot;&quot;</span>
     <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">snapshot</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">folder</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="n">is_snapshot_folder</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)):</span>
         <span class="n">path</span> <span class="o">=</span> <span class="n">snapshot</span> <span class="o">/</span> <span class="n">OWN_DIR</span> <span class="o">/</span> <span class="n">RECORD_FILE</span>
@@ -538,10 +540,10 @@
     <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">record</span><span class="p">:</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_folders</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The pipelines' folders a folder holds: a store's (``pipelines/*``), or the one it is."""</span>
+<span class="k">def</span> <span class="nf">_pipeline_folders</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The pipelines&#39; folders a folder holds: a store&#39;s (``pipelines/*``), or the one it is.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">source</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">source</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span><span class="p">)</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"+"</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">source</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span><span class="p">)</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">))</span>
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="n">is_snapshot_folder</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">source</span><span class="p">]</span>
     <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">source</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="n">is_snapshot_folder</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()))</span>
@@ -549,37 +551,37 @@
 
 <div class="viewcode-block" id="copy_snapshots">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.copy_snapshots">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">copy_snapshots</span><span class="p">(</span><span class="n">records</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">KeptRecord</span><span class="p">],</span> <span class="n">into</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Copied</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Copy snapshots, each by its record, into a store: oldest first, each file once, every byte checked.</span>
+<span class="k">def</span> <span class="nf">copy_snapshots</span><span class="p">(</span><span class="n">records</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">KeptRecord</span><span class="p">],</span> <span class="n">into</span><span class="p">:</span> <span class="n">Store</span><span class="p">,</span> <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Copied</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Copy snapshots, each by its record, into a store: oldest first, each file once, every byte checked.</span>
 
 <span class="sd">    A snapshot the store has already (its pipeline, commit and time) is not</span>
 <span class="sd">    copied again. One whose file is not what its record says, or whose</span>
 <span class="sd">    record is not one a store wrote, is refused and said, and the rest go.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">done</span> <span class="o">=</span> <span class="n">Copied</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">record</span><span class="p">:</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">)):</span>
         <span class="n">moment</span> <span class="o">=</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">record</span><span class="o">.</span><span class="n">readable</span><span class="p">:</span>
-            <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">"its record cannot be read"</span><span class="p">))</span>
+            <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="p">),</span> <span class="s2">&quot;its record cannot be read&quot;</span><span class="p">))</span>
             <span class="k">continue</span>
-        <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">made_by</span> <span class="o">!=</span> <span class="s2">"snapshot"</span><span class="p">:</span>
-            <span class="k">continue</span>  <span class="c1"># where a pin kept a clone's files: the pinning machine's, not the pipeline's</span>
+        <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">made_by</span> <span class="o">!=</span> <span class="s2">&quot;snapshot&quot;</span><span class="p">:</span>
+            <span class="k">continue</span>  <span class="c1"># where a pin kept a clone&#39;s files: the pinning machine&#39;s, not the pipeline&#39;s</span>
         <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
             <span class="p">(</span><span class="n">kept</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">kept</span><span class="o">.</span><span class="n">commit</span><span class="p">,</span> <span class="n">kept</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span> <span class="o">==</span> <span class="n">moment</span>
-            <span class="k">for</span> <span class="n">kept</span> <span class="ow">in</span> <span class="p">(</span><span class="n">into</span><span class="o">.</span><span class="n">records</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">into</span><span class="p">,</span> <span class="s2">"records"</span><span class="p">)</span> <span class="k">else</span> <span class="p">[])</span>
+            <span class="k">for</span> <span class="n">kept</span> <span class="ow">in</span> <span class="p">(</span><span class="n">into</span><span class="o">.</span><span class="n">records</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">into</span><span class="p">,</span> <span class="s2">&quot;records&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="p">[])</span>
             <span class="k">if</span> <span class="n">kept</span><span class="o">.</span><span class="n">readable</span>
         <span class="p">):</span>
             <span class="n">done</span><span class="o">.</span><span class="n">there</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">moment</span><span class="p">)</span>
             <span class="k">continue</span>
-        <span class="n">what</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">what</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">why</span> <span class="o">=</span> <span class="n">_not_to_copy</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">why</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">what</span><span class="p">,</span> <span class="n">why</span><span class="p">))</span>
             <span class="k">continue</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">document</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span>
+            <span class="n">document</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-            <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">what</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"its record cannot be read: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">"</span><span class="p">))</span>
+            <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">what</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;its record cannot be read: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
             <span class="k">continue</span>
         <span class="n">pending</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
@@ -599,125 +601,125 @@
             <span class="n">done</span><span class="o">.</span><span class="n">refused</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">what</span><span class="p">,</span> <span class="n">why</span><span class="p">))</span>
             <span class="k">continue</span>
         <span class="n">done</span><span class="o">.</span><span class="n">copied</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">moment</span><span class="p">)</span>
-        <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">commit</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span><span class="si">}</span><span class="s2">, made </span><span class="si">{</span><span class="n">record</span><span class="o">.</span><span class="n">made_at</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">done</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_not_to_copy</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="n">KeptRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Why a snapshot is not to be copied, by what a store asks of its record; None if it may be.</span>
+<span class="k">def</span> <span class="nf">_not_to_copy</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="n">KeptRecord</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Why a snapshot is not to be copied, by what a store asks of its record; None if it may be.</span>
 
 <span class="sd">    Read as any record is (:func:`chartbook.snapshot.read`): its schema, its</span>
-<span class="sd">    time, its pipeline's ID, its paths, and its folder's name, which must</span>
-<span class="sd">    be its pipeline's and its commit's. A record or a folder that is a link</span>
+<span class="sd">    time, its pipeline&#39;s ID, its paths, and its folder&#39;s name, which must</span>
+<span class="sd">    be its pipeline&#39;s and its commit&#39;s. A record or a folder that is a link</span>
 <span class="sd">    is refused, as a reader refuses one.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.snapshot</span><span class="w"> </span><span class="kn">import</span> <span class="n">SnapshotError</span><span class="p">,</span> <span class="n">read</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.snapshot</span> <span class="kn">import</span> <span class="n">SnapshotError</span><span class="p">,</span> <span class="n">read</span>
 
     <span class="n">folder</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span>
     <span class="k">if</span> <span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="ow">or</span> <span class="n">folder</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="ow">or</span> <span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
-        <span class="k">return</span> <span class="s2">"its record, or a folder holding it, is a link"</span>
+        <span class="k">return</span> <span class="s2">&quot;its record, or a folder holding it, is a link&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">taken</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">SnapshotError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">pipeline_folder</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">):</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"it is in the folder </span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, and is a snapshot of </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">, whose folder is </span><span class="si">{</span><span class="n">pipeline_folder</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;it is in the folder </span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, and is a snapshot of </span><span class="si">{</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">, whose folder is </span><span class="si">{</span><span class="n">pipeline_folder</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_copy_parts</span><span class="p">(</span><span class="n">document</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">KeptRecord</span><span class="p">,</span> <span class="n">pending</span><span class="p">,</span> <span class="n">done</span><span class="p">:</span> <span class="n">Copied</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Put each part a record names into the snapshot being written, and give the record where each is kept now; why not, if not."""</span>
-    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">part</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"records"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)]</span>
-    <span class="n">parts</span> <span class="o">+=</span> <span class="p">[</span><span class="n">document</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"index"</span><span class="p">,</span> <span class="s2">"documents"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)]</span>
+<span class="k">def</span> <span class="nf">_copy_parts</span><span class="p">(</span><span class="n">document</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="n">KeptRecord</span><span class="p">,</span> <span class="n">pending</span><span class="p">,</span> <span class="n">done</span><span class="p">:</span> <span class="n">Copied</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Put each part a record names into the snapshot being written, and give the record where each is kept now; why not, if not.&quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">part</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)]</span>
+    <span class="n">parts</span> <span class="o">+=</span> <span class="p">[</span><span class="n">document</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="s2">&quot;documents&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="nb">dict</span><span class="p">)]</span>
     <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"content_hash"</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_hash&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">continue</span>  <span class="c1"># declared and not built</span>
-        <span class="k">if</span> <span class="s2">"stored"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">part</span><span class="p">:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"its record's </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'id'</span><span class="p">,</span><span class="w"> </span><span class="s1">'part'</span><span class="p">)</span><span class="si">}</span><span class="s2"> names </span><span class="si">{</span><span class="n">part</span><span class="p">[</span><span class="s1">'content_hash'</span><span class="p">]</span><span class="si">}</span><span class="s2">, and does not say where its files are"</span>
-        <span class="n">kept</span> <span class="o">=</span> <span class="n">_kept_files</span><span class="p">(</span><span class="n">part</span><span class="p">[</span><span class="s2">"stored"</span><span class="p">],</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;stored&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">part</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;its record&#39;s </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;part&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> names </span><span class="si">{</span><span class="n">part</span><span class="p">[</span><span class="s1">&#39;content_hash&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, and does not say where its files are&quot;</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="n">_kept_files</span><span class="p">(</span><span class="n">part</span><span class="p">[</span><span class="s2">&quot;stored&quot;</span><span class="p">],</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">kept</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"its record's </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'id'</span><span class="p">,</span><span class="w"> </span><span class="s1">'part'</span><span class="p">)</span><span class="si">}</span><span class="s2"> says nothing a store could follow"</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;its record&#39;s </span><span class="si">{</span><span class="n">part</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;part&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> says nothing a store could follow&quot;</span>
         <span class="n">at</span><span class="p">,</span> <span class="n">single</span><span class="p">,</span> <span class="n">files</span> <span class="o">=</span> <span class="n">kept</span>
-        <span class="c1"># A folder sent by someone may hold a link to a file of this machine's: never followed</span>
+        <span class="c1"># A folder sent by someone may hold a link to a file of this machine&#39;s: never followed</span>
         <span class="n">inside</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">parent</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">location</span><span class="p">))</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">inside</span><span class="p">):</span>
-                <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">file</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> is a link, or leads out of the folder it came in"</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">file</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> is a link, or leads out of the folder it came in&quot;</span>
         <span class="n">missing</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">file</span><span class="o">.</span><span class="n">location</span><span class="o">.</span><span class="n">is_file</span><span class="p">()),</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">missing</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">missing</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not there"</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">missing</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2"> is not there&quot;</span>
         <span class="n">sources</span> <span class="o">=</span> <span class="p">[(</span><span class="n">file</span><span class="o">.</span><span class="n">relative</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">location</span><span class="p">))</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
         <span class="n">stored</span> <span class="o">=</span> <span class="n">pending</span><span class="o">.</span><span class="n">put_listed</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">path</span> <span class="k">if</span> <span class="n">single</span> <span class="k">else</span> <span class="n">at</span><span class="p">,</span> <span class="n">single</span><span class="p">)</span>
         <span class="n">wrong</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">new</span><span class="p">[</span><span class="s2">"path"</span><span class="p">]</span> <span class="k">for</span> <span class="n">new</span><span class="p">,</span> <span class="n">old</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">stored</span><span class="p">[</span><span class="s2">"files"</span><span class="p">],</span> <span class="n">files</span><span class="p">)</span> <span class="k">if</span> <span class="n">new</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]</span> <span class="o">!=</span> <span class="n">old</span><span class="o">.</span><span class="n">content_hash</span>
+            <span class="n">new</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">new</span><span class="p">,</span> <span class="n">old</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">stored</span><span class="o">.</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">],</span> <span class="n">files</span><span class="p">)</span> <span class="k">if</span> <span class="n">new</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">old</span><span class="o">.</span><span class="n">content_hash</span>
         <span class="p">]</span>
-        <span class="k">if</span> <span class="n">wrong</span> <span class="ow">or</span> <span class="n">stored</span><span class="o">.</span><span class="n">content_hash</span> <span class="o">!=</span> <span class="n">part</span><span class="p">[</span><span class="s2">"content_hash"</span><span class="p">]:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="p">(</span><span class="n">wrong</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">[</span><span class="n">at</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> is not what its record says"</span>
+        <span class="k">if</span> <span class="n">wrong</span> <span class="ow">or</span> <span class="n">stored</span><span class="o">.</span><span class="n">content_hash</span> <span class="o">!=</span> <span class="n">part</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">wrong</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">[</span><span class="n">at</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> is not what its record says&quot;</span>
         <span class="n">done</span><span class="o">.</span><span class="n">size_bytes</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">(</span>
-            <span class="n">new</span><span class="p">[</span><span class="s2">"size_bytes"</span><span class="p">]</span> <span class="k">for</span> <span class="n">new</span> <span class="ow">in</span> <span class="n">stored</span><span class="o">.</span><span class="n">stored</span><span class="p">[</span><span class="s2">"files"</span><span class="p">]</span> <span class="k">if</span> <span class="n">new</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kept_in"</span><span class="p">)</span> <span class="o">==</span> <span class="n">pending</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="s2">"kept_as"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new</span>
+            <span class="n">new</span><span class="p">[</span><span class="s2">&quot;size_bytes&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">new</span> <span class="ow">in</span> <span class="n">stored</span><span class="o">.</span><span class="n">stored</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">new</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kept_in&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">pending</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="s2">&quot;kept_as&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new</span>
         <span class="p">)</span>
-        <span class="n">part</span><span class="p">[</span><span class="s2">"stored"</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">stored</span>
+        <span class="n">part</span><span class="p">[</span><span class="s2">&quot;stored&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span><span class="o">.</span><span class="n">stored</span>
     <span class="k">return</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="export">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.export">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">export</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">export</span><span class="p">(</span>
     <span class="n">store</span><span class="p">:</span> <span class="n">FolderStore</span><span class="p">,</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">to</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
     <span class="n">which</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Copied</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Write snapshots of one pipeline from a store into a folder laid out as a store: ``&lt;to&gt;/pipelines/&lt;pipeline&gt;/``.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write snapshots of one pipeline from a store into a folder laid out as a store: ``&lt;to&gt;/pipelines/&lt;pipeline&gt;/``.</span>
 
-<span class="sd">    :param which: None for every snapshot its owner made; ``"latest"`` for</span>
+<span class="sd">    :param which: None for every snapshot its owner made; ``&quot;latest&quot;`` for</span>
 <span class="sd">        the newest; or a list of the ones to write, each a commit (or the</span>
 <span class="sd">        start of one) or ``commit@made_at``.</span>
 <span class="sd">    :raises SharingError: If the store has no snapshot of the pipeline, or</span>
 <span class="sd">        none of those asked for.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">folder</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">pipeline_path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span>
-    <span class="n">records</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">records</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">readable</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">made_by</span> <span class="o">==</span> <span class="s2">"snapshot"</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">==</span> <span class="n">pipeline</span><span class="p">]</span>
+    <span class="n">records</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">store</span><span class="o">.</span><span class="n">records</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">readable</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">made_by</span> <span class="o">==</span> <span class="s2">&quot;snapshot&quot;</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">pipeline</span> <span class="o">==</span> <span class="n">pipeline</span><span class="p">]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">records</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2"> has no snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> (its folder would be </span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">"latest"</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The store at </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2"> has no snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> (its folder would be </span><span class="si">{</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">which</span> <span class="o">==</span> <span class="s2">&quot;latest&quot;</span><span class="p">:</span>
         <span class="n">records</span> <span class="o">=</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">made_at</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">))]</span>
     <span class="k">elif</span> <span class="n">which</span><span class="p">:</span>
         <span class="n">chosen</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">asked</span> <span class="ow">in</span> <span class="n">which</span><span class="p">:</span>
-            <span class="n">commit</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">made_at</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asked</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"@"</span><span class="p">)</span>
+            <span class="n">commit</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">made_at</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asked</span><span class="p">)</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">)</span>
             <span class="n">matched</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">records</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">commit</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">commit</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">made_at</span> <span class="ow">or</span> <span class="n">r</span><span class="o">.</span><span class="n">made_at</span> <span class="o">==</span> <span class="n">made_at</span><span class="p">)]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">matched</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The store at </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2"> has no snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">asked</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The store at </span><span class="si">{</span><span class="n">store</span><span class="si">}</span><span class="s2"> has no snapshot of </span><span class="si">{</span><span class="n">pipeline</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">asked</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
             <span class="n">chosen</span> <span class="o">+=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">matched</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">chosen</span><span class="p">]</span>
         <span class="n">records</span> <span class="o">=</span> <span class="n">chosen</span>
     <span class="n">to</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">to</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">to</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span> <span class="o">/</span> <span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">((</span><span class="n">to</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span> <span class="o">/</span> <span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
-        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">to</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">PIPELINES_DIR</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is there already: export into another folder."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">to</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">PIPELINES_DIR</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">folder</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is there already: export into another folder.&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">copy_snapshots</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">FolderStore</span><span class="p">(</span><span class="n">to</span><span class="p">),</span> <span class="n">echo</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="import_snapshots">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.import_snapshots">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">import_snapshots</span><span class="p">(</span><span class="n">store</span><span class="p">:</span> <span class="n">FolderStore</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Copied</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Copy the snapshots a folder holds into a store: an export, a store, or a pipeline's folder copied by hand.</span>
+<span class="k">def</span> <span class="nf">import_snapshots</span><span class="p">(</span><span class="n">store</span><span class="p">:</span> <span class="n">FolderStore</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span> <span class="n">echo</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Copied</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Copy the snapshots a folder holds into a store: an export, a store, or a pipeline&#39;s folder copied by hand.</span>
 
 <span class="sd">    :raises SharingError: If the folder holds no snapshot.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">source</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> is not a folder."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> is not a folder.&quot;</span><span class="p">)</span>
     <span class="n">inside</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">root</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="n">inside</span> <span class="ow">or</span> <span class="n">source</span><span class="o">.</span><span class="n">is_relative_to</span><span class="p">(</span><span class="n">inside</span> <span class="o">/</span> <span class="n">PIPELINES_DIR</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> is in the store it would be imported into."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> is in the store it would be imported into.&quot;</span><span class="p">)</span>
     <span class="n">records</span> <span class="o">=</span> <span class="p">[</span><span class="n">record</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">_pipeline_folders</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">_records_in</span><span class="p">(</span><span class="n">folder</span><span class="p">)]</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">records</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">SharingError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> holds no snapshot: a pipeline's folder from a store (its snapshots' folders, each with "</span>
-            <span class="sa">f</span><span class="s2">"_chartbook/</span><span class="si">{</span><span class="n">RECORD_FILE</span><span class="si">}</span><span class="s2">), or a folder `chartbook store export` wrote."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> holds no snapshot: a pipeline&#39;s folder from a store (its snapshots&#39; folders, each with &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;_chartbook/</span><span class="si">{</span><span class="n">RECORD_FILE</span><span class="si">}</span><span class="s2">), or a folder `chartbook store export` wrote.&quot;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">copy_snapshots</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">store</span><span class="p">,</span> <span class="n">echo</span><span class="p">)</span></div>
 
@@ -783,8 +785,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

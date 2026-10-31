@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/data';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,7 +458,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.data</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Data access for chartbook: where dataframes live, and loading them.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Data access for chartbook: where dataframes live, and loading them.</span>
 
 <span class="sd">This is the front door for **dataframes**. Every function here takes a</span>
 <span class="sd">dataframe and nothing else; :mod:`chartbook.assets` is the general module,</span>
@@ -469,47 +471,47 @@
 
 <span class="sd">    # The path declared for [dataframes.repo_public] in the enclosing</span>
 <span class="sd">    # chartbook.toml; works before the file exists, so it can name a target</span>
-<span class="sd">    df.to_parquet(data.path("repo_public"))</span>
+<span class="sd">    df.to_parquet(data.path(&quot;repo_public&quot;))</span>
 
 <span class="sd">    # A throwaway directory for intermediates: _data/_scratch/ in the pipeline</span>
-<span class="sd">    raw.to_csv(data.scratch() / "raw_download.csv")</span>
+<span class="sd">    raw.to_csv(data.scratch() / &quot;raw_download.csv&quot;)</span>
 
 <span class="sd">Load a dataframe by reference: one of this pipeline, or the pinned copy of</span>
 <span class="sd">one that belongs to a pipeline declared in ``[dependencies]``::</span>
 
-<span class="sd">    lf = data.load("repo_public")                    # mine, as it is now</span>
-<span class="sd">    lf = data.load("yield_curve:fed_yield_curve")    # theirs, as pinned</span>
-<span class="sd">    path = data.path("yield_curve:fed_yield_curve")  # just the path</span>
+<span class="sd">    lf = data.load(&quot;repo_public&quot;)                    # mine, as it is now</span>
+<span class="sd">    lf = data.load(&quot;yield_curve:fed_yield_curve&quot;)    # theirs, as pinned</span>
+<span class="sd">    path = data.path(&quot;yield_curve:fed_yield_curve&quot;)  # just the path</span>
 
 <span class="sd">Load dataframes from registered pipelines in a catalog::</span>
 
 <span class="sd">    # Load as Polars LazyFrame (default)</span>
-<span class="sd">    lf = data.load(pipeline="yield_curve", dataframe="repo_public")</span>
+<span class="sd">    lf = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
 
 <span class="sd">    # Load as Polars eager DataFrame</span>
-<span class="sd">    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars_eager")</span>
+<span class="sd">    df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;polars_eager&quot;)</span>
 
 <span class="sd">    # Load as pandas DataFrame</span>
-<span class="sd">    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="pandas")</span>
+<span class="sd">    df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;pandas&quot;)</span>
 
 <span class="sd">    # Get just the data path</span>
-<span class="sd">    path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")</span>
+<span class="sd">    path = data.get_data_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
 
 <span class="sd">    # Get documentation content</span>
-<span class="sd">    docs = data.get_docs(pipeline="yield_curve", dataframe="repo_public")</span>
+<span class="sd">    docs = data.get_docs(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
 
 <span class="sd">    # Get path to documentation source</span>
-<span class="sd">    docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")</span>
-<span class="sd">"""</span>
+<span class="sd">    docs_path = data.get_docs_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
+<span class="kn">from</span> <span class="nn">chartbook.refs</span> <span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
+<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">FileLocation</span><span class="p">,</span>
     <span class="n">caller_start_dirs</span><span class="p">,</span>
     <span class="n">find_manifest_dir</span><span class="p">,</span>
@@ -517,31 +519,31 @@
     <span class="n">require_file</span><span class="p">,</span>
     <span class="n">resolve</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_catalog_path</span> <span class="k">as</span> <span class="n">_resolve_catalog_path</span>
+<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">resolve_catalog_path</span> <span class="k">as</span> <span class="n">_resolve_catalog_path</span>
 
 
 <div class="viewcode-block" id="path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">path</span><span class="p">(</span>
     <span class="n">ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the path the manifest declares for a dataframe of the current pipeline.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path the manifest declares for a dataframe of the current pipeline.</span>
 
 <span class="sd">    The enclosing ``chartbook.toml`` is the single source of truth for where</span>
 <span class="sd">    a dataframe lives, so code can ask for the path rather than repeat it:</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; df.to_parquet(data.path("merged_rates"))  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; df.to_parquet(data.path(&quot;merged_rates&quot;))  # doctest: +SKIP</span>
 
 <span class="sd">    and a build definition can use the same call for what it reads and what</span>
 <span class="sd">    it writes — ``file_dep`` and ``targets`` in a ``dodo.py``, say. The path</span>
 <span class="sd">    is whatever ``path`` the entry declares, made absolute; nothing checks</span>
 <span class="sd">    that the file exists, so a target can be named before it is built.</span>
 
-<span class="sd">    This is :func:`chartbook.assets.path` with ``kind="dataframe"``: it</span>
+<span class="sd">    This is :func:`chartbook.assets.path` with ``kind=&quot;dataframe&quot;``: it</span>
 <span class="sd">    answers for dataframes and nothing else, so a typo cannot hand back a</span>
-<span class="sd">    chart's HTML where a parquet file was meant. For a chart, a notebook or</span>
+<span class="sd">    chart&#39;s HTML where a parquet file was meant. For a chart, a notebook or</span>
 <span class="sd">    a note, use :func:`chartbook.assets.path`. Asking for a name that</span>
 <span class="sd">    ``[dataframes]`` does not declare raises immediately, naming the table</span>
 <span class="sd">    to add, rather than surfacing later as a missing file.</span>
@@ -551,20 +553,20 @@
 <span class="sd">    command line gives the same answer to a shell, Make, R or Stata.</span>
 
 <span class="sd">    A dataframe of another pipeline is named with the pipeline in front,</span>
-<span class="sd">    ``data.path("fed_yield_curve:treasury_rates")``. That pipeline must be</span>
+<span class="sd">    ``data.path(&quot;fed_yield_curve:treasury_rates&quot;)``. That pipeline must be</span>
 <span class="sd">    declared in ``[dependencies]``, and the path is the copy that</span>
-<span class="sd">    ``chartbook.lock`` pins, in the store, not the other pipeline's working</span>
+<span class="sd">    ``chartbook.lock`` pins, in the store, not the other pipeline&#39;s working</span>
 <span class="sd">    directory; see :func:`chartbook.assets.path`. Read it; never write to it.</span>
 
 <span class="sd">    The rest of the reference grammar, ``asset#part`` and ``@rev``, is</span>
-<span class="sd">    reserved and raises "not yet supported".</span>
+<span class="sd">    reserved and raises &quot;not yet supported&quot;.</span>
 
-<span class="sd">    :param ref: The dataframe's name: its key in ``[dataframes]``; or</span>
-<span class="sd">        ``"pipeline:name"`` for another pipeline's.</span>
+<span class="sd">    :param ref: The dataframe&#39;s name: its key in ``[dataframes]``; or</span>
+<span class="sd">        ``&quot;pipeline:name&quot;`` for another pipeline&#39;s.</span>
 <span class="sd">    :type ref: str</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline. The enclosing</span>
 <span class="sd">        ``chartbook.toml`` is found by walking up from here. By default the</span>
-<span class="sd">        search starts at the calling file's directory, then falls back to the</span>
+<span class="sd">        search starts at the calling file&#39;s directory, then falls back to the</span>
 <span class="sd">        current working directory.</span>
 <span class="sd">    :type project_dir: Optional[Union[str, Path]]</span>
 <span class="sd">    :returns: The absolute path declared for the dataframe (it may contain</span>
@@ -573,40 +575,40 @@
 <span class="sd">    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.</span>
 <span class="sd">    :raises DependencyNotDeclaredError: If the reference names a pipeline</span>
 <span class="sd">        that ``[dependencies]`` does not declare.</span>
-<span class="sd">    :raises AssetNotPinnedError: If another pipeline's dataframe has no</span>
+<span class="sd">    :raises AssetNotPinnedError: If another pipeline&#39;s dataframe has no</span>
 <span class="sd">        pinned copy in the store.</span>
 <span class="sd">    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the</span>
 <span class="sd">        starting directory.</span>
 <span class="sd">    :raises ValueError: If the reference names another kind of asset, uses</span>
 <span class="sd">        reserved syntax, or the entry has no ``path``.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">"dataframe"</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">KindMismatchError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">KindMismatchError</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">),</span> <span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span> <span class="n">hint</span><span class="o">=</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"data.path() answers for dataframes only; use "</span>
-                <span class="sa">f</span><span class="s2">"chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">."</span>
+                <span class="sa">f</span><span class="s2">&quot;data.path() answers for dataframes only; use &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">.&quot;</span>
             <span class="p">)</span>
-        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+        <span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span></div>
 
 
 
 <span class="c1">#: Where :func:`scratch` puts throwaway files, relative to the pipeline root.</span>
-<span class="n">SCRATCH_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"_data"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"_scratch"</span>
+<span class="n">SCRATCH_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_data&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;_scratch&quot;</span>
 
 
 <div class="viewcode-block" id="scratch">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.scratch">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">scratch</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the current pipeline's directory for throwaway files.</span>
+<span class="k">def</span> <span class="nf">scratch</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the current pipeline&#39;s directory for throwaway files.</span>
 
 <span class="sd">    Use it for intermediates that nothing else depends on: a partial</span>
 <span class="sd">    download, a cache between two steps, a file you only want to look at.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; tmp = data.scratch() / "raw_download.csv"  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; tmp = data.scratch() / &quot;raw_download.csv&quot;  # doctest: +SKIP</span>
 
 <span class="sd">    The directory is ``_data/_scratch/`` inside the pipeline, created on</span>
 <span class="sd">    first use. What goes in it is not an asset: it is not declared in the</span>
@@ -623,90 +625,113 @@
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the</span>
 <span class="sd">        starting directory.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="n">directory</span> <span class="o">=</span> <span class="n">find_manifest_dir</span><span class="p">(</span><span class="o">*</span><span class="n">start_dirs</span><span class="p">)</span> <span class="o">/</span> <span class="n">SCRATCH_DIR</span>
     <span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">gitignore</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="s2">".gitignore"</span>
+    <span class="n">gitignore</span> <span class="o">=</span> <span class="n">directory</span> <span class="o">/</span> <span class="s2">&quot;.gitignore&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">gitignore</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="n">gitignore</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">"*</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">gitignore</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;*</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">directory</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_get_dataframe_docs_info_from_catalog</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">_get_dataframe_docs_info_from_catalog</span><span class="p">(</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Look up docs info for a dataframe inside a catalog manifest.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Look up docs info for a dataframe inside a catalog manifest.</span>
 
-<span class="sd">    :param catalog_path: Path to the catalog's ``chartbook.toml``.</span>
+<span class="sd">    :param catalog_path: Path to the catalog&#39;s ``chartbook.toml``.</span>
 <span class="sd">    :type catalog_path: Path</span>
 <span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
-<span class="sd">        (``"crsp_treasury"``, if unambiguous), a scoped ID</span>
-<span class="sd">        (``"ftsfr/crsp_treasury"``), or a repository URL.</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
 <span class="sd">    :returns: Tuple of (doc_mode, doc_value, pipeline_base_dir) where doc_mode</span>
-<span class="sd">        is ``"path"`` or ``"str"``, doc_value is the path string or inline</span>
+<span class="sd">        is ``&quot;path&quot;`` or ``&quot;str&quot;``, doc_value is the path string or inline</span>
 <span class="sd">        content, and pipeline_base_dir is the base directory of the pipeline.</span>
 <span class="sd">    :rtype: tuple[str, str, Path]</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is not found.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_manifest</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">load_manifest</span>
 
     <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">catalog_path</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
 
     <span class="n">pipeline_key</span> <span class="o">=</span> <span class="n">locate_in_catalog</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stores&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">snapshot</span>
+        <span class="kn">from</span> <span class="nn">chartbook.hubs</span> <span class="kn">import</span> <span class="n">selected_snapshots</span>
+        <span class="kn">import</span> <span class="nn">tomli</span>
+        <span class="n">stores</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;stores&quot;</span><span class="p">]</span>
+        <span class="n">found</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">readable_snapshots</span><span class="p">(</span><span class="n">stores</span><span class="p">)</span>
+        <span class="n">chosen</span> <span class="o">=</span> <span class="n">selected_snapshots</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">pipeline_key</span><span class="p">,</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_notes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pipeline_key</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;repository&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">chosen</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> has no snapshot. Run `chartbook snapshot` in its pipeline.&quot;</span><span class="p">)</span>
+        <span class="n">taken</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">chosen</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">made_at</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The newest snapshot of </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> has no stored documents&quot;</span><span class="p">)</span>
+        <span class="n">held</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">stores</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">taken</span><span class="o">.</span><span class="n">documents</span><span class="p">[</span><span class="s2">&quot;content_hash&quot;</span><span class="p">],</span> <span class="n">pipeline_key</span><span class="p">))</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">loads</span><span class="p">((</span><span class="n">held</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dataframe</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">}</span><span class="s2"> declares no dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> in its newest snapshot&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">):</span>
+            <span class="n">plain</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">safe_relative</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;docs_path&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">plain</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">_through_a_link</span><span class="p">(</span><span class="n">held</span><span class="p">,</span> <span class="n">plain</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The documentation path is not inside the snapshot&#39;s documents&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">plain</span><span class="p">,</span> <span class="n">held</span>
+        <span class="k">return</span> <span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">held</span>
 
-    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"pipelines"</span><span class="p">][</span><span class="n">pipeline_key</span><span class="p">]</span>
-    <span class="n">available_dataframes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dataframes"</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dataframes"</span><span class="p">,</span> <span class="p">{}):</span>
+    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_key</span><span class="p">]</span>
+    <span class="n">available_dataframes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{}):</span>
         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2">. "</span>
-            <span class="sa">f</span><span class="s2">"Available dataframes: </span><span class="si">{</span><span class="n">available_dataframes</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Available dataframes: </span><span class="si">{</span><span class="n">available_dataframes</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
-    <span class="n">df_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">"dataframes"</span><span class="p">][</span><span class="n">dataframe</span><span class="p">]</span>
-    <span class="n">doc_mode</span> <span class="o">=</span> <span class="n">df_manifest</span><span class="p">[</span><span class="s2">"_doc_mode"</span><span class="p">]</span>
-    <span class="n">doc_value</span> <span class="o">=</span> <span class="n">df_manifest</span><span class="p">[</span><span class="s2">"_doc_value"</span><span class="p">]</span>
-    <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">"base_dir"</span><span class="p">])</span>
+    <span class="n">df_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe</span><span class="p">]</span>
+    <span class="n">doc_mode</span> <span class="o">=</span> <span class="n">df_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">]</span>
+    <span class="n">doc_value</span> <span class="o">=</span> <span class="n">df_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_value&quot;</span><span class="p">]</span>
+    <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span>
 
     <span class="k">return</span> <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span><span class="p">,</span> <span class="n">pipeline_base_dir</span>
 
 
 <div class="viewcode-block" id="get_data_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.get_data_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_data_path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">get_data_path</span><span class="p">(</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the resolved path to a dataframe's file, through a catalog.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the resolved path to a dataframe&#39;s file, through a catalog.</span>
 
 <span class="sd">    For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing</span>
 <span class="sd">    the glob pattern characters.</span>
 
-<span class="sd">    :func:`path` supersedes this inside a pipeline: ``data.path("name")`` for</span>
-<span class="sd">    its own dataframes, and ``data.path("pipeline:name")`` for the pinned</span>
-<span class="sd">    copy of a declared dependency's. This remains the way to find a</span>
+<span class="sd">    :func:`path` supersedes this inside a pipeline: ``data.path(&quot;name&quot;)`` for</span>
+<span class="sd">    its own dataframes, and ``data.path(&quot;pipeline:name&quot;)`` for the pinned</span>
+<span class="sd">    copy of a declared dependency&#39;s. This remains the way to find a</span>
 <span class="sd">    dataframe through a catalog, from a notebook that belongs to no</span>
 <span class="sd">    pipeline, say. It gives the file by the rules of :func:`load`: in a</span>
 <span class="sd">    pipeline that declares the other one, its pin; otherwise the file in</span>
-<span class="sd">    the pipeline's newest snapshot in the store; with no snapshot, the file</span>
+<span class="sd">    the pipeline&#39;s newest snapshot in the store; with no snapshot, the file</span>
 <span class="sd">    in the folder the catalog lists, with a</span>
 <span class="sd">    :class:`~chartbook.resolve.WorkingVersionWarning`. Which pipeline the</span>
 <span class="sd">    call is in is found as for :func:`path`: from the calling file first,</span>
-<span class="sd">    then the working directory, so a script in a pipeline's folder gets</span>
-<span class="sd">    that pipeline's pin wherever it is run from.</span>
+<span class="sd">    then the working directory, so a script in a pipeline&#39;s folder gets</span>
+<span class="sd">    that pipeline&#39;s pin wherever it is run from.</span>
 
 <span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
-<span class="sd">        (``"crsp_treasury"``, if unambiguous), a scoped ID</span>
-<span class="sd">        (``"ftsfr/crsp_treasury"``), or a repository URL.</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -726,29 +751,29 @@
 <span class="sd">        no snapshot and no folder here.</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is in neither the store</span>
 <span class="sd">        nor the catalog.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">catalog_path</span><span class="o">=</span><span class="n">catalog_path</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">require_file</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">require_file</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="get_docs_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.get_docs_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_docs_path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">get_docs_path</span><span class="p">(</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the path to a dataframe's documentation source.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path to a dataframe&#39;s documentation source.</span>
 
 <span class="sd">    For dataframes using ``docs_path``, returns the path to the ``.md``</span>
 <span class="sd">    file. For dataframes using ``docs`` (inline docs), returns the path to</span>
 <span class="sd">    the ``chartbook.toml`` file where the docs are defined.</span>
 
 <span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
-<span class="sd">        (``"crsp_treasury"``, if unambiguous), a scoped ID</span>
-<span class="sd">        (``"ftsfr/crsp_treasury"``), or a repository URL.</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -760,26 +785,26 @@
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is not found.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">resolved_catalog</span> <span class="o">=</span> <span class="n">_resolve_catalog_path</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">)</span>
     <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span><span class="p">,</span> <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">_get_dataframe_docs_info_from_catalog</span><span class="p">(</span>
         <span class="n">resolved_catalog</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">dataframe</span>
     <span class="p">)</span>
-    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">"path"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">doc_value</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == "str"</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="s2">"chartbook.toml"</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span></div>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == &quot;str&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span></div>
 
 
 
 <div class="viewcode-block" id="get_docs">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.get_docs">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_docs</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">get_docs</span><span class="p">(</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the documentation content for a dataframe as a string.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the documentation content for a dataframe as a string.</span>
 
 <span class="sd">    Works with both documentation modes:</span>
 
@@ -788,8 +813,8 @@
 <span class="sd">    - If the dataframe uses ``docs``, returns the inline string directly.</span>
 
 <span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
-<span class="sd">        (``"crsp_treasury"``, if unambiguous), a scoped ID</span>
-<span class="sd">        (``"ftsfr/crsp_treasury"``), or a repository URL.</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -801,43 +826,43 @@
 <span class="sd">    :rtype: str</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is not found.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">resolved_catalog</span> <span class="o">=</span> <span class="n">_resolve_catalog_path</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">)</span>
     <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span><span class="p">,</span> <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">_get_dataframe_docs_info_from_catalog</span><span class="p">(</span>
         <span class="n">resolved_catalog</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">dataframe</span>
     <span class="p">)</span>
-    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">"path"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span>
         <span class="n">doc_path</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">doc_value</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">doc_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == "str"</span>
+        <span class="k">return</span> <span class="n">doc_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == &quot;str&quot;</span>
         <span class="k">return</span> <span class="n">doc_value</span></div>
 
 
 
 <div class="viewcode-block" id="load">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.load">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
     <span class="n">ref</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"polars"</span><span class="p">,</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;polars&quot;</span><span class="p">,</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Load a dataframe: by reference, or from a pipeline in a catalog.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a dataframe: by reference, or from a pipeline in a catalog.</span>
 
 <span class="sd">    **By reference**, with one argument. A dataframe of the pipeline you</span>
 <span class="sd">    are in is loaded from where its manifest says it is: a file, or a table</span>
-<span class="sd">    or query in one of its ``[sources]``, in which case the source's engine</span>
+<span class="sd">    or query in one of its ``[sources]``, in which case the source&#39;s engine</span>
 <span class="sd">    runs it and the frame is fetched whole when it is collected. A</span>
 <span class="sd">    dataframe of another pipeline is loaded from the copy that</span>
 <span class="sd">    ``chartbook.lock`` pins, so it does not change until you run</span>
 <span class="sd">    ``chartbook update``:</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; mine = data.load("term_premium")  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; theirs = data.load("yield_curve:fed_yield_curve")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; mine = data.load(&quot;term_premium&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; theirs = data.load(&quot;yield_curve:fed_yield_curve&quot;)  # doctest: +SKIP</span>
 
 <span class="sd">    The other pipeline is declared in ``[dependencies]`` and pinned with</span>
 <span class="sd">    ``chartbook pin``, or by the first read: one declared and not pinned</span>
@@ -846,7 +871,7 @@
 <span class="sd">    :class:`~chartbook.resolve.UnrecordedReadWarning`, and one with no</span>
 <span class="sd">    snapshot from its folder with a</span>
 <span class="sd">    :class:`~chartbook.resolve.WorkingVersionWarning`. Under</span>
-<span class="sd">    ``chartbook run``'s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is</span>
+<span class="sd">    ``chartbook run``&#39;s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is</span>
 <span class="sd">    read. Outside any pipeline, the newest snapshot is read and nothing is</span>
 <span class="sd">    said; in a batch run there, nothing is read, since nothing records it.</span>
 
@@ -856,35 +881,35 @@
 <span class="sd">    the catalog lists, as it is now, with a</span>
 <span class="sd">    :class:`~chartbook.resolve.WorkingVersionWarning`:</span>
 
-<span class="sd">    &gt;&gt;&gt; lf = data.load(pipeline="yield_curve", dataframe="repo_public",</span>
-<span class="sd">    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; lf = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
+<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
 
-<span class="sd">    :param ref: A reference to a dataframe: ``"name"`` for one of the</span>
-<span class="sd">        current pipeline, ``"pipeline:name"`` for another pipeline's. (With</span>
+<span class="sd">    :param ref: A reference to a dataframe: ``&quot;name&quot;`` for one of the</span>
+<span class="sd">        current pipeline, ``&quot;pipeline:name&quot;`` for another pipeline&#39;s. (With</span>
 <span class="sd">        *dataframe* also given, this is the pipeline, as it used to be the</span>
 <span class="sd">        first argument.)</span>
 <span class="sd">    :type ref: Optional[Union[str, AssetRef]]</span>
 <span class="sd">    :param dataframe: The dataframe identifier within *pipeline*, to load</span>
 <span class="sd">        through a catalog.</span>
 <span class="sd">    :type dataframe: Optional[str]</span>
-<span class="sd">    :param format: Output format — ``"polars"`` (default, returns LazyFrame),</span>
-<span class="sd">        ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated</span>
-<span class="sd">        alias for ``"polars"``). Every one reads a file, a glob or a folder.</span>
-<span class="sd">        This is what is returned, not what the file is: that is the entry's</span>
-<span class="sd">        ``format``, or its path's ending (see below).</span>
+<span class="sd">    :param format: Output format — ``&quot;polars&quot;`` (default, returns LazyFrame),</span>
+<span class="sd">        ``&quot;polars_eager&quot;``, ``&quot;pandas&quot;``, or ``&quot;polars-lazyframe&quot;`` (deprecated</span>
+<span class="sd">        alias for ``&quot;polars&quot;``). Every one reads a file, a glob or a folder.</span>
+<span class="sd">        This is what is returned, not what the file is: that is the entry&#39;s</span>
+<span class="sd">        ``format``, or its path&#39;s ending (see below).</span>
 <span class="sd">    :type format: str</span>
 <span class="sd">    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent</span>
 <span class="sd">        directory, to load through.  If ``None``, the global default from</span>
 <span class="sd">        ``~/.chartbook/settings.toml`` is used.</span>
 <span class="sd">    :type catalog_path: Optional[Union[str, Path]]</span>
 <span class="sd">    :param pipeline: The pipeline to load from through a catalog — a bare</span>
-<span class="sd">        name (``"crsp_treasury"``, if unambiguous), a scoped ID</span>
-<span class="sd">        (``"ftsfr/crsp_treasury"``), or a repository URL.</span>
+<span class="sd">        name (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: Optional[str]</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline the call is made</span>
 <span class="sd">        from, as for :func:`path`. By either form, that pipeline is found</span>
 <span class="sd">        from the calling file first, then the working directory, so a</span>
-<span class="sd">        script in a pipeline's folder reads by that pipeline's rules</span>
+<span class="sd">        script in a pipeline&#39;s folder reads by that pipeline&#39;s rules</span>
 <span class="sd">        wherever it is run from.</span>
 <span class="sd">    :type project_dir: Optional[Union[str, Path]]</span>
 <span class="sd">    :returns: The loaded dataframe in the requested format.</span>
@@ -893,7 +918,7 @@
 <span class="sd">    :raises DependencyNotDeclaredError: If a reference names a pipeline that</span>
 <span class="sd">        ``[dependencies]`` does not declare, in a batch run, or when it has</span>
 <span class="sd">        neither a snapshot nor a folder here.</span>
-<span class="sd">    :raises AssetNotPinnedError: If another pipeline's dataframe has no</span>
+<span class="sd">    :raises AssetNotPinnedError: If another pipeline&#39;s dataframe has no</span>
 <span class="sd">        copy to read: no pin in a batch run, a batch run outside any</span>
 <span class="sd">        pipeline, and otherwise no snapshot and no folder here.</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If a catalog is needed and none is</span>
@@ -903,42 +928,42 @@
 <span class="sd">    :raises TypeError: If the arguments are neither one reference nor a</span>
 <span class="sd">        pipeline and a dataframe.</span>
 <span class="sd">    :raises UnreadableTableError: If a file cannot be read as its format.</span>
-<span class="sd">        The message names the format and what said it, the entry's</span>
-<span class="sd">        ``format`` or the path's ending.</span>
+<span class="sd">        The message names the format and what said it, the entry&#39;s</span>
+<span class="sd">        ``format`` or the path&#39;s ending.</span>
 <span class="sd">    :raises FileNotFoundError: If the file is not there, or a glob matches</span>
 <span class="sd">        no file.</span>
 <span class="sd">    :raises ValueError: If *format* is not one of the supported values, or</span>
-<span class="sd">        the entry's ``format`` or ``read_options`` is not one ChartBook reads.</span>
+<span class="sd">        the entry&#39;s ``format`` or ``read_options`` is not one ChartBook reads.</span>
 
-<span class="sd">    **The file's format.** A dataframe's file is parquet, CSV or TSV, JSON</span>
-<span class="sd">    lines (gzipped or not) or Arrow IPC (Feather), as its entry's ``format``</span>
+<span class="sd">    **The file&#39;s format.** A dataframe&#39;s file is parquet, CSV or TSV, JSON</span>
+<span class="sd">    lines (gzipped or not) or Arrow IPC (Feather), as its entry&#39;s ``format``</span>
 <span class="sd">    says, or else the ending of its ``path`` (``.parquet``, ``.csv``,</span>
 <span class="sd">    ``.tsv``, ``.csv.gz``, ``.jsonl``, ``.ndjson``, ``.jsonl.gz``,</span>
 <span class="sd">    ``.arrow``, ``.feather``, ``.ipc``); a path whose ending names none, a</span>
 <span class="sd">    folder say, is parquet. It is read with ``pl.scan_parquet``,</span>
 <span class="sd">    ``pl.scan_csv``, ``pl.scan_ndjson`` or ``pl.scan_ipc``, given the</span>
-<span class="sd">    entry's ``read_options``, and its schema is read at once, so a file that</span>
+<span class="sd">    entry&#39;s ``read_options``, and its schema is read at once, so a file that</span>
 <span class="sd">    is not what it is taken to be is said here and not when the frame is</span>
 <span class="sd">    collected. A gzipped file is decompressed whole, in memory, each time it</span>
-<span class="sd">    is read. ``"pandas"`` reads a parquet file or folder as pandas does, Hive</span>
+<span class="sd">    is read. ``&quot;pandas&quot;`` reads a parquet file or folder as pandas does, Hive</span>
 <span class="sd">    keys as categories, and anything else, a glob among them, as</span>
-<span class="sd">    ``"polars"`` does, collected. See :mod:`chartbook.formats`.</span>
+<span class="sd">    ``&quot;polars&quot;`` does, collected. See :mod:`chartbook.formats`.</span>
 
 <span class="sd">    **Examples**</span>
 
 <span class="sd">    Load as a Polars eager DataFrame:</span>
 
-<span class="sd">    &gt;&gt;&gt; df = data.load("yield_curve:fed_yield_curve",</span>
-<span class="sd">    ...               format="polars_eager")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; df = data.load(&quot;yield_curve:fed_yield_curve&quot;,</span>
+<span class="sd">    ...               format=&quot;polars_eager&quot;)  # doctest: +SKIP</span>
 
 <span class="sd">    Load as a pandas DataFrame, through a catalog:</span>
 
-<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline="yield_curve", dataframe="repo_public",</span>
-<span class="sd">    ...               format="pandas",</span>
-<span class="sd">    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP</span>
-<span class="sd">    """</span>
+<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
+<span class="sd">    ...               format=&quot;pandas&quot;,</span>
+<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># The pipeline this call is made from, by either form: it decides how</span>
-    <span class="c1"># another pipeline's dataframe is read, so a script finds its own</span>
+    <span class="c1"># another pipeline&#39;s dataframe is read, so a script finds its own</span>
     <span class="c1"># pipeline from its file, wherever it is run from</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pipeline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -947,68 +972,68 @@
             <span class="n">pipeline</span> <span class="o">=</span> <span class="n">ref</span>
         <span class="k">elif</span> <span class="n">ref</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">"data.load() was given a reference and a pipeline. Pass one "</span>
-                <span class="s2">"reference, data.load('pipeline:name'), or a pipeline and a "</span>
-                <span class="s2">"dataframe, data.load(pipeline=..., dataframe=...)."</span>
+                <span class="s2">&quot;data.load() was given a reference and a pipeline. Pass one &quot;</span>
+                <span class="s2">&quot;reference, data.load(&#39;pipeline:name&#39;), or a pipeline and a &quot;</span>
+                <span class="s2">&quot;dataframe, data.load(pipeline=..., dataframe=...).&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">pipeline</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">dataframe</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">"To load through a catalog, data.load() needs both a pipeline "</span>
-                <span class="s2">"and a dataframe: data.load(pipeline=..., dataframe=...)."</span>
+                <span class="s2">&quot;To load through a catalog, data.load() needs both a pipeline &quot;</span>
+                <span class="s2">&quot;and a dataframe: data.load(pipeline=..., dataframe=...).&quot;</span>
             <span class="p">)</span>
         <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">=</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">catalog_path</span><span class="o">=</span><span class="n">catalog_path</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">ref</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">"data.load() needs a reference to a dataframe, e.g. "</span>
-                <span class="s2">"data.load('treasury_rates') or data.load('pipeline:name')."</span>
+                <span class="s2">&quot;data.load() needs a reference to a dataframe, e.g. &quot;</span>
+                <span class="s2">&quot;data.load(&#39;treasury_rates&#39;) or data.load(&#39;pipeline:name&#39;).&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">catalog_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">"catalog_path goes with data.load(pipeline=..., dataframe=...). "</span>
-                <span class="s2">"A reference resolves against the pipeline you are in, with no "</span>
-                <span class="s2">"catalog."</span>
+                <span class="s2">&quot;catalog_path goes with data.load(pipeline=..., dataframe=...). &quot;</span>
+                <span class="s2">&quot;A reference resolves against the pipeline you are in, with no &quot;</span>
+                <span class="s2">&quot;catalog.&quot;</span>
             <span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"dataframe"</span><span class="p">)</span>
+            <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">KindMismatchError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">KindMismatchError</span><span class="p">(</span>
                 <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">),</span>
                 <span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="p">,</span>
                 <span class="n">e</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span>
-                <span class="n">hint</span><span class="o">=</span><span class="sa">f</span><span class="s2">"data.load() loads dataframes only, not a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
-            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                <span class="n">hint</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data.load() loads dataframes only, not a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
         <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
         <span class="n">dataframe</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">FileLocation</span><span class="p">):</span>
         <span class="c1"># A table or a query in a source: the backend binds it now, runs it</span>
         <span class="c1"># when the frame is collected, Arrow comes back, Polars wraps it.</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">backend_for</span>
+        <span class="kn">from</span> <span class="nn">chartbook.backends</span> <span class="kn">import</span> <span class="n">backend_for</span>
 
         <span class="n">frame</span> <span class="o">=</span> <span class="n">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"polars"</span><span class="p">,</span> <span class="s2">"polars-lazyframe"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;polars&quot;</span><span class="p">,</span> <span class="s2">&quot;polars-lazyframe&quot;</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">frame</span>
-        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars_eager"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars_eager&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"pandas"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;pandas&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">frame</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">))</span>
-    <span class="k">if</span> <span class="nb">format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"polars"</span><span class="p">,</span> <span class="s2">"polars_eager"</span><span class="p">,</span> <span class="s2">"pandas"</span><span class="p">,</span> <span class="s2">"polars-lazyframe"</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;polars&quot;</span><span class="p">,</span> <span class="s2">&quot;polars_eager&quot;</span><span class="p">,</span> <span class="s2">&quot;pandas&quot;</span><span class="p">,</span> <span class="s2">&quot;polars-lazyframe&quot;</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">))</span>
     <span class="c1"># A file, read as its format is: parquet, CSV, JSON lines or Arrow IPC</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">formats</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">formats</span>
 
-    <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2">"</span>
-    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"pandas"</span><span class="p">:</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;pandas&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">formats</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span>
-    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars_eager"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars_eager&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">formats</span><span class="o">.</span><span class="n">scan_location</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">where</span><span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">"polars-lazyframe"</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+    <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars-lazyframe&quot;</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">warnings</span>
 
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-            <span class="s2">"format='polars-lazyframe' is deprecated. Use format='polars' instead "</span>
-            <span class="s2">"(polars format now returns LazyFrame by default)."</span><span class="p">,</span>
+            <span class="s2">&quot;format=&#39;polars-lazyframe&#39; is deprecated. Use format=&#39;polars&#39; instead &quot;</span>
+            <span class="s2">&quot;(polars format now returns LazyFrame by default).&quot;</span><span class="p">,</span>
             <span class="ne">DeprecationWarning</span><span class="p">,</span>
             <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
@@ -1016,45 +1041,45 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""What to say of a ``format=`` that data.load() does not return."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.formats</span><span class="w"> </span><span class="kn">import</span> <span class="n">FORMATS</span>
+<span class="k">def</span> <span class="nf">_invalid_format</span><span class="p">(</span><span class="nb">format</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What to say of a ``format=`` that data.load() does not return.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.formats</span> <span class="kn">import</span> <span class="n">FORMATS</span>
 
     <span class="n">said</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be 'polars', 'polars_eager', "</span>
-        <span class="sa">f</span><span class="s2">"'pandas', or 'polars-lazyframe'."</span>
+        <span class="sa">f</span><span class="s2">&quot;Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be &#39;polars&#39;, &#39;polars_eager&#39;, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;&#39;pandas&#39;, or &#39;polars-lazyframe&#39;.&quot;</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="nb">format</span> <span class="ow">in</span> <span class="n">FORMATS</span><span class="p">:</span>
         <span class="n">said</span> <span class="o">+=</span> <span class="p">(</span>
-            <span class="s2">" That is what data.load() returns. The format a dataframe's file is stored in "</span>
-            <span class="sa">f</span><span class="s1">'is said in its entry in [dataframes]: format = "</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s1">".'</span>
+            <span class="s2">&quot; That is what data.load() returns. The format a dataframe&#39;s file is stored in &quot;</span>
+            <span class="sa">f</span><span class="s1">&#39;is said in its entry in [dataframes]: format = &quot;</span><span class="si">{</span><span class="nb">format</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">said</span>
 
 
 <span class="c1"># A {reference} in SQL: anything between braces that is not itself a brace.</span>
-<span class="c1"># A doubled brace is a literal one, for DuckDB's own {'a': 1} syntax; it is</span>
+<span class="c1"># A doubled brace is a literal one, for DuckDB&#39;s own {&#39;a&#39;: 1} syntax; it is</span>
 <span class="c1"># set aside before references are found and put back after.</span>
-<span class="n">_REFERENCE_IN_SQL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\{([^</span><span class="si">{}</span><span class="s2">]+)\}"</span><span class="p">)</span>
-<span class="n">_LITERAL_OPEN</span><span class="p">,</span> <span class="n">_LITERAL_CLOSE</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\0</span><span class="s2">open</span><span class="se">\0</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"</span><span class="se">\0</span><span class="s2">close</span><span class="se">\0</span><span class="s2">"</span>
+<span class="n">_REFERENCE_IN_SQL</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{([^</span><span class="si">{}</span><span class="s2">]+)\}&quot;</span><span class="p">)</span>
+<span class="n">_LITERAL_OPEN</span><span class="p">,</span> <span class="n">_LITERAL_CLOSE</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\0</span><span class="s2">open</span><span class="se">\0</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\0</span><span class="s2">close</span><span class="se">\0</span><span class="s2">&quot;</span>
 
 
 <div class="viewcode-block" id="ref">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.ref">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">ref</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">ref</span><span class="p">(</span>
     <span class="n">reference</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The name a dataframe goes by in SQL, for a query you run yourself.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The name a dataframe goes by in SQL, for a query you run yourself.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; data.ref("treasury_rates")  # doctest: +SKIP</span>
-<span class="sd">    "read_parquet('/work/rates/_data/treasury_rates.parquet')"</span>
-<span class="sd">    &gt;&gt;&gt; data.ref("slopes")  # doctest: +SKIP</span>
-<span class="sd">    '(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)'</span>
+<span class="sd">    &gt;&gt;&gt; data.ref(&quot;treasury_rates&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &quot;read_parquet(&#39;/work/rates/_data/treasury_rates.parquet&#39;)&quot;</span>
+<span class="sd">    &gt;&gt;&gt; data.ref(&quot;slopes&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &#39;(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)&#39;</span>
 
-<span class="sd">    A file is DuckDB's reader of its format, ``read_parquet('…')``,</span>
-<span class="sd">    ``read_csv('…', …)`` or ``read_json('…', …)``, given the entry's</span>
+<span class="sd">    A file is DuckDB&#39;s reader of its format, ``read_parquet(&#39;…&#39;)``,</span>
+<span class="sd">    ``read_csv(&#39;…&#39;, …)`` or ``read_json(&#39;…&#39;, …)``, given the entry&#39;s</span>
 <span class="sd">    ``read_options`` (:func:`chartbook.formats.sql`). A table in a source is</span>
 <span class="sd">    its quoted identifier. A query in a source is the query, in</span>
 <span class="sd">    parentheses, so it stands where a table would. Paste it into SQL you</span>
@@ -1065,19 +1090,19 @@
 <span class="sd">    applies: :func:`sql` hands DuckDB what :func:`load` reads of each</span>
 <span class="sd">    (:func:`chartbook.formats.handed`).</span>
 
-<span class="sd">    :param reference: The dataframe: a name of this pipeline's, or</span>
-<span class="sd">        ``pipeline:name`` for a pinned one of another's.</span>
+<span class="sd">    :param reference: The dataframe: a name of this pipeline&#39;s, or</span>
+<span class="sd">        ``pipeline:name`` for a pinned one of another&#39;s.</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for :func:`path`.</span>
 <span class="sd">    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.</span>
-<span class="sd">    :raises AssetNotPinnedError: If another pipeline's dataframe has no</span>
+<span class="sd">    :raises AssetNotPinnedError: If another pipeline&#39;s dataframe has no</span>
 <span class="sd">        pinned copy.</span>
 <span class="sd">    :raises ValueError: For an Arrow IPC file, or a JSON lines file with</span>
 <span class="sd">        ``schema_overrides``.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">backend_for</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.backends</span> <span class="kn">import</span> <span class="n">backend_for</span>
 
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-    <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"dataframe"</span><span class="p">)</span>
+    <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
     <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span></div>
 
@@ -1085,15 +1110,15 @@
 
 <div class="viewcode-block" id="sql">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.sql">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">sql</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">sql</span><span class="p">(</span>
     <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Run SQL that names dataframes by their ChartBook references.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run SQL that names dataframes by their ChartBook references.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
 <span class="sd">    &gt;&gt;&gt; rates = data.sql(</span>
-<span class="sd">    ...     "select Date, SVENY10 from {fed_yield_curve} where Date &gt;= '2024-01-01'"</span>
+<span class="sd">    ...     &quot;select Date, SVENY10 from {fed_yield_curve} where Date &gt;= &#39;2024-01-01&#39;&quot;</span>
 <span class="sd">    ... )  # doctest: +SKIP</span>
 <span class="sd">    &gt;&gt;&gt; rates.collect()  # doctest: +SKIP</span>
 
@@ -1106,9 +1131,9 @@
 <span class="sd">    ``schema_overrides`` is handed as the frame :func:`load` gives, so that</span>
 <span class="sd">    its overrides mean in SQL what they mean there. ChartBook never parses</span>
 <span class="sd">    or rewrites the SQL; what is between the</span>
-<span class="sd">    braces is a reference, and everything else is yours, in that engine's</span>
-<span class="sd">    dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or</span>
-<span class="sd">    inside a string, is written twice: ``{{'a': 1}}``. A warehouse reads</span>
+<span class="sd">    braces is a reference, and everything else is yours, in that engine&#39;s</span>
+<span class="sd">    dialect. A literal brace, as in DuckDB&#39;s ``{&#39;a&#39;: 1}`` struct syntax or</span>
+<span class="sd">    inside a string, is written twice: ``{{&#39;a&#39;: 1}}``. A warehouse reads</span>
 <span class="sd">    its own tables only, so a query run in one names no file.</span>
 
 <span class="sd">    A dataframe of another pipeline, ``{fed_yield_curve:treasury_rates}``,</span>
@@ -1118,43 +1143,43 @@
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for :func:`path`.</span>
 <span class="sd">    :returns: A Polars LazyFrame. Collect it to run the query. An error that</span>
 <span class="sd">        only running can find, such as a cast that fails on one value, is</span>
-<span class="sd">        raised then with DuckDB's message in it, as Polars' ``ComputeError``</span>
-<span class="sd">        or as DuckDB's own exception, by Polars version.</span>
+<span class="sd">        raised then with DuckDB&#39;s message in it, as Polars&#39; ``ComputeError``</span>
+<span class="sd">        or as DuckDB&#39;s own exception, by Polars version.</span>
 <span class="sd">    :raises ValueError: If the query has no reference in it, names</span>
 <span class="sd">        dataframes of two different sources, or names a file alongside a</span>
 <span class="sd">        source whose engine cannot read one.</span>
 <span class="sd">    :raises chartbook.backends.BackendError: If the engine refuses the SQL</span>
 <span class="sd">        as it binds it: a name it does not know, or SQL it cannot parse.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">formats</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">DuckDBBackend</span><span class="p">,</span> <span class="n">backend_for</span><span class="p">,</span> <span class="n">open_backend</span><span class="p">,</span> <span class="n">quote_identifier</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">formats</span>
+    <span class="kn">from</span> <span class="nn">chartbook.backends</span> <span class="kn">import</span> <span class="n">DuckDBBackend</span><span class="p">,</span> <span class="n">backend_for</span><span class="p">,</span> <span class="n">open_backend</span><span class="p">,</span> <span class="n">quote_identifier</span>
 
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-    <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{{"</span><span class="p">,</span> <span class="n">_LITERAL_OPEN</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"}}"</span><span class="p">,</span> <span class="n">_LITERAL_CLOSE</span><span class="p">)</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;{{&quot;</span><span class="p">,</span> <span class="n">_LITERAL_OPEN</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;}}&quot;</span><span class="p">,</span> <span class="n">_LITERAL_CLOSE</span><span class="p">)</span>
     <span class="n">found</span> <span class="o">=</span> <span class="n">_REFERENCE_IN_SQL</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">"data.sql() runs SQL that names dataframes in braces, e.g. "</span>
-            <span class="s2">"</span><span class="se">\"</span><span class="s2">select * from </span><span class="si">{treasury_rates}</span><span class="se">\"</span><span class="s2">. This query has none; for SQL "</span>
-            <span class="s2">"with no ChartBook reference in it, use data.connect(source).sql(...). "</span>
-            <span class="s2">"A doubled brace, {{ or }}, is a literal one."</span>
+            <span class="s2">&quot;data.sql() runs SQL that names dataframes in braces, e.g. &quot;</span>
+            <span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">select * from </span><span class="si">{treasury_rates}</span><span class="se">\&quot;</span><span class="s2">. This query has none; for SQL &quot;</span>
+            <span class="s2">&quot;with no ChartBook reference in it, use data.connect(source).sql(...). &quot;</span>
+            <span class="s2">&quot;A doubled brace, {{ or }}, is a literal one.&quot;</span>
         <span class="p">)</span>
     <span class="n">engines</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">locations</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">found</span><span class="p">):</span>
-        <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"dataframe"</span><span class="p">)</span>
+        <span class="n">asset</span> <span class="o">=</span> <span class="n">_assets</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
         <span class="n">locations</span><span class="p">[</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">location</span> <span class="o">=</span> <span class="n">resolve</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">start_dirs</span><span class="o">=</span><span class="n">start_dirs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="s2">"file"</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">!=</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
             <span class="n">backend</span> <span class="o">=</span> <span class="n">open_backend</span><span class="p">(</span><span class="n">location</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">location</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
             <span class="n">engines</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">backend</span><span class="o">.</span><span class="n">engine</span><span class="p">(),</span> <span class="n">backend</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">engines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"The query names dataframes in </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">engines</span><span class="p">)</span><span class="si">}</span><span class="s2"> sources, "</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">engines</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="si">}</span><span class="s2">. One source at a "</span>
-            <span class="sa">f</span><span class="s2">"time: an engine runs SQL over its own tables, and files it can read."</span>
+            <span class="sa">f</span><span class="s2">&quot;The query names dataframes in </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">engines</span><span class="p">)</span><span class="si">}</span><span class="s2"> sources, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">engines</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span><span class="si">}</span><span class="s2">. One source at a &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;time: an engine runs SQL over its own tables, and files it can read.&quot;</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">engines</span><span class="p">:</span>
         <span class="n">engine</span> <span class="o">=</span> <span class="n">DuckDBBackend</span><span class="o">.</span><span class="n">scratch</span><span class="p">()</span>
@@ -1162,62 +1187,62 @@
         <span class="p">(</span><span class="n">engine</span><span class="p">,)</span> <span class="o">=</span> <span class="n">engines</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">files</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">engine</span><span class="o">.</span><span class="n">reads_files</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"The query names </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2">, a file of this machine, and dataframes in "</span>
-                <span class="sa">f</span><span class="s2">"the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, which reads its own tables only. "</span>
-                <span class="sa">f</span><span class="s2">"Load them apart with data.load() and join the frames in Polars."</span>
+                <span class="sa">f</span><span class="s2">&quot;The query names </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2">, a file of this machine, and dataframes in &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, which reads its own tables only. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Load them apart with data.load() and join the frames in Polars.&quot;</span>
             <span class="p">)</span>
     <span class="n">arrow</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">text</span><span class="p">,</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">locations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">handed</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">handed</span><span class="p">(</span><span class="n">location</span><span class="p">)</span> <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">handed</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">handed</span><span class="p">(</span><span class="n">location</span><span class="p">)</span> <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">handed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># An Arrow IPC file, or a JSON lines file with overrides: DuckDB is</span>
             <span class="c1"># handed it, under a name of its own, the same each call, so a</span>
             <span class="c1"># :memory: source keeps one view of it and not one a call</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">_takes_arrow</span><span class="p">(</span><span class="n">engine</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"The query names </span><span class="si">{</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">, which DuckDB is handed rather than given a "</span>
-                    <span class="sa">f</span><span class="s2">"reader of, and runs in the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, "</span>
-                    <span class="sa">f</span><span class="s2">"which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars."</span>
+                    <span class="sa">f</span><span class="s2">&quot;The query names </span><span class="si">{</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">, which DuckDB is handed rather than given a &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;reader of, and runs in the source </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">source</span><span class="si">!r}</span><span class="s2">, a </span><span class="si">{</span><span class="n">engine</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> engine, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;which ChartBook cannot hand one to. Load it with data.load() and join the frames in Polars.&quot;</span>
                 <span class="p">)</span>
             <span class="n">name</span> <span class="o">=</span> <span class="n">formats</span><span class="o">.</span><span class="n">handed_name</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
             <span class="n">arrow</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">handed</span>
             <span class="n">replacement</span> <span class="o">=</span> <span class="n">quote_identifier</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"file"</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">location</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
             <span class="n">replacement</span> <span class="o">=</span> <span class="n">backend_for</span><span class="p">(</span><span class="n">location</span><span class="p">)</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">replacement</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">location</span><span class="p">)</span>
-        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"{"</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="s2">"}"</span><span class="p">,</span> <span class="n">replacement</span><span class="p">)</span>
-    <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_OPEN</span><span class="p">,</span> <span class="s2">"{"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_CLOSE</span><span class="p">,</span> <span class="s2">"}"</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="n">text</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span><span class="p">,</span> <span class="n">replacement</span><span class="p">)</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_OPEN</span><span class="p">,</span> <span class="s2">&quot;{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">_LITERAL_CLOSE</span><span class="p">,</span> <span class="s2">&quot;}&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">arrow</span><span class="o">=</span><span class="n">arrow</span><span class="p">)</span> <span class="k">if</span> <span class="n">arrow</span> <span class="k">else</span> <span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_takes_arrow</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether an engine's ``sql()`` takes Arrow data to register (``arrow=``), as DuckDB's does.</span>
+<span class="k">def</span> <span class="nf">_takes_arrow</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether an engine&#39;s ``sql()`` takes Arrow data to register (``arrow=``), as DuckDB&#39;s does.</span>
 
 <span class="sd">    A backend from a plugin, written before there was such an argument, is</span>
 <span class="sd">    handed none.</span>
-<span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">inspect</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="n">parameters</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">engine</span><span class="o">.</span><span class="n">sql</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
-    <span class="k">return</span> <span class="s2">"arrow"</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">is</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">return</span> <span class="s2">&quot;arrow&quot;</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">is</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="connect">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.data.html#chartbook.data.connect">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">connect</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span>
     <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The raw connection to one of this pipeline's ``[sources]``.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The raw connection to one of this pipeline&#39;s ``[sources]``.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; con = data.connect("local")  # doctest: +SKIP</span>
-<span class="sd">    &gt;&gt;&gt; con.sql("select 1").fetchall()  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; con = data.connect(&quot;local&quot;)  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; con.sql(&quot;select 1&quot;).fetchall()  # doctest: +SKIP</span>
 
 <span class="sd">    For a DuckDB file that is a ``duckdb`` connection, opened read-only and</span>
 <span class="sd">    afresh for each call; close it when you are done, or let it go. For a</span>
@@ -1228,25 +1253,25 @@
 <span class="sd">    it when you are done. Anything ChartBook does not expose is reachable</span>
 <span class="sd">    here, and the SQL you run with it is between you and the engine.</span>
 
-<span class="sd">    :param source: The source's name in ``[sources]``.</span>
+<span class="sd">    :param source: The source&#39;s name in ``[sources]``.</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for :func:`path`.</span>
 <span class="sd">    :raises LookupError: If the manifest declares no such source.</span>
 <span class="sd">    :raises chartbook.backends.BackendError: If it cannot be opened.</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.backends</span><span class="w"> </span><span class="kn">import</span> <span class="n">open_backend</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.manifest</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_sources</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span> <span class="n">_read_raw_manifest</span><span class="p">,</span> <span class="n">find_manifest_dir</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.backends</span> <span class="kn">import</span> <span class="n">open_backend</span>
+    <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">validate_sources</span>
+    <span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">MANIFEST_NAME</span><span class="p">,</span> <span class="n">_read_raw_manifest</span><span class="p">,</span> <span class="n">find_manifest_dir</span>
 
     <span class="n">manifest_dir</span> <span class="o">=</span> <span class="n">find_manifest_dir</span><span class="p">(</span><span class="o">*</span><span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
     <span class="n">raw</span> <span class="o">=</span> <span class="n">_read_raw_manifest</span><span class="p">(</span><span class="n">manifest_dir</span> <span class="o">/</span> <span class="n">MANIFEST_NAME</span><span class="p">)</span>
-    <span class="n">sources</span> <span class="o">=</span> <span class="n">validate_sources</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sources"</span><span class="p">),</span> <span class="n">manifest_dir</span><span class="p">)</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="n">validate_sources</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sources&quot;</span><span class="p">),</span> <span class="n">manifest_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
-        <span class="n">declared</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">sources</span><span class="p">))</span> <span class="ow">or</span> <span class="s2">"(none)"</span>
+        <span class="n">declared</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">sources</span><span class="p">))</span> <span class="ow">or</span> <span class="s2">&quot;(none)&quot;</span>
         <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"No source named </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">manifest_dir</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">MANIFEST_NAME</span><span class="si">}</span><span class="s2">. Its "</span>
-            <span class="sa">f</span><span class="s2">"sources are: </span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2">."</span>
+            <span class="sa">f</span><span class="s2">&quot;No source named </span><span class="si">{</span><span class="n">source</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">manifest_dir</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">MANIFEST_NAME</span><span class="si">}</span><span class="s2">. Its &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;sources are: </span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2">.&quot;</span>
         <span class="p">)</span>
-    <span class="k">return</span> <span class="n">open_backend</span><span class="p">(</span><span class="n">sources</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s2">"backend"</span><span class="p">],</span> <span class="n">sources</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s2">"_resolved_url"</span><span class="p">],</span> <span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span></div>
+    <span class="k">return</span> <span class="n">open_backend</span><span class="p">(</span><span class="n">sources</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s2">&quot;backend&quot;</span><span class="p">],</span> <span class="n">sources</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s2">&quot;_resolved_url&quot;</span><span class="p">],</span> <span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span></div>
 
 
 </pre></div>
@@ -1311,8 +1336,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

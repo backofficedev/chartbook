@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'reference/configuration';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="CLI Reference" href="cli.html" />
     <link rel="prev" title="Examples" href="../examples.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../_static/searchtools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script src="../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -272,7 +272,7 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Configuration Guide</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Configuration Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="stability.html">Stability</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,32 +507,29 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-file-structure">Configuration File Structure</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-catalog-registry"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry</a><ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-discovery-with-members">Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-toml-and-several-stores"><code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code> and several stores</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#policy-which-fields-are-required"><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Which Fields Are Required</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-files-format-format-and-read-options">The file’s format: <code class="docutils literal notranslate"><span class="pre">format</span></code> and <code class="docutils literal notranslate"><span class="pre">read_options</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sources-where-data-lives-besides-a-file"><code class="docutils literal notranslate"><span class="pre">[sources]</span></code> — Where Data Lives Besides a File</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sources-where-data-lives-besides-a-file"><code class="docutils literal notranslate"><span class="pre">[sources]</span></code> — Where Data Lives Besides a File</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#naming-columns">Naming columns</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documenting-a-column-dataframes-id-series-key">Documenting a column: <code class="docutils literal notranslate"><span class="pre">[dataframes.&lt;id&gt;.series.&lt;key&gt;]</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models-trained-models"><code class="docutils literal notranslate"><span class="pre">[models]</span></code> — Trained Models</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models-trained-models"><code class="docutils literal notranslate"><span class="pre">[models]</span></code> — Trained Models</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#versions-and-labels">Versions and labels</a></li>
 </ul>
 </li>
@@ -569,10 +568,11 @@
 <span class="k">[dependencies]</span><span class="w">     </span><span class="c1"># Other pipelines this one reads from</span>
 </pre></div>
 </div>
-<p>A <strong>catalog</strong> manifest has the metadata table plus a registry:</p>
+<p>A <strong>catalog</strong>, in <code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code>, has project metadata and stores:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span><span class="w">          </span><span class="c1"># Project metadata</span>
-<span class="k">[pipelines]</span><span class="w">        </span><span class="c1"># Registered pipelines (scoped keys)</span>
-<span class="k">[policy]</span><span class="w">           </span><span class="c1"># Optional: required-field policy for member pipelines</span>
+<span class="k">[stores]</span><span class="w">           </span><span class="c1"># Named store locations</span>
+<span class="k">[pipelines]</span><span class="w">        </span><span class="c1"># Optional disabled/repository notes</span>
+<span class="k">[policy]</span><span class="w">           </span><span class="c1"># Optional: metadata policy for snapshot diagnostics</span>
 </pre></div>
 </div>
 </section>
@@ -653,7 +653,7 @@
 <td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">requires_chartbook</span></code></p></td>
-<td><p>a version specifier, as a pip requirement has it after the name: <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=0.3.0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=0.3,&lt;0.5&quot;</span></code>. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member’s stops the catalog, and the message names <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">disable</span></code> to leave it out meanwhile. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> and <code class="docutils literal notranslate"><span class="pre">init</span></code> do not read it. A bare version (<code class="docutils literal notranslate"><span class="pre">&quot;0.3.0&quot;</span></code>) or the whole requirement (<code class="docutils literal notranslate"><span class="pre">&quot;chartbook&gt;=0.3&quot;</span></code>) is refused with the specifier to write. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key</p></td>
+<td><p>a version specifier, as a pip requirement has it after the name: <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=0.4.0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;&gt;=0.4,&lt;0.6&quot;</span></code>. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member’s stops the catalog, and the message names <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">disable</span></code> to leave it out meanwhile. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>, <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> and <code class="docutils literal notranslate"><span class="pre">init</span></code> do not read it. A bare version (<code class="docutils literal notranslate"><span class="pre">&quot;0.3.0&quot;</span></code>) or the whole requirement (<code class="docutils literal notranslate"><span class="pre">&quot;chartbook&gt;=0.3&quot;</span></code>) is refused with the specifier to write. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code> (any)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">site_dir</span></code></p></td>
@@ -673,34 +673,34 @@
 </div>
 <p>Each field has the one type the table gives, and a value of another type does not load: the error names the file, the table and the key, says what the value is, and shows the form to write. Nothing is guessed. A list is written in brackets even with one item: <code class="docutils literal notranslate"><span class="pre">contributors</span> <span class="pre">=</span> <span class="pre">&quot;Alice</span> <span class="pre">Smith&quot;</span></code> is refused, not read as a list of one (it would otherwise be read letter by letter); write <code class="docutils literal notranslate"><span class="pre">contributors</span> <span class="pre">=</span> <span class="pre">[&quot;Alice</span> <span class="pre">Smith&quot;]</span></code>. The same holds in every table below: <code class="docutils literal notranslate"><span class="pre">path</span></code>, every <code class="docutils literal notranslate"><span class="pre">*_path</span></code> and <code class="docutils literal notranslate"><span class="pre">docs</span></code> are strings, and <code class="docutils literal notranslate"><span class="pre">tags</span></code>, <code class="docutils literal notranslate"><span class="pre">sources</span></code>, <code class="docutils literal notranslate"><span class="pre">providers</span></code> and <code class="docutils literal notranslate"><span class="pre">provider_links</span></code> are lists of strings.</p>
 <p>Unknown keys in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> produce a warning naming the closest known key, so typos don’t silently become dead metadata.</p>
-<p><code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code> and <code class="docutils literal notranslate"><span class="pre">copyright</span></code> are written into the site’s Sphinx configuration, so each is one line of letters, digits, spaces, accented letters and the punctuation <code class="docutils literal notranslate"><span class="pre">-_.,!?&amp;:'</span></code>, at most 200 characters. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> refuses anything else, a line break or a quotation mark included, and names the field.</p>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code> and <code class="docutils literal notranslate"><span class="pre">copyright</span></code> are written into the site’s Sphinx configuration, so each is one line of letters, digits, spaces, accented letters and the punctuation <code class="docutils literal notranslate"><span class="pre">-_.,!?&amp;:'</span></code>, at most 200 characters. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> refuses anything else, a line break or a quotation mark included, and names the field.</p>
 <p>A fully populated pipeline:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"CRSP Treasury"</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Treasury Securities Data from CRSP"</span>
-<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Jeremy Bejarano"</span>
-<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Jeremy Bejarano"</span><span class="p">]</span>
-<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://github.com/ftsfr/crsp_treasury"</span>
-<span class="n">os_compatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Windows"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Linux"</span><span class="p">,</span><span class="w"> </span><span class="s2">"macOS"</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRSP Treasury&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury Securities Data from CRSP&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jeremy Bejarano&quot;</span>
+<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jeremy Bejarano&quot;</span><span class="p">]</span>
+<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span>
+<span class="n">os_compatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;macOS&quot;</span><span class="p">]</span>
 
 <span class="k">[scripts]</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"doit"</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span>
 </pre></div>
 </div>
 <p>The <strong>minimal</strong> valid pipeline manifest is an empty file — its presence alone marks a directory as a chartbook pipeline. In practice you’ll usually want at least:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"My Pipeline"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Pipeline&quot;</span>
 </pre></div>
 </div>
 <section id="build-commands">
 <h3>Build commands<a class="headerlink" href="#build-commands" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">build</span></code> is the command that builds the pipeline. It is a single string with <strong>shell-script semantics</strong>: a multi-line value is one script, so environment state carries across lines:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[scripts]</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"""</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">module load anaconda3/2024.02</span>
 <span class="s2">conda activate myenv</span>
 <span class="s2">doit</span>
-<span class="s2">"""</span>
+<span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
 <p>On Windows the lines go in a batch file, and a line that runs another batch file, as <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span></code> does (<code class="docutils literal notranslate"><span class="pre">conda.bat</span></code>), must begin with <code class="docutils literal notranslate"><span class="pre">call</span></code>, or the lines after it do not run: <code class="docutils literal notranslate"><span class="pre">call</span> <span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">myenv</span></code>.</p>
@@ -719,12 +719,12 @@
 <p><strong>What a changed ID is not followed through.</strong> <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> say when a dependency’s ID has newer snapshots under another ID of the same repository, and name the entry to write. They do not follow it when the repository moved to another address while a folder on this machine is still checked out at the old one, or when a pipeline in a subfolder of a repository moved to another subfolder; give the dependency’s new ID by hand then. On the command line, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> read a catalog from its folder as you named it, links and all; other commands read it from the folder links lead to.</p>
 <p><code class="docutils literal notranslate"><span class="pre">repo_url</span></code> comes before the remote (one that names no host, such as <code class="docutils literal notranslate"><span class="pre">&quot;TBD&quot;</span></code>, gives way to it), so a fork whose manifest names its upstream’s repository keeps the upstream’s ID. So does a project copied into a new repository with its manifest, which then claims the original’s ID; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns when <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> and the git remote name two repositories, and says what the ID would be without it.</p>
 <p>So adding a remote to a pipeline that had none changes its ID, from <code class="docutils literal notranslate"><span class="pre">first_pipeline</span></code> to <code class="docutils literal notranslate"><span class="pre">testorg/first_pipeline</span></code>, and its next snapshot is made under the new one. Whatever goes by the ID goes with it: a catalog’s Versions page and a model’s versions list the snapshots of each ID apart, and the pipeline’s pages in a site move, since their path holds its ID (<code class="docutils literal notranslate"><span class="pre">cb/pipelines/testorg--first_pipeline_README.html</span></code>). A dependency named by the old ID stays at the last snapshot made under it: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> say when the store has newer snapshots of the same repository (by its address, or by its first commit where a snapshot records no address, or a clone of it whose remote was set to a new address, as when the repository moves to another owner) and folder under another ID, and name the entry to write, <code class="docutils literal notranslate"><span class="pre">&quot;first_pipeline&quot;</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">id</span> <span class="pre">=</span> <span class="pre">&quot;testorg/first_pipeline&quot;</span> <span class="pre">}</span></code>; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns when a catalog’s key, or a dependency named by its ID, is not what the pipeline’s folder calls itself now. Set <code class="docutils literal notranslate"><span class="pre">id</span></code> to keep one ID whatever happens to the folder or the remote.</p>
-<p>Two checkouts of one repository, its main worktree and another, or two clones (of one remote’s address, or of one first commit where either has no remote), are one pipeline with one ID. A catalog’s <code class="docutils literal notranslate"><span class="pre">members</span></code> that find both list it once, from the main worktree (else the one found first) or from the catalog’s explicit entry, with a warning naming the other; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> of the second says it is already in the catalog, under whatever key, and enables it again if it was disabled.</p>
+<p>Two checkouts of one repository share an ID. Catalogs show the snapshots published to their stores, independently of checkout folders.</p>
 <p>A scope derived from a remote is in lowercase, and a reference must be too: <code class="docutils literal notranslate"><span class="pre">Acme/rates</span></code>, as a web page shows the owner, does not find <code class="docutils literal notranslate"><span class="pre">acme/rates</span></code>, and the error suggests it.</p>
 <p>Anywhere a pipeline reference is accepted (<code class="docutils literal notranslate"><span class="pre">data.load</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-docs</span></code>), three forms work:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">"crsp_treasury"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                          <span class="c1"># bare, if unambiguous</span>
-<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">"ftsfr/crsp_treasury"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                    <span class="c1"># canonical</span>
-<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">"https://github.com/ftsfr/crsp_treasury"</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="c1"># URL, normalized</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                          <span class="c1"># bare, if unambiguous</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                    <span class="c1"># canonical</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="c1"># URL, normalized</span>
 </pre></div>
 </div>
 <p>If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. See <a class="reference internal" href="../design/toml-format-v2.html"><span class="doc">Design: chartbook.toml Format v2</span></a> for why identity works this way.</p>
@@ -750,86 +750,76 @@
 </div>
 <p>A registry prefix is the first of exactly three components, and looks like a host — it contains <code class="docutils literal notranslate"><span class="pre">.</span></code> or <code class="docutils literal notranslate"><span class="pre">:</span></code>, or is <code class="docutils literal notranslate"><span class="pre">localhost</span></code> (the rule Docker uses). <code class="docutils literal notranslate"><span class="pre">acme/rates</span></code> therefore means the same thing whether or not a registry ever exists, and a two-component ID is always <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, even if the scope contains a dot. See <a class="reference internal" href="../design/asset-graph.html"><span class="doc">Design: the asset graph</span></a>.</p>
 </section>
-<section id="pipelines-catalog-registry">
-<h2><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry<a class="headerlink" href="#pipelines-catalog-registry" title="Link to this heading">#</a></h2>
-<p>Catalog keys are pipeline IDs; scoped keys contain a <code class="docutils literal notranslate"><span class="pre">/</span></code> and must be quoted:</p>
+<section id="catalog-toml-and-several-stores">
+<h2><code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code> and several stores<a class="headerlink" href="#catalog-toml-and-several-stores" title="Link to this heading">#</a></h2>
+<p>A catalog lists stores, independently of pipeline manifests. See <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a> for routing and migration.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"My Catalog"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Catalog&quot;</span>
 
-<span class="k">[pipelines.</span><span class="s2">"ftsfr/crsp_treasury"</span><span class="k">]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../crsp_treasury"</span>
+<span class="k">[stores.mine]</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;~/data/chartbook&quot;</span>
 
-<span class="k">[pipelines.</span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="k">]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"../fed_yield_curve"</span>
-<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                    </span><span class="c1"># kept but skipped during builds</span>
+<span class="k">[stores.team]</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">unix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;/shared/chartbook&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">windows</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;T:/chartbook&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="n">pipelines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;acme/rates&quot;</span><span class="p">]</span>
 
-<span class="k">[pipelines.</span><span class="s2">"finm-33200/news_headlines"</span><span class="k">]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">unix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"/data/pipelines/news_headlines"</span><span class="p">,</span><span class="w"> </span><span class="n">windows</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"T:/pipelines/news_headlines"</span><span class="w"> </span><span class="p">}</span>
+<span class="k">[stores.archive]</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;s3://acme-archive/chartbook?anonymous=true&quot;</span>
+<span class="n">read_only</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+
+<span class="k">[pipelines.</span><span class="s2">&quot;acme/hidden&quot;</span><span class="k">]</span>
+<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+
+<span class="k">[pipelines.</span><span class="s2">&quot;acme/rates&quot;</span><span class="k">]</span>
+<span class="n">repository</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/acme/rates&quot;</span>
 </pre></div>
 </div>
-<p>Entry keys: <code class="docutils literal notranslate"><span class="pre">path</span></code> (string, or a <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">unix</span> <span class="pre">=</span> <span class="pre">...,</span> <span class="pre">windows</span> <span class="pre">=</span> <span class="pre">...</span> <span class="pre">}</span></code> table) and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> (bool); any other key is an error. A plain string value is shorthand for the path. An entry with no <code class="docutils literal notranslate"><span class="pre">path</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;acme/rates&quot;</span> <span class="pre">=</span> <span class="pre">{}</span></code>, is a pipeline whose folder is not on this machine: the catalog shows it from its snapshots in the store, with a page that links its newest version and the Versions page. Its name, description and maintainer are what its newest snapshot’s own index says, shown as plain text (never read as Markdown or HTML, with <code class="docutils literal notranslate"><span class="pre">&lt;</span> <span class="pre">&gt;</span> <span class="pre">&quot;</span> <span class="pre">'</span></code> and the backtick shown as look-alikes and <code class="docutils literal notranslate"><span class="pre">&amp;</span></code> as “and”, since anyone who can write to the store wrote them), and its repository and site only when they are <code class="docutils literal notranslate"><span class="pre">http</span></code> or <code class="docutils literal notranslate"><span class="pre">https</span></code> addresses. Its assets are those its newest snapshot’s own index lists: its page lists its dataframes, charts and models, and the catalog’s Dataframes page lists its dataframes after the catalog’s own, each linked to its page in that snapshot’s site and named as plain text. It has no working version, and <code class="docutils literal notranslate"><span class="pre">check</span></code>, <code class="docutils literal notranslate"><span class="pre">run</span></code> and the policy pass it by; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> lists it as store only, with its dataframes and charts, and loading its data through the catalog reads its newest snapshot from the store. A folder of the same ID, added with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> or found by <code class="docutils literal notranslate"><span class="pre">members</span></code>, fills the entry in. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span> <span class="pre">&lt;dir&gt;</span></code> writes the key for you, the pipeline’s ID (see <a class="reference internal" href="#pipeline-identity">Pipeline Identity</a>).</p>
-<section id="auto-discovery-with-members">
-<h3>Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code><a class="headerlink" href="#auto-discovery-with-members" title="Link to this heading">#</a></h3>
-<p>For a local catalog, skip per-pipeline entries entirely and declare membership as path patterns — new projects dropped into a matched directory join the catalog automatically:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"My Catalog"</span>
-
-<span class="k">[pipelines]</span>
-<span class="n">members</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">"../GitRepositories/ftsfr_repos/*"</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">"../GitRepositories/finm33200/news_headlines"</span><span class="p">,</span>
-<span class="p">]</span>
-<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/sovereign_bonds"</span><span class="p">]</span><span class="w">   </span><span class="c1"># switch members off by ID</span>
-<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"../GitRepositories/ftsfr_repos/scratch_*"</span><span class="p">]</span><span class="w">   </span><span class="c1"># optional</span>
-</pre></div>
-</div>
-<p>Each matched directory containing a pipeline <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a <em>literal</em> member path that’s broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Two members that are checkouts of one repository at the same place in it (a worktree beside its repository, a second clone) are one pipeline, not an error: the catalog lists the main worktree’s, else the one found first, or the explicit entry’s, and a warning names the other. Explicit entries coexist with <code class="docutils literal notranslate"><span class="pre">members</span></code> and win when they point at the same directory (useful to rename a pipeline in your catalog). <code class="docutils literal notranslate"><span class="pre">members</span></code>, <code class="docutils literal notranslate"><span class="pre">exclude</span></code>, and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> are reserved keys and can’t be used as bare pipeline IDs.</p>
-<p>This is designed for the <strong>local</strong> catalog — publishing to a shared catalog should stay an explicit act.</p>
-</section>
+<p>The first store is the default destination. A pipeline in one or several <code class="docutils literal notranslate"><span class="pre">pipelines</span></code> lists is written to those stores; reads always search all stores, with newest snapshots chosen within a repository. <code class="docutils literal notranslate"><span class="pre">read_only</span></code> prevents writes. A relative URL names a folder relative to this file. Duplicate locations are rejected. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code> overrides the catalog with one isolated store. Without catalog stores the settings’ <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code>, then <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store</span></code>, remain the fallback.</p>
+<p><code class="docutils literal notranslate"><span class="pre">[pipelines.&quot;ID&quot;]</span></code> accepts only <code class="docutils literal notranslate"><span class="pre">disabled</span></code> and <code class="docutils literal notranslate"><span class="pre">repository</span></code>. Working-folder paths and member globs are replaced by snapshots. Use <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">migrate</span></code> to upgrade a former catalog file. <code class="docutils literal notranslate"><span class="pre">chartbook.links.toml</span></code> beside a consumer’s manifest supplies explicit local working-copy overrides; never commit it.</p>
 </section>
 <section id="policy-which-fields-are-required">
-<span id="policy"></span><h2><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Which Fields Are Required<a class="headerlink" href="#policy-which-fields-are-required" title="Link to this heading">#</a></h2>
+<h2><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Which Fields Are Required<a class="headerlink" href="#policy-which-fields-are-required" title="Link to this heading">#</a></h2>
 <p>The format itself is permissive; <strong>which fields are required is a policy</strong>, and usually your catalog’s:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[policy]</span>
-<span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"warn"</span><span class="w">          </span><span class="c1"># default; "strict" fails the build instead</span>
+<span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;warn&quot;</span><span class="w">          </span><span class="c1"># default; &quot;strict&quot; fails the build instead</span>
 
 <span class="k">[policy.required]</span>
-<span class="n">project</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"description"</span><span class="p">,</span><span class="w"> </span><span class="s2">"maintainer"</span><span class="p">,</span><span class="w"> </span><span class="s2">"repo_url"</span><span class="p">]</span>
-<span class="n">dataframes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"date_col"</span><span class="p">,</span><span class="w"> </span><span class="s2">"pull_method"</span><span class="p">]</span>
-<span class="n">charts</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"units"</span><span class="p">,</span><span class="w"> </span><span class="s2">"frequency"</span><span class="p">]</span>
-<span class="n">models</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"trained_on"</span><span class="p">,</span><span class="w"> </span><span class="s2">"docs"</span><span class="p">]</span>
-<span class="n">files</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"description"</span><span class="p">,</span><span class="w"> </span><span class="s2">"license"</span><span class="p">,</span><span class="w"> </span><span class="s2">"docs"</span><span class="p">]</span>
+<span class="n">project</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;maintainer&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;repo_url&quot;</span><span class="p">]</span>
+<span class="n">dataframes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;date_col&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pull_method&quot;</span><span class="p">]</span>
+<span class="n">charts</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;frequency&quot;</span><span class="p">]</span>
+<span class="n">models</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;trained_on&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;docs&quot;</span><span class="p">]</span>
+<span class="n">files</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;license&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;docs&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Without a <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> section, chartbook’s default recommended-field lists apply, warn-only. A kind you leave out of <code class="docutils literal notranslate"><span class="pre">[policy.required]</span></code> keeps its default list. Each list is a list of field names, in brackets; <code class="docutils literal notranslate"><span class="pre">project</span> <span class="pre">=</span> <span class="pre">&quot;description&quot;</span></code> is refused, not read as one name (nor as its letters), and the error shows the form to write. In a list, <code class="docutils literal notranslate"><span class="pre">docs</span></code> means “a write-up”, and is satisfied by either <code class="docutils literal notranslate"><span class="pre">docs</span></code> or <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>. In the <code class="docutils literal notranslate"><span class="pre">project</span></code> list, <code class="docutils literal notranslate"><span class="pre">build</span></code> means the build script: <code class="docutils literal notranslate"><span class="pre">[scripts]</span> <span class="pre">build</span></code>, or <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">build</span></code>, the old place, which is still read. A missing one is named <code class="docutils literal notranslate"><span class="pre">[scripts]</span> <span class="pre">build</span></code>.</p>
 <p>A pipeline may have a <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog’s policy applies and the pipeline’s is ignored: whoever gathers the pipelines together decides what they must say.</p>
-<p>To enforce a policy in CI — for a catalog or a single pipeline — run <a class="reference internal" href="cli.html"><span class="doc">chartbook check</span></a>, which exits nonzero on any missing required field regardless of <code class="docutils literal notranslate"><span class="pre">mode</span></code>. <code class="docutils literal notranslate"><span class="pre">check</span> <span class="pre">--policy</span> <span class="pre">FILE</span></code> replaces the pipeline’s own <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> with the one in that file, as a catalog’s replaces its members’; a file with no <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> table gives no policy. When no policy is given anywhere (no <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> in the pipeline, none in the catalog it is checked in, and no <code class="docutils literal notranslate"><span class="pre">--policy</span></code>, or a <code class="docutils literal notranslate"><span class="pre">--policy</span></code> file with no <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> table), <code class="docutils literal notranslate"><span class="pre">check</span></code> reports the missing recommended fields as <code class="docutils literal notranslate"><span class="pre">warning:</span></code> lines, and they do not make it exit nonzero. An empty write-up (<code class="docutils literal notranslate"><span class="pre">docs_path</span></code> or <code class="docutils literal notranslate"><span class="pre">docs</span></code>) still fails it: the format requires one.</p>
+<p>To enforce a pipeline’s policy in CI, run <a class="reference internal" href="cli.html"><span class="doc">chartbook check</span></a>. <code class="docutils literal notranslate"><span class="pre">check</span> <span class="pre">--policy</span> <span class="pre">FILE</span></code> replaces its own policy; otherwise the machine catalog’s policy supplies a fallback. Catalogs compare stored metadata with their <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> on the Diagnostics page. A catalog never checks working folders.</p>
 </section>
 <section id="charts-chart-definitions">
 <h2><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions<a class="headerlink" href="#charts-chart-definitions" title="Link to this heading">#</a></h2>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.revenue_trend]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Revenue Trend Analysis"</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Monthly revenue trends with seasonal adjustments"</span>
-<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"revenue_data"</span><span class="w">           </span><span class="c1"># links to a [dataframes.*] entry</span>
-<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Revenue"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Financial"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Monthly"</span><span class="p">]</span>
-<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Monthly"</span>
-<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Month-end"</span>
-<span class="n">release_lag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"15 days"</span>
-<span class="n">release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Mid-month"</span>
-<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"X-13ARIMA-SEATS"</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"USD Millions"</span>
-<span class="n">series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Gross Revenue"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Net Revenue"</span><span class="p">]</span>
-<span class="n">start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"1/1/2020"</span>
-<span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"REV_TREND"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Trend Analysis&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly revenue trends with seasonal adjustments&quot;</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span><span class="w">           </span><span class="c1"># links to a [dataframes.*] entry</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span><span class="p">]</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
+<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Month-end&quot;</span>
+<span class="n">release_lag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;15 days&quot;</span>
+<span class="n">release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Mid-month&quot;</span>
+<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;X-13ARIMA-SEATS&quot;</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD Millions&quot;</span>
+<span class="n">series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Gross Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Net Revenue&quot;</span><span class="p">]</span>
+<span class="n">start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
+<span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;REV_TREND&quot;</span>
 <span class="n">publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">"[Q4 Report 2024, p15](https://example.com/reports/q4-2024)"</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;[Q4 Report 2024, p15](https://example.com/reports/q4-2024)&quot;</span><span class="p">,</span>
 <span class="p">]</span>
-<span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2025-01-15"</span>
-<span class="n">last_legal_clearance_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2025-01-15"</span>
-<span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Legal Team"</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/revenue_trend.html"</span><span class="w">        </span><span class="c1"># the chart's HTML file</span>
-<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./excel/revenue_trend.xlsx"</span><span class="w">    </span><span class="c1"># optional Excel version</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/charts/revenue_trend.md"</span>
+<span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
+<span class="n">last_legal_clearance_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
+<span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Legal Team&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_trend.html&quot;</span><span class="w">        </span><span class="c1"># the chart&#39;s HTML file</span>
+<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_trend.xlsx&quot;</span><span class="w">    </span><span class="c1"># optional Excel version</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_trend.md&quot;</span>
 </pre></div>
 </div>
 <p>Exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> (a markdown file) or <code class="docutils literal notranslate"><span class="pre">docs</span></code> (inline markdown, usually a multi-line string) is required per chart.</p>
@@ -839,32 +829,32 @@
 <h2><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions<a class="headerlink" href="#dataframes-dataframe-definitions" title="Link to this heading">#</a></h2>
 <p>A dataframe is in one place: a file (<code class="docutils literal notranslate"><span class="pre">path</span></code>), or a table or a query in one of the pipeline’s <a class="reference internal" href="#sources"><span class="std std-ref">[sources]</span></a> (<code class="docutils literal notranslate"><span class="pre">source</span></code> with <code class="docutils literal notranslate"><span class="pre">table</span></code> or <code class="docutils literal notranslate"><span class="pre">query</span></code>). <code class="docutils literal notranslate"><span class="pre">path</span></code> points at the file — a single file, a folder of parts, or a glob pattern for hive-partitioned data — stored as parquet, CSV, JSON lines or Arrow IPC (<a class="reference internal" href="#formats"><span class="std std-ref">The file’s format: format and read_options</span></a>):</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.revenue_data]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Revenue Dataset"</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Comprehensive revenue data with geographic breakdowns"</span>
-<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Internal Sales System"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Finance Database"</span><span class="p">]</span>
-<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Sales Team"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Finance Team"</span><span class="p">]</span>
-<span class="n">provider_links</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://internal.company.com/sales"</span><span class="p">]</span>
-<span class="n">access_types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Internal"</span><span class="p">]</span>
-<span class="n">contact_required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"No"</span>
-<span class="n">pre_approved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Yes"</span>
-<span class="n">license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Internal Use Only"</span>
-<span class="n">license_expiration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2025-12-31"</span>
-<span class="n">provider_contact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"data-team@company.com"</span>
-<span class="n">restrictions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Internal analytics only"</span>
-<span class="n">pull_method</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"SQL query via Python"</span>
-<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Revenue"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Sales"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Financial"</span><span class="p">]</span>
-<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"date"</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/revenue_data.parquet"</span>
-<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/revenue_data.xlsx"</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/revenue_data.md"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Dataset&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Comprehensive revenue data with geographic breakdowns&quot;</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal Sales System&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Database&quot;</span><span class="p">]</span>
+<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Sales Team&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Team&quot;</span><span class="p">]</span>
+<span class="n">provider_links</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;https://internal.company.com/sales&quot;</span><span class="p">]</span>
+<span class="n">access_types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal&quot;</span><span class="p">]</span>
+<span class="n">contact_required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;No&quot;</span>
+<span class="n">pre_approved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Yes&quot;</span>
+<span class="n">license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal Use Only&quot;</span>
+<span class="n">license_expiration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-12-31&quot;</span>
+<span class="n">provider_contact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;data-team@company.com&quot;</span>
+<span class="n">restrictions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal analytics only&quot;</span>
+<span class="n">pull_method</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SQL query via Python&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Sales&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">]</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;date&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.parquet&quot;</span>
+<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.xlsx&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/revenue_data.md&quot;</span>
 </pre></div>
 </div>
 <p>Hive-partitioned data:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/revenue_data/**/*.parquet"</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data/**/*.parquet&quot;</span>
 </pre></div>
 </div>
 <p>A dataset kept as one file a period is a glob too, so that a new year’s file is part of it:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/transcripts_*.parquet"</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/transcripts_*.parquet&quot;</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> warns when a <code class="docutils literal notranslate"><span class="pre">path</span></code> names one such file (<code class="docutils literal notranslate"><span class="pre">transcripts_2026.parquet</span></code>) and no asset declares the rest (<a class="reference internal" href="cli.html#chartbook-check"><span class="std std-ref">chartbook check</span></a>, “One file of a set”).</p>
@@ -897,15 +887,15 @@
 <p>A path whose ending names none (a folder, Hive’s <code class="docutils literal notranslate"><span class="pre">000000_0</span></code>, a <code class="docutils literal notranslate"><span class="pre">.txt</span></code>) is parquet, unless <code class="docutils literal notranslate"><span class="pre">format</span></code> says otherwise. A folder is read as the files in it of its format, passing over any named with a leading <code class="docutils literal notranslate"><span class="pre">.</span></code> or <code class="docutils literal notranslate"><span class="pre">_</span></code>. When its entry gives <code class="docutils literal notranslate"><span class="pre">format</span></code> and none of its files has that format’s ending, it is read as the files with the ending most of its files have, passing over what is plainly not a table (a <code class="docutils literal notranslate"><span class="pre">README</span></code>, a <code class="docutils literal notranslate"><span class="pre">schema.json</span></code>, a <code class="docutils literal notranslate"><span class="pre">.md</span></code>): a folder of <code class="docutils literal notranslate"><span class="pre">.dat</span></code> files is read as CSV. A folder of parquet with nothing else in it is handed to polars whole, as it always was. A folder’s Hive <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folders become columns for parquet and Arrow IPC: those below it that every file has, and none above it, with the types and values polars gives them (<code class="docutils literal notranslate"><span class="pre">year=2024</span></code> a whole number, <code class="docutils literal notranslate"><span class="pre">date=2024-01-01</span></code> a date), in both engines. A filter on a key reads only the files it names, unless a <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folder is above the one declared: its files are then read whole and given their keys one by one, and a file’s own column of that key’s name is kept as it is. A file or folder below a declared path is itself, whatever its name holds: a <code class="docutils literal notranslate"><span class="pre">[</span></code>, <code class="docutils literal notranslate"><span class="pre">*</span></code> or <code class="docutils literal notranslate"><span class="pre">?</span></code> in it (<code class="docutils literal notranslate"><span class="pre">tag=[draft]</span></code>, <code class="docutils literal notranslate"><span class="pre">a[1].parquet</span></code>) is not a glob. A declared path whose own parts name one (<code class="docutils literal notranslate"><span class="pre">./_data/[raw]</span></code>) is refused: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> fails it, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> stops on it, each saying to rename it. Polars reads no such columns from CSV or JSON lines, and DuckDB is told to read none either.</p>
 <p><code class="docutils literal notranslate"><span class="pre">read_options</span></code> gives the reader of a CSV or JSON lines file its options. <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>, the page and the index pass them to polars (<code class="docutils literal notranslate"><span class="pre">pl.scan_csv</span></code>, <code class="docutils literal notranslate"><span class="pre">pl.scan_ndjson</span></code>) by these names, and <code class="docutils literal notranslate"><span class="pre">data.sql()</span></code> passes them to DuckDB under its own, each so that it means the same there:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.vendor_prices]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/vendor/prices.txt"</span><span class="w">     </span><span class="c1"># delivered as it is, with an ending that says nothing</span>
-<span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"csv"</span>
-<span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">separator</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">";"</span><span class="p">,</span><span class="w"> </span><span class="n">skip_lines</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">schema_overrides</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">zip</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"String"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">null_values</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"NA"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
-<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"The vendor's daily drop, kept as delivered, with a line about the delivery above its header."</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/vendor/prices.txt&quot;</span><span class="w">     </span><span class="c1"># delivered as it is, with an ending that says nothing</span>
+<span class="n">format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;csv&quot;</span>
+<span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">separator</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;;&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">skip_lines</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">schema_overrides</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">zip</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;String&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="n">null_values</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;NA&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;The vendor&#39;s daily drop, kept as delivered, with a line about the delivery above its header.&quot;</span>
 
 <span class="k">[dataframes.earnings_releases]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"</span><span class="w">   </span><span class="c1"># a field a later quarter brings is kept</span>
-<span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">schema_overrides</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">event_id</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"String"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
-<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"One nested record per event, a file per quarter."</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/archive/EARNINGS_RELEASE_*.jsonl.gz&quot;</span><span class="w">   </span><span class="c1"># a field a later quarter brings is kept</span>
+<span class="n">read_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">schema_overrides</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">event_id</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;String&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;One nested record per event, a file per quarter.&quot;</span>
 </pre></div>
 </div>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -960,20 +950,20 @@
 <span id="sources"></span><h2><code class="docutils literal notranslate"><span class="pre">[sources]</span></code> — Where Data Lives Besides a File<a class="headerlink" href="#sources-where-data-lives-besides-a-file" title="Link to this heading">#</a></h2>
 <p>A dataframe does not have to be a file. It can be a table, or a query, in a <strong>source</strong>: a database the pipeline names.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[sources.local]</span>
-<span class="n">backend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"duckdb"</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"duckdb:///./_data/local.duckdb"</span>
+<span class="n">backend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;duckdb&quot;</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;duckdb:///./_data/local.duckdb&quot;</span>
 
 <span class="k">[dataframes.curve]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Yield Curve"</span>
-<span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local"</span>
-<span class="n">table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="w">                 </span><span class="c1"># a table or view that already exists</span>
-<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"The Fed's zero-coupon curve, as a table."</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Yield Curve&quot;</span>
+<span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local&quot;</span>
+<span class="n">table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="w">                 </span><span class="c1"># a table or view that already exists</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;The Fed&#39;s zero-coupon curve, as a table.&quot;</span>
 
 <span class="k">[dataframes.slopes]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Yield Curve Slopes"</span>
-<span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"local"</span>
-<span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"</span><span class="w">   </span><span class="c1"># a view ChartBook names</span>
-<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"The 10-year yield less the 2-year, computed when read."</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Yield Curve Slopes&quot;</span>
+<span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local&quot;</span>
+<span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;select Date, SVENY10 - SVENY02 as slope from fed_yield_curve&quot;</span><span class="w">   </span><span class="c1"># a view ChartBook names</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;The 10-year yield less the 2-year, computed when read.&quot;</span>
 </pre></div>
 </div>
 <p><strong>The rule.</strong> A name resolves to a location. The engine runs the query. Arrow comes back. Polars wraps it. ChartBook never parses, plans or rewrites SQL: it knows <em>where</em> a name lives and <em>which</em> engine lives there, and puts the name in. The SQL is yours.</p>
@@ -1034,24 +1024,24 @@
 <h3>Documenting a column: <code class="docutils literal notranslate"><span class="pre">[dataframes.&lt;id&gt;.series.&lt;key&gt;]</span></code><a class="headerlink" href="#documenting-a-column-dataframes-id-series-key" title="Link to this heading">#</a></h3>
 <p>A dataframe with a date column and several value columns holds several time series. To give one of them a name, units and a write-up of its own, add a series table under the dataframe:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.treasury_rates.series.dgs10]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span>
-<span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="w">              </span><span class="c1"># the column in the data; defaults to the key</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Percent"</span>
-<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Daily"</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/series/dgs10.md"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;10-Year Treasury Constant Maturity&quot;</span>
+<span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="w">              </span><span class="c1"># the column in the data; defaults to the key</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/series/dgs10.md&quot;</span>
 </pre></div>
 </div>
 <p>The key (<code class="docutils literal notranslate"><span class="pre">dgs10</span></code>) is the series’ address inside the dataframe, <code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code>, so it may only contain letters, digits, <code class="docutils literal notranslate"><span class="pre">.</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code> and <code class="docutils literal notranslate"><span class="pre">-</span></code>. If the column already has a code-friendly name, use it as the key and leave <code class="docutils literal notranslate"><span class="pre">column</span></code> out:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.term_premium.series.spread_10y_2y]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"10Y-2Y Spread"</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Percentage points"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;10Y-2Y Spread&quot;</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percentage points&quot;</span>
 </pre></div>
 </div>
 <p>The column a table names may be spelled any way at all, which is how one called <code class="docutils literal notranslate"><span class="pre">10Y</span> <span class="pre">2Y</span> <span class="pre">Spread</span></code> gets an address when the data cannot be changed. Every field is optional, and you may add fields of your own.</p>
 <p>You do not have to declare a series for it to exist. Every column except the <code class="docutils literal notranslate"><span class="pre">date_col</span></code> is listed in the build’s <code class="docutils literal notranslate"><span class="pre">index.json</span></code> whether or not it has a table; a table only documents one. Series are not shown on the dataframe’s page yet.</p>
 <p><strong>A series address is for documentation, not for loading.</strong> <code class="docutils literal notranslate"><span class="pre">treasury_rates#dgs10</span></code> names the column so that a name, units and a write-up can be attached to it. It does not load it: <code class="docutils literal notranslate"><span class="pre">data.load(&quot;treasury_rates#dgs10&quot;)</span></code> is refused, on purpose. ChartBook says where a dataframe is and which copy you get; picking columns and rows is for polars or SQL.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"treasury_rates"</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">"date"</span><span class="p">,</span> <span class="s2">"DGS10"</span><span class="p">)</span>     <span class="c1"># polars</span>
-<span class="n">path</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"treasury_rates"</span><span class="p">)</span>                              <span class="c1"># or the file, for anything else</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;treasury_rates&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;DGS10&quot;</span><span class="p">)</span>     <span class="c1"># polars</span>
+<span class="n">path</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;treasury_rates&quot;</span><span class="p">)</span>                              <span class="c1"># or the file, for anything else</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports a <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> that points at no file.</p>
@@ -1061,8 +1051,8 @@
 <h2><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks<a class="headerlink" href="#notebooks-jupyter-notebooks" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">name</span></code> is inferred from the notebook’s first <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">Heading</span></code>; set it explicitly to override. <code class="docutils literal notranslate"><span class="pre">publishable</span> <span class="pre">=</span> <span class="pre">true</span></code> includes the notebook in <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code> output. <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code> keeps every version of the executed notebook in the store, as for a dataframe (<a class="reference internal" href="../guide/keeping-costly-outputs.html"><span class="doc">Keeping Costly Outputs</span></a>).</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notebooks.exploratory_analysis]</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Initial exploration of revenue patterns and anomalies"</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"_output/01_exploratory_analysis.ipynb"</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Initial exploration of revenue patterns and anomalies&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;_output/01_exploratory_analysis.ipynb&quot;</span>
 <span class="n">publishable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 </pre></div>
 </div>
@@ -1070,7 +1060,7 @@
 <section id="notes-additional-documentation">
 <h2><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation<a class="headerlink" href="#notes-additional-documentation" title="Link to this heading">#</a></h2>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notes.methodology]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">path</span></code> is required: the markdown file the note’s page is made from. A note without one does not load, and the error says what to write. <code class="docutils literal notranslate"><span class="pre">keep</span> <span class="pre">=</span> <span class="pre">true</span></code> keeps every version of it in the store, as for a dataframe.</p>
@@ -1079,13 +1069,13 @@
 <h2><code class="docutils literal notranslate"><span class="pre">[models]</span></code> — Trained Models<a class="headerlink" href="#models-trained-models" title="Link to this heading">#</a></h2>
 <p>A model is a file, or a directory of files, that the pipeline’s own code produces. ChartBook records where it is, what it was trained on and how it scores, and gives it a page. It never loads, runs or serves a model.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Rate Forecaster"</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Forecasts the 10-year Treasury yield one month ahead."</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_models/rate_forecaster.joblib"</span>
-<span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"treasury_rates"</span><span class="p">]</span>
-<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_output/rate_forecaster_metrics.json"</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/models/rate_forecaster.md"</span>
-<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Forecast"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Treasury"</span><span class="p">]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Rate Forecaster&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Forecasts the 10-year Treasury yield one month ahead.&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_models/rate_forecaster.joblib&quot;</span>
+<span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;treasury_rates&quot;</span><span class="p">]</span>
+<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/rate_forecaster_metrics.json&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/models/rate_forecaster.md&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Treasury&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -1125,16 +1115,16 @@
 </div>
 <p>The key (<code class="docutils literal notranslate"><span class="pre">rate_forecaster</span></code>) is the model’s address, <code class="docutils literal notranslate"><span class="pre">model/rate_forecaster</span></code>, so it may only contain letters, digits, <code class="docutils literal notranslate"><span class="pre">.</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code> and <code class="docutils literal notranslate"><span class="pre">-</span></code>.</p>
 <p><strong>The metrics file</strong> is one flat JSON object. Values are numbers, strings or <code class="docutils literal notranslate"><span class="pre">true</span></code>/<code class="docutils literal notranslate"><span class="pre">false</span></code>:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"rmse"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.214</span><span class="p">,</span><span class="w"> </span><span class="nt">"mae"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.171</span><span class="p">,</span><span class="w"> </span><span class="nt">"n_train"</span><span class="p">:</span><span class="w"> </span><span class="mi">5120</span><span class="p">,</span><span class="w"> </span><span class="nt">"n_test"</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rmse&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.214</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;mae&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.171</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;n_train&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5120</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;n_test&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Scores live in a file, not in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, because they are an output: they change every time the model is retrained. A table or a curve does not belong here; declare it as a dataframe or a chart.</p>
 <p><strong>Getting the path.</strong> Training code asks where to write, and anything that uses the model asks where to read:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">joblib</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">models</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">joblib</span>
+<span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">models</span>
 
-<span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rate_forecaster"</span><span class="p">))</span>       <span class="c1"># in the training script</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"rate_forecaster"</span><span class="p">))</span>      <span class="c1"># anywhere else in the pipeline</span>
+<span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;rate_forecaster&quot;</span><span class="p">))</span>       <span class="c1"># in the training script</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;rate_forecaster&quot;</span><span class="p">))</span>      <span class="c1"># anywhere else in the pipeline</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>path<span class="w"> </span>model/rate_forecaster
@@ -1142,12 +1132,12 @@
 </div>
 <p>There is no <code class="docutils literal notranslate"><span class="pre">models.load()</span></code>: loading is one line of your own code, and keeping it there keeps every machine-learning library out of ChartBook.</p>
 <p><strong>Training data in another pipeline.</strong> A model is often trained on data another pipeline produces. Say so:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="s2">"local_features"</span><span class="p">]</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">trained_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;local_features&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Then say where that pipeline is, in <a class="reference internal" href="#dependencies"><span class="std std-ref">[dependencies]</span></a>:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
-<span class="s2">"ftsfr/fed_yield_curve"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"../fed_yield_curve"</span><span class="w"> </span><span class="p">}</span>
+<span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;../fed_yield_curve&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>With that, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> opens the other pipeline’s <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> and reports a dataframe it does not declare. The training data is recorded in <code class="docutils literal notranslate"><span class="pre">index.json</span></code>, listed on the model’s page, and linked to the dataframe’s page when both pipelines are in the same catalog. Without the <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> entry the manifest does not load, and the error shows the line to add.</p>
@@ -1155,14 +1145,14 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>pin
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
 
-<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"fed_yield_curve:treasury_rates"</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">"pandas"</span><span class="p">)</span>   <span class="c1"># as pinned</span>
+<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;pandas&quot;</span><span class="p">)</span>   <span class="c1"># as pinned</span>
 </pre></div>
 </div>
 <p>The model’s record in <code class="docutils literal notranslate"><span class="pre">index.json</span></code> then says which bytes that was, under <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">],</span>
-<span class="nt">"pinned_inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">],</span>
+<span class="nt">&quot;pinned_inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code> says what <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins, which is what your training code is handed. It is not yet a record of what one particular training run read; that comes with build records.</p>
@@ -1182,8 +1172,8 @@
 <p>The whole hash is what is stored and compared. The name is its first 12 digits, which is what Docker shows and what the Linux kernel asks for. Among 10,000 versions of one model, two share 12 digits about once in five million; if two ever do, both are shown with more digits, and a start that matches two versions is refused, never guessed at. You can type any start of four or more digits that names one version.</p>
 <p><strong>A label is a name people use</strong>, and it points at a version:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[models.rate_forecaster.aliases]</span>
-<span class="n">champion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"7f3a9c2e41b0"</span>
-<span class="n">challenger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"b2c91d0a77f3"</span>
+<span class="n">champion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;7f3a9c2e41b0&quot;</span>
+<span class="n">challenger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;b2c91d0a77f3&quot;</span>
 </pre></div>
 </div>
 <p>Promoting a model is changing one line, in a pull request like any other. There is no “promote” button and no service behind one.</p>
@@ -1245,15 +1235,15 @@
 <span id="files"></span><h2><code class="docutils literal notranslate"><span class="pre">[files]</span></code> — Files That Are Not Tables<a class="headerlink" href="#files-files-that-are-not-tables" title="Link to this heading">#</a></h2>
 <p>A files asset is a file, a folder of files or a glob of them that the pipeline keeps whatever is inside: gzipped JSON lines, text or HTML, PDFs, images, NumPy arrays, a SQLite or DuckDB file, a vendor’s zip kept byte for byte. ChartBook moves, versions and documents the bytes, as for a model, and never treats them as a table. Reading them is one line of your own code.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[files.earnings_releases]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Earnings Releases"</span>
-<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"The data API's earnings releases since 2014, one file a quarter, as the API sends them."</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./_data/archive/EARNINGS_RELEASE_*.jsonl.gz"</span>
-<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Vendor API"</span><span class="p">]</span>
-<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Vendor"</span><span class="p">]</span>
-<span class="n">license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Licensed to the department"</span>
-<span class="n">restrictions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Research use only"</span>
-<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">"Earnings"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Raw"</span><span class="p">]</span>
-<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./docs_src/files/earnings_releases.md"</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Earnings Releases&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;The data API&#39;s earnings releases since 2014, one file a quarter, as the API sends them.&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/archive/EARNINGS_RELEASE_*.jsonl.gz&quot;</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Vendor API&quot;</span><span class="p">]</span>
+<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Vendor&quot;</span><span class="p">]</span>
+<span class="n">license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Licensed to the department&quot;</span>
+<span class="n">restrictions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Research use only&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Earnings&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Raw&quot;</span><span class="p">]</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/files/earnings_releases.md&quot;</span>
 <span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 </pre></div>
 </div>
@@ -1286,14 +1276,14 @@
 </div>
 <p>The key (<code class="docutils literal notranslate"><span class="pre">earnings_releases</span></code>) is its address, <code class="docutils literal notranslate"><span class="pre">file/earnings_releases</span></code>, and another pipeline’s is <code class="docutils literal notranslate"><span class="pre">pipeline:file/earnings_releases</span></code>. A file’s own name may be anything; a folder’s or glob’s files are those its hash is made of, so <code class="docutils literal notranslate"><span class="pre">.DS_Store</span></code>, <code class="docutils literal notranslate"><span class="pre">Thumbs.db</span></code>, <code class="docutils literal notranslate"><span class="pre">desktop.ini</span></code> and <code class="docutils literal notranslate"><span class="pre">._*</span></code> files are never among them.</p>
 <p><strong>Reading them.</strong></p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">assets</span>
+<span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
 
-<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">"file/earnings_releases"</span><span class="p">)</span>      <span class="c1"># the path as declared (a glob stays a glob)</span>
-<span class="n">assets</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">"file/earnings_releases"</span><span class="p">)</span>     <span class="c1"># the files, sorted: [Path(".../EARNINGS_RELEASE_2014Q1.jsonl.gz"), ...]</span>
-<span class="n">index</span> <span class="o">=</span> <span class="n">assets</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"file/earnings_releases"</span><span class="p">)</span>   <span class="c1"># a LazyFrame: path, size_bytes, sha256, and a column per key=value folder</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s2">&quot;file/earnings_releases&quot;</span><span class="p">)</span>      <span class="c1"># the path as declared (a glob stays a glob)</span>
+<span class="n">assets</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;file/earnings_releases&quot;</span><span class="p">)</span>     <span class="c1"># the files, sorted: [Path(&quot;.../EARNINGS_RELEASE_2014Q1.jsonl.gz&quot;), ...]</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">assets</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;file/earnings_releases&quot;</span><span class="p">)</span>   <span class="c1"># a LazyFrame: path, size_bytes, sha256, and a column per key=value folder</span>
 
-<span class="n">recent</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s2">"2025"</span><span class="p">))</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+<span class="n">recent</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s2">&quot;2025&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">assets.files</span></code> returns the file itself, a folder’s files, or a glob’s matches, sorted by their path inside the asset; it works for a dataframe of many parts and a model that is a folder too, so a large dataset can be read a file at a time. <code class="docutils literal notranslate"><span class="pre">assets.index</span></code> has one row per file, in the same order: <code class="docutils literal notranslate"><span class="pre">path</span></code> (the file), <code class="docutils literal notranslate"><span class="pre">size_bytes</span></code>, <code class="docutils literal notranslate"><span class="pre">sha256</span></code> (the file’s hash, in hex), and, for files in <code class="docutils literal notranslate"><span class="pre">key=value</span></code> folders (<code class="docutils literal notranslate"><span class="pre">year=2024/q=1/x.htm</span></code>), a column for each key, as text. Pick files with polars before opening any. Of another pipeline’s files, every size and hash comes from the record the store keeps, and nothing is read; of your own, the files are hashed, and a file is read again only when it has changed. On the command line, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">file/earnings_releases</span> <span class="pre">--files</span></code> prints the files, one per line.</p>
@@ -1304,10 +1294,10 @@
 <span id="dependencies"></span><h2><code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code> — Other Pipelines This One Reads From<a class="headerlink" href="#dependencies-other-pipelines-this-one-reads-from" title="Link to this heading">#</a></h2>
 <p>A pipeline that uses another pipeline’s data says so. Naming it by its ID is enough:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
-<span class="s2">"ftsfr/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">                                            </span><span class="c1"># its snapshots in the store</span>
-<span class="n">yields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"ftsfr/yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"3f2a9c1"</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># a short name, and one commit's snapshots</span>
-<span class="s2">"ftsfr/fed_yield_curve"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"../fed_yield_curve"</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># a folder on this machine</span>
-<span class="s2">"ftsfr/crsp_compustat"</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"https://gitlab.example.org/ftsfr/crsp_compustat"</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"a1b2c3d"</span><span class="w"> </span><span class="p">}</span>
+<span class="s2">&quot;ftsfr/rates&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span><span class="w">                                            </span><span class="c1"># its snapshots in the store</span>
+<span class="n">yields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;ftsfr/yield_curve&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;3f2a9c1&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># a short name, and one commit&#39;s snapshots</span>
+<span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;../fed_yield_curve&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">     </span><span class="c1"># a folder on this machine</span>
+<span class="s2">&quot;ftsfr/crsp_compustat&quot;</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;https://gitlab.example.org/ftsfr/crsp_compustat&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span> <span class="pre">ftsfr/rates</span></code> writes the first line for you and pins it (<a class="reference internal" href="cli.html"><span class="doc">CLI Reference</span></a>).</p>
@@ -1353,9 +1343,9 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> reports training data that a dependency does not declare (<code class="docutils literal notranslate"><span class="pre">trained_on</span> <span class="pre">=</span> <span class="pre">[&quot;fed_yield_curve:no_such_table&quot;]</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">index.json</span></code> lists them, under <code class="docutils literal notranslate"><span class="pre">dependencies</span></code> in the pipeline’s record.</p></li>
 <li><p>A model’s training data in another pipeline is written by the dependency’s name, so <code class="docutils literal notranslate"><span class="pre">fed_yield_curve:treasury_rates</span></code> becomes <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:treasury_rates</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">data.load</span></code> of a dependency that is declared and not pinned pins it, from its newest snapshot, on the first read, and says so; of a pipeline not declared, it reads its newest snapshot with a warning; of one with no snapshot, its working folder with a louder one. In a build under <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH=1</span></code>) only pins are read. See <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data.load</span></code> of a dependency that is declared and not pinned pins it, from its newest snapshot, on the first read, and says so; of a pipeline not declared, it reads its newest snapshot with a warning; of one with no snapshot, it requires a snapshot or an explicit <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">link</span></code>. In a build under <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH=1</span></code>) only pins are read. See <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> freezes what each dependency was declared ready with. A pipeline named by its ID alone is pinned from its newest <strong>snapshot</strong> in the store, found by that ID. A folder (<code class="docutils literal notranslate"><span class="pre">path</span></code>) is pinned from its newest snapshot at or before the commit the folder is on, which its owner makes there with <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>; the folder itself is never read, so it can be half-way through a change. A repository (<code class="docutils literal notranslate"><span class="pre">git</span></code>) is pinned from a clean copy of a commit. The content hash of every asset, and the commit, are written to <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code>, which you commit. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> moves the pins forward. See <a class="reference internal" href="cli.html"><span class="doc">CLI Reference</span></a>.</p></li>
-<li><p><strong>Your code reads the pinned copy.</strong> <code class="docutils literal notranslate"><span class="pre">data.path(&quot;fed_yield_curve:treasury_rates&quot;)</span></code>, <code class="docutils literal notranslate"><span class="pre">data.load(…)</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.path(…)</span></code>, <code class="docutils literal notranslate"><span class="pre">models.path(…)</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">…</span></code> all resolve a reference to another pipeline’s asset through <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> into the store, not to that pipeline’s working directory. No catalog is needed. Before it is pinned, a read in a notebook pins it, or reads a pipeline not declared here with a warning, or a working folder with a louder one; a build under <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> refuses all but the pin (see <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>).</p></li>
+<li><p><strong>Your code reads the pinned copy.</strong> <code class="docutils literal notranslate"><span class="pre">data.path(&quot;fed_yield_curve:treasury_rates&quot;)</span></code>, <code class="docutils literal notranslate"><span class="pre">data.load(…)</span></code>, <code class="docutils literal notranslate"><span class="pre">assets.path(…)</span></code>, <code class="docutils literal notranslate"><span class="pre">models.path(…)</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">path</span> <span class="pre">…</span></code> all resolve a reference to another pipeline’s asset through <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> into the store, not to that pipeline’s working directory. No catalog is needed. Before it is pinned, a read in a notebook pins it, or reads a pipeline not declared here with a warning, or follows an explicit <code class="docutils literal notranslate"><span class="pre">chartbook.links.toml</span></code> link; a build under <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> refuses all but the pin (see <a class="reference internal" href="../guide/depending-on-pipelines.html"><span class="doc">Depending on Another Pipeline</span></a>).</p></li>
 <li><p>A reference to a pipeline that is not in this table is read from its newest snapshot with a warning that names the <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">add</span></code> command that declares it; in a build under <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> it fails.</p></li>
 </ul>
 <p><strong>What it does not do yet.</strong></p>
@@ -1370,12 +1360,12 @@
 <span id="scripts"></span><h2><code class="docutils literal notranslate"><span class="pre">[scripts]</span></code> — Named Commands<a class="headerlink" href="#scripts-named-commands" title="Link to this heading">#</a></h2>
 <p>A pipeline names the commands that are run in it:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[scripts]</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"doit"</span>
-<span class="n">test</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">"pytest"</span>
-<span class="n">fetch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"""</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span>
+<span class="n">test</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pytest&quot;</span>
+<span class="n">fetch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">module load python/3.12</span>
 <span class="s2">python src/pull_wrds.py</span>
-<span class="s2">"""</span>
+<span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs the first, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">test</span></code> the second. See <a class="reference internal" href="cli.html#chartbook-run"><span class="std std-ref">chartbook run</span></a>.</p>
@@ -1404,7 +1394,7 @@
 <p><strong><code class="docutils literal notranslate"><span class="pre">build</span></code> is the one name with a meaning.</strong> It is the script that makes this pipeline’s data current. It is what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs when you name no script, and what it runs, once, in a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency that is not built yet. It is shown on the pipeline’s page, and written to <code class="docutils literal notranslate"><span class="pre">index.json</span></code> with the others.</p>
 <p><strong><code class="docutils literal notranslate"><span class="pre">build</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> is the same thing</strong>, and is still read. Give it in one place. A manifest that gives both, with different text, does not load.</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
-<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"doit"</span><span class="w">      </span><span class="c1"># the same as [scripts] build = "doit"</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span><span class="w">      </span><span class="c1"># the same as [scripts] build = &quot;doit&quot;</span>
 </pre></div>
 </div>
 <div class="admonition warning">
@@ -1430,19 +1420,19 @@
 <h2>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading">#</a></h2>
 <p>Per-user settings live in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>, managed by the <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> command:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[catalog]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/absolute/path/to/catalog/chartbook.toml"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/absolute/path/to/catalog/chartbook.toml&quot;</span>
 </pre></div>
 </div>
 <p>A relative <code class="docutils literal notranslate"><span class="pre">path</span></code> is relative to the settings file’s own folder, as <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">url</span></code>, <code class="docutils literal notranslate"><span class="pre">[git]</span> <span class="pre">path</span></code> and <code class="docutils literal notranslate"><span class="pre">[cache]</span> <span class="pre">path</span></code> are, never to the folder a command is run from; <code class="docutils literal notranslate"><span class="pre">~</span></code> is your home. The organization’s settings file (below) may name a catalog the same way, read where the user’s file names none.</p>
 <p>When a default catalog is configured (or <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code> exists), <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> and <code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code> work without an explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">"yield_curve"</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">"repo_public"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;yield_curve&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;repo_public&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>An explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument always takes priority over the global setting. See the <a class="reference internal" href="cli.html"><span class="doc">CLI Reference</span></a> reference for details.</p>
 <p>The same file says where the store is, if it is not at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/store/</span></code>:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[store]</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/a/bigger/disk/chartbook-store"</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/a/bigger/disk/chartbook-store&quot;</span>
 </pre></div>
 </div>
 <p>The store is a setting of the machine or the organization, never of a pipeline, so it is read in layers, each only where the one above it is silent, key by key: the <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_STORE</span></code> environment variable; the user’s <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>; the organization’s settings file, <code class="docutils literal notranslate"><span class="pre">/etc/chartbook/settings.toml</span></code> on Unix and macOS, <code class="docutils literal notranslate"><span class="pre">%ProgramData%\chartbook\settings.toml</span></code> on Windows, or the file <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_SYSTEM_SETTINGS</span></code> names; then the default. An organization sets the store once for every machine, and a user keeps their own choices for everything else. The value is a URL: a bare path or <code class="docutils literal notranslate"><span class="pre">file://</span></code> is a folder; <code class="docutils literal notranslate"><span class="pre">s3://bucket/prefix</span></code> is a bucket; another scheme names a kind of store a plugin provides, and the setting says so when none does. <code class="docutils literal notranslate"><span class="pre">[store]</span> <span class="pre">path</span></code> is still read as a folder, with a warning.</p>
@@ -1458,35 +1448,35 @@
 </ul>
 <p><strong>A store in S3.</strong> <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook[s3]</span></code>, and</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[store]</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"s3://bucket/prefix"</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;s3://bucket/prefix&quot;</span>
 </pre></div>
 </div>
 <p>The bucket is laid out exactly as a folder store is, under the prefix, so <code class="docutils literal notranslate"><span class="pre">aws</span> <span class="pre">s3</span> <span class="pre">sync</span></code> of a folder store into a bucket is this store. Credentials are the AWS SDK’s own, from the environment, <code class="docutils literal notranslate"><span class="pre">~/.aws</span></code> or an instance role; the URL never carries them. A bucket that is not at AWS is named with <code class="docutils literal notranslate"><span class="pre">?endpoint=https://minio.example.org</span></code>, and a region with <code class="docutils literal notranslate"><span class="pre">?region=</span></code>. Everything a pipeline reads from the store is read through a copy on this machine, under <code class="docutils literal notranslate"><span class="pre">~/.chartbook/cache/</span></code> (<code class="docutils literal notranslate"><span class="pre">[cache]</span> <span class="pre">path</span></code>, or <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_CACHE</span></code>, moves it; it can be emptied whenever nothing is reading from it): the first <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> of a pinned asset downloads its files, checks that they hash to the object’s name, and keeps them; each later read while online is one listing request, so that a name another pipeline added for the same bytes is seen, and the files come from disk; offline, what was read and checked before is served. <code class="docutils literal notranslate"><span class="pre">data.path()</span></code> is the path of that copy. A bucket that is read-only for a machine (<code class="docutils literal notranslate"><span class="pre">s3:ListBucket</span></code> and <code class="docutils literal notranslate"><span class="pre">s3:GetObject</span></code>) serves <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span> <span class="pre">--frozen</span></code> and <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>; a command that would write says that it was refused, and <code class="docutils literal notranslate"><span class="pre">pin</span></code> leaves only its note for <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> unwritten. Writing (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code>, a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency’s first pin) needs <code class="docutils literal notranslate"><span class="pre">s3:PutObject</span></code>, and <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code> <code class="docutils literal notranslate"><span class="pre">s3:DeleteObject</span></code>. A key under an object’s prefix that is not a plain path inside it (a <code class="docutils literal notranslate"><span class="pre">..</span></code>, an empty part or a leading <code class="docutils literal notranslate"><span class="pre">/</span></code>; on Windows also a backslash or a colon) is not one of the object’s files and is never downloaded, nor is such a key under <code class="docutils literal notranslate"><span class="pre">snapshots/</span></code>: anyone who can write to the bucket chooses its keys, and a reader makes a file of each. An object of several files is uploaded one file at a time, so a snapshot interrupted while uploading leaves a partial object, and one being made has keys still arriving: <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span> <span class="pre">--frozen</span></code>, every read and a catalog’s build of a version’s site compare the keys under the object and their sizes with what the record says (one listing request; nothing is downloaded), as they compare a synced folder’s files, and say the object is not fully uploaded yet; <code class="docutils literal notranslate"><span class="pre">update</span></code> does not move to that snapshot meanwhile, and making the snapshot again uploads what is missing. A key of another size than the record gives was written over, which no upload mends, and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">store</span> <span class="pre">verify</span></code> is what checks it. Nothing else changes: the manifest, the lockfile and the snapshots are the same, and so are the commands.</p>
 <p><code class="docutils literal notranslate"><span class="pre">git</span></code> dependencies are cloned into <code class="docutils literal notranslate"><span class="pre">~/.chartbook/git/</span></code>: one clone per repository, and one checkout per commit that something has pinned. To keep them elsewhere, set <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_GIT_CACHE</span></code>, or:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[git]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/a/bigger/disk/chartbook-git"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/a/bigger/disk/chartbook-git&quot;</span>
 </pre></div>
 </div>
 <p>Nothing in it is precious. Delete it and the next <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> or <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> that needs a repository fetches it again.</p>
-<p><strong>Trust.</strong> A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: the first build of it asks you at a terminal, or <a class="reference internal" href="cli.html#chartbook-trust"><span class="std std-ref">chartbook trust</span></a> in its folder says it beforehand. Until then <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja’s sandbox), and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> refuse to run its build script. The record is <code class="docutils literal notranslate"><span class="pre">~/.chartbook/trust.toml</span></code>, this user’s, beside <code class="docutils literal notranslate"><span class="pre">settings.toml</span></code>:</p>
+<p><strong>Trust.</strong> A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: the first build of it asks you at a terminal, or <a class="reference internal" href="cli.html#chartbook-trust"><span class="std std-ref">chartbook trust</span></a> in its folder says it beforehand. Until then <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja’s sandbox), and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> and <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> refuse to run its build script. The record is <code class="docutils literal notranslate"><span class="pre">~/.chartbook/trust.toml</span></code>, this user’s, beside <code class="docutils literal notranslate"><span class="pre">settings.toml</span></code>:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[[pipeline]]</span>
-<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"/Users/me/GitRepositories/ftsfr/rates"</span><span class="w">   </span><span class="c1"># resolved; the folders inside it too</span>
-<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"run"</span><span class="w">                                     </span><span class="c1"># "render" or "run"</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"ftsfr/rates"</span><span class="w">                                </span><span class="c1"># for you to read; nothing goes by it</span>
-<span class="n">repository</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://github.com/ftsfr/rates"</span>
-<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-10-18T22:14:05Z"</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/Users/me/GitRepositories/ftsfr/rates&quot;</span><span class="w">   </span><span class="c1"># resolved; the folders inside it too</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;run&quot;</span><span class="w">                                     </span><span class="c1"># &quot;render&quot; or &quot;run&quot;</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ftsfr/rates&quot;</span><span class="w">                                </span><span class="c1"># for you to read; nothing goes by it</span>
+<span class="n">repository</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/ftsfr/rates&quot;</span>
+<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2026-10-18T22:14:05Z&quot;</span>
 
 <span class="k">[[repository]]</span>
-<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://github.com/ftsfr/rates"</span><span class="w">            </span><span class="c1"># any clone whose origin remote is this</span>
-<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"run"</span>
-<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"2026-10-18T22:14:05Z"</span>
+<span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/ftsfr/rates&quot;</span><span class="w">            </span><span class="c1"># any clone whose origin remote is this</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;run&quot;</span>
+<span class="n">since</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2026-10-18T22:14:05Z&quot;</span>
 </pre></div>
 </div>
-<p>A folder’s level is the highest of every entry that covers it: a <code class="docutils literal notranslate"><span class="pre">[[pipeline]]</span></code> entry whose path is the folder or a parent of it, and a <code class="docutils literal notranslate"><span class="pre">[[repository]]</span></code> entry whose url is the repository the folder’s <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote names (in any spelling: <code class="docutils literal notranslate"><span class="pre">git&#64;github.com:Acme/Rates.git</span></code> is <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates</span></code>). Trust a repository only for clones you made yourself: a folder that arrived with a <code class="docutils literal notranslate"><span class="pre">.git/</span></code> inside (an unpacked archive) may name any repository in its <code class="docutils literal notranslate"><span class="pre">.git/config</span></code>, and is trusted by its path. <code class="docutils literal notranslate"><span class="pre">render</span></code> lets queries run and the files the manifest names be read wherever they are; <code class="docutils literal notranslate"><span class="pre">run</span></code> lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative <code class="docutils literal notranslate"><span class="pre">path</span></code> is one) is passed over with a warning that names it, and kept as it was; a <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> or <code class="docutils literal notranslate"><span class="pre">repository</span></code> key that is a table rather than an array stops a write, which would otherwise drop it. It is written by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>, by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> for the project it makes (at <code class="docutils literal notranslate"><span class="pre">run</span></code>), by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code> for the catalog’s folder (at <code class="docutils literal notranslate"><span class="pre">run</span></code>) and by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> for each folder added (at <code class="docutils literal notranslate"><span class="pre">render</span></code>, unless it is trusted already), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under <code class="docutils literal notranslate"><span class="pre">CI</span></code> (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_TRUST=all</span></code> trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code>) is never trusted, whatever the record says. The reasoning is <a class="reference internal" href="../design/trust.html"><span class="doc">Design: trust, for a build of files on this machine</span></a>.</p>
-<p><strong>Set by ChartBook for its own child processes.</strong> Five more variables are not settings: ChartBook sets them for a process it starts, and a build script may read them. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_DIR</span></code> and <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_SCRIPT</span></code> are set for a script that <a class="reference internal" href="cli.html#chartbook-run"><span class="std std-ref">chartbook run</span></a> or <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> runs: the pipeline’s directory, and the script’s name (<code class="docutils literal notranslate"><span class="pre">build</span></code>, or the one named). They are how <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code>, called from inside the build script, tells that it was, and renders the site without running the script again; <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_STACK</span></code> is the whole chain of scripts being run, outermost first, as a JSON list of <code class="docutils literal notranslate"><span class="pre">[directory,</span> <span class="pre">script]</span></code> pairs. For <code class="docutils literal notranslate"><span class="pre">build</span></code>, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH=1</span></code> is set with them, and CI may set that one itself. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code> is set by a catalog’s build for its build of a version laid out from the store, whose files anyone who can write to the store may have written: that build takes no template from the project’s folder, copies only pages and pictures of its site folder, runs no table or query, and lets no page take in a file from outside the site (the whole list is under Versions in <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>). <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> sets it for itself, too, in a pipeline folder you have not trusted (above).</p>
+<p>A folder’s level is the highest of every entry that covers it: a <code class="docutils literal notranslate"><span class="pre">[[pipeline]]</span></code> entry whose path is the folder or a parent of it, and a <code class="docutils literal notranslate"><span class="pre">[[repository]]</span></code> entry whose url is the repository the folder’s <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote names (in any spelling: <code class="docutils literal notranslate"><span class="pre">git&#64;github.com:Acme/Rates.git</span></code> is <code class="docutils literal notranslate"><span class="pre">https://github.com/acme/rates</span></code>). Trust a repository only for clones you made yourself: a folder that arrived with a <code class="docutils literal notranslate"><span class="pre">.git/</span></code> inside (an unpacked archive) may name any repository in its <code class="docutils literal notranslate"><span class="pre">.git/config</span></code>, and is trusted by its path. <code class="docutils literal notranslate"><span class="pre">render</span></code> lets queries run and the files the manifest names be read wherever they are; <code class="docutils literal notranslate"><span class="pre">run</span></code> lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative <code class="docutils literal notranslate"><span class="pre">path</span></code> is one) is passed over with a warning that names it, and kept as it was; a <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> or <code class="docutils literal notranslate"><span class="pre">repository</span></code> key that is a table rather than an array stops a write, which would otherwise drop it. It is written by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">trust</span></code>, by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code> for the project it makes (at <code class="docutils literal notranslate"><span class="pre">run</span></code>), by <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code> for the catalog’s folder (at <code class="docutils literal notranslate"><span class="pre">run</span></code>), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under <code class="docutils literal notranslate"><span class="pre">CI</span></code> (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_TRUST=all</span></code> trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (<code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code>) is never trusted, whatever the record says. The reasoning is <a class="reference internal" href="../design/trust.html"><span class="doc">Design: trust, for a build of files on this machine</span></a>.</p>
+<p><strong>Set by ChartBook for its own child processes.</strong> Five more variables are not settings: ChartBook sets them for a process it starts, and a build script may read them. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_DIR</span></code> and <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_SCRIPT</span></code> are set for a script that <a class="reference internal" href="cli.html#chartbook-run"><span class="std std-ref">chartbook run</span></a> or <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> runs: the pipeline’s directory, and the script’s name (<code class="docutils literal notranslate"><span class="pre">build</span></code>, or the one named). They are how <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code>, called from inside the build script, tells that it was, and renders the site without running the script again; <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_RUN_STACK</span></code> is the whole chain of scripts being run, outermost first, as a JSON list of <code class="docutils literal notranslate"><span class="pre">[directory,</span> <span class="pre">script]</span></code> pairs. For <code class="docutils literal notranslate"><span class="pre">build</span></code>, <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_BATCH=1</span></code> is set with them, and CI may set that one itself. <code class="docutils literal notranslate"><span class="pre">CHARTBOOK_UNTRUSTED_SOURCE=1</span></code> is set by a catalog’s build for its build of a version laid out from the store, whose files anyone who can write to the store may have written: that build takes no template from the project’s folder, copies only pages and pictures of its site folder, runs no table or query, and lets no page take in a file from outside the site (the whole list is under Versions in <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>). <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> sets it for itself, too, in a pipeline folder you have not trusted (above).</p>
 <p><strong>The default host.</strong> A dependency named by its ID alone, <code class="docutils literal notranslate"><span class="pre">&quot;acme/rates&quot;</span> <span class="pre">=</span> <span class="pre">{}</span></code>, is read from the store. When the store has no snapshot of it at all, its repository is wanted, and the ID says where it is on a git host the machine or the organization sets:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[resolve]</span>
-<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"github.com"</span><span class="w">          </span><span class="c1"># acme/rates is https://github.com/acme/rates</span>
+<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;github.com&quot;</span><span class="w">          </span><span class="c1"># acme/rates is https://github.com/acme/rates</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">default_host</span></code> is a host name, perhaps with a path under it (<code class="docutils literal notranslate"><span class="pre">github.com</span></code>, <code class="docutils literal notranslate"><span class="pre">gitlab.example.org/group</span></code>, cloned over <code class="docutils literal notranslate"><span class="pre">https</span></code>), an address the repositories are under (<code class="docutils literal notranslate"><span class="pre">https://…</span></code>, <code class="docutils literal notranslate"><span class="pre">ssh://…</span></code>, <code class="docutils literal notranslate"><span class="pre">git&#64;gitlab.example.org:</span></code>), or a folder of repositories (<code class="docutils literal notranslate"><span class="pre">/srv/git</span></code>, <code class="docutils literal notranslate"><span class="pre">~/repos</span></code>, or <code class="docutils literal notranslate"><span class="pre">./repos</span></code> relative to the settings file). <code class="docutils literal notranslate"><span class="pre">default_host</span> <span class="pre">=</span> <span class="pre">&quot;&quot;</span></code> sets none, over the organization’s. It is read from the user’s settings, then the organization’s, and never from a pipeline: the host is not part of a pipeline’s identity, so a repository that moves changes this one line. With it set, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> clones a dependency named by its ID that the store has no snapshot of at all (or none at the commit its entry names with <code class="docutils literal notranslate"><span class="pre">commit</span></code>), from that host (or from the repository its entry names with <code class="docutils literal notranslate"><span class="pre">repository</span></code>, as written there, ssh and port included), checks that the clone calls itself by that ID, and pins from it; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> checks the same and builds it first, as it does a <code class="docutils literal notranslate"><span class="pre">git</span></code> dependency, except a pipeline the same run builds itself, such as another of a catalog’s, which is built before it and never cloned. The lockfile lists it as from its repository (<code class="docutils literal notranslate"><span class="pre">via:</span> <span class="pre">rev</span></code>) by the pipeline’s ID, with no address, which each machine works out from its own setting. A pin keeps where a dependency was pinned from, the store or its repository, and puts back what the store has lost; an entry with nothing pinned yet, as a failed first read leaves, is looked at afresh. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">update</span></code> looks again, takes the store’s newest snapshot once there is one, and keeps a pin from the repository when it finds nothing better. Either way it keeps to the repository the dependency was pinned from, by that repository’s first commit: a snapshot of another that gives itself the same ID is passed over, and a clone whose history does not begin where the pinned one’s did (another repository at the default host, or a history rewritten) is not taken, and is said, as is one that lacks the commit a pin with no first commit recorded was made at; <code class="docutils literal notranslate"><span class="pre">repository</span> <span class="pre">=</span> <span class="pre">&quot;...&quot;</span></code> names the one to take, or remove the dependency from <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> and update. On a machine with no default host, a pin from its repository is kept as it is, and what the store has lost of it is said. A read never clones: <code class="docutils literal notranslate"><span class="pre">data.load</span></code> of such a dependency before it is pinned says that <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">pin</span></code> gets it. A pipeline with a bare ID (no scope) has no owner to find it under, and is read from the store only; with no default host, so is every dependency named by its ID.</p>
@@ -1511,9 +1501,9 @@
 <li><p>A file that is not valid TOML, named, a catalog member’s included</p></li>
 <li><p>A chart’s <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> key referencing a missing dataframe</p></li>
 <li><p>Explicit <code class="docutils literal notranslate"><span class="pre">type</span></code> contradicting the file’s structure</p></li>
-<li><p>Referenced files that don’t exist (run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, or <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code>)</p></li>
+<li><p>Referenced files that don’t exist (run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code>, or <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code>)</p></li>
 </ul>
-<p>Warnings (unknown <code class="docutils literal notranslate"><span class="pre">[project]</span></code> keys, missing policy-required fields) appear during <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">generate</span></code> and on the catalog’s diagnostics page. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.</p>
+<p>Warnings (unknown <code class="docutils literal notranslate"><span class="pre">[project]</span></code> keys, missing policy-required fields) appear during <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">docs</span> <span class="pre">build</span></code> and on the catalog’s diagnostics page. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">check</span></code> turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.</p>
 </section>
 </section>
 
@@ -1553,8 +1543,7 @@
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1562,32 +1551,29 @@
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-file-structure">Configuration File Structure</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-catalog-registry"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry</a><ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-discovery-with-members">Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-toml-and-several-stores"><code class="docutils literal notranslate"><span class="pre">catalog.toml</span></code> and several stores</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#policy-which-fields-are-required"><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Which Fields Are Required</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-files-format-format-and-read-options">The file’s format: <code class="docutils literal notranslate"><span class="pre">format</span></code> and <code class="docutils literal notranslate"><span class="pre">read_options</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sources-where-data-lives-besides-a-file"><code class="docutils literal notranslate"><span class="pre">[sources]</span></code> — Where Data Lives Besides a File</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sources-where-data-lives-besides-a-file"><code class="docutils literal notranslate"><span class="pre">[sources]</span></code> — Where Data Lives Besides a File</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#naming-columns">Naming columns</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documenting-a-column-dataframes-id-series-key">Documenting a column: <code class="docutils literal notranslate"><span class="pre">[dataframes.&lt;id&gt;.series.&lt;key&gt;]</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models-trained-models"><code class="docutils literal notranslate"><span class="pre">[models]</span></code> — Trained Models</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#models-trained-models"><code class="docutils literal notranslate"><span class="pre">[models]</span></code> — Trained Models</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#versions-and-labels">Versions and labels</a></li>
 </ul>
 </li>
@@ -1647,8 +1633,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

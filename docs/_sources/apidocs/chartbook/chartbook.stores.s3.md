@@ -343,7 +343,7 @@ Bases: {py:obj}`chartbook.store.Store`
 ````{py:data} URL_OPTIONS
 :canonical: chartbook.stores.s3.URL_OPTIONS
 :value: >
-   ('endpoint', 'region')
+   ('endpoint', 'region', 'anonymous')
 
 ```{autodoc2-docstring} chartbook.stores.s3.URL_OPTIONS
 ```

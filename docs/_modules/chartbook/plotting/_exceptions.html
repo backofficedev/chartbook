@@ -27,19 +27,19 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../../_static/documentation_options.js?v=9453eeee"></script>
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -250,11 +250,15 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
@@ -267,19 +271,50 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
@@ -288,9 +323,14 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../reference/stability.html">Stability</a></li>
@@ -298,14 +338,23 @@ document.write(`
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/overview.html">Design: start here</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/references.html">Design: references</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/asset-graph.html">Design: the asset graph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/writer.html">Design: the writer, and what every page shows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/models.html">Design: models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -409,15 +458,15 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.plotting._exceptions</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Custom exceptions for chartbook.plotting."""</span>
+<span></span><span class="sd">&quot;&quot;&quot;Custom exceptions for chartbook.plotting.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
 
 <div class="viewcode-block" id="PlottingError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.PlottingError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">PlottingError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Base exception for chartbook.plotting errors."""</span>
+<span class="k">class</span> <span class="nc">PlottingError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base exception for chartbook.plotting errors.&quot;&quot;&quot;</span>
 
     <span class="k">pass</span></div>
 
@@ -425,39 +474,39 @@ document.write(`
 
 <div class="viewcode-block" id="BackendError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.BackendError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">BackendError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error related to plotting backend."""</span>
+<span class="k">class</span> <span class="nc">BackendError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error related to plotting backend.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">backend</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Backend '</span><span class="si">{</span><span class="n">backend</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Backend &#39;</span><span class="si">{</span><span class="n">backend</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="MissingDependencyError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.MissingDependencyError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MissingDependencyError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Required plotting library not installed."""</span>
+<span class="k">class</span> <span class="nc">MissingDependencyError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Required plotting library not installed.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">package</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">feature</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">package</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">feature</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="n">package</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">feature</span> <span class="o">=</span> <span class="n">feature</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">package</span><span class="si">}</span><span class="s2">' is required for </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2">. "</span>
-            <span class="sa">f</span><span class="s2">"Install with: pip install </span><span class="si">{</span><span class="n">package</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">package</span><span class="si">}</span><span class="s2">&#39; is required for </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Install with: pip install </span><span class="si">{</span><span class="n">package</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="DataValidationError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.DataValidationError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">DataValidationError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error validating input data."""</span>
+<span class="k">class</span> <span class="nc">DataValidationError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error validating input data.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">column</span> <span class="o">=</span> <span class="n">column</span>
         <span class="k">if</span> <span class="n">column</span><span class="p">:</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Column '</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
 
@@ -465,19 +514,19 @@ document.write(`
 
 <div class="viewcode-block" id="OutputError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.OutputError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">OutputError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error saving chart output."""</span>
+<span class="k">class</span> <span class="nc">OutputError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error saving chart output.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cannot save to '</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot save to &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="ConfigurationError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.ConfigurationError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ConfigurationError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error in plotting configuration."""</span>
+<span class="k">class</span> <span class="nc">ConfigurationError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error in plotting configuration.&quot;&quot;&quot;</span>
 
     <span class="k">pass</span></div>
 
@@ -485,8 +534,8 @@ document.write(`
 
 <div class="viewcode-block" id="OverlayError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.OverlayError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">OverlayError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error applying chart overlays."""</span>
+<span class="k">class</span> <span class="nc">OverlayError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error applying chart overlays.&quot;&quot;&quot;</span>
 
     <span class="k">pass</span></div>
 
@@ -494,11 +543,11 @@ document.write(`
 
 <div class="viewcode-block" id="FREDAPIError">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.FREDAPIError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">FREDAPIError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Error fetching data from FRED API."""</span>
+<span class="k">class</span> <span class="nc">FREDAPIError</span><span class="p">(</span><span class="n">PlottingError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Error fetching data from FRED API.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">"FRED API error: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FRED API error: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

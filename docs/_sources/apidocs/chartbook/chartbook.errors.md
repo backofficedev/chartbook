@@ -166,7 +166,7 @@ Bases: {py:obj}`Exception`
 
 `````
 
-````{py:exception} DependencyNotDeclaredError(reference: str, pipeline: str, manifest_path: pathlib.Path, declared: list[str], found_at: typing.Optional[tuple[str, str]] = None, known: typing.Mapping[str, typing.Optional[str]] = {})
+````{py:exception} DependencyNotDeclaredError(reference: str, pipeline: str, manifest_path: pathlib.Path, declared: list[str], found_at: typing.Optional[tuple[str, typing.Optional[str]]] = None, known: typing.Mapping[str, typing.Optional[str]] = {})
 :canonical: chartbook.errors.DependencyNotDeclaredError
 
 Bases: {py:obj}`LookupError`

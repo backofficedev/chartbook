@@ -27,19 +27,19 @@
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
 <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
   <!-- Pre-loaded scripts that we'll load fully later -->
   <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=06af8975"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -250,11 +250,15 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">User guide</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/vocabulary.html">Vocabulary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/depending-on-pipelines.html">Depending on Another Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/keeping-costly-outputs.html">Keeping Costly Outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/reading-a-warehouse.html">Reading From a Databricks Warehouse</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/plotting-backends.html">Writing a Plotting Backend</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
@@ -267,19 +271,50 @@ document.write(`
 <li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.formats.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.formats</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.backends.databricks.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.backends.databricks</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.assets.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.assets</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.models.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.files.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.files</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.claude_skill.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.claude_skill</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.incremental.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.incremental</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.index</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.indexdiff.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.indexdiff</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.provenance.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.provenance</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.sphinx.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.sphinx</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.writers.mkdocs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.writers.mkdocs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hashing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hashing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.store</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.stores.s3.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.stores.s3</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.migrate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.migrate</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lock.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.check.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.check</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
@@ -288,9 +323,14 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.refs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.refs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.resolve.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.resolve</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.scaffold.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.scaffold</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -298,14 +338,23 @@ document.write(`
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../roadmap.html">Roadmap</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/overview.html">Design: start here</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/references.html">Design: references</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/asset-graph.html">Design: the asset graph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/index-schema.html">Design: the index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/writer.html">Design: the writer, and what every page shows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/models.html">Design: models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/data-access.html">Design: data access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/stores-and-backends.html">Design: stores and backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/versioned-catalog.html">Design: the versioned catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/trust.html">Design: trust, for a build of files on this machine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -409,99 +458,99 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.path_validation</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Path validation utilities for detecting shell/platform mismatches.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Path validation utilities for detecting shell/platform mismatches.</span>
 
-<span class="sd">Detects when users pass paths that don't match their shell environment</span>
+<span class="sd">Detects when users pass paths that don&#39;t match their shell environment</span>
 <span class="sd">(e.g., Windows-style paths in Git Bash) and provides actionable suggestions.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">platform</span><span class="w"> </span><span class="kn">import</span> <span class="n">system</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">platform</span> <span class="kn">import</span> <span class="n">system</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">import</span> <span class="nn">click</span>
 
 <span class="c1"># Pattern for Windows drive letter paths like C:\ or D:\</span>
-<span class="n">_WINDOWS_DRIVE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z]:</span><span class="se">\\</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">_WINDOWS_DRIVE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z]:</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">)</span>
 
 <span class="c1"># Pattern for UNC paths like \\server\share</span>
-<span class="n">_UNC_PATH_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^</span><span class="se">\\\\</span><span class="s2">"</span><span class="p">)</span>
+<span class="n">_UNC_PATH_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^</span><span class="se">\\\\</span><span class="s2">&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ShellEnvironment">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">ShellEnvironment</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Detected shell and platform environment."""</span>
+<span class="k">class</span> <span class="nc">ShellEnvironment</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detected shell and platform environment.&quot;&quot;&quot;</span>
 
     <span class="n">os_name</span><span class="p">:</span> <span class="nb">str</span>
-<span class="w">    </span><span class="sd">"""Result of platform.system() — 'Windows', 'Linux', 'Darwin', etc."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Result of platform.system() — &#39;Windows&#39;, &#39;Linux&#39;, &#39;Darwin&#39;, etc.&quot;&quot;&quot;</span>
 
     <span class="n">is_mingw</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="w">    </span><span class="sd">"""True if MSYSTEM env var is set (Git Bash, MSYS2, MINGW)."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;True if MSYSTEM env var is set (Git Bash, MSYS2, MINGW).&quot;&quot;&quot;</span>
 
     <span class="n">is_cygwin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="w">    </span><span class="sd">"""True if running under Cygwin."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;True if running under Cygwin.&quot;&quot;&quot;</span>
 
     <span class="n">is_wsl</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
-<span class="w">    </span><span class="sd">"""True if running under Windows Subsystem for Linux."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;True if running under Windows Subsystem for Linux.&quot;&quot;&quot;</span>
 
-    <span class="n">msystem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
-<span class="w">    </span><span class="sd">"""Value of MSYSTEM env var if set (e.g. 'MINGW64', 'UCRT64')."""</span>
+    <span class="n">msystem</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Value of MSYSTEM env var if set (e.g. &#39;MINGW64&#39;, &#39;UCRT64&#39;).&quot;&quot;&quot;</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">is_posix_on_windows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""True if running a POSIX-like shell on a Windows system."""</span>
+    <span class="k">def</span> <span class="nf">is_posix_on_windows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;True if running a POSIX-like shell on a Windows system.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mingw</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_cygwin</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_wsl</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">shell_style</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Return 'posix' or 'windows' based on the detected shell."""</span>
+    <span class="k">def</span> <span class="nf">shell_style</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return &#39;posix&#39; or &#39;windows&#39; based on the detected shell.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_posix_on_windows</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"posix"</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">"Windows"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"windows"</span>
-        <span class="k">return</span> <span class="s2">"posix"</span>
+            <span class="k">return</span> <span class="s2">&quot;posix&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;windows&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;posix&quot;</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">shell_label</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Human-readable label for the detected shell environment."""</span>
+    <span class="k">def</span> <span class="nf">shell_label</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Human-readable label for the detected shell environment.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mingw</span><span class="p">:</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"Git Bash (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msystem</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">msystem</span> <span class="k">else</span> <span class="s2">"Git Bash (MINGW)"</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Git Bash (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">msystem</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">msystem</span> <span class="k">else</span> <span class="s2">&quot;Git Bash (MINGW)&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_cygwin</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"Cygwin"</span>
+            <span class="k">return</span> <span class="s2">&quot;Cygwin&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_wsl</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"WSL"</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">"Windows"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"Windows"</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">"Darwin"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"macOS"</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">"Linux"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">"Linux"</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="ow">or</span> <span class="s2">"Unknown"</span></div>
+            <span class="k">return</span> <span class="s2">&quot;WSL&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Windows&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">&quot;Darwin&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;macOS&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">&quot;Linux&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;Linux&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">os_name</span> <span class="ow">or</span> <span class="s2">&quot;Unknown&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="detect_shell_environment">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.detect_shell_environment">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">detect_shell_environment</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ShellEnvironment</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Detect the current shell and platform environment.</span>
+<span class="k">def</span> <span class="nf">detect_shell_environment</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">ShellEnvironment</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect the current shell and platform environment.</span>
 
 <span class="sd">    Uses environment variables and platform info to identify MINGW/Git Bash,</span>
 <span class="sd">    Cygwin, WSL, and other environments.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">os_name</span> <span class="o">=</span> <span class="n">system</span><span class="p">()</span>
-    <span class="n">msystem</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"MSYSTEM"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="n">msystem</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MSYSTEM&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">ShellEnvironment</span><span class="p">(</span>
         <span class="n">os_name</span><span class="o">=</span><span class="n">os_name</span><span class="p">,</span>
         <span class="n">is_mingw</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">msystem</span><span class="p">),</span>
-        <span class="n">is_cygwin</span><span class="o">=</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s2">"cygwin"</span> <span class="ow">or</span> <span class="s2">"CYGWIN"</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">),</span>
-        <span class="n">is_wsl</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"WSL_DISTRO_NAME"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"WSL_INTEROP"</span><span class="p">)),</span>
+        <span class="n">is_cygwin</span><span class="o">=</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s2">&quot;cygwin&quot;</span> <span class="ow">or</span> <span class="s2">&quot;CYGWIN&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">),</span>
+        <span class="n">is_wsl</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;WSL_DISTRO_NAME&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;WSL_INTEROP&quot;</span><span class="p">)),</span>
         <span class="n">msystem</span><span class="o">=</span><span class="n">msystem</span><span class="p">,</span>
     <span class="p">)</span></div>
 
@@ -510,67 +559,67 @@ document.write(`
 <div class="viewcode-block" id="PathDiagnostic">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">PathDiagnostic</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A single diagnostic finding about a path."""</span>
+<span class="k">class</span> <span class="nc">PathDiagnostic</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A single diagnostic finding about a path.&quot;&quot;&quot;</span>
 
     <span class="n">level</span><span class="p">:</span> <span class="nb">str</span>
-<span class="w">    </span><span class="sd">"""'warning' or 'error'."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;&#39;warning&#39; or &#39;error&#39;.&quot;&quot;&quot;</span>
 
     <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
-<span class="w">    </span><span class="sd">"""Human-readable description of the issue."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Human-readable description of the issue.&quot;&quot;&quot;</span>
 
     <span class="n">hint</span><span class="p">:</span> <span class="nb">str</span>
-<span class="w">    </span><span class="sd">"""Actionable suggestion for fixing the issue."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Actionable suggestion for fixing the issue.&quot;&quot;&quot;</span>
 
     <span class="n">original_path</span><span class="p">:</span> <span class="nb">str</span>
-<span class="w">    </span><span class="sd">"""The path as originally provided."""</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The path as originally provided.&quot;&quot;&quot;</span>
 
     <span class="n">suggested_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="w">    </span><span class="sd">"""Corrected path, if one can be computed."""</span></div>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Corrected path, if one can be computed.&quot;&quot;&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="suggest_posix_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.suggest_posix_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">suggest_posix_path</span><span class="p">(</span><span class="n">windows_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Convert a Windows-style path to the appropriate POSIX equivalent.</span>
+<span class="k">def</span> <span class="nf">suggest_posix_path</span><span class="p">(</span><span class="n">windows_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a Windows-style path to the appropriate POSIX equivalent.</span>
 
-<span class="sd">    Returns None if the path doesn't look like a Windows path or the</span>
-<span class="sd">    environment doesn't have a known conversion.</span>
-<span class="sd">    """</span>
+<span class="sd">    Returns None if the path doesn&#39;t look like a Windows path or the</span>
+<span class="sd">    environment doesn&#39;t have a known conversion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">match</span> <span class="o">=</span> <span class="n">_WINDOWS_DRIVE_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">windows_path</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="n">drive_letter</span> <span class="o">=</span> <span class="n">windows_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="c1"># Everything after "C:\" with backslashes replaced</span>
-    <span class="n">rest</span> <span class="o">=</span> <span class="n">windows_path</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
+    <span class="c1"># Everything after &quot;C:\&quot; with backslashes replaced</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="n">windows_path</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">env</span><span class="o">.</span><span class="n">is_wsl</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"/mnt/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/mnt/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">elif</span> <span class="n">env</span><span class="o">.</span><span class="n">is_cygwin</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"/cygdrive/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/cygdrive/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">elif</span> <span class="n">env</span><span class="o">.</span><span class="n">is_mingw</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/</span><span class="si">{</span><span class="n">drive_letter</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">rest</span><span class="si">}</span><span class="s2">&quot;</span>
 
     <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_looks_like_windows_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Check if a path looks like a Windows-style path."""</span>
+<span class="k">def</span> <span class="nf">_looks_like_windows_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a path looks like a Windows-style path.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">_WINDOWS_DRIVE_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_has_backslashes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Check if a path contains backslashes (potential Windows separator)."""</span>
-    <span class="k">return</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">path</span>
+<span class="k">def</span> <span class="nf">_has_backslashes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a path contains backslashes (potential Windows separator).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">path</span>
 
 
 <div class="viewcode-block" id="diagnose_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.diagnose_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">diagnose_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathDiagnostic</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Analyze a path string for potential platform/shell mismatches.</span>
+<span class="k">def</span> <span class="nf">diagnose_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathDiagnostic</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyze a path string for potential platform/shell mismatches.</span>
 
 <span class="sd">    This is the core reusable check — works for both CLI arguments</span>
 <span class="sd">    and paths read from TOML files.</span>
@@ -578,25 +627,25 @@ document.write(`
 <span class="sd">    :param raw_path: The path string to analyze.</span>
 <span class="sd">    :param env: The detected shell environment.</span>
 <span class="sd">    :returns: List of diagnostics (may be empty if path looks fine).</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">diagnostics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathDiagnostic</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="c1"># Check 1: Windows drive letter path in a POSIX-like shell</span>
     <span class="k">if</span> <span class="n">_looks_like_windows_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">is_posix_on_windows</span><span class="p">:</span>
         <span class="n">suggested</span> <span class="o">=</span> <span class="n">suggest_posix_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
         <span class="n">hint_parts</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="sa">f</span><span class="s2">"In </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">, use POSIX-style paths instead of Windows paths."</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;In </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">, use POSIX-style paths instead of Windows paths.&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="n">suggested</span><span class="p">:</span>
-            <span class="n">hint_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Try: </span><span class="si">{</span><span class="n">suggested</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">hint_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Try: </span><span class="si">{</span><span class="n">suggested</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">PathDiagnostic</span><span class="p">(</span>
-                <span class="n">level</span><span class="o">=</span><span class="s2">"warning"</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
                 <span class="n">message</span><span class="o">=</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"Path looks like a Windows path, but you're running in "</span>
-                    <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="sa">f</span><span class="s2">&quot;Path looks like a Windows path, but you&#39;re running in &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">.&quot;</span>
                 <span class="p">),</span>
-                <span class="n">hint</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">hint_parts</span><span class="p">),</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">hint_parts</span><span class="p">),</span>
                 <span class="n">original_path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">,</span>
                 <span class="n">suggested_path</span><span class="o">=</span><span class="n">suggested</span><span class="p">,</span>
             <span class="p">)</span>
@@ -604,30 +653,30 @@ document.write(`
         <span class="k">return</span> <span class="n">diagnostics</span>  <span class="c1"># No need for further checks</span>
 
     <span class="c1"># Check 2: Backslashes in a non-Windows runtime</span>
-    <span class="k">if</span> <span class="n">_has_backslashes</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">os_name</span> <span class="o">!=</span> <span class="s2">"Windows"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_has_backslashes</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">os_name</span> <span class="o">!=</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
         <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">PathDiagnostic</span><span class="p">(</span>
-                <span class="n">level</span><span class="o">=</span><span class="s2">"warning"</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="s2">"Path contains backslashes, which are not path separators on this platform."</span><span class="p">,</span>
-                <span class="n">hint</span><span class="o">=</span><span class="s2">"Use forward slashes (/) instead of backslashes (</span><span class="se">\\</span><span class="s2">)."</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Path contains backslashes, which are not path separators on this platform.&quot;</span><span class="p">,</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;Use forward slashes (/) instead of backslashes (</span><span class="se">\\</span><span class="s2">).&quot;</span><span class="p">,</span>
                 <span class="n">original_path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">,</span>
-                <span class="n">suggested_path</span><span class="o">=</span><span class="n">raw_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">),</span>
+                <span class="n">suggested_path</span><span class="o">=</span><span class="n">raw_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">),</span>
             <span class="p">)</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">diagnostics</span>
 
     <span class="c1"># Check 3: Backslashes in MINGW with native Windows Python</span>
-    <span class="c1"># (Python can resolve them, but it's fragile and confusing)</span>
-    <span class="k">if</span> <span class="n">_has_backslashes</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">is_mingw</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">"Windows"</span><span class="p">:</span>
-        <span class="n">suggested</span> <span class="o">=</span> <span class="n">suggest_posix_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span> <span class="k">if</span> <span class="n">_looks_like_windows_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="k">else</span> <span class="n">raw_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
+    <span class="c1"># (Python can resolve them, but it&#39;s fragile and confusing)</span>
+    <span class="k">if</span> <span class="n">_has_backslashes</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">is_mingw</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">os_name</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
+        <span class="n">suggested</span> <span class="o">=</span> <span class="n">suggest_posix_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span> <span class="k">if</span> <span class="n">_looks_like_windows_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="k">else</span> <span class="n">raw_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">)</span>
         <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">PathDiagnostic</span><span class="p">(</span>
-                <span class="n">level</span><span class="o">=</span><span class="s2">"warning"</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
                 <span class="n">message</span><span class="o">=</span><span class="p">(</span>
-                    <span class="s2">"Path contains backslashes. While this may work with Windows Python, "</span>
-                    <span class="sa">f</span><span class="s2">"it can cause issues in </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="s2">&quot;Path contains backslashes. While this may work with Windows Python, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;it can cause issues in </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">.&quot;</span>
                 <span class="p">),</span>
-                <span class="n">hint</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Use forward slashes for consistency. Try: </span><span class="si">{</span><span class="n">suggested</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">hint</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Use forward slashes for consistency. Try: </span><span class="si">{</span><span class="n">suggested</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="n">original_path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">,</span>
                 <span class="n">suggested_path</span><span class="o">=</span><span class="n">suggested</span><span class="p">,</span>
             <span class="p">)</span>
@@ -637,9 +686,9 @@ document.write(`
     <span class="k">if</span> <span class="n">_UNC_PATH_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">env</span><span class="o">.</span><span class="n">is_posix_on_windows</span><span class="p">:</span>
         <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">PathDiagnostic</span><span class="p">(</span>
-                <span class="n">level</span><span class="o">=</span><span class="s2">"warning"</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"UNC path detected in </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">."</span><span class="p">,</span>
-                <span class="n">hint</span><span class="o">=</span><span class="s2">"UNC paths may not resolve correctly. Consider mapping to a drive letter or using the POSIX mount point."</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;UNC path detected in </span><span class="si">{</span><span class="n">env</span><span class="o">.</span><span class="n">shell_label</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">,</span>
+                <span class="n">hint</span><span class="o">=</span><span class="s2">&quot;UNC paths may not resolve correctly. Consider mapping to a drive letter or using the POSIX mount point.&quot;</span><span class="p">,</span>
                 <span class="n">original_path</span><span class="o">=</span><span class="n">raw_path</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">)</span>
@@ -650,12 +699,12 @@ document.write(`
 
 <div class="viewcode-block" id="validate_cli_paths">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.validate_cli_paths">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">validate_cli_paths</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">validate_cli_paths</span><span class="p">(</span>
     <span class="n">paths</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">,</span>
     <span class="n">auto_confirm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Validate CLI path arguments and warn about potential issues.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate CLI path arguments and warn about potential issues.</span>
 
 <span class="sd">    Runs :func:`diagnose_path` on each path, prints warnings, and</span>
 <span class="sd">    optionally prompts the user to continue or use a suggested path.</span>
@@ -664,7 +713,7 @@ document.write(`
 <span class="sd">    :param env: The detected shell environment.</span>
 <span class="sd">    :param auto_confirm: If True, skip confirmation prompts (like -y flag).</span>
 <span class="sd">    :returns: List of path strings to use (may include corrected paths).</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result_paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">all_diagnostics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathDiagnostic</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -684,12 +733,12 @@ document.write(`
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">best_suggestion</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">auto_confirm</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">click</span><span class="o">.</span><span class="n">confirm</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Use suggested path instead?"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">click</span><span class="o">.</span><span class="n">confirm</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Use suggested path instead?&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
                 <span class="n">result_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">best_suggestion</span><span class="p">)</span>
                 <span class="k">continue</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">auto_confirm</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">click</span><span class="o">.</span><span class="n">confirm</span><span class="p">(</span><span class="s2">"  Continue with the original path?"</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">click</span><span class="o">.</span><span class="n">confirm</span><span class="p">(</span><span class="s2">&quot;  Continue with the original path?&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="n">result_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span>
@@ -700,22 +749,22 @@ document.write(`
 
 <div class="viewcode-block" id="check_toml_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.check_toml_path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">check_toml_path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">check_toml_path</span><span class="p">(</span>
     <span class="n">raw_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">env</span><span class="p">:</span> <span class="n">ShellEnvironment</span><span class="p">,</span>
     <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">PathDiagnostic</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Check a path value read from a TOML file for potential issues.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check a path value read from a TOML file for potential issues.</span>
 
 <span class="sd">    Wraps :func:`diagnose_path` with TOML context for better messages.</span>
 
 <span class="sd">    :param raw_path: The path string from the TOML file.</span>
 <span class="sd">    :param env: The detected shell environment.</span>
-<span class="sd">    :param field_name: The TOML field name (e.g. 'path_to_pipeline').</span>
+<span class="sd">    :param field_name: The TOML field name (e.g. &#39;path_to_pipeline&#39;).</span>
 <span class="sd">    :param file_path: The TOML file path for context in messages.</span>
 <span class="sd">    :returns: List of diagnostics with TOML context.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">base_diags</span> <span class="o">=</span> <span class="n">diagnose_path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">base_diags</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
@@ -725,7 +774,7 @@ document.write(`
         <span class="n">contextualized</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">PathDiagnostic</span><span class="p">(</span>
                 <span class="n">level</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">level</span><span class="p">,</span>
-                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">"In </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">, field '</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">d</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;In </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">, field &#39;</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">d</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="n">hint</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">hint</span><span class="p">,</span>
                 <span class="n">original_path</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">original_path</span><span class="p">,</span>
                 <span class="n">suggested_path</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">suggested_path</span><span class="p">,</span>
@@ -735,21 +784,21 @@ document.write(`
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_print_diagnostic</span><span class="p">(</span><span class="n">diag</span><span class="p">:</span> <span class="n">PathDiagnostic</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Print a path diagnostic to stderr with colored formatting."""</span>
-    <span class="k">if</span> <span class="n">diag</span><span class="o">.</span><span class="n">level</span> <span class="o">==</span> <span class="s2">"error"</span><span class="p">:</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Error: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_print_diagnostic</span><span class="p">(</span><span class="n">diag</span><span class="p">:</span> <span class="n">PathDiagnostic</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print a path diagnostic to stderr with colored formatting.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">diag</span><span class="o">.</span><span class="n">level</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Error: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">"Warning: "</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">"yellow"</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="s2">&quot;Warning: &quot;</span><span class="p">,</span> <span class="n">fg</span><span class="o">=</span><span class="s2">&quot;yellow&quot;</span><span class="p">,</span> <span class="n">bold</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">diag</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  Path: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">diag</span><span class="o">.</span><span class="n">original_path</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'cyan'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}{</span><span class="n">diag</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Path: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">diag</span><span class="o">.</span><span class="n">original_path</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;cyan&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">diag</span><span class="o">.</span><span class="n">suggested_path</span><span class="p">:</span>
         <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"  Suggested: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">diag</span><span class="o">.</span><span class="n">suggested_path</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">'green'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span>
+            <span class="sa">f</span><span class="s2">&quot;  Suggested: </span><span class="si">{</span><span class="n">click</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">diag</span><span class="o">.</span><span class="n">suggested_path</span><span class="p">,</span><span class="w"> </span><span class="n">fg</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span>
-    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">diag</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">diag</span><span class="o">.</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 
                 </article>

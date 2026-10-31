@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,72 +16,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.plotting._types';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -88,6 +88,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -95,17 +96,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -118,18 +119,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -142,7 +140,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -153,7 +152,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,10 +507,10 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig"><code class="docutils literal notranslate"><span class="pre">ChartConfig</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig.caption"><code class="docutils literal notranslate"><span class="pre">ChartConfig.caption</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig.chart_id"><code class="docutils literal notranslate"><span class="pre">ChartConfig.chart_id</span></code></a></li>
@@ -627,137 +629,137 @@
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">ChartConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#ChartConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.ChartConfig" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">ChartConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#ChartConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.ChartConfig" title="Link to this definition">#</a></dt>
 <dd><p>Configuration for a single chart.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.caption">
-<span class="sig-name descname"><span class="pre">caption</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.caption" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">caption</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.caption" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.chart_id">
-<span class="sig-name descname"><span class="pre">chart_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.chart_id" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">chart_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.chart_id" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.chart_type">
-<span class="sig-name descname"><span class="pre">chart_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pie</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.chart_type" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">chart_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">pie</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.chart_type" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.color">
-<span class="sig-name descname"><span class="pre">color</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.color" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">color</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.15)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.color" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.color_by">
-<span class="sig-name descname"><span class="pre">color_by</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.color_by" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">color_by</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.color_by" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.extra_kwargs">
-<span class="sig-name descname"><span class="pre">extra_kwargs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.extra_kwargs" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">extra_kwargs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.extra_kwargs" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.labels">
-<span class="sig-name descname"><span class="pre">labels</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.labels" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.labels" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.names">
-<span class="sig-name descname"><span class="pre">names</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.names" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.names" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.note">
-<span class="sig-name descname"><span class="pre">note</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.note" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">note</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.note" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.size">
-<span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.size" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.size" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.source">
-<span class="sig-name descname"><span class="pre">source</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.source" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">source</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.source" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.stacked">
-<span class="sig-name descname"><span class="pre">stacked</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.stacked" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">stacked</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.stacked" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.title">
-<span class="sig-name descname"><span class="pre">title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.values">
-<span class="sig-name descname"><span class="pre">values</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.values" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">values</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.values" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.x">
-<span class="sig-name descname"><span class="pre">x</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.x_range">
-<span class="sig-name descname"><span class="pre">x_range</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_range" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x_range</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_range" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.x_tickformat">
-<span class="sig-name descname"><span class="pre">x_tickformat</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_tickformat" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x_tickformat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_tickformat" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.x_title">
-<span class="sig-name descname"><span class="pre">x_title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x_title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.x_title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.y">
-<span class="sig-name descname"><span class="pre">y</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">y</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.y_range">
-<span class="sig-name descname"><span class="pre">y_range</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_range" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">y_range</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_range" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.y_tickformat">
-<span class="sig-name descname"><span class="pre">y_tickformat</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_tickformat" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">y_tickformat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_tickformat" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartConfig.y_title">
-<span class="sig-name descname"><span class="pre">y_title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">y_title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartConfig.y_title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -765,7 +767,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">ChartResult</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#ChartResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.ChartResult" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">ChartResult</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#ChartResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.ChartResult" title="Link to this definition">#</a></dt>
 <dd><p>Result of creating a chart.</p>
 <p>This object holds the generated figure and provides methods to display
 and save the chart. Call <code class="docutils literal notranslate"><span class="pre">.show()</span></code> to display inline, or <code class="docutils literal notranslate"><span class="pre">.save(chart_id)</span></code>
@@ -780,39 +782,39 @@ Matplotlib Figure for fine-grained control. Lazily created on first access.
 mpl_axes : matplotlib.axes.Axes
 Matplotlib Axes for fine-grained control. Lazily created on first access.</p>
 <p class="rubric" id="id2">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>  <span class="c1"># Display inline</span>
-<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"gdp_chart"</span><span class="p">)</span>  <span class="c1"># Save to files</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;gdp_chart&quot;</span><span class="p">)</span>  <span class="c1"># Save to files</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">html_path</span><span class="p">)</span>  <span class="c1"># Access saved file path</span>
 </pre></div>
 </div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.chart_id">
-<span class="sig-name descname"><span class="pre">chart_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.chart_id" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">chart_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.chart_id" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.chart_type">
-<span class="sig-name descname"><span class="pre">chart_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.chart_type" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">chart_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.chart_type" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.figure">
-<span class="sig-name descname"><span class="pre">figure</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://plotly.com/python-api-reference/generated/plotly.graph_objects.html#plotly.graph_objects.Figure" title="(in )"><span class="pre">plotly.graph_objects.Figure</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.figure" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">figure</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://plotly.com/python-api-reference/generated/plotly.graph_objects.html#plotly.graph_objects.Figure" title="(in )"><span class="pre">plotly.graph_objects.Figure</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.figure" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.html_path">
-<span class="sig-name descname"><span class="pre">html_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.html_path" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">html_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.html_path" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.mpl_axes">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mpl_axes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">matplotlib.axes.Axes</span></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.mpl_axes" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mpl_axes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">matplotlib.axes.Axes</span></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.mpl_axes" title="Link to this definition">#</a></dt>
 <dd><p>Access matplotlib Axes for fine-grained control.</p>
 <p>The matplotlib axes is lazily created on first access. You can
 customize it and then call <code class="docutils literal notranslate"><span class="pre">.save()</span></code> to export with your changes.</p>
@@ -825,18 +827,18 @@ customize it and then call <code class="docutils literal notranslate"><span clas
 </dd>
 </dl>
 <p class="rubric" id="id3">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">ax</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">mpl_axes</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">'red'</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">'--'</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">'Target'</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Target&#39;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"annotated_chart"</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;annotated_chart&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.mpl_figure">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">mpl_figure</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">matplotlib.figure.Figure</span></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.mpl_figure" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mpl_figure</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">matplotlib.figure.Figure</span></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.mpl_figure" title="Link to this definition">#</a></dt>
 <dd><p>Access matplotlib Figure for fine-grained control.</p>
 <p>The matplotlib figure is lazily created on first access. You can
 customize it and then call <code class="docutils literal notranslate"><span class="pre">.save()</span></code> to export with your changes.</p>
@@ -849,23 +851,23 @@ customize it and then call <code class="docutils literal notranslate"><span clas
 </dd>
 </dl>
 <p class="rubric" id="id4">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">fig</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">mpl_figure</span>
-<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">"Custom Title"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
-<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"custom_chart"</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Custom Title&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;custom_chart&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.output_dir">
-<span class="sig-name descname"><span class="pre">output_dir</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.output_dir" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">output_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.output_dir" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.paths">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">paths</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.paths" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">paths</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.paths" title="Link to this definition">#</a></dt>
 <dd><p>Get all saved file paths as a dictionary.</p>
 <p>Returns an empty dict if <code class="docutils literal notranslate"><span class="pre">.save()</span></code> has not been called yet.</p>
 <dl class="myst field-list simple">
@@ -878,37 +880,37 @@ Keys: ‘html’, ‘png’, ‘png_wide’, ‘pdf’, ‘pdf_wide’</p>
 </dd>
 </dl>
 <p class="rubric" id="id5">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">paths</span>  <span class="c1"># Empty before save</span>
 <span class="c1"># Output: {}</span>
-<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">paths</span>
-<span class="c1"># Output: {'html': Path('./_output/gdp.html'), 'png': Path('./_output/gdp.png'), ...}</span>
+<span class="c1"># Output: {&#39;html&#39;: Path(&#39;./_output/gdp.html&#39;), &#39;png&#39;: Path(&#39;./_output/gdp.png&#39;), ...}</span>
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.pdf_path">
-<span class="sig-name descname"><span class="pre">pdf_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.pdf_path" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pdf_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.pdf_path" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.pdf_wide_path">
-<span class="sig-name descname"><span class="pre">pdf_wide_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.pdf_wide_path" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pdf_wide_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.pdf_wide_path" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.png_path">
-<span class="sig-name descname"><span class="pre">png_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.png_path" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">png_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.png_path" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.ChartResult.png_wide_path">
-<span class="sig-name descname"><span class="pre">png_wide_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.ChartResult.png_wide_path" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">png_wide_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.ChartResult.png_wide_path" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
@@ -941,13 +943,13 @@ linking to chartbook.toml.</p></li>
 </dd>
 </dl>
 <p class="rubric" id="id6">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
-<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">"gdp_chart"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;gdp_chart&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">html_path</span><span class="p">)</span>
 <span class="c1"># Output: ./_output/gdp_chart.html</span>
 
 <span class="c1"># Method chaining</span>
-<span class="n">paths</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"gdp"</span><span class="p">)</span><span class="o">.</span><span class="n">paths</span>
+<span class="n">paths</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">paths</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -967,7 +969,7 @@ render the chart directly in the output cell.</p>
 </dd>
 </dl>
 <p class="rubric" id="id7">Examples</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">"date"</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">"gdp"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;gdp&quot;</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -977,125 +979,125 @@ render the chart directly in the output cell.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">DualAxisConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#DualAxisConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">DualAxisConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#DualAxisConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig" title="Link to this definition">#</a></dt>
 <dd><p>Configuration for dual-axis charts.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.caption">
-<span class="sig-name descname"><span class="pre">caption</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.caption" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">caption</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.caption" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.chart_id">
-<span class="sig-name descname"><span class="pre">chart_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.chart_id" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">chart_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.chart_id" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.extra_kwargs">
-<span class="sig-name descname"><span class="pre">extra_kwargs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.extra_kwargs" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">extra_kwargs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.extra_kwargs" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_colors">
-<span class="sig-name descname"><span class="pre">left_colors</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_colors" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_colors</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_colors" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_type">
-<span class="sig-name descname"><span class="pre">left_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_type" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_type" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_y">
-<span class="sig-name descname"><span class="pre">left_y</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_y</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_y_range">
-<span class="sig-name descname"><span class="pre">left_y_range</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_range" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_y_range</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_range" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_y_tickformat">
-<span class="sig-name descname"><span class="pre">left_y_tickformat</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_tickformat" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_y_tickformat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_tickformat" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.left_y_title">
-<span class="sig-name descname"><span class="pre">left_y_title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">left_y_title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.left_y_title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.note">
-<span class="sig-name descname"><span class="pre">note</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.note" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">note</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.note" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_colors">
-<span class="sig-name descname"><span class="pre">right_colors</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_colors" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_colors</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_colors" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_type">
-<span class="sig-name descname"><span class="pre">right_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_type" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Literal" title="(in Python v3.15)"><span class="pre">Literal</span></a><span class="p"><span class="pre">[</span></span><span class="pre">line</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bar</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">scatter</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">area</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_type" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_y">
-<span class="sig-name descname"><span class="pre">right_y</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_y</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_y_range">
-<span class="sig-name descname"><span class="pre">right_y_range</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_range" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_y_range</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_range" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_y_tickformat">
-<span class="sig-name descname"><span class="pre">right_y_tickformat</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_tickformat" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_y_tickformat</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_tickformat" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.right_y_title">
-<span class="sig-name descname"><span class="pre">right_y_title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">right_y_title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.right_y_title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.source">
-<span class="sig-name descname"><span class="pre">source</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.source" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">source</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.source" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.title">
-<span class="sig-name descname"><span class="pre">title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.x">
-<span class="sig-name descname"><span class="pre">x</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.x" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.x" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.DualAxisConfig.x_title">
-<span class="sig-name descname"><span class="pre">x_title</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></span><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.x_title" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">x_title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.15)"><span class="pre">None</span></a></em><a class="headerlink" href="#chartbook.plotting._types.DualAxisConfig.x_title" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -1103,41 +1105,41 @@ render the chart directly in the output cell.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">OverlayConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#OverlayConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.plotting._types.</span></span><span class="sig-name descname"><span class="pre">OverlayConfig</span></span><a class="reference internal" href="../../_modules/chartbook/plotting/_types.html#OverlayConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig" title="Link to this definition">#</a></dt>
 <dd><p>Configuration for chart overlays.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.bands">
-<span class="sig-name descname"><span class="pre">bands</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.bands" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">bands</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.bands" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.hlines">
-<span class="sig-name descname"><span class="pre">hlines</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.hlines" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">hlines</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.hlines" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.nber_recessions">
-<span class="sig-name descname"><span class="pre">nber_recessions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.nber_recessions" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">nber_recessions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.nber_recessions" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.regression_line">
-<span class="sig-name descname"><span class="pre">regression_line</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.regression_line" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">regression_line</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.regression_line" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.shaded_regions">
-<span class="sig-name descname"><span class="pre">shaded_regions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.shaded_regions" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">shaded_regions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.shaded_regions" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.plotting._types.OverlayConfig.vlines">
-<span class="sig-name descname"><span class="pre">vlines</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.vlines" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">vlines</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.15)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.plotting._types.OverlayConfig.vlines" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
@@ -1165,8 +1167,7 @@ render the chart directly in the output cell.</p>
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1174,10 +1175,10 @@ render the chart directly in the output cell.</p>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig"><code class="docutils literal notranslate"><span class="pre">ChartConfig</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig.caption"><code class="docutils literal notranslate"><span class="pre">ChartConfig.caption</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.plotting._types.ChartConfig.chart_id"><code class="docutils literal notranslate"><span class="pre">ChartConfig.chart_id</span></code></a></li>
@@ -1304,8 +1305,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

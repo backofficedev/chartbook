@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/refs';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,7 +458,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.refs</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""The reference grammar: one parser from text to a structured address.</span>
+<span></span><span class="sd">&quot;&quot;&quot;The reference grammar: one parser from text to a structured address.</span>
 
 <span class="sd">An asset is addressed by a *reference*::</span>
 
@@ -467,13 +469,13 @@
 <span class="sd">``/``</span>
 <span class="sd">    One level down: registry, then scope, then pipeline; kind, then name.</span>
 <span class="sd">``:``</span>
-<span class="sd">    "From this pipeline, take...". Everything before it says *which</span>
+<span class="sd">    &quot;From this pipeline, take...&quot;. Everything before it says *which</span>
 <span class="sd">    pipeline*; everything after says *what inside it*. A reference with no</span>
 <span class="sd">    colon is local: it names an asset of the pipeline you are in.</span>
 <span class="sd">``#``</span>
-<span class="sd">    "...this part of it": a column of a dataframe, a file inside a model.</span>
+<span class="sd">    &quot;...this part of it&quot;: a column of a dataframe, a file inside a model.</span>
 <span class="sd">``@``</span>
-<span class="sd">    "...at this revision": a version of the asset.</span>
+<span class="sd">    &quot;...at this revision&quot;: a version of the asset.</span>
 
 <span class="sd">The kind defaults to ``dataframe``, because data is what gets passed</span>
 <span class="sd">around; every other kind says what it is. So ``treasury_rates`` is a</span>
@@ -482,20 +484,20 @@
 
 <span class="sd">This module only *parses and formats*. It accepts the whole grammar, and</span>
 <span class="sd">knows nothing about which parts of it can be resolved yet; that is</span>
-<span class="sd">:mod:`chartbook.resolve`'s business. Everything inside ChartBook should</span>
+<span class="sd">:mod:`chartbook.resolve`&#39;s business. Everything inside ChartBook should</span>
 <span class="sd">carry an :class:`AssetRef`, not a string, once a reference has been read.</span>
 
 <span class="sd">The specification, with the reasoning and the prior art, is</span>
 <span class="sd">``docs_src/design/references.md``.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">ID_COMPONENT_PATTERN</span><span class="p">,</span>
     <span class="n">looks_like_registry</span><span class="p">,</span>
     <span class="n">split_registry</span><span class="p">,</span>
@@ -503,52 +505,52 @@
 
 <span class="c1">#: Every kind of asset, in the singular, as it is written in a reference.</span>
 <span class="c1">#: The first is the default.</span>
-<span class="n">KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"dataframe"</span><span class="p">,</span> <span class="s2">"chart"</span><span class="p">,</span> <span class="s2">"notebook"</span><span class="p">,</span> <span class="s2">"note"</span><span class="p">,</span> <span class="s2">"model"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">)</span>
+<span class="n">KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="s2">&quot;chart&quot;</span><span class="p">,</span> <span class="s2">&quot;notebook&quot;</span><span class="p">,</span> <span class="s2">&quot;note&quot;</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">)</span>
 
 <span class="c1">#: The kind a reference names when it does not say.</span>
-<span class="n">DEFAULT_KIND</span> <span class="o">=</span> <span class="s2">"dataframe"</span>
+<span class="n">DEFAULT_KIND</span> <span class="o">=</span> <span class="s2">&quot;dataframe&quot;</span>
 
 <span class="c1">#: The ``chartbook.toml`` table that declares assets of each kind.</span>
 <span class="n">KIND_TABLES</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">"dataframe"</span><span class="p">:</span> <span class="s2">"dataframes"</span><span class="p">,</span>
-    <span class="s2">"chart"</span><span class="p">:</span> <span class="s2">"charts"</span><span class="p">,</span>
-    <span class="s2">"notebook"</span><span class="p">:</span> <span class="s2">"notebooks"</span><span class="p">,</span>
-    <span class="s2">"note"</span><span class="p">:</span> <span class="s2">"notes"</span><span class="p">,</span>
-    <span class="s2">"model"</span><span class="p">:</span> <span class="s2">"models"</span><span class="p">,</span>
-    <span class="s2">"file"</span><span class="p">:</span> <span class="s2">"files"</span><span class="p">,</span>
+    <span class="s2">&quot;dataframe&quot;</span><span class="p">:</span> <span class="s2">&quot;dataframes&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;chart&quot;</span><span class="p">:</span> <span class="s2">&quot;charts&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;notebook&quot;</span><span class="p">:</span> <span class="s2">&quot;notebooks&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;note&quot;</span><span class="p">:</span> <span class="s2">&quot;notes&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;models&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
-<span class="c1"># A part may be a path inside the asset, so it may contain "/"</span>
-<span class="n">_PART_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9._/-]+$"</span><span class="p">)</span>
-<span class="c1"># A revision may be an algorithm-qualified hash, so it may contain ":"</span>
-<span class="n">_REV_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9._:-]+$"</span><span class="p">)</span>
+<span class="c1"># A part may be a path inside the asset, so it may contain &quot;/&quot;</span>
+<span class="n">_PART_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z0-9._/-]+$&quot;</span><span class="p">)</span>
+<span class="c1"># A revision may be an algorithm-qualified hash, so it may contain &quot;:&quot;</span>
+<span class="n">_REV_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z0-9._:-]+$&quot;</span><span class="p">)</span>
 <span class="c1"># A registry is a host, which may carry a port</span>
-<span class="n">_REGISTRY_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9._:-]+$"</span><span class="p">)</span>
+<span class="n">_REGISTRY_PATTERN</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z0-9._:-]+$&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="KindMismatchError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.KindMismatchError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">KindMismatchError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Raised when a reference names one kind of asset and another was expected.</span>
+<span class="k">class</span> <span class="nc">KindMismatchError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a reference names one kind of asset and another was expected.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        found: The kind the reference names.</span>
 <span class="sd">        expected: The kind the caller asked for.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">found</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">found</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">found</span> <span class="o">=</span> <span class="n">found</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">expected</span> <span class="o">=</span> <span class="n">expected</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2"> names a </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2">, but a </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2"> was expected."</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2"> names a </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2">, but a </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2"> was expected.&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
 
 
 
 <div class="viewcode-block" id="AssetRef">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">AssetRef</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A parsed reference to an asset: the address as named fields.</span>
+<span class="k">class</span> <span class="nc">AssetRef</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A parsed reference to an asset: the address as named fields.</span>
 
 <span class="sd">    This is the form to pass around in code and to write as JSON. The text</span>
 <span class="sd">    form is for people, command lines and ``chartbook.toml``; ``str()`` of</span>
@@ -559,14 +561,14 @@
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        registry: The registry that resolves the pipeline, if given.</span>
-<span class="sd">        scope: The pipeline's scope (its organization), if given.</span>
+<span class="sd">        scope: The pipeline&#39;s scope (its organization), if given.</span>
 <span class="sd">        pipeline: The name of the pipeline that declares the asset, or None</span>
 <span class="sd">            for a local reference (an asset of the pipeline you are in).</span>
 <span class="sd">        kind: What kind of asset it is; one of :data:`KINDS`.</span>
-<span class="sd">        name: The asset's name: its key in its table of ``chartbook.toml``.</span>
+<span class="sd">        name: The asset&#39;s name: its key in its table of ``chartbook.toml``.</span>
 <span class="sd">        part: A part inside the asset, if one is addressed.</span>
 <span class="sd">        rev: The revision of the asset, if one is pinned.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">registry</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -576,86 +578,86 @@
     <span class="n">part</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">_check_kind</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Invalid asset name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. A name is a key of "</span>
-                <span class="sa">f</span><span class="s2">"chartbook.toml, matching [A-Za-z0-9._-]+."</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid asset name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">. A name is a key of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;chartbook.toml, matching [A-Za-z0-9._-]+.&quot;</span>
             <span class="p">)</span>
-        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"pipeline"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="p">),</span> <span class="p">(</span><span class="s2">"scope"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;scope&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span><span class="p">)):</span>
             <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"Invalid </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> in a reference. Expected a name "</span>
-                    <span class="sa">f</span><span class="s2">"matching [A-Za-z0-9._-]+."</span>
+                    <span class="sa">f</span><span class="s2">&quot;Invalid </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> in a reference. Expected a name &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;matching [A-Za-z0-9._-]+.&quot;</span>
                 <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"A reference with a scope needs a pipeline."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A reference with a scope needs a pipeline.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">"A reference with a registry needs a scope and a pipeline: "</span>
-                    <span class="s2">"'registry/scope/pipeline:asset'."</span>
+                    <span class="s2">&quot;A reference with a registry needs a scope and a pipeline: &quot;</span>
+                    <span class="s2">&quot;&#39;registry/scope/pipeline:asset&#39;.&quot;</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">_REGISTRY_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">looks_like_registry</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
             <span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"Invalid registry </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="si">!r}</span><span class="s2"> in a reference. A "</span>
-                    <span class="sa">f</span><span class="s2">"registry is a host name: it contains '.' or ':', or is "</span>
-                    <span class="sa">f</span><span class="s2">"'localhost'."</span>
+                    <span class="sa">f</span><span class="s2">&quot;Invalid registry </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="si">!r}</span><span class="s2"> in a reference. A &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;registry is a host name: it contains &#39;.&#39; or &#39;:&#39;, or is &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;&#39;localhost&#39;.&quot;</span>
                 <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">part</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_PART_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Invalid part </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="si">!r}</span><span class="s2"> after '#' in a reference. A part "</span>
-                <span class="sa">f</span><span class="s2">"is a name made of letters, digits, '.', '_', '-' and '/'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid part </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="si">!r}</span><span class="s2"> after &#39;#&#39; in a reference. A part &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;is a name made of letters, digits, &#39;.&#39;, &#39;_&#39;, &#39;-&#39; and &#39;/&#39;.&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_REV_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Invalid revision </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> after '@' in a reference. A "</span>
-                <span class="sa">f</span><span class="s2">"revision is a version name, tag or hash, e.g. '@v3'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid revision </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> after &#39;@&#39; in a reference. A &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;revision is a version name, tag or hash, e.g. &#39;@v3&#39;.&quot;</span>
             <span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">is_local</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""True if the reference names no pipeline, so means the current one."""</span>
+    <span class="k">def</span> <span class="nf">is_local</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;True if the reference names no pipeline, so means the current one.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">pipeline_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""The pipeline's ID, ``scope/name`` or a bare ``name``; None if local."""</span>
+    <span class="k">def</span> <span class="nf">pipeline_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The pipeline&#39;s ID, ``scope/name`` or a bare ``name``; None if local.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">scope</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">"</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">scope</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scope</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">table</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The ``chartbook.toml`` table that declares assets of this kind."""</span>
+    <span class="k">def</span> <span class="nf">table</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The ``chartbook.toml`` table that declares assets of this kind.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">KIND_TABLES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">]</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">local_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The asset within its pipeline: ``name``, or ``kind/name``."""</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DEFAULT_KIND</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">def</span> <span class="nf">local_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The asset within its pipeline: ``name``, or ``kind/name``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DEFAULT_KIND</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
 
 <div class="viewcode-block" id="AssetRef.in_pipeline">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.in_pipeline">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">in_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"AssetRef"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""This reference, qualified with the pipeline that declares the asset.</span>
+    <span class="k">def</span> <span class="nf">in_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AssetRef&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This reference, qualified with the pipeline that declares the asset.</span>
 
 <span class="sd">        Turns a local reference from a manifest into the fully qualified one</span>
 <span class="sd">        an index or a lockfile holds.</span>
 
-<span class="sd">        :param pipeline_id: The pipeline's ID: ``name``, ``scope/name`` or</span>
+<span class="sd">        :param pipeline_id: The pipeline&#39;s ID: ``name``, ``scope/name`` or</span>
 <span class="sd">            ``registry/scope/name``.</span>
 <span class="sd">        :raises ValueError: If *pipeline_id* is not a pipeline ID.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">registry</span><span class="p">,</span> <span class="n">unqualified</span> <span class="o">=</span> <span class="n">split_registry</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="n">unqualified</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="n">unqualified</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Invalid pipeline id </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r}</span><span class="s2">. Expected 'name', "</span>
-                <span class="sa">f</span><span class="s2">"'scope/name' or 'registry/scope/name'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid pipeline id </span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">!r}</span><span class="s2">. Expected &#39;name&#39;, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;scope/name&#39; or &#39;registry/scope/name&#39;.&quot;</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">replace</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
@@ -665,104 +667,104 @@
         <span class="p">)</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The canonical text of the reference.</span>
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The canonical text of the reference.</span>
 
 <span class="sd">        The default kind is left out, so a dataframe is written without a</span>
 <span class="sd">        prefix. Parsing the result gives back an equal ``AssetRef``.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_name</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_id</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">:</span>
-                <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">"</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">"</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="p">:</span>
-            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"#</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;#</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">part</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
-            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">"@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="si">}</span><span class="s2">"</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">return</span> <span class="n">text</span>
 
 <div class="viewcode-block" id="AssetRef.to_dict">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.to_dict">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The reference as a plain dictionary, for JSON.</span>
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The reference as a plain dictionary, for JSON.</span>
 
 <span class="sd">        ``kind`` and ``name`` are always present; the other fields only when</span>
 <span class="sd">        set. Keys are in the order the address is written.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{</span>
             <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"kind"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
         <span class="p">}</span></div>
 
 
 <div class="viewcode-block" id="AssetRef.from_dict">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.from_dict">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"AssetRef"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Build a reference from :meth:`to_dict`'s form, checking it."""</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AssetRef&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a reference from :meth:`to_dict`&#39;s form, checking it.&quot;&quot;&quot;</span>
         <span class="n">unknown</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">__dataclass_fields__</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unknown reference fields: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"A reference needs a 'name'."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown reference fields: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A reference needs a &#39;name&#39;.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">fields</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">})</span></div>
 </div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Validate a kind word, suggesting the singular if a plural was given."""</span>
+<span class="k">def</span> <span class="nf">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate a kind word, suggesting the singular if a plural was given.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">kind</span>
-    <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" in reference </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">text</span> <span class="k">else</span> <span class="s2">""</span>
-    <span class="n">hint</span> <span class="o">=</span> <span class="s2">""</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">kind</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"s"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">kind</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
-        <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" Did you mean </span><span class="si">{</span><span class="n">kind</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">!r}</span><span class="s2">? Kinds are written in the singular."</span>
+    <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; in reference </span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">text</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">hint</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">kind</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">kind</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">kind</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; Did you mean </span><span class="si">{</span><span class="n">kind</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">!r}</span><span class="s2">? Kinds are written in the singular.&quot;</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"Unknown kind </span><span class="si">{</span><span class="n">kind</span><span class="si">!r}{</span><span class="n">where</span><span class="si">}</span><span class="s2">. The kinds are: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KINDS</span><span class="p">)</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">"</span>
+        <span class="sa">f</span><span class="s2">&quot;Unknown kind </span><span class="si">{</span><span class="n">kind</span><span class="si">!r}{</span><span class="n">where</span><span class="si">}</span><span class="s2">. The kinds are: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KINDS</span><span class="p">)</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_split_asset</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">original</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">has_pipeline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Split the asset half of a reference, ``[kind/]name``, into its two parts."""</span>
-    <span class="n">segments</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_split_asset</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">original</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">has_pipeline</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Split the asset half of a reference, ``[kind/]name``, into its two parts.&quot;&quot;&quot;</span>
+    <span class="n">segments</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">segments</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
         <span class="n">first</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">segments</span>
         <span class="k">if</span> <span class="n">first</span> <span class="ow">in</span> <span class="n">KINDS</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">first</span><span class="p">,</span> <span class="n">name</span>
-        <span class="n">plural</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"s"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">first</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">KINDS</span>
+        <span class="n">plural</span> <span class="o">=</span> <span class="n">first</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">first</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">KINDS</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">has_pipeline</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plural</span><span class="p">:</span>
             <span class="c1"># Most likely scope/pipeline, written where an asset was wanted</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> does not name an asset. With no ':', "</span>
-                <span class="sa">f</span><span class="s2">"the word before '/' must be a kind (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KINDS</span><span class="p">)</span><span class="si">}</span><span class="s2">). If "</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2"> is a pipeline, name an asset in it: '</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">:&lt;asset&gt;'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> does not name an asset. With no &#39;:&#39;, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the word before &#39;/&#39; must be a kind (</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KINDS</span><span class="p">)</span><span class="si">}</span><span class="s2">). If &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">text</span><span class="si">!r}</span><span class="s2"> is a pipeline, name an asset in it: &#39;</span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">:&lt;asset&gt;&#39;.&quot;</span>
             <span class="p">)</span>
         <span class="n">_check_kind</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">original</span><span class="p">)</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> is not an asset reference. An asset is 'name' "</span>
-        <span class="sa">f</span><span class="s2">"or 'kind/name'; one in another pipeline is 'scope/pipeline:name'."</span>
+        <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> is not an asset reference. An asset is &#39;name&#39; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;or &#39;kind/name&#39;; one in another pipeline is &#39;scope/pipeline:name&#39;.&quot;</span>
     <span class="p">)</span>
 
 
 <div class="viewcode-block" id="parse_asset_ref">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.refs.html#chartbook.refs.parse_asset_ref">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">parse_asset_ref</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">parse_asset_ref</span><span class="p">(</span>
     <span class="n">text</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span> <span class="n">kind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AssetRef</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Parse the text of a reference to an asset.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse the text of a reference to an asset.</span>
 
 <span class="sd">    The whole grammar is accepted. Whether a given reference can be</span>
 <span class="sd">    *resolved* yet is a separate question, answered by</span>
 <span class="sd">    :func:`chartbook.resolve.resolve`.</span>
 
-<span class="sd">    :param text: The reference, e.g. ``"treasury_rates"``,</span>
-<span class="sd">        ``"chart/gdp"`` or ``"ftsfr/fed_yield_curve:model/forecaster@v3"``.</span>
+<span class="sd">    :param text: The reference, e.g. ``&quot;treasury_rates&quot;``,</span>
+<span class="sd">        ``&quot;chart/gdp&quot;`` or ``&quot;ftsfr/fed_yield_curve:model/forecaster@v3&quot;``.</span>
 <span class="sd">        An ``AssetRef`` is checked against *kind* and returned.</span>
 <span class="sd">    :param kind: The kind the caller expects. A reference that names no kind</span>
 <span class="sd">        takes this one; a reference that names a different kind is an error.</span>
@@ -770,7 +772,7 @@
 <span class="sd">    :returns: The parsed reference.</span>
 <span class="sd">    :raises KindMismatchError: If the reference names a kind other than *kind*.</span>
 <span class="sd">    :raises ValueError: If the text does not follow the grammar.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">_check_kind</span><span class="p">(</span><span class="n">kind</span><span class="p">)</span>
 
@@ -782,60 +784,60 @@
     <span class="n">original</span> <span class="o">=</span> <span class="n">text</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"A reference cannot be empty."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A reference cannot be empty.&quot;</span><span class="p">)</span>
 
     <span class="c1"># Right to left: the revision, then the part, then pipeline : asset</span>
     <span class="n">rev</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="s2">"@"</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
-        <span class="n">text</span><span class="p">,</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"@"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;@&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">text</span><span class="p">,</span> <span class="n">rev</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_REV_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">rev</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid revision after '@'. "</span>
-                <span class="sa">f</span><span class="s2">"A revision is a version name, tag or hash, e.g. '@v3'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid revision after &#39;@&#39;. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;A revision is a version name, tag or hash, e.g. &#39;@v3&#39;.&quot;</span>
             <span class="p">)</span>
 
     <span class="n">part</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="s2">"#"</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
-        <span class="n">text</span><span class="p">,</span> <span class="n">part</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"#"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;#&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">text</span><span class="p">,</span> <span class="n">part</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_PART_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">part</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid part after '#'. A part "</span>
-                <span class="sa">f</span><span class="s2">"is a name made of letters, digits, '.', '_', '-' and '/'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid part after &#39;#&#39;. A part &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;is a name made of letters, digits, &#39;.&#39;, &#39;_&#39;, &#39;-&#39; and &#39;/&#39;.&quot;</span>
             <span class="p">)</span>
 
     <span class="c1"># The asset never contains a colon, so the last one divides the two. (A</span>
     <span class="c1"># registry may: localhost:5000/acme/rates:treasury_rates.)</span>
     <span class="n">pipeline_text</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="s2">":"</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
-        <span class="n">pipeline_text</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">":"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;:&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+        <span class="n">pipeline_text</span><span class="p">,</span> <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
         <span class="c1"># Only a pipeline, a part or a revision: nothing for them to be of</span>
         <span class="n">only</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">what</span>
             <span class="k">for</span> <span class="n">what</span><span class="p">,</span> <span class="n">given</span> <span class="ow">in</span> <span class="p">(</span>
-                <span class="p">(</span><span class="s2">"a pipeline"</span><span class="p">,</span> <span class="n">pipeline_text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"a part"</span><span class="p">,</span> <span class="n">part</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
-                <span class="p">(</span><span class="s2">"a revision"</span><span class="p">,</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;a pipeline&quot;</span><span class="p">,</span> <span class="n">pipeline_text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;a part&quot;</span><span class="p">,</span> <span class="n">part</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;a revision&quot;</span><span class="p">,</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">given</span>
         <span class="p">]</span>
         <span class="n">example</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline_text</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">':'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">pipeline_text</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">treasury_rates"</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'#'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">part</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">part</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}{</span><span class="s1">'@'</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">''</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_text</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;:&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">pipeline_text</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">treasury_rates&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;#&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">part</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">part</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}{</span><span class="s1">&#39;@&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
-        <span class="n">said</span> <span class="o">=</span> <span class="s2">" and "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">only</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">only</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">only</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">only</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">said</span> <span class="o">=</span> <span class="s2">&quot; and &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">only</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">only</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">only</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">only</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> names no asset: it is only </span><span class="si">{</span><span class="n">said</span><span class="si">}</span><span class="s2">. "</span>
-            <span class="sa">f</span><span class="s2">"A reference is '[pipeline:][kind/]name[#part][@rev]', and the name "</span>
-            <span class="sa">f</span><span class="s2">"is never left out: </span><span class="si">{</span><span class="n">example</span><span class="si">!r}</span><span class="s2">, say."</span>
+            <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> names no asset: it is only </span><span class="si">{</span><span class="n">said</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;A reference is &#39;[pipeline:][kind/]name[#part][@rev]&#39;, and the name &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;is never left out: </span><span class="si">{</span><span class="n">example</span><span class="si">!r}</span><span class="s2">, say.&quot;</span>
         <span class="p">)</span>
 
     <span class="n">explicit_kind</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">_split_asset</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">original</span><span class="p">,</span> <span class="n">pipeline_text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"Invalid asset name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> in reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2">. A name is "</span>
-            <span class="sa">f</span><span class="s2">"a key of chartbook.toml, matching [A-Za-z0-9._-]+."</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid asset name </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> in reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2">. A name is &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;a key of chartbook.toml, matching [A-Za-z0-9._-]+.&quot;</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">explicit_kind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -848,14 +850,14 @@
     <span class="n">registry</span> <span class="o">=</span> <span class="n">scope</span> <span class="o">=</span> <span class="n">pipeline</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">pipeline_text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">registry</span><span class="p">,</span> <span class="n">unqualified</span> <span class="o">=</span> <span class="n">split_registry</span><span class="p">(</span><span class="n">pipeline_text</span><span class="p">)</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="n">unqualified</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="n">unqualified</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
             <span class="n">ID_COMPONENT_PATTERN</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid pipeline "</span>
-                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pipeline_text</span><span class="si">!r}</span><span class="s2"> before the ':'. A pipeline is 'name', "</span>
-                <span class="sa">f</span><span class="s2">"'scope/name' or 'registry/scope/name'."</span>
+                <span class="sa">f</span><span class="s2">&quot;Reference </span><span class="si">{</span><span class="n">original</span><span class="si">!r}</span><span class="s2"> has an invalid pipeline &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_text</span><span class="si">!r}</span><span class="s2"> before the &#39;:&#39;. A pipeline is &#39;name&#39;, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;scope/name&#39; or &#39;registry/scope/name&#39;.&quot;</span>
             <span class="p">)</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">scope</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">components</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="kc">None</span>
@@ -932,8 +934,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

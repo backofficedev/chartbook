@@ -1017,6 +1017,17 @@ Bases: {py:obj}`Exception`
 
 ````
 
+````{py:attribute} stores
+:canonical: chartbook.snapshot.SnapshotReport.stores
+:type: list[str]
+:value: >
+   'field(...)'
+
+```{autodoc2-docstring} chartbook.snapshot.SnapshotReport.stores
+```
+
+````
+
 `````
 
 ````{py:exception} StoreNotReadyError()
@@ -1202,7 +1213,7 @@ Bases: {py:obj}`chartbook.snapshot.SnapshotError`
 ```
 ````
 
-````{py:function} make(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, made_at: typing.Optional[str] = None, built_by_run: bool = False, ignoring: tuple = (), deep: bool = False) -> chartbook.snapshot.SnapshotReport
+````{py:function} make(project_dir: typing.Union[str, pathlib.Path] = '.', store: typing.Optional[chartbook.store.Store] = None, made_at: typing.Optional[str] = None, built_by_run: bool = False, ignoring: tuple = (), deep: bool = False, store_names: typing.Optional[list[str]] = None) -> chartbook.snapshot.SnapshotReport
 :canonical: chartbook.snapshot.make
 
 ```{autodoc2-docstring} chartbook.snapshot.make

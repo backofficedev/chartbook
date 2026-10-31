@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'design/reading-other-pipelines';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Design: the plan for 0.3.0" href="plan-0.3.0.html" />
     <link rel="prev" title="Design: keeping costly outputs" href="keep.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../_static/searchtools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script src="../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
@@ -352,8 +357,9 @@
 <li class="toctree-l1"><a class="reference internal" href="versioned-catalog.html">Design: the versioned catalog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="trust.html">Design: trust, for a build of files on this machine</a></li>
 <li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: reading another pipeline while you work</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,40 +507,40 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-story-this-serves">The story this serves</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-today">What happens today</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id">Option 1a: by ID, the store first, git worked out from the ID</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1b-by-git-url-bytes-from-the-store">Option 1b: by git URL, bytes from the store</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1c-by-id-the-store-only">Option 1c: by ID, the store only</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#path-in-every-option"><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2a-refuse-today">Option 2a: refuse (today)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so">Option 2b: read the newest snapshot, every time, and say so</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-snapshot-is-newest">Which snapshot is “newest”</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3a-refuse-and-say-what-to-add">Option 3a: refuse, and say what to add</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3b-read-it-and-warn-that-nothing-records-it">Option 3b: read it, and warn that nothing records it</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3c-declare-it-for-you">Option 3c: declare it for you</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4a-refuse">Option 4a: refuse</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4b-read-the-working-file-and-say-so-loudly">Option 4b: read the working file, and say so loudly</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5a-refuse">Option 5a: refuse</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">Option 5b: read the newest snapshot, and say nothing is recorded</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6a-nothing-about-dependencies-today">Option 6a: nothing about dependencies (today)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6b-every-declared-dependency-pinned-to-a-snapshot">Option 6b: every declared dependency pinned to a snapshot</a></li>
 </ul>
@@ -610,17 +612,17 @@ developed, and a snapshot of B captures them.</p></li>
 <h3>Option 1a: by ID, the store first, git worked out from the ID<a class="headerlink" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id" title="Link to this heading">#</a></h3>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># acme/forecast/chartbook.toml</span>
 <span class="k">[dependencies]</span>
-<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
+<span class="s2">&quot;acme/rates&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
 </pre></div>
 </div>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># ~/.chartbook/settings.toml, once per machine (or the organization's settings)</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># ~/.chartbook/settings.toml, once per machine (or the organization&#39;s settings)</span>
 <span class="k">[resolve]</span>
-<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"github.com"</span>
+<span class="n">default_host</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;github.com&quot;</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">data</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
 
-<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -638,10 +640,10 @@ is new. <code class="docutils literal notranslate"><span class="pre">default_hos
 <section id="option-1b-by-git-url-bytes-from-the-store">
 <h3>Option 1b: by git URL, bytes from the store<a class="headerlink" href="#option-1b-by-git-url-bytes-from-the-store" title="Link to this heading">#</a></h3>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
-<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"https://github.com/acme/rates"</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"main"</span><span class="w"> </span><span class="p">}</span>
+<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">git</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/acme/rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;main&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"rates:rates"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;rates:rates&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -655,7 +657,7 @@ clone only when there is no snapshot.</p></li>
 <section id="option-1c-by-id-the-store-only">
 <h3>Option 1c: by ID, the store only<a class="headerlink" href="#option-1c-by-id-the-store-only" title="Link to this heading">#</a></h3>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
-<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
+<span class="s2">&quot;acme/rates&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{}</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -668,12 +670,12 @@ source: a pipeline with no snapshot cannot be read, and ChartBook never clones o
 <section id="path-in-every-option">
 <h3><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option<a class="headerlink" href="#path-in-every-option" title="Link to this heading">#</a></h3>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
-<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"../rates"</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># still allowed</span>
+<span class="n">rates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;../rates&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># still allowed</span>
 </pre></div>
 </div>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>check
 <span class="go">warning: acme/forecast: the dependency `rates` is a path, ../rates. It works on this machine only;</span>
-<span class="go">  name it by its ID, "acme/rates" = {}, to read it from the store anywhere.</span>
+<span class="go">  name it by its ID, &quot;acme/rates&quot; = {}, to read it from the store anywhere.</span>
 </pre></div>
 </div>
 <p>Kept for two pipelines in one repository and for working on both at once, with a warning that
@@ -687,15 +689,15 @@ your use case, and with no default host it is 1c. <em>Decided by the maintainer 
 <p>B declares A and has pinned nothing. In a notebook:</p>
 <section id="option-2a-refuse-today">
 <h3>Option 2a: refuse (today)<a class="headerlink" href="#option-2a-refuse-today" title="Link to this heading">#</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
-<span class="go">AssetNotPinnedError: 'acme/rates:rates' is not pinned: ~/forecast/chartbook.lock does not list</span>
-<span class="go">the dependency 'acme/rates'. Run `chartbook pin` in ~/forecast.</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>
+<span class="go">AssetNotPinnedError: &#39;acme/rates:rates&#39; is not pinned: ~/forecast/chartbook.lock does not list</span>
+<span class="go">the dependency &#39;acme/rates&#39;. Run `chartbook pin` in ~/forecast.</span>
 </pre></div>
 </div>
 </section>
 <section id="option-2b-read-the-newest-snapshot-every-time-and-say-so">
 <h3>Option 2b: read the newest snapshot, every time, and say so<a class="headerlink" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so" title="Link to this heading">#</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>
 <span class="go">UserWarning: acme/rates is not pinned: reading its newest snapshot, 3f2a9c1, made</span>
 <span class="go">2026-10-16 22:06 UTC. `chartbook pin` records it.</span>
 <span class="go">&lt;LazyFrame ...&gt;</span>
@@ -706,15 +708,15 @@ two runs of the same notebook can read different data.</p>
 </section>
 <section id="option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">
 <h3>Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles<a class="headerlink" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles" title="Link to this heading">#</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>
 <span class="go">acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock).</span>
 <span class="go">`chartbook update acme/rates` moves it.</span>
 <span class="go">&lt;LazyFrame ...&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>      <span class="c1"># the same bytes, until you update</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>      <span class="c1"># the same bytes, until you update</span>
 <span class="go">&lt;LazyFrame ...&gt;</span>
 </pre></div>
 </div>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>update<span class="w"> </span>acme/rates<span class="w">           </span><span class="c1"># when A's owner has made a newer snapshot</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>update<span class="w"> </span>acme/rates<span class="w">           </span><span class="c1"># when A&#39;s owner has made a newer snapshot</span>
 <span class="go">acme/rates: 3f2a9c1 (2026-10-16) -&gt; 8b41d07 (2026-10-18)</span>
 <span class="go">  rates: changed, 5,210 -&gt; 5,233 rows</span>
 <span class="go">Wrote chartbook.lock.</span>
@@ -731,8 +733,8 @@ extra command.</p></li>
 <section id="which-snapshot-is-newest">
 <h3>Which snapshot is “newest”<a class="headerlink" href="#which-snapshot-is-newest" title="Link to this heading">#</a></h3>
 <p>The one made last, by its owner’s clock, across every branch. An entry narrows it:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"3f2a9c1"</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># exactly this one (the newest at that commit)</span>
-<span class="s2">"acme/rates"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">"main"</span><span class="w"> </span><span class="p">}</span><span class="w">         </span><span class="c1"># the newest at or before main's commit (asks git)</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;acme/rates&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">commit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;3f2a9c1&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># exactly this one (the newest at that commit)</span>
+<span class="s2">&quot;acme/rates&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;main&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">         </span><span class="c1"># the newest at or before main&#39;s commit (asks git)</span>
 </pre></div>
 </div>
 <p><strong>Recommended: 2c,</strong> with “newest” by time and <code class="docutils literal notranslate"><span class="pre">commit</span></code> or <code class="docutils literal notranslate"><span class="pre">rev</span></code> to narrow it. <em>Decided by the
@@ -741,13 +743,13 @@ maintainer 2026-10-16: 2c.</em></p>
 </section>
 <section id="decision-3-a-pipeline-b-has-not-declared">
 <h2>Decision 3: a pipeline B has not declared<a class="headerlink" href="#decision-3-a-pipeline-b-has-not-declared" title="Link to this heading">#</a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/yields:curve"</span><span class="p">)</span>    <span class="c1"># acme/yields is not in B's [dependencies]</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/yields:curve&quot;</span><span class="p">)</span>    <span class="c1"># acme/yields is not in B&#39;s [dependencies]</span>
 </pre></div>
 </div>
 <section id="option-3a-refuse-and-say-what-to-add">
 <h3>Option 3a: refuse, and say what to add<a class="headerlink" href="#option-3a-refuse-and-say-what-to-add" title="Link to this heading">#</a></h3>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>DependencyNotDeclaredError: acme/forecast does not declare acme/yields. Add it:
-    chartbook add acme/yields          # writes "acme/yields" = {} under [dependencies]
+    chartbook add acme/yields          # writes &quot;acme/yields&quot; = {} under [dependencies]
 </pre></div>
 </div>
 </section>
@@ -804,8 +806,8 @@ and data.load then reads what it declares.
 </section>
 <section id="option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">
 <h3>Option 5b: read the newest snapshot, and say nothing is recorded<a class="headerlink" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded" title="Link to this heading">#</a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"acme/rates:rates"</span><span class="p">)</span>
-<span class="go">UserWarning: not in a pipeline: reading acme/rates's newest snapshot, 3f2a9c1, and recording</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;acme/rates:rates&quot;</span><span class="p">)</span>
+<span class="go">UserWarning: not in a pipeline: reading acme/rates&#39;s newest snapshot, 3f2a9c1, and recording</span>
 <span class="go">nothing.</span>
 </pre></div>
 </div>
@@ -957,8 +959,7 @@ decision, from the lockfile, and never clones a pipeline it builds itself. A pla
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -966,40 +967,40 @@ decision, from the lockfile, and never clones a pipeline it builds itself. A pla
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-story-this-serves">The story this serves</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-today">What happens today</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-1-how-b-names-a">Decision 1: how B names A</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1a-by-id-the-store-first-git-worked-out-from-the-id">Option 1a: by ID, the store first, git worked out from the ID</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1b-by-git-url-bytes-from-the-store">Option 1b: by git URL, bytes from the store</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1c-by-id-the-store-only">Option 1c: by ID, the store only</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#path-in-every-option"><code class="docutils literal notranslate"><span class="pre">path</span></code>, in every option</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-2-what-an-unpinned-dependency-gives-you">Decision 2: what an unpinned dependency gives you</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2a-refuse-today">Option 2a: refuse (today)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2b-read-the-newest-snapshot-every-time-and-say-so">Option 2b: read the newest snapshot, every time, and say so</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2c-pin-on-the-first-read-as-uv-and-cargo-write-their-lockfiles">Option 2c: pin on the first read, as <code class="docutils literal notranslate"><span class="pre">uv</span></code> and <code class="docutils literal notranslate"><span class="pre">cargo</span></code> write their lockfiles</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#which-snapshot-is-newest">Which snapshot is “newest”</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-3-a-pipeline-b-has-not-declared">Decision 3: a pipeline B has not declared</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3a-refuse-and-say-what-to-add">Option 3a: refuse, and say what to add</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3b-read-it-and-warn-that-nothing-records-it">Option 3b: read it, and warn that nothing records it</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-3c-declare-it-for-you">Option 3c: declare it for you</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-4-no-snapshot-but-a-working-folder">Decision 4: no snapshot, but a working folder</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4a-refuse">Option 4a: refuse</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-4b-read-the-working-file-and-say-so-loudly">Option 4b: read the working file, and say so loudly</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-5-outside-any-pipeline">Decision 5: outside any pipeline</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5a-refuse">Option 5a: refuse</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-5b-read-the-newest-snapshot-and-say-nothing-is-recorded">Option 5b: read the newest snapshot, and say nothing is recorded</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decision-6-what-chartbook-snapshot-requires">Decision 6: what <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">snapshot</span></code> requires</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6a-nothing-about-dependencies-today">Option 6a: nothing about dependencies (today)</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-6b-every-declared-dependency-pinned-to-a-snapshot">Option 6b: every declared dependency pinned to a snapshot</a></li>
 </ul>
@@ -1055,8 +1056,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

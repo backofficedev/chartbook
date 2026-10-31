@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=6512192e"></script>
-    <script src="_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/documentation_options.js?v=9453eeee"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=f281be69"></script>
     <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="_static/logo.png"/>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="_static/searchtools.js"></script>
-    <script src="_static/language_data.js"></script>
-    <script src="searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -491,11 +493,15 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.A_LINK">A_LINK (in module chartbook.snapshot)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.add">add() (in module chartbook.links)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.add_command">add_command() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.add_root">add_root() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.add_root">add_root() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.add_root">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.add_root">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.add_root">(chartbook.stores.s3.S3Store method)</a>
@@ -511,9 +517,11 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.Checkout.address">address (chartbook.identity.Checkout attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.age_of">age_of() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.age_of">age_of() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.age_of">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.age_of">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.age_of">(chartbook.stores.s3.S3Store method)</a>
@@ -527,9 +535,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.all_hashes">all_hashes() (in module chartbook.snapshot)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.all_snapshot_files">all_snapshot_files() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.all_snapshot_files">all_snapshot_files() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.all_snapshot_files">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.all_snapshot_files">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.all_snapshot_files">(chartbook.stores.s3.S3Store method)</a>
@@ -545,12 +555,12 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.apply_code_change_times">apply_code_change_times() (in module chartbook.manifest)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.index.html#chartbook.index.apply_code_times">apply_code_times() (in module chartbook.index)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.apply_matplotlib_style">apply_matplotlib_style() (in module chartbook.plotting._config)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._overlays.html#chartbook.plotting._overlays.apply_overlays_matplotlib">apply_overlays_matplotlib() (in module chartbook.plotting._overlays)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._overlays.html#chartbook.plotting._overlays.apply_overlays_plotly">apply_overlays_plotly() (in module chartbook.plotting._overlays)</a>
@@ -649,16 +659,16 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.backends.databricks.html#chartbook.backends.databricks.BATCH_ROWS">BATCH_ROWS (in module chartbook.backends.databricks)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.begin">begin() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.begin">begin() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.begin">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.begin">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.begin">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.build">build() (in module chartbook.cli)</a>
-</li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#chartbook.plotting.backends._plotly.PlotlyBackend.build_area">build_area() (chartbook.plotting.backends._plotly.PlotlyBackend method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#chartbook.plotting.backends._plotly.PlotlyBackend.build_bar">build_bar() (chartbook.plotting.backends._plotly.PlotlyBackend method)</a>
@@ -747,8 +757,6 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog">catalog() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_add">catalog_add() (in module chartbook.cli)</a>
-</li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_disable">catalog_disable() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_enable">catalog_enable() (in module chartbook.cli)</a>
@@ -760,6 +768,8 @@
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_init">catalog_init() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.catalog_member_dirs">catalog_member_dirs() (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_migrate">catalog_migrate() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_open">catalog_open() (in module chartbook.cli)</a>
 </li>
@@ -829,6 +839,13 @@
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.build_docs.html#module-chartbook.build_docs">module</a>
+</li>
+      </ul></li>
+      <li>
+    chartbook.catalog_config
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.catalog_config.html#module-chartbook.catalog_config">module</a>
 </li>
       </ul></li>
       <li>
@@ -923,6 +940,13 @@
 </li>
       </ul></li>
       <li>
+    chartbook.hubs
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.hubs.html#module-chartbook.hubs">module</a>
+</li>
+      </ul></li>
+      <li>
     chartbook.identity
 
       <ul>
@@ -958,6 +982,13 @@
 </li>
       </ul></li>
       <li>
+    chartbook.links
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.links.html#module-chartbook.links">module</a>
+</li>
+      </ul></li>
+      <li>
     chartbook.lock
 
       <ul>
@@ -983,6 +1014,13 @@
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.models.html#module-chartbook.models">module</a>
+</li>
+      </ul></li>
+      <li>
+    chartbook.multi_store
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#module-chartbook.multi_store">module</a>
 </li>
       </ul></li>
       <li>
@@ -1161,12 +1199,21 @@
 </li>
       </ul></li>
       <li>
+    chartbook.transfer
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.transfer.html#module-chartbook.transfer">module</a>
+</li>
+      </ul></li>
+      <li>
     chartbook.versions
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.versions.html#module-chartbook.versions">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.writers
 
@@ -1181,8 +1228,6 @@
         <li><a href="apidocs/chartbook/chartbook.writers.mkdocs.html#module-chartbook.writers.mkdocs">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.writers.sphinx
 
@@ -1219,6 +1264,8 @@
       <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_ids">check_ids() (in module chartbook.check)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_licenses">check_licenses() (in module chartbook.check)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_links">check_links() (in module chartbook.check)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.check.html#chartbook.check.check_model_labels">check_model_labels() (in module chartbook.check)</a>
 </li>
@@ -1344,6 +1391,8 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.configure">configure() (in module chartbook.plotting._config)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.configured">configured() (chartbook.multi_store.Stores class method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.backends.html#chartbook.backends.Backend.connect">connect() (chartbook.backends.Backend method)</a>
 
       <ul>
@@ -1398,6 +1447,8 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.sitefiles.html#chartbook.sitefiles.copy_site_pages">copy_site_pages() (in module chartbook.sitefiles)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.transfer.html#chartbook.transfer.copy_snapshot">copy_snapshot() (in module chartbook.transfer)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.sharing.html#chartbook.sharing.copy_snapshots">copy_snapshots() (in module chartbook.sharing)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.sitefiles.html#chartbook.sitefiles.copy_theme_files">copy_theme_files() (in module chartbook.sitefiles)</a>
@@ -1407,6 +1458,8 @@
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.PinReport.count">count() (chartbook.lock.PinReport method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.files.html#chartbook.files.count_by_extension">count_by_extension() (in module chartbook.files)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.create">create (chartbook.multi_store.NamedStore attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.BaseBackend.create_area">create_area() (chartbook.plotting.backends._base.BaseBackend method)</a>
 
@@ -1532,6 +1585,8 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.DEEPEST">DEEPEST (in module chartbook.lineage)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.default">default() (chartbook.multi_store.Stores method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.DEFAULT_BRANCH">DEFAULT_BRANCH (in module chartbook.scaffold)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.default_git_cache">default_git_cache() (in module chartbook.gitcache)</a>
@@ -1595,6 +1650,8 @@
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.DEPENDENCY_KEYS">DEPENDENCY_KEYS (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.dependency_line">dependency_line() (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.hubs.html#chartbook.hubs.dependency_records">dependency_records() (in module chartbook.hubs)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.DependencyNotDeclaredError">DependencyNotDeclaredError</a>
 </li>
@@ -1688,6 +1745,8 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Cycle.edges">edges (chartbook.lineage.Cycle attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.catalog_config.html#chartbook.catalog_config.edit_store">edit_store() (in module chartbook.catalog_config)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.GcPlan.elsewhere">elsewhere (chartbook.lock.GcPlan attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.IndexDiff.empty">empty (chartbook.indexdiff.IndexDiff property)</a>
@@ -1708,16 +1767,18 @@
         <li><a href="apidocs/chartbook/chartbook.backends.html#chartbook.backends.DuckDBBackend.engine">(chartbook.backends.DuckDBBackend method)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.hubs.html#chartbook.hubs.enrich">enrich() (in module chartbook.hubs)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.sitefiles.html#chartbook.sitefiles.ensure_notebook_titles">ensure_notebook_titles() (in module chartbook.sitefiles)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.ENTITY_SECTIONS">ENTITY_SECTIONS (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoredObject.entries">entries (chartbook.store.StoredObject attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.claude_skill.html#chartbook.claude_skill.ENTRY">ENTRY (in module chartbook.claude_skill)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.claude_skill.html#chartbook.claude_skill.ENTRY">ENTRY (in module chartbook.claude_skill)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#chartbook.plotting.backends.ENTRY_POINT_GROUP">ENTRY_POINT_GROUP (in module chartbook.plotting.backends)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.IndexDiff.envelope">envelope (chartbook.indexdiff.IndexDiff attribute)</a>
@@ -1816,9 +1877,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.index.html#chartbook.index.FILES_LISTED">FILES_LISTED (in module chartbook.index)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.files_of">files_of() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.files_of">files_of() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.files_of">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.files_of">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.files_of">(chartbook.stores.s3.S3Store method)</a>
@@ -1841,6 +1904,8 @@
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.find">find() (chartbook.gitcache.GitCache method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.find">(chartbook.multi_store.Stores method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.find">(in module chartbook.snapshot)</a>
 </li>
       </ul></li>
@@ -1854,10 +1919,10 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.find_template">find_template() (in module chartbook.scaffold)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.find_work">find_work() (chartbook.gitcache.GitCache method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.find_work">find_work() (chartbook.gitcache.GitCache method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.versions.html#chartbook.versions.fingerprint">fingerprint() (in module chartbook.versions)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.BuildPlan.fingerprints">fingerprints (chartbook.incremental.BuildPlan attribute)</a>
@@ -1881,6 +1946,8 @@
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.folder_of_store_url">folder_of_store_url() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore">FolderStore (class in chartbook.store)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.for_writing">for_writing() (chartbook.multi_store.Stores method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.GcPlan.forget">forget (chartbook.lock.GcPlan attribute)</a>
 </li>
@@ -1977,6 +2044,8 @@
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.get">get() (chartbook.gitcache.GitCache method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.get">(chartbook.multi_store.Stores method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.get">(chartbook.store.FolderStore method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.get">(chartbook.store.Store method)</a>
@@ -2102,9 +2171,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.handle_validation_error">handle_validation_error() (in module chartbook.errors)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.has">has() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.has">has() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.has">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.has">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.has">(chartbook.stores.s3.S3Store method)</a>
@@ -2133,6 +2204,8 @@
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.Lock.hashes">hashes() (chartbook.lock.Lock method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.hashes">(chartbook.multi_store.Stores method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.Snapshot.hashes">(chartbook.snapshot.Snapshot method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.hashes">(chartbook.store.FolderStore method)</a>
@@ -2146,9 +2219,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.held_elsewhere">held_elsewhere() (in module chartbook.lock)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.held_hashes">held_hashes() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.held_hashes">held_hashes() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.held_hashes">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.held_hashes">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.held_hashes">(chartbook.stores.s3.S3Store method)</a>
@@ -2222,13 +2297,17 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.in_another_case">in_another_case() (in module chartbook.identity)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.in_order">in_order() (chartbook.multi_store.Stores method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.refs.html#chartbook.refs.AssetRef.in_pipeline">in_pipeline() (chartbook.refs.AssetRef method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.in_place">in_place() (in module chartbook.store)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.incomplete">incomplete() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.incomplete">incomplete() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.incomplete">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.incomplete">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.incomplete">(chartbook.stores.s3.S3Store method)</a>
@@ -2465,10 +2544,16 @@
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.lineage_gaps">lineage_gaps() (in module chartbook.snapshot)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered.link_command">link_command() (chartbook.scaffold.Rendered method)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.link_command">(in module chartbook.cli)</a>
 </li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.link_target">link_target() (in module chartbook.store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.writers.sphinx.html#chartbook.writers.sphinx.SphinxWriter.link_to_dataframe">link_to_dataframe() (chartbook.writers.sphinx.SphinxWriter method)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.LinkedDependencyWarning">LinkedDependencyWarning</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoredObject.links">links (chartbook.store.StoredObject attribute)</a>
 </li>
@@ -2484,9 +2569,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.FileLocation.listed">listed (chartbook.resolve.FileLocation attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.listing">listing() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.listing">listing() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.listing">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.listing">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.listing">(chartbook.stores.s3.S3Store method)</a>
@@ -2551,6 +2638,10 @@
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.ls_dataframes">ls_dataframes() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.ls_pipelines">ls_pipelines() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.ls_stores">ls_stores() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.ls_versions">ls_versions() (in module chartbook.cli)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -2632,7 +2723,11 @@
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.metadata_complete">metadata_complete (chartbook.diagnostics.DiagnosticRow attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.hubs.html#chartbook.hubs.metadata_present">metadata_present() (in module chartbook.hubs)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.models.html#chartbook.models.Version.metrics">metrics (chartbook.models.Version attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.catalog_config.html#chartbook.catalog_config.migrate">migrate() (in module chartbook.catalog_config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.MIGRATE_JOURNAL">MIGRATE_JOURNAL (in module chartbook.store)</a>
 </li>
@@ -2670,6 +2765,8 @@
 </li>
         <li><a href="apidocs/chartbook/chartbook.build_docs.html#module-chartbook.build_docs">chartbook.build_docs</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.catalog_config.html#module-chartbook.catalog_config">chartbook.catalog_config</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.check.html#module-chartbook.check">chartbook.check</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.claude_skill.html#module-chartbook.claude_skill">chartbook.claude_skill</a>
@@ -2696,6 +2793,8 @@
 </li>
         <li><a href="apidocs/chartbook/chartbook.hashing.html#module-chartbook.hashing">chartbook.hashing</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.hubs.html#module-chartbook.hubs">chartbook.hubs</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.identity.html#module-chartbook.identity">chartbook.identity</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.incremental.html#module-chartbook.incremental">chartbook.incremental</a>
@@ -2706,6 +2805,8 @@
 </li>
         <li><a href="apidocs/chartbook/chartbook.lineage.html#module-chartbook.lineage">chartbook.lineage</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.links.html#module-chartbook.links">chartbook.links</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.lock.html#module-chartbook.lock">chartbook.lock</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.manifest.html#module-chartbook.manifest">chartbook.manifest</a>
@@ -2713,6 +2814,8 @@
         <li><a href="apidocs/chartbook/chartbook.migrate.html#module-chartbook.migrate">chartbook.migrate</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.models.html#module-chartbook.models">chartbook.models</a>
+</li>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#module-chartbook.multi_store">chartbook.multi_store</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.path_validation.html#module-chartbook.path_validation">chartbook.path_validation</a>
 </li>
@@ -2764,6 +2867,8 @@
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#module-chartbook.stores.s3">chartbook.stores.s3</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.transfer.html#module-chartbook.transfer">chartbook.transfer</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.versions.html#module-chartbook.versions">chartbook.versions</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.writers.html#module-chartbook.writers">chartbook.writers</a>
@@ -2776,6 +2881,8 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.MOST_INPUTS">MOST_INPUTS (in module chartbook.lineage)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.transfer.html#chartbook.transfer.move">move() (in module chartbook.transfer)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.mpl_axes">mpl_axes (chartbook.plotting._types.ChartResult property)</a>
 </li>
@@ -2800,6 +2907,8 @@
 </li>
         <li><a href="apidocs/chartbook/chartbook.models.html#chartbook.models.Version.name">(chartbook.models.Version attribute)</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.name">(chartbook.multi_store.NamedStore attribute)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.BaseBackend.name">(chartbook.plotting.backends._base.BaseBackend property)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.PlottingBackend.name">(chartbook.plotting.backends._base.PlottingBackend property)</a>
@@ -2813,9 +2922,17 @@
         <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.KeptVersion.name">(chartbook.snapshot.KeptVersion attribute)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.NAME">NAME (in module chartbook.links)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.name_it_by_its_id">name_it_by_its_id() (in module chartbook.lock)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.name_of">name_of() (chartbook.multi_store.Stores method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.KeptRecord.named">named (chartbook.store.KeptRecord attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.named">named() (chartbook.multi_store.Stores method)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore">NamedStore (class in chartbook.multi_store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.names">names (chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
@@ -2841,14 +2958,14 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Root.node">node (chartbook.store.Root attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node">Node (class in chartbook.lineage)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.normalize_ref_to_id">normalize_ref_to_id() (in module chartbook.identity)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.normalize_tags">normalize_tags() (in module chartbook.manifest)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.NOT_A_FILE">NOT_A_FILE (in module chartbook.snapshot)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.NOT_A_PLAIN_PATH">NOT_A_PLAIN_PATH (in module chartbook.snapshot)</a>
@@ -2943,9 +3060,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.original_path">original_path (chartbook.path_validation.PathDiagnostic attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.origins">origins() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.origins">origins() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.origins">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.origins">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.origins">(chartbook.stores.s3.S3Store method)</a>
@@ -3101,9 +3220,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.GcPlan.pinned_kept">pinned_kept (chartbook.lock.GcPlan attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.pinned_snapshot_files">pinned_snapshot_files() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.pinned_snapshot_files">pinned_snapshot_files() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.pinned_snapshot_files">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.pinned_snapshot_files">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.pinned_snapshot_files">(chartbook.stores.s3.S3Store method)</a>
@@ -3168,6 +3289,8 @@
       <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.PipelineLocation">PipelineLocation (class in chartbook.resolve)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.PipelineNotFoundError">PipelineNotFoundError</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.pipelines">pipelines (chartbook.multi_store.NamedStore attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.PIPELINES_DIR">PIPELINES_DIR (in module chartbook.store)</a>
 </li>
@@ -3249,6 +3372,8 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ProjectRootNotFoundError">ProjectRootNotFoundError</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.provenance">provenance() (in module chartbook.links)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.publish">publish() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.PUBLISH_DIR">PUBLISH_DIR (in module chartbook.manifest)</a>
@@ -3259,9 +3384,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered.pushed">pushed (chartbook.scaffold.Rendered attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.put">put() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.put">put() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.put">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.PendingSnapshot.put">(chartbook.store.PendingSnapshot method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.put">(chartbook.store.Store method)</a>
@@ -3293,8 +3420,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.run.html#chartbook.run.RunReport.ran">ran (chartbook.run.RunReport attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.read">read() (in module chartbook.snapshot)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.reachable">reachable (chartbook.multi_store.NamedStore property)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.read">read() (in module chartbook.links)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.read">(in module chartbook.snapshot)</a>
+</li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.formats.html#chartbook.formats.READ_ERRORS">READ_ERRORS (in module chartbook.formats)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.read_global_settings">read_global_settings() (in module chartbook.config)</a>
@@ -3308,6 +3441,8 @@
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.read_lock">read_lock() (in module chartbook.lock)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.models.html#chartbook.models.read_metrics">read_metrics() (in module chartbook.models)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.read_only">read_only (chartbook.multi_store.NamedStore attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.FileLocation.read_options">read_options (chartbook.resolve.FileLocation attribute)</a>
 </li>
@@ -3335,9 +3470,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.formats.html#chartbook.formats.Reading">Reading (class in chartbook.formats)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.reading">reading() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.reading">reading() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.reading">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.reading">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.reading">(chartbook.stores.s3.S3Store method)</a>
@@ -3445,9 +3582,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.remove">remove() (in module chartbook.snapshot)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.remove_root">remove_root() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.remove_root">remove_root() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.remove_root">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.remove_root">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.remove_root">(chartbook.stores.s3.S3Store method)</a>
@@ -3520,6 +3659,8 @@
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.resolve">resolve() (chartbook.gitcache.GitCache method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.links.html#chartbook.links.resolve">(in module chartbook.links)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.resolve">(in module chartbook.resolve)</a>
 </li>
       </ul></li>
@@ -3581,23 +3722,29 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.root_name">root_name() (in module chartbook.store)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.root_of">root_of() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.root_of">root_of() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.root_of">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.root_of">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.root_of">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.roots">roots() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.roots">roots() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.roots">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.roots">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.roots">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.ROOTS_DIR">ROOTS_DIR (in module chartbook.store)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.catalog_config.html#chartbook.catalog_config.route">route() (in module chartbook.catalog_config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.migrate.html#chartbook.migrate.run">run() (in module chartbook.migrate)</a>
 
@@ -3717,11 +3864,17 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.lineage.html#chartbook.lineage.Node.seen">seen (chartbook.lineage.Node attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.hubs.html#chartbook.hubs.selected_snapshots">selected_snapshots() (in module chartbook.hubs)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.selected_store">selected_store (in module chartbook.multi_store)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.migrate.html#chartbook.migrate.SENTINEL_SCHEMA">SENTINEL_SCHEMA (in module chartbook.migrate)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.set_default_catalog_path">set_default_catalog_path() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.set_style">set_style() (in module chartbook.plotting._config)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.settings_warnings">settings_warnings (in module chartbook.multi_store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.shaded_regions">shaded_regions (chartbook.plotting._types.OverlayConfig attribute)</a>
 </li>
@@ -3771,9 +3924,11 @@
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoredObject.size_bytes">(chartbook.store.StoredObject attribute)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.size_of">size_of() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.size_of">size_of() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.size_of">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.size_of">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.size_of">(chartbook.stores.s3.S3Store method)</a>
@@ -3799,25 +3954,31 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.snapshot">snapshot() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_commit_prefixes">snapshot_commit_prefixes() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.snapshot_commit_prefixes">snapshot_commit_prefixes() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_commit_prefixes">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.snapshot_commit_prefixes">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.snapshot_commit_prefixes">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_commits">snapshot_commits() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.snapshot_commits">snapshot_commits() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_commits">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.snapshot_commits">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.snapshot_commits">(chartbook.stores.s3.S3Store method)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_files">snapshot_files() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.snapshot_files">snapshot_files() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.snapshot_files">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.snapshot_files">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.snapshot_files">(chartbook.stores.s3.S3Store method)</a>
@@ -3850,7 +4011,11 @@
 </li>
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.Lock.snapshots">snapshots() (chartbook.lock.Lock method)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.snapshots">(chartbook.multi_store.Stores method)</a>
 </li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.lock.html#chartbook.lock.GcPlan.snapshots_delete">snapshots_delete (chartbook.lock.GcPlan attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.SNAPSHOTS_DIR">SNAPSHOTS_DIR (in module chartbook.store)</a>
@@ -3941,9 +4106,13 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.run.html#chartbook.run.Step">Step (class in chartbook.run)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.store">store (chartbook.multi_store.NamedStore attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store">Store (class in chartbook.store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store">store() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store_add">store_add() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.STORE_ENV_VAR">STORE_ENV_VAR (in module chartbook.config)</a>
 </li>
@@ -3963,9 +4132,13 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store_migrate">store_migrate() (in module chartbook.cli)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store_move">store_move() (in module chartbook.cli)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.STORE_ONLY">STORE_ONLY (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.STORE_PLUGIN_GROUP">STORE_PLUGIN_GROUP (in module chartbook.store)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store_remove">store_remove() (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.store_verify">store_verify() (in module chartbook.cli)</a>
 </li>
@@ -3990,6 +4163,10 @@
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.StoreNotReadyError">StoreNotReadyError</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoreProblem">StoreProblem (class in chartbook.store)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.SnapshotReport.stores">stores (chartbook.snapshot.SnapshotReport attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores">Stores (class in chartbook.multi_store)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.StoreUnreachableError">StoreUnreachableError</a>
 </li>
@@ -4169,6 +4346,8 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.unavailable">unavailable (chartbook.multi_store.NamedStore attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.incremental.html#chartbook.incremental.SyncResult.unchanged">unchanged (chartbook.incremental.SyncResult attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.snapshot.html#chartbook.snapshot.uncommitted">uncommitted() (in module chartbook.snapshot)</a>
@@ -4222,6 +4401,8 @@
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.Checkout.url">url (chartbook.gitcache.Checkout attribute)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.NamedStore.url">(chartbook.multi_store.NamedStore attribute)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.PipelineLocation.url">(chartbook.resolve.PipelineLocation attribute)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.resolve.html#chartbook.resolve.QueryLocation.url">(chartbook.resolve.QueryLocation attribute)</a>
@@ -4301,9 +4482,11 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.values">values (chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.verify">verify() (chartbook.store.FolderStore method)</a>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.Stores.verify">verify() (chartbook.multi_store.Stores method)</a>
 
       <ul>
+        <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.FolderStore.verify">(chartbook.store.FolderStore method)</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.Store.verify">(chartbook.store.Store method)</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.stores.s3.html#chartbook.stores.s3.S3Store.verify">(chartbook.stores.s3.S3Store method)</a>
@@ -4395,16 +4578,18 @@
 </li>
       <li><a href="apidocs/chartbook/chartbook.store.html#chartbook.store.WINDOWS_PATH_LIMIT">WINDOWS_PATH_LIMIT (in module chartbook.store)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.multi_store.html#chartbook.multi_store.with_dependencies">with_dependencies() (in module chartbook.multi_store)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.with_dependency">with_dependency() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.without_credentials">without_credentials() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.indexdiff.html#chartbook.indexdiff.Change.words">words (chartbook.indexdiff.Change property)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_copy">work_copy() (chartbook.gitcache.GitCache method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_copy">work_copy() (chartbook.gitcache.GitCache method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.WORK_DIR">WORK_DIR (in module chartbook.gitcache)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_path">work_path() (chartbook.gitcache.GitCache method)</a>
@@ -4550,8 +4735,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

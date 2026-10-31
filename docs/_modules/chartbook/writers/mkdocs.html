@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/writers/mkdocs';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../../_static/searchtools.js"></script>
-    <script src="../../../_static/language_data.js"></script>
-    <script src="../../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,13 +458,13 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.writers.mkdocs</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""The MkDocs writer: pages for MkDocs, from the same index the Sphinx writer reads.</span>
+<span></span><span class="sd">&quot;&quot;&quot;The MkDocs writer: pages for MkDocs, from the same index the Sphinx writer reads.</span>
 
 <span class="sd">The second site tool, and the proof that the index is what it claims to</span>
-<span class="sd">be: nothing above the writer changes. The pages are the Sphinx writer's,</span>
-<span class="sd">rendered through a theme folder of this writer's own</span>
-<span class="sd">(``chartbook/docs_src_mkdocs/&lt;theme&gt;``) where a template needs MkDocs'</span>
-<span class="sd">dialect: freshness and the chart's top, which Sphinx wrote as ``{raw}``</span>
+<span class="sd">be: nothing above the writer changes. The pages are the Sphinx writer&#39;s,</span>
+<span class="sd">rendered through a theme folder of this writer&#39;s own</span>
+<span class="sd">(``chartbook/docs_src_mkdocs/&lt;theme&gt;``) where a template needs MkDocs&#39;</span>
+<span class="sd">dialect: freshness and the chart&#39;s top, which Sphinx wrote as ``{raw}``</span>
 <span class="sd">fences and MkDocs takes as the HTML it is; the front pages and the lists,</span>
 <span class="sd">which Sphinx wrote as toctrees and MkDocs writes as lists of links, with</span>
 <span class="sd">its navigation in ``mkdocs.yml`` instead. The provenance panel, the</span>
@@ -472,328 +474,334 @@
 <span class="sd">chartbook[mkdocs]`` brings it, with the Material theme and the notebook</span>
 <span class="sd">plugin. The writer itself needs none of them: it writes files.</span>
 
-<span class="sd">What MkDocs does not have, and how the pages do without: Sphinx's blog</span>
+<span class="sd">What MkDocs does not have, and how the pages do without: Sphinx&#39;s blog</span>
 <span class="sd">carries the notes and the chart listing; here the notes are pages listed</span>
 <span class="sd">on the front page and the chart listing is written from the records.</span>
 <span class="sd">Pages keep their ``.md`` paths and the site keeps ``.html`` files</span>
 <span class="sd">(``use_directory_urls: false``), so every relative link and iframe path</span>
 <span class="sd">the Sphinx pages use holds.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.resources</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">importlib.resources</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">jinja2</span>
+<span class="kn">import</span> <span class="nn">jinja2</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.writers.sphinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">SphinxWriter</span><span class="p">,</span> <span class="n">_laid_out_version</span><span class="p">,</span> <span class="n">_literal</span><span class="p">,</span> <span class="n">_local_name</span><span class="p">,</span> <span class="n">_sandboxed</span><span class="p">,</span> <span class="n">_slug</span>
+<span class="kn">from</span> <span class="nn">chartbook.writers.sphinx</span> <span class="kn">import</span> <span class="n">SphinxWriter</span><span class="p">,</span> <span class="n">_laid_out_version</span><span class="p">,</span> <span class="n">_literal</span><span class="p">,</span> <span class="n">_local_name</span><span class="p">,</span> <span class="n">_sandboxed</span><span class="p">,</span> <span class="n">_slug</span>
 
 <span class="c1">#: The install extra that brings MkDocs, the Material theme and the notebook plugin.</span>
-<span class="n">EXTRA</span> <span class="o">=</span> <span class="s2">"chartbook[mkdocs]"</span>
+<span class="n">EXTRA</span> <span class="o">=</span> <span class="s2">&quot;chartbook[mkdocs]&quot;</span>
 <span class="c1">#: The folder under the MkDocs project that holds the pages; ``mkdocs.yml`` sits beside it.</span>
-<span class="n">PAGES_DIR</span> <span class="o">=</span> <span class="s2">"pages"</span>
-<span class="c1">#: The Sphinx theme's templates this writer shares, found when its own folder has none.</span>
-<span class="n">_SPHINX_THEMES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"pipeline"</span><span class="p">:</span> <span class="s2">"docs_src_pipeline"</span><span class="p">,</span> <span class="s2">"catalog"</span><span class="p">:</span> <span class="s2">"docs_src_catalog"</span><span class="p">}</span>
+<span class="n">PAGES_DIR</span> <span class="o">=</span> <span class="s2">&quot;pages&quot;</span>
+<span class="c1">#: The Sphinx theme&#39;s templates this writer shares, found when its own folder has none.</span>
+<span class="n">_SPHINX_THEMES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pipeline&quot;</span><span class="p">:</span> <span class="s2">&quot;docs_src_pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span> <span class="s2">&quot;docs_src_catalog&quot;</span><span class="p">}</span>
 
 
 <div class="viewcode-block" id="MkDocsWriter">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MkDocsWriter</span><span class="p">(</span><span class="n">SphinxWriter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Pages for MkDocs, from one index. The parameters are :class:`SphinxWriter`'s."""</span>
+<span class="k">class</span> <span class="nc">MkDocsWriter</span><span class="p">(</span><span class="n">SphinxWriter</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pages for MkDocs, from one index. The parameters are :class:`SphinxWriter`&#39;s.&quot;&quot;&quot;</span>
 
     <span class="c1">#: MkDocs would render the templates as pages: they stay out of the site tree.</span>
     <span class="n">THEME_TEMPLATES_IN_SITE</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="c1">#: The pages the writer renders besides the records': the catalog's own, and the chart listing.</span>
+    <span class="c1">#: The pages the writer renders besides the records&#39;: the catalog&#39;s own, and the chart listing.</span>
     <span class="n">CATALOG_PAGES</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="s2">"index.md"</span><span class="p">,</span> <span class="s2">"cb/charts.md"</span><span class="p">,</span> <span class="s2">"cb/dataframes.md"</span><span class="p">,</span> <span class="s2">"cb/models.md"</span><span class="p">,</span> <span class="s2">"cb/files.md"</span><span class="p">,</span> <span class="s2">"cb/pipelines.md"</span><span class="p">,</span>
-        <span class="s2">"cb/diagnostics.md"</span><span class="p">,</span> <span class="s2">"cb/versions.md"</span><span class="p">,</span>
+        <span class="s2">&quot;index.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/dataframes.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/models.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/files.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/pipelines.md&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cb/diagnostics.md&quot;</span><span class="p">,</span> <span class="s2">&quot;cb/versions.md&quot;</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_environment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jinja2</span><span class="o">.</span><span class="n">Environment</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The Sphinx writer's search path, with this writer's theme folder first, in the sandbox."""</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">untrusted_source</span>
+    <span class="k">def</span> <span class="nf">_environment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">jinja2</span><span class="o">.</span><span class="n">Environment</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The Sphinx writer&#39;s search path, with this writer&#39;s theme folder first, in the sandbox.&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">chartbook.config</span> <span class="kn">import</span> <span class="n">untrusted_source</span>
 
-        <span class="n">package</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">"chartbook"</span><span class="p">)))</span>
-        <span class="n">own</span> <span class="o">=</span> <span class="n">package</span> <span class="o">/</span> <span class="s2">"docs_src_mkdocs"</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)))</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="n">package</span> <span class="o">/</span> <span class="s2">&quot;docs_src_mkdocs&quot;</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span>
         <span class="n">sphinx_theme</span> <span class="o">=</span> <span class="n">package</span> <span class="o">/</span> <span class="n">_SPHINX_THEMES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">theme</span><span class="p">]</span>
         <span class="n">paths</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">paths</span> <span class="o">+=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"_templates"</span><span class="p">]</span>
-        <span class="n">paths</span> <span class="o">+=</span> <span class="p">[</span><span class="n">own</span><span class="p">,</span> <span class="n">own</span> <span class="o">/</span> <span class="s2">"_templates"</span><span class="p">,</span> <span class="n">sphinx_theme</span> <span class="o">/</span> <span class="s2">"_templates"</span><span class="p">]</span>
+            <span class="n">paths</span> <span class="o">+=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">]</span>
+        <span class="n">paths</span> <span class="o">+=</span> <span class="p">[</span><span class="n">own</span><span class="p">,</span> <span class="n">own</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span> <span class="n">sphinx_theme</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">]</span>
         <span class="n">environment</span> <span class="o">=</span> <span class="n">_sandboxed</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">own</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">untrusted_source</span><span class="p">()</span> <span class="k">else</span> <span class="n">base_dir</span><span class="p">)</span>
         <span class="c1"># Python-Markdown reads a pipe in code as text, in a table cell too</span>
-        <span class="n">environment</span><span class="o">.</span><span class="n">filters</span><span class="p">[</span><span class="s2">"literal"</span><span class="p">]</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">_literal</span><span class="p">,</span> <span class="n">escape_pipes</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">environment</span><span class="o">.</span><span class="n">filters</span><span class="p">[</span><span class="s2">&quot;literal&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">_literal</span><span class="p">,</span> <span class="n">escape_pipes</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">environment</span>
 
-    <span class="c1"># --- the pages this writer renders besides the records' -------------------</span>
+    <span class="c1"># --- the pages this writer renders besides the records&#39; -------------------</span>
 
 <div class="viewcode-block" id="MkDocsWriter.own_page_paths">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter.own_page_paths">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">own_page_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The site's own pages: the chart listing in a pipeline site, the catalog's pages in a catalog."""</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">"pipeline"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[</span><span class="s2">"cb/charts.md"</span><span class="p">]</span>
+    <span class="k">def</span> <span class="nf">own_page_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The site&#39;s own pages: the chart listing in a pipeline site, the catalog&#39;s pages in a catalog.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;cb/charts.md&quot;</span><span class="p">]</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog_page_paths</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="MkDocsWriter.own_page">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter.own_page">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">own_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/charts.md"</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">own_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_charts_page</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog_page</span><span class="p">(</span><span class="n">page_path</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_pages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_root</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The pages of one kind, as a list of titles and links, by pipeline then name."""</span>
+    <span class="k">def</span> <span class="nf">_pages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_root</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The pages of one kind, as a list of titles and links, by pipeline then name.&quot;&quot;&quot;</span>
         <span class="n">records</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-            <span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="n">kind</span><span class="p">),</span>
-            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)),</span>
+            <span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">kind</span> <span class="ow">and</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;current&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)),</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)),</span>
         <span class="p">)</span>
         <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">records</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;store&quot;</span> <span class="ow">and</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;Pipeline&quot;</span><span class="p">:</span>
+                <span class="kn">from</span> <span class="nn">chartbook.writers.sphinx</span> <span class="kn">import</span> <span class="n">_as_text</span>
+                <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">record</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">_as_text</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)),</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">_as_text</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">))}</span>
             <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_path</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
             <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="p">{</span>
-                    <span class="s2">"title"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
-                    <span class="s2">"link"</span><span class="p">:</span> <span class="n">path</span> <span class="k">if</span> <span class="n">from_root</span> <span class="k">else</span> <span class="n">path</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"cb/"</span><span class="p">),</span>
-                    <span class="s2">"pipeline"</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pipeline"</span><span class="p">,</span> <span class="s2">""</span><span class="p">),</span>
-                    <span class="s2">"description"</span><span class="p">:</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"description"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">record</span><span class="p">),</span>
+                    <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="n">path</span> <span class="k">if</span> <span class="n">from_root</span> <span class="k">else</span> <span class="n">path</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">&quot;cb/&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
                 <span class="p">}</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="n">entries</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_charts_page</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">catalog</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Catalog"</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_charts_page</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">catalog</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Catalog&quot;</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
-            <span class="p">((</span><span class="n">catalog</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"value"</span><span class="p">)</span>
-            <span class="ow">or</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="s2">"location"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Pipeline"</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span>
+            <span class="p">((</span><span class="n">catalog</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Pipeline&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"charts.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">charts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Chart"</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;charts.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">charts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Chart&quot;</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
 
 <div class="viewcode-block" id="MkDocsWriter.catalog_page">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter.catalog_page">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">catalog_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The catalog's pages, with the lists as titles and links rather than toctree paths."""</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/charts.md"</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">catalog_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The catalog&#39;s pages, with the lists as titles and links rather than toctree paths.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_charts_page</span><span class="p">()</span>
-        <span class="n">catalog</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Catalog"</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">catalog</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Catalog&quot;</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">catalog</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"This index has no Catalog record: it is a pipeline's, and a pipeline site has no catalog pages."</span><span class="p">)</span>
-        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">((</span><span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"location"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"value"</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This index has no Catalog record: it is a pipeline&#39;s, and a pipeline site has no catalog pages.&quot;</span><span class="p">)</span>
+        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">((</span><span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">docs_src_dir</span><span class="p">)</span>
         <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"index.md"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"index.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
-                <span class="n">manifest</span><span class="o">=</span><span class="p">{</span><span class="s2">"project"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)}},</span>
-                <span class="n">model_file_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Model"</span><span class="p">),</span>
-                <span class="n">files_file_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"File"</span><span class="p">),</span>
-                <span class="n">readme_text</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;index.md&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;index.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+                <span class="n">manifest</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;project&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">catalog</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)}},</span>
+                <span class="n">model_file_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">),</span>
+                <span class="n">files_file_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;File&quot;</span><span class="p">),</span>
+                <span class="n">readme_text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
                 <span class="n">today</span><span class="o">=</span><span class="n">_built_at</span><span class="p">(),</span>
                 <span class="n">has_versions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_has_versions</span><span class="p">(),</span>
+                <span class="n">has_stores</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stores&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/dataframes.md"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"dataframes.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
-                <span class="n">dataframe_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-                <span class="n">stored_dataframes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">from_the_store_assets</span><span class="p">((</span><span class="s2">"dataframe"</span><span class="p">,),</span> <span class="n">page_path</span><span class="p">),</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;cb/dataframes.md&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;dataframes.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+                <span class="n">dataframe_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                <span class="n">stored_dataframes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">from_the_store_assets</span><span class="p">((</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,),</span> <span class="n">page_path</span><span class="p">),</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/models.md"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"models.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">model_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Model"</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">"cb/files.md"</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"files.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">files_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"File"</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;cb/models.md&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;models.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">model_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">page_path</span> <span class="o">==</span> <span class="s2">&quot;cb/files.md&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;files.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">files_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;File&quot;</span><span class="p">,</span> <span class="n">from_root</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
         <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">catalog_page</span><span class="p">(</span><span class="n">page_path</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MkDocsWriter.pipeline_page">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter.pipeline_page">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">pipeline_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The front page of a pipeline site as lists of links; a pipeline's README page in a catalog, as Sphinx's."""</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">"catalog"</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">pipeline_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The front page of a pipeline site as lists of links; a pipeline&#39;s README page in a catalog, as Sphinx&#39;s.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">pipeline_page</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
         <span class="n">pipeline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">pipeline_id</span><span class="p">]</span>
-        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">"location"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">])</span>
+        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">])</span>
         <span class="n">readme</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readme_lines</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">)</span>
         <span class="n">environment</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-        <span class="n">own</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"assets"</span><span class="p">,</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
+        <span class="n">own</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;assets&quot;</span><span class="p">,</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
         <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
         <span class="n">notebooks</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">{</span>
-                <span class="s2">"title"</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span>
-                <span class="s2">"link"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/notebooks/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">Path</span><span class="p">((</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'location'</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'path'</span><span class="p">,</span><span class="w"> </span><span class="s1">''</span><span class="p">))</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.ipynb"</span><span class="p">,</span>
+                <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span>
+                <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;cb/notebooks/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">Path</span><span class="p">((</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;location&#39;</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.ipynb&quot;</span><span class="p">,</span>
             <span class="p">}</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Notebook"</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Notebook&quot;</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
         <span class="p">]</span>
         <span class="n">notes</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">{</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="s2">"link"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2">.md"</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Note"</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
+            <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;cb/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Note&quot;</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
         <span class="p">]</span>
-        <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">"index.md"</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+        <span class="k">return</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="s2">&quot;index.md&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
             <span class="n">pipeline_manifest</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>
             <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
-            <span class="n">pipeline_page_link</span><span class="o">=</span><span class="s2">"./index.md"</span><span class="p">,</span>
-            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">"cb"</span><span class="p">,</span>
+            <span class="n">pipeline_page_link</span><span class="o">=</span><span class="s2">&quot;./index.md&quot;</span><span class="p">,</span>
+            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;cb&quot;</span><span class="p">,</span>
             <span class="n">show_code_updated</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="n">readme_text</span><span class="o">=</span><span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readme</span><span class="p">[</span><span class="mi">2</span><span class="p">:]),</span>
+            <span class="n">readme_text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readme</span><span class="p">[</span><span class="mi">2</span><span class="p">:]),</span>
             <span class="n">today</span><span class="o">=</span><span class="n">_built_at</span><span class="p">(),</span>
             <span class="n">site_pages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_site_pages</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>
             <span class="n">notebooks</span><span class="o">=</span><span class="n">notebooks</span><span class="p">,</span>
             <span class="n">notes</span><span class="o">=</span><span class="n">notes</span><span class="p">,</span>
-            <span class="n">charts</span><span class="o">=</span><span class="p">[{</span><span class="s2">"title"</span><span class="p">:</span> <span class="s2">"All charts"</span><span class="p">,</span> <span class="s2">"link"</span><span class="p">:</span> <span class="s2">"cb/charts.md"</span><span class="p">},</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Chart"</span><span class="p">)],</span>
-            <span class="n">dataframes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">),</span>
-            <span class="n">models</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Model"</span><span class="p">),</span>
-            <span class="n">files</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"File"</span><span class="p">),</span>
+            <span class="n">charts</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;All charts&quot;</span><span class="p">,</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Chart&quot;</span><span class="p">)],</span>
+            <span class="n">dataframes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Dataframe&quot;</span><span class="p">),</span>
+            <span class="n">models</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">),</span>
+            <span class="n">files</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;File&quot;</span><span class="p">),</span>
             <span class="n">freshness</span><span class="o">=</span><span class="p">[</span><span class="n">fact</span> <span class="k">for</span> <span class="n">fact</span> <span class="ow">in</span> <span class="p">[</span><span class="n">_freshness_of</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)]</span> <span class="k">if</span> <span class="n">fact</span><span class="p">],</span>
             <span class="n">version</span><span class="o">=</span><span class="n">_laid_out_version</span><span class="p">(</span><span class="n">pipeline</span><span class="p">),</span>
             <span class="n">dependencies</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dependencies</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)),</span>
         <span class="p">)</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_site_pages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""A pipeline's own site pages as titles and links: in the order of its `index_toc.md`, else by path.</span>
+    <span class="k">def</span> <span class="nf">_site_pages</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A pipeline&#39;s own site pages as titles and links: in the order of its `index_toc.md`, else by path.</span>
 
 <span class="sd">        Sphinx reads `index_toc.md` as a toctree; here its entries, one page</span>
-<span class="sd">        per line, give the order and the set, and a page's title is its first</span>
+<span class="sd">        per line, give the order and the set, and a page&#39;s title is its first</span>
 <span class="sd">        heading, else its file name.</span>
-<span class="sd">        """</span>
-        <span class="n">pages</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"site_pages"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"index_toc.md"</span><span class="p">,</span> <span class="s2">"index.md"</span><span class="p">)]</span>
-        <span class="n">site_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"site_dir"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"resolved_path"</span><span class="p">)</span>
-        <span class="n">toc</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"index_toc.md"</span> <span class="k">if</span> <span class="n">site_dir</span> <span class="k">else</span> <span class="kc">None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;site_pages&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;index_toc.md&quot;</span><span class="p">,</span> <span class="s2">&quot;index.md&quot;</span><span class="p">)]</span>
+        <span class="n">site_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;site_dir&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;resolved_path&quot;</span><span class="p">)</span>
+        <span class="n">toc</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;index_toc.md&quot;</span> <span class="k">if</span> <span class="n">site_dir</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">toc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">toc</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="n">listed</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">toc</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">toc</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
                 <span class="n">entry</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">":"</span><span class="p">,</span> <span class="s2">"```"</span><span class="p">,</span> <span class="s2">"#"</span><span class="p">,</span> <span class="s2">"%"</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span> <span class="ow">or</span> <span class="n">entry</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;```&quot;</span><span class="p">,</span> <span class="s2">&quot;#&quot;</span><span class="p">,</span> <span class="s2">&quot;%&quot;</span><span class="p">)):</span>
                     <span class="k">continue</span>
-                <span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"&lt;"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"&gt;"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>  <span class="c1"># a toctree's "Title &lt;path&gt;" form</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;&lt;&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;&gt;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>  <span class="c1"># a toctree&#39;s &quot;Title &lt;path&gt;&quot; form</span>
                 <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">page</span> <span class="o">==</span> <span class="n">entry</span> <span class="ow">or</span> <span class="n">page</span> <span class="o">==</span> <span class="n">entry</span> <span class="o">+</span> <span class="s2">".md"</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span> <span class="o">==</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">page</span> <span class="o">==</span> <span class="n">entry</span> <span class="ow">or</span> <span class="n">page</span> <span class="o">==</span> <span class="n">entry</span> <span class="o">+</span> <span class="s2">&quot;.md&quot;</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span> <span class="o">==</span> <span class="n">entry</span><span class="p">:</span>
                         <span class="n">listed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
             <span class="n">pages</span> <span class="o">=</span> <span class="n">listed</span> <span class="o">+</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pages</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">]</span>
         <span class="n">entries</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">:</span>
-            <span class="n">title</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="s2">" "</span><span class="p">)</span><span class="o">.</span><span class="n">title</span><span class="p">()</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">title</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">site_dir</span> <span class="ow">and</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"# "</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">site_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">page</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# &quot;</span><span class="p">):</span>
                         <span class="n">title</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
                         <span class="k">break</span>
-            <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s2">"link"</span><span class="p">:</span> <span class="n">page</span><span class="p">})</span>
+            <span class="n">entries</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="n">page</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">entries</span>
 
     <span class="c1"># --- mkdocs.yml ------------------------------------------------------------</span>
 
 <div class="viewcode-block" id="MkDocsWriter.config">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.MkDocsWriter.config">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">site_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="n">copyright</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="n">site_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"_build/html"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The MkDocs configuration for this site, with the navigation written from the records.</span>
+    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">site_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">site_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">copyright</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">site_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;_build/html&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The MkDocs configuration for this site, with the navigation written from the records.</span>
 
 <span class="sd">        Written beside the pages folder as ``mkdocs.yml``. Pages keep their</span>
 <span class="sd">        ``.md`` names and the site its ``.html`` files, so the relative links</span>
 <span class="sd">        the pages carry hold; the Material theme, search and the notebook</span>
 <span class="sd">        plugin are what the extra installs.</span>
-<span class="sd">        """</span>
-        <span class="n">nav</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"Home"</span><span class="p">:</span> <span class="s2">"index.md"</span><span class="p">}]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">"pipeline"</span><span class="p">:</span>
-            <span class="n">pipeline</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Pipeline"</span><span class="p">)</span>
-            <span class="n">own</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"assets"</span><span class="p">,</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
-            <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
-            <span class="n">charts</span> <span class="o">=</span> <span class="p">[{</span><span class="n">p</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]:</span> <span class="n">p</span><span class="p">[</span><span class="s2">"link"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Chart"</span><span class="p">)]</span>
-            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Charts"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All charts"</span><span class="p">:</span> <span class="s2">"cb/charts.md"</span><span class="p">},</span> <span class="o">*</span><span class="n">charts</span><span class="p">]})</span>
-            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">"Dataframes"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">))</span>
-            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">"Models"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Model"</span><span class="p">))</span>
-            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">"Files"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"File"</span><span class="p">))</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nav</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;Home&quot;</span><span class="p">:</span> <span class="s2">&quot;index.md&quot;</span><span class="p">}]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+            <span class="n">pipeline</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Pipeline&quot;</span><span class="p">)</span>
+            <span class="n">own</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;assets&quot;</span><span class="p">,</span> <span class="p">[])</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">]</span>
+            <span class="n">slug</span> <span class="o">=</span> <span class="n">_slug</span><span class="p">(</span><span class="n">pipeline</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+            <span class="n">charts</span> <span class="o">=</span> <span class="p">[{</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]:</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;link&quot;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Chart&quot;</span><span class="p">)]</span>
+            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Charts&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All charts&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="n">charts</span><span class="p">]})</span>
+            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">&quot;Dataframes&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Dataframe&quot;</span><span class="p">))</span>
+            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">&quot;Models&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">))</span>
+            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">&quot;Files&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;File&quot;</span><span class="p">))</span>
             <span class="n">_append</span><span class="p">(</span>
                 <span class="n">nav</span><span class="p">,</span>
-                <span class="s2">"Notebooks"</span><span class="p">,</span>
+                <span class="s2">&quot;Notebooks&quot;</span><span class="p">,</span>
                 <span class="p">[</span>
                     <span class="p">{</span>
-                        <span class="s2">"title"</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span>
-                        <span class="s2">"link"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/notebooks/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">Path</span><span class="p">((</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'location'</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'path'</span><span class="p">,</span><span class="w"> </span><span class="s1">''</span><span class="p">))</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.ipynb"</span><span class="p">,</span>
+                        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span>
+                        <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;cb/notebooks/</span><span class="si">{</span><span class="n">slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">Path</span><span class="p">((</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;location&#39;</span><span class="p">)</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;path&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">stem</span><span class="si">}</span><span class="s2">.ipynb&quot;</span><span class="p">,</span>
                     <span class="p">}</span>
-                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Notebook"</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Notebook&quot;</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
                 <span class="p">],</span>
             <span class="p">)</span>
             <span class="n">_append</span><span class="p">(</span>
                 <span class="n">nav</span><span class="p">,</span>
-                <span class="s2">"Notes"</span><span class="p">,</span>
+                <span class="s2">&quot;Notes&quot;</span><span class="p">,</span>
                 <span class="p">[</span>
-                    <span class="p">{</span><span class="s2">"title"</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="s2">"link"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"cb/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2">.md"</span><span class="p">}</span>
-                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Note"</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
+                    <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="s2">&quot;link&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;cb/</span><span class="si">{</span><span class="n">_local_name</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">}</span>
+                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">own</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Note&quot;</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">_local_name</span><span class="p">)</span>
                 <span class="p">],</span>
             <span class="p">)</span>
-            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">"Site Pages"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_site_pages</span><span class="p">(</span><span class="n">pipeline</span><span class="p">))</span>
+            <span class="n">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">,</span> <span class="s2">&quot;Site Pages&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_site_pages</span><span class="p">(</span><span class="n">pipeline</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Two pipelines may each have a chart of one name: the entry says whose</span>
-            <span class="k">def</span><span class="w"> </span><span class="nf">titled</span><span class="p">(</span><span class="n">pages</span><span class="p">):</span>
-                <span class="k">return</span> <span class="p">[{</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">p</span><span class="p">[</span><span class="s1">'title'</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">p</span><span class="p">[</span><span class="s1">'pipeline'</span><span class="p">]</span><span class="si">}</span><span class="s2">)"</span><span class="p">:</span> <span class="n">p</span><span class="p">[</span><span class="s2">"link"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">]</span>
+            <span class="k">def</span> <span class="nf">titled</span><span class="p">(</span><span class="n">pages</span><span class="p">):</span>
+                <span class="k">return</span> <span class="p">[{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;pipeline&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">:</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;link&quot;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">]</span>
 
-            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Charts"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All charts"</span><span class="p">:</span> <span class="s2">"cb/charts.md"</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Chart"</span><span class="p">))]})</span>
-            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Dataframes"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All dataframes"</span><span class="p">:</span> <span class="s2">"cb/dataframes.md"</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Dataframe"</span><span class="p">))]})</span>
-            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Model"</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
-                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Models"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All models"</span><span class="p">:</span> <span class="s2">"cb/models.md"</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"Model"</span><span class="p">))]})</span>
-            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"File"</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
-                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Files"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All files"</span><span class="p">:</span> <span class="s2">"cb/files.md"</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">"File"</span><span class="p">))]})</span>
-            <span class="n">pipelines</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Pipeline"</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">"id"</span><span class="p">])</span>
+            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Charts&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All charts&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/charts.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Chart&quot;</span><span class="p">))]})</span>
+            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Dataframes&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All dataframes&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/dataframes.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Dataframe&quot;</span><span class="p">))]})</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Model&quot;</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Models&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All models&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/models.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">))]})</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;File&quot;</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Files&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All files&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/files.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="n">titled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pages</span><span class="p">(</span><span class="s2">&quot;File&quot;</span><span class="p">))]})</span>
+            <span class="n">pipelines</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Pipeline&quot;</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">r</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
             <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="p">{</span><span class="s2">"Pipelines"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"All pipelines"</span><span class="p">:</span> <span class="s2">"cb/pipelines.md"</span><span class="p">},</span> <span class="o">*</span><span class="p">[{</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">r</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)}</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">pipelines</span><span class="p">]]}</span>
+                <span class="p">{</span><span class="s2">&quot;Pipelines&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;All pipelines&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/pipelines.md&quot;</span><span class="p">},</span> <span class="o">*</span><span class="p">[{</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_page_path</span><span class="p">(</span><span class="n">r</span><span class="p">)}</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">pipelines</span><span class="p">]]}</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_versions</span><span class="p">():</span>
-                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Versions"</span><span class="p">:</span> <span class="s2">"cb/versions.md"</span><span class="p">})</span>
-            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Diagnostics"</span><span class="p">:</span> <span class="s2">"cb/diagnostics.md"</span><span class="p">})</span>
-            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"Contributing"</span><span class="p">:</span> <span class="s2">"contributing.md"</span><span class="p">})</span>
+                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Versions&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/versions.md&quot;</span><span class="p">})</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stores&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Stores&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/stores.md&quot;</span><span class="p">})</span>
+            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Diagnostics&quot;</span><span class="p">:</span> <span class="s2">&quot;cb/diagnostics.md&quot;</span><span class="p">})</span>
+            <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;Contributing&quot;</span><span class="p">:</span> <span class="s2">&quot;contributing.md&quot;</span><span class="p">})</span>
         <span class="n">configuration</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">"site_name"</span><span class="p">:</span> <span class="n">site_name</span> <span class="ow">or</span> <span class="s2">"ChartBook"</span><span class="p">,</span>
-            <span class="s2">"docs_dir"</span><span class="p">:</span> <span class="n">PAGES_DIR</span><span class="p">,</span>
-            <span class="s2">"site_dir"</span><span class="p">:</span> <span class="n">site_dir</span><span class="p">,</span>
-            <span class="s2">"use_directory_urls"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="s2">"theme"</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"material"</span><span class="p">,</span>
-                <span class="s2">"logo"</span><span class="p">:</span> <span class="s2">"_static/logo.png"</span><span class="p">,</span>
-                <span class="s2">"favicon"</span><span class="p">:</span> <span class="s2">"_static/favicon.ico"</span><span class="p">,</span>
-                <span class="s2">"features"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"navigation.sections"</span><span class="p">,</span> <span class="s2">"navigation.top"</span><span class="p">,</span> <span class="s2">"search.suggest"</span><span class="p">,</span> <span class="s2">"content.code.copy"</span><span class="p">],</span>
+            <span class="s2">&quot;site_name&quot;</span><span class="p">:</span> <span class="n">site_name</span> <span class="ow">or</span> <span class="s2">&quot;ChartBook&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;docs_dir&quot;</span><span class="p">:</span> <span class="n">PAGES_DIR</span><span class="p">,</span>
+            <span class="s2">&quot;site_dir&quot;</span><span class="p">:</span> <span class="n">site_dir</span><span class="p">,</span>
+            <span class="s2">&quot;use_directory_urls&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">&quot;theme&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;material&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;logo&quot;</span><span class="p">:</span> <span class="s2">&quot;_static/logo.png&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;favicon&quot;</span><span class="p">:</span> <span class="s2">&quot;_static/favicon.ico&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;navigation.sections&quot;</span><span class="p">,</span> <span class="s2">&quot;navigation.top&quot;</span><span class="p">,</span> <span class="s2">&quot;search.suggest&quot;</span><span class="p">,</span> <span class="s2">&quot;content.code.copy&quot;</span><span class="p">],</span>
             <span class="p">},</span>
-            <span class="s2">"markdown_extensions"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"admonition"</span><span class="p">,</span> <span class="s2">"attr_list"</span><span class="p">,</span> <span class="s2">"md_in_html"</span><span class="p">,</span> <span class="s2">"tables"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"toc"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"permalink"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}],</span>
-            <span class="s2">"plugins"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"search"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"mkdocs-jupyter"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"include"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"*.ipynb"</span><span class="p">],</span> <span class="s2">"execute"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"include_source"</span><span class="p">:</span> <span class="kc">False</span><span class="p">}}],</span>
-            <span class="s2">"extra_css"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"_static/custom.css"</span><span class="p">],</span>
-            <span class="s2">"extra_javascript"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"_static/chartbook-freshness.js"</span><span class="p">],</span>
-            <span class="s2">"nav"</span><span class="p">:</span> <span class="n">nav</span><span class="p">,</span>
+            <span class="s2">&quot;markdown_extensions&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;admonition&quot;</span><span class="p">,</span> <span class="s2">&quot;attr_list&quot;</span><span class="p">,</span> <span class="s2">&quot;md_in_html&quot;</span><span class="p">,</span> <span class="s2">&quot;tables&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;toc&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;permalink&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}}],</span>
+            <span class="s2">&quot;plugins&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;search&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;mkdocs-jupyter&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;*.ipynb&quot;</span><span class="p">],</span> <span class="s2">&quot;execute&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;include_source&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}}],</span>
+            <span class="s2">&quot;extra_css&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;_static/custom.css&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;extra_javascript&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;_static/chartbook-freshness.js&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;nav&quot;</span><span class="p">:</span> <span class="n">nav</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="k">if</span> <span class="n">site_url</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"http://"</span><span class="p">,</span> <span class="s2">"https://"</span><span class="p">)):</span>
-            <span class="n">configuration</span><span class="p">[</span><span class="s2">"site_url"</span><span class="p">]</span> <span class="o">=</span> <span class="n">site_url</span>  <span class="c1"># MkDocs refuses one without a scheme; a manifest's may be a bare host</span>
+        <span class="k">if</span> <span class="n">site_url</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="s2">&quot;https://&quot;</span><span class="p">)):</span>
+            <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;site_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">site_url</span>  <span class="c1"># MkDocs refuses one without a scheme; a manifest&#39;s may be a bare host</span>
         <span class="k">if</span> <span class="n">copyright</span><span class="p">:</span>
-            <span class="n">configuration</span><span class="p">[</span><span class="s2">"copyright"</span><span class="p">]</span> <span class="o">=</span> <span class="n">copyright</span>
+            <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;copyright&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">copyright</span>
         <span class="k">return</span> <span class="n">configuration</span></div>
 </div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pages</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span> <span class="nf">_append</span><span class="p">(</span><span class="n">nav</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pages</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">pages</span><span class="p">:</span>
-        <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">title</span><span class="p">:</span> <span class="p">[{</span><span class="n">p</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]:</span> <span class="n">p</span><span class="p">[</span><span class="s2">"link"</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">]})</span>
+        <span class="n">nav</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">title</span><span class="p">:</span> <span class="p">[{</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]:</span> <span class="n">p</span><span class="p">[</span><span class="s2">&quot;link&quot;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pages</span><span class="p">]})</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_freshness_of</span><span class="p">(</span><span class="n">pipeline</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.writers.sphinx</span><span class="w"> </span><span class="kn">import</span> <span class="n">_freshness</span>
+<span class="k">def</span> <span class="nf">_freshness_of</span><span class="p">(</span><span class="n">pipeline</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+    <span class="kn">from</span> <span class="nn">chartbook.writers.sphinx</span> <span class="kn">import</span> <span class="n">_freshness</span>
 
-    <span class="k">return</span> <span class="n">_freshness</span><span class="p">(</span><span class="s2">"Code updated"</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"code_changed_at"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_freshness</span><span class="p">(</span><span class="s2">&quot;Code updated&quot;</span><span class="p">,</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;code_changed_at&quot;</span><span class="p">))</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_built_at</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The front page's "Last updated": now, in UTC and said so, as every time on the site is."""</span>
-    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S UTC"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_built_at</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The front page&#39;s &quot;Last updated&quot;: now, in UTC and said so, as every time on the site is.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S UTC&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="is_installed">
 <a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.writers.mkdocs.html#chartbook.writers.mkdocs.is_installed">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">is_installed</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether MkDocs and what the writer's configuration names are installed."""</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+<span class="k">def</span> <span class="nf">is_installed</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether MkDocs and what the writer&#39;s configuration names are installed.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">importlib.util</span>
 
-    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mkdocs"</span><span class="p">,</span> <span class="s2">"material"</span><span class="p">,</span> <span class="s2">"mkdocs_jupyter"</span><span class="p">))</span></div>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;mkdocs&quot;</span><span class="p">,</span> <span class="s2">&quot;material&quot;</span><span class="p">,</span> <span class="s2">&quot;mkdocs_jupyter&quot;</span><span class="p">))</span></div>
 
 </pre></div>
 
@@ -857,8 +865,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

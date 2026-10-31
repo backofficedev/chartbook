@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/scaffold';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,10 +458,10 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.scaffold</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""What ``chartbook init`` renders, and what it does after.</span>
+<span></span><span class="sd">&quot;&quot;&quot;What ``chartbook init`` renders, and what it does after.</span>
 
 <span class="sd">``chartbook init`` renders a project from the cookiecutter template, which</span>
-<span class="sd">is the ``template/`` folder of ChartBook's own repository</span>
+<span class="sd">is the ``template/`` folder of ChartBook&#39;s own repository</span>
 <span class="sd">(:data:`TEMPLATE_REPOSITORY`, :data:`TEMPLATE_DIRECTORY`). It lives beside</span>
 <span class="sd">the code so that a command the template uses and the command itself change</span>
 <span class="sd">in one pull request, and so that the tests here build a freshly rendered</span>
@@ -473,179 +475,179 @@
 <span class="sd">commit the template is at (:func:`template_commit`), so ``cruft update`` and</span>
 <span class="sd">``cruft check`` follow the template from there; with no commit known there</span>
 <span class="sd">is no ``.cruft.json``, and ``chartbook init`` says how to make one. cruft</span>
-<span class="sd">itself would clone the template, which a wheel's folder is not. A source</span>
+<span class="sd">itself would clone the template, which a wheel&#39;s folder is not. A source</span>
 <span class="sd">checkout renders only the files git tracks in ``template/``, as a wheel</span>
 <span class="sd">built from it ships.</span>
 
 <span class="sd">With ``--git`` it also runs ``git init`` and makes the first commit; with</span>
 <span class="sd">``--github`` it then creates a GitHub repository and pushes that commit.</span>
 <span class="sd">These are the same three commands every time, run here through ``git`` and</span>
-<span class="sd">``gh`` as subprocesses, with the user's existing configuration and login.</span>
+<span class="sd">``gh`` as subprocesses, with the user&#39;s existing configuration and login.</span>
 
 <span class="sd">Everything that can be checked is checked *before* the template is rendered</span>
 <span class="sd">(:func:`preflight`), so a missing tool or login fails with nothing created.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.resources</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">stat</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">importlib.resources</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">stat</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="n">INITIAL_COMMIT_MESSAGE</span> <span class="o">=</span> <span class="s2">"Initial commit from chartbook init"</span>
+<span class="n">INITIAL_COMMIT_MESSAGE</span> <span class="o">=</span> <span class="s2">&quot;Initial commit from chartbook init&quot;</span>
 
-<span class="c1">#: The first branch's name when the user's git configuration does not set one.</span>
-<span class="n">DEFAULT_BRANCH</span> <span class="o">=</span> <span class="s2">"main"</span>
+<span class="c1">#: The first branch&#39;s name when the user&#39;s git configuration does not set one.</span>
+<span class="n">DEFAULT_BRANCH</span> <span class="o">=</span> <span class="s2">&quot;main&quot;</span>
 
 <span class="c1">#: A project rendered by cruft carries this file at its root.</span>
-<span class="n">CRUFT_MARKER</span> <span class="o">=</span> <span class="s2">".cruft.json"</span>
+<span class="n">CRUFT_MARKER</span> <span class="o">=</span> <span class="s2">&quot;.cruft.json&quot;</span>
 
-<span class="c1">#: The repository the project template is in: ChartBook's own.</span>
-<span class="n">TEMPLATE_REPOSITORY</span> <span class="o">=</span> <span class="s2">"https://github.com/backofficedev/chartbook"</span>
+<span class="c1">#: The repository the project template is in: ChartBook&#39;s own.</span>
+<span class="n">TEMPLATE_REPOSITORY</span> <span class="o">=</span> <span class="s2">&quot;https://github.com/backofficedev/chartbook&quot;</span>
 
 <span class="c1">#: The folder of that repository that is the template.</span>
-<span class="n">TEMPLATE_DIRECTORY</span> <span class="o">=</span> <span class="s2">"template"</span>
+<span class="n">TEMPLATE_DIRECTORY</span> <span class="o">=</span> <span class="s2">&quot;template&quot;</span>
 
 <span class="c1">#: The file a built package carries the commit it was built from in, beside</span>
-<span class="c1">#: its modules (written by ``hatch_build.py`` at the repository's root).</span>
-<span class="n">BUILT_FROM</span> <span class="o">=</span> <span class="s2">"built_from.txt"</span>
+<span class="c1">#: its modules (written by ``hatch_build.py`` at the repository&#39;s root).</span>
+<span class="n">BUILT_FROM</span> <span class="o">=</span> <span class="s2">&quot;built_from.txt&quot;</span>
 
 
 <div class="viewcode-block" id="ScaffoldError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.ScaffoldError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ScaffoldError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""A step of ``chartbook init --git/--github`` could not be done.</span>
+<span class="k">class</span> <span class="nc">ScaffoldError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A step of ``chartbook init --git/--github`` could not be done.</span>
 
 <span class="sd">    The message says what to do about it. Nothing here is a bug to report</span>
 <span class="sd">    with a traceback: it is a missing tool, a missing login, or a command</span>
 <span class="sd">    that git or gh refused.</span>
-<span class="sd">    """</span></div>
+<span class="sd">    &quot;&quot;&quot;</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_run</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Run a git or gh command, capturing its output."""</span>
-    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_run</span><span class="p">(</span><span class="n">command</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">cwd</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a git or gh command, capturing its output.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The part of a failed command's output worth showing."""</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The part of a failed command&#39;s output worth showing.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="github_host">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.github_host">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">github_host</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The host ``gh`` will create the repository on."""</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"GH_HOST"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"github.com"</span></div>
+<span class="k">def</span> <span class="nf">github_host</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The host ``gh`` will create the repository on.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GH_HOST&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;github.com&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="enclosing_repository">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.enclosing_repository">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">enclosing_repository</span><span class="p">(</span><span class="n">cwd</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Return the root of the git repository *cwd* is inside, if any.</span>
+<span class="k">def</span> <span class="nf">enclosing_repository</span><span class="p">(</span><span class="n">cwd</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the root of the git repository *cwd* is inside, if any.</span>
 
 <span class="sd">    A project created there with ``--git`` becomes a repository nested in</span>
 <span class="sd">    that one, which is legitimate but worth saying out loud.</span>
-<span class="sd">    """</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">_run</span><span class="p">([</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--show-toplevel"</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">_run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;--show-toplevel&quot;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
 
 <div class="viewcode-block" id="preflight">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.preflight">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">preflight</span><span class="p">(</span><span class="n">cwd</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">use_github</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Check everything ``--git`` (and ``--github``) needs, before anything exists.</span>
+<span class="k">def</span> <span class="nf">preflight</span><span class="p">(</span><span class="n">cwd</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">use_github</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check everything ``--git`` (and ``--github``) needs, before anything exists.</span>
 
 <span class="sd">    :param cwd: The directory the project will be created in.</span>
 <span class="sd">    :param use_github: Whether a GitHub repository will be created too.</span>
 <span class="sd">    :raises ScaffoldError: Naming the fix, if a tool, an identity or a login</span>
 <span class="sd">        is missing.</span>
-<span class="sd">    """</span>
-    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"git"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;git&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="s2">"git is not installed, or not on PATH. Install it from "</span>
-            <span class="s2">"https://git-scm.com/downloads and try again."</span>
+            <span class="s2">&quot;git is not installed, or not on PATH. Install it from &quot;</span>
+            <span class="s2">&quot;https://git-scm.com/downloads and try again.&quot;</span>
         <span class="p">)</span>
 
     <span class="c1"># The first commit needs an author; git says so only at commit time</span>
-    <span class="k">if</span> <span class="n">_run</span><span class="p">([</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"var"</span><span class="p">,</span> <span class="s2">"GIT_AUTHOR_IDENT"</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;var&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_AUTHOR_IDENT&quot;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="s2">"git does not know who you are, so it cannot make the first commit. "</span>
-            <span class="s2">"Set your identity and try again:</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="s1">'    git config --global user.name "Your Name"</span><span class="se">\n</span><span class="s1">'</span>
-            <span class="s1">'    git config --global user.email "you@example.com"'</span>
+            <span class="s2">&quot;git does not know who you are, so it cannot make the first commit. &quot;</span>
+            <span class="s2">&quot;Set your identity and try again:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s1">&#39;    git config --global user.name &quot;Your Name&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    git config --global user.email &quot;you@example.com&quot;&#39;</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">use_github</span><span class="p">:</span>
         <span class="k">return</span>
 
-    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">"gh"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;gh&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="s2">"--github needs the GitHub CLI (gh), which is not installed or not "</span>
-            <span class="s2">"on PATH. Install it from https://cli.github.com, run 'gh auth "</span>
-            <span class="s2">"login', and try again."</span>
+            <span class="s2">&quot;--github needs the GitHub CLI (gh), which is not installed or not &quot;</span>
+            <span class="s2">&quot;on PATH. Install it from https://cli.github.com, run &#39;gh auth &quot;</span>
+            <span class="s2">&quot;login&#39;, and try again.&quot;</span>
         <span class="p">)</span>
 
     <span class="n">host</span> <span class="o">=</span> <span class="n">github_host</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">_run</span><span class="p">([</span><span class="s2">"gh"</span><span class="p">,</span> <span class="s2">"auth"</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"--hostname"</span><span class="p">,</span> <span class="n">host</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">_run</span><span class="p">([</span><span class="s2">&quot;gh&quot;</span><span class="p">,</span> <span class="s2">&quot;auth&quot;</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">,</span> <span class="s2">&quot;--hostname&quot;</span><span class="p">,</span> <span class="n">host</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">cwd</span><span class="p">)</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"--github needs gh to be logged in to </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">, and it is not. "</span>
-            <span class="sa">f</span><span class="s2">"Run 'gh auth login' and try again."</span>
+            <span class="sa">f</span><span class="s2">&quot;--github needs gh to be logged in to </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">, and it is not. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Run &#39;gh auth login&#39; and try again.&quot;</span>
         <span class="p">)</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_package_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""This package's folder, as installed."""</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">"chartbook"</span><span class="p">)))</span>
+<span class="k">def</span> <span class="nf">_package_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This package&#39;s folder, as installed.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)))</span>
 
 
 <div class="viewcode-block" id="find_template">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.find_template">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">find_template</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The project template that came with this ChartBook: the folder holding ``cookiecutter.json``.</span>
+<span class="k">def</span> <span class="nf">find_template</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The project template that came with this ChartBook: the folder holding ``cookiecutter.json``.</span>
 
 <span class="sd">    A wheel carries it in the package as ``chartbook/template``. A source</span>
 <span class="sd">    checkout, which an editable install runs from, has it as ``template/``</span>
 <span class="sd">    beside ``src/``.</span>
 
-<span class="sd">    :param package_dir: The package's folder; this ChartBook's by default.</span>
+<span class="sd">    :param package_dir: The package&#39;s folder; this ChartBook&#39;s by default.</span>
 <span class="sd">    :raises ScaffoldError: If neither is there, as in a broken install.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">package_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">package_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_package_dir</span><span class="p">()</span>
     <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">package_dir</span> <span class="o">/</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">package_dir</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"src"</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">package_dir</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;src&quot;</span><span class="p">:</span>
         <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">package_dir</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">candidate</span> <span class="o">/</span> <span class="s2">"cookiecutter.json"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">candidate</span> <span class="o">/</span> <span class="s2">&quot;cookiecutter.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">candidate</span>
     <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">"This ChartBook has no project template (looked in </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span><span class="w"> </span><span class="n">candidates</span><span class="p">))</span><span class="si">}</span><span class="s2">). "</span>
-        <span class="sa">f</span><span class="s2">"Reinstall it: pip install --force-reinstall chartbook"</span>
+        <span class="sa">f</span><span class="s2">&quot;This ChartBook has no project template (looked in </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span><span class="w"> </span><span class="n">candidates</span><span class="p">))</span><span class="si">}</span><span class="s2">). &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Reinstall it: pip install --force-reinstall chartbook&quot;</span>
     <span class="p">)</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""What git says in *checkout*, or None if it fails; without the environment's git location variables."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.gitcache</span><span class="w"> </span><span class="kn">import</span> <span class="n">GIT_LOCATION_VARIABLES</span>
+<span class="k">def</span> <span class="nf">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What git says in *checkout*, or None if it fails; without the environment&#39;s git location variables.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.gitcache</span> <span class="kn">import</span> <span class="n">GIT_LOCATION_VARIABLES</span>
 
     <span class="n">environment</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">GIT_LOCATION_VARIABLES</span><span class="p">}</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-C"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkout</span><span class="p">),</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
+            <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;-C&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">checkout</span><span class="p">),</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">SubprocessError</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
@@ -655,39 +657,39 @@
 <div class="viewcode-block" id="TemplateSource">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.TemplateSource">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">TemplateSource</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Where this ChartBook's template is, and what is known of the commit it is at.</span>
+<span class="k">class</span> <span class="nc">TemplateSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Where this ChartBook&#39;s template is, and what is known of the commit it is at.</span>
 
 <span class="sd">    ``checkout`` is the git checkout of ChartBook a source install runs</span>
 <span class="sd">    from, whose tracked files of ``template/`` are what is rendered; None</span>
 <span class="sd">    for a template that came in a package, or in an unpacked sdist, which</span>
 <span class="sd">    holds those files and no others. ``why`` says why no commit is known,</span>
 <span class="sd">    when none is.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">template</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">checkout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span>
     <span class="n">commit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-    <span class="n">why</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span></div>
+    <span class="n">why</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_recorded</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The commit a build recorded beside the package's modules; None if none was, or it was empty."""</span>
+<span class="k">def</span> <span class="nf">_recorded</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The commit a build recorded beside the package&#39;s modules; None if none was, or it was empty.&quot;&quot;&quot;</span>
     <span class="n">recorded</span> <span class="o">=</span> <span class="n">package_dir</span> <span class="o">/</span> <span class="n">BUILT_FROM</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">recorded</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">recorded</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">recorded</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="kc">None</span>
 
 
 <div class="viewcode-block" id="template_source">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.template_source">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">template_source</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TemplateSource</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Where the template is (:func:`find_template`), and the commit of ChartBook's repository it is at.</span>
+<span class="k">def</span> <span class="nf">template_source</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TemplateSource</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Where the template is (:func:`find_template`), and the commit of ChartBook&#39;s repository it is at.</span>
 
 <span class="sd">    A built package records the commit (``built_from.txt``, written at build</span>
 <span class="sd">    time), as does an unpacked sdist, beside its modules. A source checkout</span>
-<span class="sd">    is asked with git for its ``HEAD``, without the environment's git</span>
+<span class="sd">    is asked with git for its ``HEAD``, without the environment&#39;s git</span>
 <span class="sd">    location variables, as other reads of a repository here are; a</span>
 <span class="sd">    ``template/`` with changes git has not committed to tracked files is at</span>
 <span class="sd">    no commit (a file git does not track is never rendered, and does not</span>
@@ -698,80 +700,80 @@
 <span class="sd">        folder git does not trust), or one with neither a ``.git`` of its</span>
 <span class="sd">        own nor the ``PKG-INFO`` of an sdist (a copy of a checkout, which may</span>
 <span class="sd">        hold an ``.env`` that was never meant to be rendered).</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">package_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">package_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_package_dir</span><span class="p">()</span>
     <span class="n">template</span> <span class="o">=</span> <span class="n">find_template</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">parent</span> <span class="o">==</span> <span class="n">package_dir</span><span class="p">:</span>
         <span class="n">commit</span> <span class="o">=</span> <span class="n">_recorded</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">commit</span> <span class="k">else</span> <span class="s2">"this ChartBook was built without recording it"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">commit</span> <span class="k">else</span> <span class="s2">&quot;this ChartBook was built without recording it&quot;</span><span class="p">)</span>
     <span class="n">root</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">parent</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="s2">".git"</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="s2">"PKG-INFO"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="s2">&quot;.git&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">root</span> <span class="o">/</span> <span class="s2">&quot;PKG-INFO&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="n">commit</span> <span class="o">=</span> <span class="n">_recorded</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span>
-                <span class="n">template</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">commit</span> <span class="k">else</span> <span class="s2">"the sdist this ChartBook was installed from did not record it"</span>
+                <span class="n">template</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">commit</span> <span class="k">else</span> <span class="s2">&quot;the sdist this ChartBook was installed from did not record it&quot;</span>
             <span class="p">)</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> has neither a .git nor the PKG-INFO of an sdist, so ChartBook cannot tell which files of "</span>
-            <span class="sa">f</span><span class="s2">"its template/ git tracks, and it renders only those. Render from a git checkout of ChartBook, "</span>
-            <span class="sa">f</span><span class="s2">"or install ChartBook from PyPI or from a wheel."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2"> has neither a .git nor the PKG-INFO of an sdist, so ChartBook cannot tell which files of &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;its template/ git tracks, and it renders only those. Render from a git checkout of ChartBook, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;or install ChartBook from PyPI or from a wheel.&quot;</span>
         <span class="p">)</span>
-    <span class="n">top</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--show-toplevel"</span><span class="p">)</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;--show-toplevel&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">top</span> <span class="ow">or</span> <span class="n">Path</span><span class="p">(</span><span class="n">top</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="o">!=</span> <span class="n">root</span><span class="o">.</span><span class="n">resolve</span><span class="p">():</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"To render the template from the source checkout </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">, ChartBook asks git which of its files "</span>
-            <span class="sa">f</span><span class="s2">"git tracks, which are all it renders, and git cannot read the checkout. Install git; or, if git "</span>
-            <span class="sa">f</span><span class="s2">"does not trust the folder, run `git config --global --add safe.directory </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">`."</span>
+            <span class="sa">f</span><span class="s2">&quot;To render the template from the source checkout </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">, ChartBook asks git which of its files &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;git tracks, which are all it renders, and git cannot read the checkout. Install git; or, if git &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;does not trust the folder, run `git config --global --add safe.directory </span><span class="si">{</span><span class="n">root</span><span class="si">}</span><span class="s2">`.&quot;</span>
         <span class="p">)</span>
-    <span class="n">changed</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"status"</span><span class="p">,</span> <span class="s2">"--porcelain"</span><span class="p">,</span> <span class="s2">"--untracked-files=no"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">)</span>
+    <span class="n">changed</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">,</span> <span class="s2">&quot;--porcelain&quot;</span><span class="p">,</span> <span class="s2">&quot;--untracked-files=no&quot;</span><span class="p">,</span> <span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">changed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"git could not say whether its template/ has changes"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;git could not say whether its template/ has changes&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">changed</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"its template/ has changes git has not committed"</span><span class="p">)</span>
-    <span class="n">head</span> <span class="o">=</span> <span class="p">(</span><span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"HEAD"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">head</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">""</span> <span class="k">if</span> <span class="n">head</span> <span class="k">else</span> <span class="s2">"the checkout it runs from has no commit"</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;its template/ has changes git has not committed&quot;</span><span class="p">)</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="p">(</span><span class="n">_git</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">TemplateSource</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">root</span><span class="p">,</span> <span class="n">head</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">head</span> <span class="k">else</span> <span class="s2">&quot;the checkout it runs from has no commit&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="template_commit">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.template_commit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">template_commit</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The commit of ChartBook's repository that the template is at, or None if it is not known (:func:`template_source`)."""</span>
+<span class="k">def</span> <span class="nf">template_commit</span><span class="p">(</span><span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The commit of ChartBook&#39;s repository that the template is at, or None if it is not known (:func:`template_source`).&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">template_source</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span><span class="o">.</span><span class="n">commit</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_is_template_repository</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether a remote's URL is :data:`TEMPLATE_REPOSITORY`, in whichever form git was given it."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_to_web_url</span>
+<span class="k">def</span> <span class="nf">_is_template_repository</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a remote&#39;s URL is :data:`TEMPLATE_REPOSITORY`, in whichever form git was given it.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">remote_to_web_url</span>
 
     <span class="k">return</span> <span class="n">remote_to_web_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">TEMPLATE_REPOSITORY</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
 
 <div class="viewcode-block" id="commit_is_pushed">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.commit_is_pushed">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">commit_is_pushed</span><span class="p">(</span><span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Whether *commit* is on GitHub, as far as the source checkout knows: True, False, or None if it cannot tell.</span>
+<span class="k">def</span> <span class="nf">commit_is_pushed</span><span class="p">(</span><span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether *commit* is on GitHub, as far as the source checkout knows: True, False, or None if it cannot tell.</span>
 
 <span class="sd">    ``cruft update`` clones the template from GitHub, so the commit that</span>
 <span class="sd">    ``.cruft.json`` names must be there. It counts as there when a branch of</span>
-<span class="sd">    a remote that is :data:`TEMPLATE_REPOSITORY` (a fork's is not), or a</span>
+<span class="sd">    a remote that is :data:`TEMPLATE_REPOSITORY` (a fork&#39;s is not), or a</span>
 <span class="sd">    tag (a clone of one release has only that), holds it. A built package</span>
 <span class="sd">    cannot tell.</span>
-<span class="sd">    """</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">re</span>
 
     <span class="n">checkout</span> <span class="o">=</span> <span class="n">template_source</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span><span class="o">.</span><span class="n">checkout</span>
     <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">configured</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">"config"</span><span class="p">,</span> <span class="s2">"--get-regexp"</span><span class="p">,</span> <span class="sa">r</span><span class="s2">"^remote\..*\.url$"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span>
+    <span class="n">configured</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="s2">&quot;--get-regexp&quot;</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;^remote\..*\.url$&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
     <span class="n">remotes</span> <span class="o">=</span> <span class="p">[</span>
         <span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">configured</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">found</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"remote\.(.+)\.url\s+(\S+)$"</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span> <span class="ow">and</span> <span class="n">_is_template_repository</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">found</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;remote\.(.+)\.url\s+(\S+)$&quot;</span><span class="p">,</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span> <span class="ow">and</span> <span class="n">_is_template_repository</span><span class="p">(</span><span class="n">found</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
     <span class="p">]</span>
-    <span class="n">places</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"refs/remotes/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">/"</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">remotes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"refs/tags/"</span><span class="p">]</span>
-    <span class="n">holding</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">"for-each-ref"</span><span class="p">,</span> <span class="s2">"--contains"</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">"--format=%(refname)"</span><span class="p">,</span> <span class="o">*</span><span class="n">places</span><span class="p">)</span>
+    <span class="n">places</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;refs/remotes/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">/&quot;</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">remotes</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;refs/tags/&quot;</span><span class="p">]</span>
+    <span class="n">holding</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">&quot;for-each-ref&quot;</span><span class="p">,</span> <span class="s2">&quot;--contains&quot;</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">&quot;--format=%(refname)&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">places</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">holding</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">holding</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
@@ -779,8 +781,8 @@
 
 
 <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">_template_to_render</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">TemplateSource</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The template as a package ships it: in a source checkout, only the files git tracks.</span>
+<span class="k">def</span> <span class="nf">_template_to_render</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">TemplateSource</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The template as a package ships it: in a source checkout, only the files git tracks.</span>
 
 <span class="sd">    A wheel built from the checkout carries those files and no others</span>
 <span class="sd">    (``hatch_build.py``), so a source install renders the same set: a</span>
@@ -789,22 +791,22 @@
 
 <span class="sd">    :raises ScaffoldError: If git cannot list them, or lists one that is not</span>
 <span class="sd">        on disk (a sparse checkout, a file deleted and not committed).</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">checkout</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">checkout</span>
     <span class="k">if</span> <span class="n">checkout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">yield</span> <span class="n">source</span><span class="o">.</span><span class="n">template</span>
         <span class="k">return</span>
-    <span class="n">listed</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">"ls-files"</span><span class="p">,</span> <span class="s2">"-z"</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">)</span>
+    <span class="n">listed</span> <span class="o">=</span> <span class="n">_git</span><span class="p">(</span><span class="n">checkout</span><span class="p">,</span> <span class="s2">&quot;ls-files&quot;</span><span class="p">,</span> <span class="s2">&quot;-z&quot;</span><span class="p">,</span> <span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">listed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"git could not list the files of </span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">template</span><span class="si">}</span><span class="s2">, which are what is rendered."</span><span class="p">)</span>
-    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">listed</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\0</span><span class="s2">"</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;git could not list the files of </span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">template</span><span class="si">}</span><span class="s2">, which are what is rendered.&quot;</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">listed</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="p">]</span>
     <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">checkout</span> <span class="o">/</span> <span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()]</span>
     <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"git tracks files of </span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">template</span><span class="si">}</span><span class="s2"> that are not on disk (a sparse checkout, or a file deleted "</span>
-            <span class="sa">f</span><span class="s2">"and not committed), so the template would be rendered without them: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">&quot;git tracks files of </span><span class="si">{</span><span class="n">source</span><span class="o">.</span><span class="n">template</span><span class="si">}</span><span class="s2"> that are not on disk (a sparse checkout, or a file deleted &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;and not committed), so the template would be rendered without them: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
-    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"chartbook-template-"</span><span class="p">)</span> <span class="k">as</span> <span class="n">scratch</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;chartbook-template-&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">scratch</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
             <span class="n">target</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span>
             <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -812,13 +814,13 @@
         <span class="k">yield</span> <span class="n">Path</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span> <span class="o">/</span> <span class="n">TEMPLATE_DIRECTORY</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_make_writable</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Let the owner write all that was rendered.</span>
+<span class="k">def</span> <span class="nf">_make_writable</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Let the owner write all that was rendered.</span>
 
-<span class="sd">    cookiecutter copies the template's file modes, so a template installed</span>
+<span class="sd">    cookiecutter copies the template&#39;s file modes, so a template installed</span>
 <span class="sd">    read-only (a Nix store, a locked tree on a cluster) made a read-only</span>
 <span class="sd">    project.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">folders</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">project_dir</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">folders</span><span class="p">,</span> <span class="o">*</span><span class="n">files</span><span class="p">]:</span>
             <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">name</span>
@@ -830,90 +832,90 @@
 <div class="viewcode-block" id="Rendered">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">Rendered</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A project :func:`render` made.</span>
+<span class="k">class</span> <span class="nc">Rendered</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A project :func:`render` made.</span>
 
 <span class="sd">    Its folder; the template commit its ``.cruft.json`` names, None when it</span>
 <span class="sd">    has none, and then ``why``; whether that commit is on GitHub as far as</span>
 <span class="sd">    the checkout ChartBook runs from knows (None when that cannot be told);</span>
-<span class="sd">    and the answers to the template's questions, which ``cruft link`` takes.</span>
-<span class="sd">    """</span>
+<span class="sd">    and the answers to the template&#39;s questions, which ``cruft link`` takes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span>
     <span class="n">commit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
     <span class="n">pushed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">why</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">why</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">answers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="Rendered.link_command">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.Rendered.link_command">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">link_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"&lt;commit&gt;"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""The `cruft link` that gives the project a ``.cruft.json`` once the commit is known, with its answers."""</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+    <span class="k">def</span> <span class="nf">link_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&lt;commit&gt;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The `cruft link` that gives the project a ``.cruft.json`` once the commit is known, with its answers.&quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">shlex</span>
 
         <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="s2">"cruft"</span><span class="p">,</span> <span class="s2">"link"</span><span class="p">,</span> <span class="n">TEMPLATE_REPOSITORY</span><span class="p">,</span> <span class="s2">"--directory"</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">,</span>
-            <span class="s2">"--checkout"</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">"--no-input"</span><span class="p">,</span> <span class="s2">"--extra-context"</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answers</span> <span class="ow">or</span> <span class="p">{}),</span>
+            <span class="s2">&quot;cruft&quot;</span><span class="p">,</span> <span class="s2">&quot;link&quot;</span><span class="p">,</span> <span class="n">TEMPLATE_REPOSITORY</span><span class="p">,</span> <span class="s2">&quot;--directory&quot;</span><span class="p">,</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">,</span>
+            <span class="s2">&quot;--checkout&quot;</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="s2">&quot;--no-input&quot;</span><span class="p">,</span> <span class="s2">&quot;--extra-context&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">answers</span> <span class="ow">or</span> <span class="p">{}),</span>
         <span class="p">]</span>
         <span class="c1"># The placeholder stays as it is, for the reader to replace</span>
-        <span class="k">return</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">part</span> <span class="k">if</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">"&lt;commit&gt;"</span> <span class="k">else</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">command</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">part</span> <span class="k">if</span> <span class="n">part</span> <span class="o">==</span> <span class="s2">&quot;&lt;commit&gt;&quot;</span> <span class="k">else</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">command</span><span class="p">)</span></div>
 </div>
 
 
 
 <div class="viewcode-block" id="render">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.render">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">render</span><span class="p">(</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">no_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">answers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">package_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Rendered</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Render a new project from the template that came with this ChartBook, into *output_dir*.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Render a new project from the template that came with this ChartBook, into *output_dir*.</span>
 
 <span class="sd">    The questions are asked as cookiecutter asks them (``no_input`` takes</span>
-<span class="sd">    the defaults, and *answers*, by name), and the template's hooks run.</span>
-<span class="sd">    The project's environment files ask for the template's</span>
-<span class="sd">    ``_chartbook_version``, which is this ChartBook's version (a test keeps</span>
+<span class="sd">    the defaults, and *answers*, by name), and the template&#39;s hooks run.</span>
+<span class="sd">    The project&#39;s environment files ask for the template&#39;s</span>
+<span class="sd">    ``_chartbook_version``, which is this ChartBook&#39;s version (a test keeps</span>
 <span class="sd">    the two equal). Then ``.cruft.json`` is written as ``cruft create``</span>
-<span class="sd">    writes it, when the template's commit is known; with none, there is no</span>
+<span class="sd">    writes it, when the template&#39;s commit is known; with none, there is no</span>
 <span class="sd">    commit for ``cruft update`` to start from, and no file.</span>
 
 <span class="sd">    :raises ScaffoldError: If the template cannot be rendered from where it</span>
-<span class="sd">        is (:func:`template_source`), or the project's folder is there</span>
+<span class="sd">        is (:func:`template_source`), or the project&#39;s folder is there</span>
 <span class="sd">        already (:class:`ProjectExistsError`).</span>
 <span class="sd">    :raises cookiecutter.exceptions.CookiecutterException: If cookiecutter</span>
-<span class="sd">        refuses otherwise, as when a hook stops it (the template's own hooks</span>
+<span class="sd">        refuses otherwise, as when a hook stops it (the template&#39;s own hooks</span>
 <span class="sd">        print why).</span>
-<span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">cookiecutter.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_user_config</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">cookiecutter.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">OutputDirExistsException</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">cookiecutter.generate</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_context</span><span class="p">,</span> <span class="n">generate_files</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">cookiecutter.prompt</span><span class="w"> </span><span class="kn">import</span> <span class="n">prompt_for_config</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">cookiecutter.config</span> <span class="kn">import</span> <span class="n">get_user_config</span>
+    <span class="kn">from</span> <span class="nn">cookiecutter.exceptions</span> <span class="kn">import</span> <span class="n">OutputDirExistsException</span>
+    <span class="kn">from</span> <span class="nn">cookiecutter.generate</span> <span class="kn">import</span> <span class="n">generate_context</span><span class="p">,</span> <span class="n">generate_files</span>
+    <span class="kn">from</span> <span class="nn">cookiecutter.prompt</span> <span class="kn">import</span> <span class="n">prompt_for_config</span>
 
     <span class="n">package_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">package_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_package_dir</span><span class="p">()</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">template_source</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
     <span class="n">commit</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">commit</span>
     <span class="c1"># A hook that stops it is said by the hook, and by chartbook init after</span>
-    <span class="c1"># it; cookiecutter's log of it would add a traceback, printed by Python's</span>
+    <span class="c1"># it; cookiecutter&#39;s log of it would add a traceback, printed by Python&#39;s</span>
     <span class="c1"># last-resort handler or by whatever handles the root logger</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"cookiecutter"</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">)</span>
     <span class="n">quiet</span><span class="p">,</span> <span class="n">propagated</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">(),</span> <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">quiet</span><span class="p">)</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">with</span> <span class="n">_template_to_render</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="k">as</span> <span class="n">template</span><span class="p">:</span>
             <span class="n">context</span> <span class="o">=</span> <span class="n">generate_context</span><span class="p">(</span>
-                <span class="n">context_file</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">template</span> <span class="o">/</span> <span class="s2">"cookiecutter.json"</span><span class="p">),</span>
-                <span class="n">default_context</span><span class="o">=</span><span class="n">get_user_config</span><span class="p">()[</span><span class="s2">"default_context"</span><span class="p">],</span>
+                <span class="n">context_file</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">template</span> <span class="o">/</span> <span class="s2">&quot;cookiecutter.json&quot;</span><span class="p">),</span>
+                <span class="n">default_context</span><span class="o">=</span><span class="n">get_user_config</span><span class="p">()[</span><span class="s2">&quot;default_context&quot;</span><span class="p">],</span>
                 <span class="n">extra_context</span><span class="o">=</span><span class="n">answers</span> <span class="ow">or</span> <span class="p">{},</span>
             <span class="p">)</span>
-            <span class="n">context</span><span class="p">[</span><span class="s2">"cookiecutter"</span><span class="p">]</span> <span class="o">=</span> <span class="n">prompt_for_config</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">no_input</span><span class="p">)</span>
-            <span class="c1"># The answers, as `cruft link` takes them again: its private variables are the template's</span>
-            <span class="n">given</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="s2">"cookiecutter"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)}</span>
+            <span class="n">context</span><span class="p">[</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prompt_for_config</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">no_input</span><span class="p">)</span>
+            <span class="c1"># The answers, as `cruft link` takes them again: its private variables are the template&#39;s</span>
+            <span class="n">given</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">context</span><span class="p">[</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)}</span>
             <span class="c1"># What cruft adds, so that the context is the one `cruft create` would record</span>
-            <span class="n">context</span><span class="p">[</span><span class="s2">"cookiecutter"</span><span class="p">][</span><span class="s2">"_template"</span><span class="p">]</span> <span class="o">=</span> <span class="n">TEMPLATE_REPOSITORY</span>
-            <span class="n">context</span><span class="p">[</span><span class="s2">"cookiecutter"</span><span class="p">][</span><span class="s2">"_commit"</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit</span>
+            <span class="n">context</span><span class="p">[</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">][</span><span class="s2">&quot;_template&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TEMPLATE_REPOSITORY</span>
+            <span class="n">context</span><span class="p">[</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">][</span><span class="s2">&quot;_commit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">project_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
                     <span class="n">generate_files</span><span class="p">(</span>
@@ -921,8 +923,8 @@
                     <span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">except</span> <span class="n">OutputDirExistsException</span><span class="p">:</span>
-                <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s2">"cookiecutter"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"project_slug"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
-                <span class="k">raise</span> <span class="n">ProjectExistsError</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;cookiecutter&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project_slug&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">ProjectExistsError</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">removeHandler</span><span class="p">(</span><span class="n">quiet</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="n">propagated</span>
@@ -936,68 +938,68 @@
 
 <div class="viewcode-block" id="ProjectExistsError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.ProjectExistsError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ProjectExistsError</span><span class="p">(</span><span class="n">ScaffoldError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""The folder the project would be rendered into is there already; nothing was changed."""</span>
+<span class="k">class</span> <span class="nc">ProjectExistsError</span><span class="p">(</span><span class="n">ScaffoldError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The folder the project would be rendered into is there already; nothing was changed.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">folder</span><span class="si">}</span><span class="s2"> is there already, so nothing was changed. Run `chartbook init` again and give "</span>
-            <span class="sa">f</span><span class="s2">"another folder name at the second question, or move that folder."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">folder</span><span class="si">}</span><span class="s2"> is there already, so nothing was changed. Run `chartbook init` again and give &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;another folder name at the second question, or move that folder.&quot;</span>
         <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="write_cruft_file">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.write_cruft_file">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">write_cruft_file</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Write ``.cruft.json`` as ``cruft create`` does, naming the template on GitHub.</span>
+<span class="k">def</span> <span class="nf">write_cruft_file</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write ``.cruft.json`` as ``cruft create`` does, naming the template on GitHub.</span>
 
 <span class="sd">    ``cruft update`` and ``cruft check`` read it, and clone the template from</span>
 <span class="sd">    :data:`TEMPLATE_REPOSITORY` at ``commit``. It has no ``skip``, as</span>
-<span class="sd">    ``cruft create`` writes none: ``cruft update`` adds the project's own</span>
+<span class="sd">    ``cruft create`` writes none: ``cruft update`` adds the project&#39;s own</span>
 <span class="sd">    skips to one that is there, again on every run.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">state</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">"template"</span><span class="p">:</span> <span class="n">TEMPLATE_REPOSITORY</span><span class="p">,</span>
-        <span class="s2">"commit"</span><span class="p">:</span> <span class="n">commit</span><span class="p">,</span>
-        <span class="s2">"checkout"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="s2">"context"</span><span class="p">:</span> <span class="n">context</span><span class="p">,</span>
-        <span class="s2">"directory"</span><span class="p">:</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">,</span>
+        <span class="s2">&quot;template&quot;</span><span class="p">:</span> <span class="n">TEMPLATE_REPOSITORY</span><span class="p">,</span>
+        <span class="s2">&quot;commit&quot;</span><span class="p">:</span> <span class="n">commit</span><span class="p">,</span>
+        <span class="s2">&quot;checkout&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="n">context</span><span class="p">,</span>
+        <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="n">TEMPLATE_DIRECTORY</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">CRUFT_MARKER</span>
-    <span class="c1"># cruft's own layout (cruft._commands.utils.cruft.json_dumps)</span>
-    <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">","</span><span class="p">,</span> <span class="s2">": "</span><span class="p">))</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+    <span class="c1"># cruft&#39;s own layout (cruft._commands.utils.cruft.json_dumps)</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;: &quot;</span><span class="p">))</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">path</span></div>
 
 
 
 <div class="viewcode-block" id="git_init_and_commit">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.git_init_and_commit">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">git_init_and_commit</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Make *project_dir* a git repository holding one commit of everything in it.</span>
+<span class="k">def</span> <span class="nf">git_init_and_commit</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make *project_dir* a git repository holding one commit of everything in it.</span>
 
-<span class="sd">    The project's own ``.gitignore`` (the template ships one) decides what</span>
-<span class="sd">    "everything" means.</span>
+<span class="sd">    The project&#39;s own ``.gitignore`` (the template ships one) decides what</span>
+<span class="sd">    &quot;everything&quot; means.</span>
 
 <span class="sd">    :raises ScaffoldError: If a git command fails, saying which.</span>
-<span class="sd">    """</span>
-    <span class="c1"># Name the first branch "main" unless the user has said what they want.</span>
-    <span class="c1"># Unconfigured, git still calls it "master" and prints a hint about it,</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Name the first branch &quot;main&quot; unless the user has said what they want.</span>
+    <span class="c1"># Unconfigured, git still calls it &quot;master&quot; and prints a hint about it,</span>
     <span class="c1"># and a repository pushed to GitHub keeps whatever name it arrives with.</span>
-    <span class="n">chosen</span> <span class="o">=</span> <span class="n">_run</span><span class="p">([</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"config"</span><span class="p">,</span> <span class="s2">"--get"</span><span class="p">,</span> <span class="s2">"init.defaultBranch"</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">project_dir</span><span class="p">)</span>
+    <span class="n">chosen</span> <span class="o">=</span> <span class="n">_run</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="s2">&quot;--get&quot;</span><span class="p">,</span> <span class="s2">&quot;init.defaultBranch&quot;</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">project_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">chosen</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">chosen</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-        <span class="n">init_attempts</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"init"</span><span class="p">]]</span>
+        <span class="n">init_attempts</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;init&quot;</span><span class="p">]]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># The second is for a git too old to know the option</span>
-        <span class="n">init_attempts</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"init"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"--initial-branch=</span><span class="si">{</span><span class="n">DEFAULT_BRANCH</span><span class="si">}</span><span class="s2">"</span><span class="p">],</span> <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"init"</span><span class="p">]]</span>
+        <span class="n">init_attempts</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;init&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;--initial-branch=</span><span class="si">{</span><span class="n">DEFAULT_BRANCH</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;init&quot;</span><span class="p">]]</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">failed</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">failed</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="s1">' '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span><span class="si">}</span><span class="s2">' failed in </span><span class="si">{</span><span class="n">project_dir</span><span class="si">}</span><span class="s2">:</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"The project itself was created. Fix the problem above and "</span>
-            <span class="sa">f</span><span class="s2">"finish by hand with: git init &amp;&amp; git add --all &amp;&amp; git commit"</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span><span class="si">}</span><span class="s2">&#39; failed in </span><span class="si">{</span><span class="n">project_dir</span><span class="si">}</span><span class="s2">:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;The project itself was created. Fix the problem above and &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;finish by hand with: git init &amp;&amp; git add --all &amp;&amp; git commit&quot;</span>
         <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">command</span> <span class="ow">in</span> <span class="n">init_attempts</span><span class="p">:</span>
@@ -1008,8 +1010,8 @@
         <span class="k">raise</span> <span class="n">failed</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">command</span> <span class="ow">in</span> <span class="p">(</span>
-        <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"add"</span><span class="p">,</span> <span class="s2">"--all"</span><span class="p">],</span>
-        <span class="p">[</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"commit"</span><span class="p">,</span> <span class="s2">"-m"</span><span class="p">,</span> <span class="n">INITIAL_COMMIT_MESSAGE</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span> <span class="s2">&quot;--all&quot;</span><span class="p">],</span>
+        <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;commit&quot;</span><span class="p">,</span> <span class="s2">&quot;-m&quot;</span><span class="p">,</span> <span class="n">INITIAL_COMMIT_MESSAGE</span><span class="p">],</span>
     <span class="p">):</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">_run</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -1019,42 +1021,42 @@
 
 <div class="viewcode-block" id="github_create_and_push">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.scaffold.html#chartbook.scaffold.github_create_and_push">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">github_create_and_push</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">public</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Create a GitHub repository for *project_dir* and push its commit.</span>
+<span class="k">def</span> <span class="nf">github_create_and_push</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">public</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a GitHub repository for *project_dir* and push its commit.</span>
 
 <span class="sd">    The repository is named after the directory, belongs to the account gh is</span>
 <span class="sd">    logged in as, and becomes the ``origin`` remote.</span>
 
 <span class="sd">    :param project_dir: A git repository with at least one commit.</span>
 <span class="sd">    :param public: Create a public repository. Private by default.</span>
-<span class="sd">    :returns: The new repository's URL.</span>
+<span class="sd">    :returns: The new repository&#39;s URL.</span>
 <span class="sd">    :raises ScaffoldError: If gh fails, with the command to finish by hand.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">"gh"</span><span class="p">,</span>
-        <span class="s2">"repo"</span><span class="p">,</span>
-        <span class="s2">"create"</span><span class="p">,</span>
+        <span class="s2">&quot;gh&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;repo&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;create&quot;</span><span class="p">,</span>
         <span class="n">project_dir</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-        <span class="s2">"--public"</span> <span class="k">if</span> <span class="n">public</span> <span class="k">else</span> <span class="s2">"--private"</span><span class="p">,</span>
-        <span class="s2">"--source"</span><span class="p">,</span>
-        <span class="s2">"."</span><span class="p">,</span>
-        <span class="s2">"--remote"</span><span class="p">,</span>
-        <span class="s2">"origin"</span><span class="p">,</span>
-        <span class="s2">"--push"</span><span class="p">,</span>
+        <span class="s2">&quot;--public&quot;</span> <span class="k">if</span> <span class="n">public</span> <span class="k">else</span> <span class="s2">&quot;--private&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--source&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--remote&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;origin&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;--push&quot;</span><span class="p">,</span>
     <span class="p">]</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">_run</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">cwd</span><span class="o">=</span><span class="n">project_dir</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">ScaffoldError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"gh could not create the GitHub repository:</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"The project and its first commit are in </span><span class="si">{</span><span class="n">project_dir</span><span class="si">}</span><span class="s2">. Fix the "</span>
-            <span class="sa">f</span><span class="s2">"problem above and finish from that directory with:</span><span class="se">\n</span><span class="s2">"</span>
-            <span class="sa">f</span><span class="s2">"    </span><span class="si">{</span><span class="s1">' '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">&quot;gh could not create the GitHub repository:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_detail</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;The project and its first commit are in </span><span class="si">{</span><span class="n">project_dir</span><span class="si">}</span><span class="s2">. Fix the &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;problem above and finish from that directory with:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;    </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
     <span class="c1"># gh prints the URL, then whatever git said while pushing</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
-    <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"https://"</span><span class="p">,</span> <span class="s2">"http://"</span><span class="p">))]</span>
-    <span class="k">return</span> <span class="n">urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">urls</span> <span class="k">else</span> <span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">lines</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span></div>
+    <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="s2">&quot;http://&quot;</span><span class="p">))]</span>
+    <span class="k">return</span> <span class="n">urls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">urls</span> <span class="k">else</span> <span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">lines</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 
@@ -1118,8 +1120,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

@@ -157,6 +157,13 @@
             "sql"
           ],
           "additionalProperties": false
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "store"
+            }
+          }
         }
       ]
     },
@@ -313,6 +320,10 @@
           "type": "string"
         }
       }
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "Catalog hub versions, newest first, with presence and consecutive-index changes."
     }
   },
   "additionalProperties": true

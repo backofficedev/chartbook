@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/files';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,49 +458,49 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.files</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Files: the front door for assets that are not tables.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Files: the front door for assets that are not tables.</span>
 
 <span class="sd">A files asset is a file, a folder of files or a glob of them, that a</span>
 <span class="sd">pipeline declares in ``[files]``, whatever is inside: gzipped JSON lines,</span>
-<span class="sd">text, HTML, PDFs, images, NumPy arrays, a SQLite file, a vendor's zip.</span>
+<span class="sd">text, HTML, PDFs, images, NumPy arrays, a SQLite file, a vendor&#39;s zip.</span>
 <span class="sd">ChartBook moves, versions and documents the bytes. It does not read them:</span>
-<span class="sd">the one exception is a short preview on the asset's page, at most</span>
+<span class="sd">the one exception is a short preview on the asset&#39;s page, at most</span>
 <span class="sd">:data:`PREVIEW_BYTES` of one file. Reading is one line of your own code::</span>
 
 <span class="sd">    import gzip, json</span>
 <span class="sd">    from chartbook import assets</span>
 
-<span class="sd">    for path in assets.files("file/earnings_releases"):</span>
-<span class="sd">        with gzip.open(path, "rt") as f:</span>
+<span class="sd">    for path in assets.files(&quot;file/earnings_releases&quot;):</span>
+<span class="sd">        with gzip.open(path, &quot;rt&quot;) as f:</span>
 <span class="sd">            records = [json.loads(line) for line in f]</span>
 
 <span class="sd">:func:`chartbook.assets.files` gives the files, sorted, and</span>
 <span class="sd">:func:`chartbook.assets.index` a table of them, with their sizes, hashes</span>
 <span class="sd">and the keys of any ``key=value`` folders, to pick files from before</span>
-<span class="sd">opening any. Both work for every asset with files, a dataframe's too.</span>
+<span class="sd">opening any. Both work for every asset with files, a dataframe&#39;s too.</span>
 <span class="sd">:func:`path` here is :func:`chartbook.assets.path` with the kind fixed, as</span>
 <span class="sd">:func:`chartbook.models.path` is for models.</span>
 
 <span class="sd">A snapshot, a pin, ``chartbook update``, ``restore``, ``lineage`` and</span>
 <span class="sd">``store gc`` treat a files asset as any other: its hash is the hash of</span>
 <span class="sd">its file, or of the listing of its files (:mod:`chartbook.hashing`).</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">zlib</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">zlib</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.refs</span><span class="w"> </span><span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.resolve</span><span class="w"> </span><span class="kn">import</span> <span class="n">caller_start_dirs</span>
+<span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">assets</span> <span class="k">as</span> <span class="n">_assets</span>
+<span class="kn">from</span> <span class="nn">chartbook.refs</span> <span class="kn">import</span> <span class="n">AssetRef</span><span class="p">,</span> <span class="n">KindMismatchError</span>
+<span class="kn">from</span> <span class="nn">chartbook.resolve</span> <span class="kn">import</span> <span class="n">caller_start_dirs</span>
 
-<span class="c1">#: The most of a file a page's preview decompresses or reads as text: a</span>
+<span class="c1">#: The most of a file a page&#39;s preview decompresses or reads as text: a</span>
 <span class="c1">#: preview never costs more than this, and four times as much read of a</span>
 <span class="c1">#: compressed file.</span>
 <span class="n">PREVIEW_BYTES</span> <span class="o">=</span> <span class="mi">4096</span>
@@ -510,114 +512,114 @@
 <span class="c1">#: Endings of a file that a preview reads as text, with or without ``.gz``.</span>
 <span class="n">TEXT_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">{</span>
-        <span class="s2">".txt"</span><span class="p">,</span> <span class="s2">".text"</span><span class="p">,</span> <span class="s2">".md"</span><span class="p">,</span> <span class="s2">".rst"</span><span class="p">,</span> <span class="s2">".csv"</span><span class="p">,</span> <span class="s2">".tsv"</span><span class="p">,</span> <span class="s2">".json"</span><span class="p">,</span> <span class="s2">".jsonl"</span><span class="p">,</span> <span class="s2">".ndjson"</span><span class="p">,</span> <span class="s2">".html"</span><span class="p">,</span> <span class="s2">".htm"</span><span class="p">,</span>
-        <span class="s2">".xml"</span><span class="p">,</span> <span class="s2">".yaml"</span><span class="p">,</span> <span class="s2">".yml"</span><span class="p">,</span> <span class="s2">".log"</span><span class="p">,</span> <span class="s2">".sql"</span><span class="p">,</span> <span class="s2">".tex"</span><span class="p">,</span> <span class="s2">".bib"</span><span class="p">,</span>
+        <span class="s2">&quot;.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;.text&quot;</span><span class="p">,</span> <span class="s2">&quot;.md&quot;</span><span class="p">,</span> <span class="s2">&quot;.rst&quot;</span><span class="p">,</span> <span class="s2">&quot;.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;.tsv&quot;</span><span class="p">,</span> <span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="s2">&quot;.jsonl&quot;</span><span class="p">,</span> <span class="s2">&quot;.ndjson&quot;</span><span class="p">,</span> <span class="s2">&quot;.html&quot;</span><span class="p">,</span> <span class="s2">&quot;.htm&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;.yml&quot;</span><span class="p">,</span> <span class="s2">&quot;.log&quot;</span><span class="p">,</span> <span class="s2">&quot;.sql&quot;</span><span class="p">,</span> <span class="s2">&quot;.tex&quot;</span><span class="p">,</span> <span class="s2">&quot;.bib&quot;</span><span class="p">,</span>
     <span class="p">}</span>
 <span class="p">)</span>
 
 <span class="c1">#: Endings of a file that are lines of JSON, which a preview pretty-prints.</span>
-<span class="n">JSON_LINES_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">".jsonl"</span><span class="p">,</span> <span class="s2">".ndjson"</span><span class="p">})</span>
+<span class="n">JSON_LINES_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;.jsonl&quot;</span><span class="p">,</span> <span class="s2">&quot;.ndjson&quot;</span><span class="p">})</span>
 
 <span class="c1">#: Endings of an image a page shows as a thumbnail: what a browser shows in</span>
 <span class="c1">#: an ``&lt;img&gt;``. SVG is left out, since opened as a page it runs scripts.</span>
-<span class="n">IMAGE_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">".png"</span><span class="p">,</span> <span class="s2">".jpg"</span><span class="p">,</span> <span class="s2">".jpeg"</span><span class="p">,</span> <span class="s2">".gif"</span><span class="p">,</span> <span class="s2">".webp"</span><span class="p">})</span>
+<span class="n">IMAGE_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.jpg&quot;</span><span class="p">,</span> <span class="s2">&quot;.jpeg&quot;</span><span class="p">,</span> <span class="s2">&quot;.gif&quot;</span><span class="p">,</span> <span class="s2">&quot;.webp&quot;</span><span class="p">})</span>
 
 <span class="c1">#: The largest image a page shows; a larger one is passed over for the next</span>
 <span class="c1">#: file that can be previewed, and is not copied into the site.</span>
 <span class="n">THUMBNAIL_BYTES</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
 
-<span class="c1">#: What an ending must look like to be a file's type: a dot, then up to 12</span>
+<span class="c1">#: What an ending must look like to be a file&#39;s type: a dot, then up to 12</span>
 <span class="c1">#: letters and digits with at least one letter (``.pdf``, ``.h5``, ``.7z``).</span>
 <span class="c1">#: ``.1`` of a rotated log, ``.20240101`` of a dated file and ``.3`` of</span>
 <span class="c1">#: ``v1.2.3`` are not types.</span>
-<span class="n">_TYPE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\.(?=[a-z0-9]*[a-z])[a-z0-9]{1,12}"</span><span class="p">)</span>
+<span class="n">_TYPE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\.(?=[a-z0-9]*[a-z])[a-z0-9]{1,12}&quot;</span><span class="p">)</span>
 
 <span class="c1">#: How many types a record counts by name, the most common first; the files</span>
 <span class="c1">#: of every other type are counted together, under :data:`OTHER_TYPES`.</span>
 <span class="n">TYPES_COUNTED</span> <span class="o">=</span> <span class="mi">20</span>
 
 <span class="c1">#: The key the files of every type beyond :data:`TYPES_COUNTED` are counted under.</span>
-<span class="n">OTHER_TYPES</span> <span class="o">=</span> <span class="s2">"other"</span>
+<span class="n">OTHER_TYPES</span> <span class="o">=</span> <span class="s2">&quot;other&quot;</span>
 
 <span class="c1">#: Endings that say a file is compressed, so its type is the ending before.</span>
-<span class="n">COMPRESSED_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">".gz"</span><span class="p">,</span> <span class="s2">".bz2"</span><span class="p">,</span> <span class="s2">".xz"</span><span class="p">,</span> <span class="s2">".zst"</span><span class="p">,</span> <span class="s2">".lz4"</span><span class="p">,</span> <span class="s2">".zip"</span><span class="p">})</span>
+<span class="n">COMPRESSED_SUFFIXES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.bz2&quot;</span><span class="p">,</span> <span class="s2">&quot;.xz&quot;</span><span class="p">,</span> <span class="s2">&quot;.zst&quot;</span><span class="p">,</span> <span class="s2">&quot;.lz4&quot;</span><span class="p">,</span> <span class="s2">&quot;.zip&quot;</span><span class="p">})</span>
 
 
 <div class="viewcode-block" id="path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.path">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">path</span><span class="p">(</span>
+<span class="k">def</span> <span class="nf">path</span><span class="p">(</span>
     <span class="n">ref</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AssetRef</span><span class="p">],</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Get the path the manifest declares for a files asset of the current pipeline.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path the manifest declares for a files asset of the current pipeline.</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import files</span>
-<span class="sd">    &gt;&gt;&gt; files.path("earnings_releases")  # doctest: +SKIP</span>
+<span class="sd">    &gt;&gt;&gt; files.path(&quot;earnings_releases&quot;)  # doctest: +SKIP</span>
 
-<span class="sd">    This is :func:`chartbook.assets.path` with ``kind="file"``: it answers</span>
+<span class="sd">    This is :func:`chartbook.assets.path` with ``kind=&quot;file&quot;``: it answers</span>
 <span class="sd">    for files assets and nothing else. The path is the file, the folder,</span>
 <span class="sd">    or the glob as declared; :func:`chartbook.assets.files` gives the</span>
 <span class="sd">    files themselves. Nothing checks that it exists, so a build can ask</span>
 <span class="sd">    where to write before anything is there.</span>
 
 <span class="sd">    A files asset of another pipeline is named with the pipeline in front,</span>
-<span class="sd">    ``files.path("filings:earnings_releases")``, and is the copy that</span>
+<span class="sd">    ``files.path(&quot;filings:earnings_releases&quot;)``, and is the copy that</span>
 <span class="sd">    ``chartbook.lock`` pins.</span>
 
-<span class="sd">    :param ref: The asset's name: its key in ``[files]``.</span>
+<span class="sd">    :param ref: The asset&#39;s name: its key in ``[files]``.</span>
 <span class="sd">    :param project_dir: Where to look for the pipeline, as for</span>
 <span class="sd">        :func:`chartbook.assets.path`.</span>
 <span class="sd">    :returns: The absolute path declared for the asset.</span>
 <span class="sd">    :raises AssetNotDeclaredError: If the manifest declares no such asset.</span>
 <span class="sd">    :raises ValueError: If the reference names another kind of asset.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">start_dirs</span> <span class="o">=</span> <span class="n">caller_start_dirs</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_assets</span><span class="o">.</span><span class="n">_path</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="n">start_dirs</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">KindMismatchError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">KindMismatchError</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">),</span>
             <span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="p">,</span>
             <span class="n">e</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span>
             <span class="n">hint</span><span class="o">=</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"files.path() answers for files assets only; use "</span>
-                <span class="sa">f</span><span class="s2">"chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">."</span>
+                <span class="sa">f</span><span class="s2">&quot;files.path() answers for files assets only; use &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;chartbook.assets.path(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span><span class="si">!r}</span><span class="s2">) for a </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">found</span><span class="si">}</span><span class="s2">.&quot;</span>
             <span class="p">),</span>
-        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span></div>
+        <span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span></div>
 
 
 
 <div class="viewcode-block" id="extension">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.extension">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">extension</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A file's type, by its name: ``.jsonl.gz``, ``.pdf``; empty when it has none.</span>
+<span class="k">def</span> <span class="nf">extension</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A file&#39;s type, by its name: ``.jsonl.gz``, ``.pdf``; empty when it has none.</span>
 
 <span class="sd">    In lower case. An ending of digits alone is passed over, so that</span>
 <span class="sd">    ``app.log.1`` is a ``.log`` and ``data.20240101`` has no type; an</span>
 <span class="sd">    ending that does not look like a type (:data:`_TYPE`) is none. A</span>
-<span class="sd">    compressed file keeps the ending before its compression's, so that</span>
+<span class="sd">    compressed file keeps the ending before its compression&#39;s, so that</span>
 <span class="sd">    ``x.jsonl.gz`` and ``y.csv.gz`` are told apart.</span>
-<span class="sd">    """</span>
-    <span class="n">suffixes</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">suffixes</span><span class="p">]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">suffixes</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">suffixes</span><span class="p">]</span>
     <span class="k">while</span> <span class="n">suffixes</span> <span class="ow">and</span> <span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
         <span class="n">suffixes</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">suffixes</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">_TYPE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-        <span class="k">return</span> <span class="s2">""</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
     <span class="k">if</span> <span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">COMPRESSED_SUFFIXES</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">suffixes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">_TYPE</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]):</span>
-        <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:])</span>
     <span class="k">return</span> <span class="n">suffixes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
 
 
 
 <div class="viewcode-block" id="count_by_extension">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.count_by_extension">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">count_by_extension</span><span class="p">(</span><span class="n">names</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">most</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">TYPES_COUNTED</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""How many files there are of each type (:func:`extension`), the most common first; ``""`` for those with none.</span>
+<span class="k">def</span> <span class="nf">count_by_extension</span><span class="p">(</span><span class="n">names</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">most</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">TYPES_COUNTED</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;How many files there are of each type (:func:`extension`), the most common first; ``&quot;&quot;`` for those with none.</span>
 
 <span class="sd">    At most *most* types are named; the files of the rest are counted</span>
 <span class="sd">    together under :data:`OTHER_TYPES`, so that 20,000 files of 20,000</span>
 <span class="sd">    made-up endings make one line and not 20,000.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ranked</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">extension</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
     <span class="n">counted</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ranked</span><span class="p">[:</span><span class="n">most</span><span class="p">])</span>
     <span class="n">rest</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">number</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">number</span> <span class="ow">in</span> <span class="n">ranked</span><span class="p">[</span><span class="n">most</span><span class="p">:])</span>
@@ -629,32 +631,32 @@
 
 <div class="viewcode-block" id="partitions">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.partitions">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">partitions</span><span class="p">(</span><span class="n">relative</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The ``key=value`` folders of a file's path inside its asset, in order: ``{"year": "2024"}``.</span>
+<span class="k">def</span> <span class="nf">partitions</span><span class="p">(</span><span class="n">relative</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The ``key=value`` folders of a file&#39;s path inside its asset, in order: ``{&quot;year&quot;: &quot;2024&quot;}``.</span>
 
-<span class="sd">    Only folders count, not the file's own name, as a reader of Hive's</span>
+<span class="sd">    Only folders count, not the file&#39;s own name, as a reader of Hive&#39;s</span>
 <span class="sd">    layout takes them. A folder whose key is empty is not one. The path is</span>
 <span class="sd">    as a record writes it, with ``/`` between folders; a ``\\`` is part of a</span>
 <span class="sd">    name.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">found</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-        <span class="n">key</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">part</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">"="</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">part</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sign</span> <span class="ow">and</span> <span class="n">key</span><span class="p">:</span>
             <span class="n">found</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
     <span class="k">return</span> <span class="n">found</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_bounded</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The start of a file, at most :data:`PREVIEW_BYTES`, decompressed if it is gzip; and whether that is all of it.</span>
+<span class="k">def</span> <span class="nf">_bounded</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The start of a file, at most :data:`PREVIEW_BYTES`, decompressed if it is gzip; and whether that is all of it.</span>
 
 <span class="sd">    Of a gzip file, no more than :data:`PREVIEW_BYTES` is inflated, from</span>
 <span class="sd">    at most four times as much read.</span>
-<span class="sd">    """</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">head</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">PREVIEW_BYTES</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">head</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\x1f\x8b</span><span class="s2">"</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">head</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x1f\x8b</span><span class="s2">&quot;</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">head</span><span class="p">[:</span><span class="n">PREVIEW_BYTES</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">head</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">PREVIEW_BYTES</span>
         <span class="n">inflate</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">decompressobj</span><span class="p">(</span><span class="mi">16</span> <span class="o">+</span> <span class="n">zlib</span><span class="o">.</span><span class="n">MAX_WBITS</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">inflate</span><span class="o">.</span><span class="n">decompress</span><span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">PREVIEW_BYTES</span><span class="p">)</span>
@@ -677,8 +679,8 @@
 
 <div class="viewcode-block" id="preview_text">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.preview_text">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">preview_text</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""The first lines of a text file, for a page: None if it is not text, or cannot be read.</span>
+<span class="k">def</span> <span class="nf">preview_text</span><span class="p">(</span><span class="n">file</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The first lines of a text file, for a page: None if it is not text, or cannot be read.</span>
 
 <span class="sd">    At most :data:`PREVIEW_BYTES` are read (decompressed, for gzip;</span>
 <span class="sd">    :func:`_bounded`). A line that is a JSON object or array is</span>
@@ -686,21 +688,21 @@
 <span class="sd">    each cut to :data:`PREVIEW_LINE_LENGTH` characters. A line cut short by</span>
 <span class="sd">    the limit is left out. Bytes that are not UTF-8, or a NUL, say it is</span>
 <span class="sd">    not text.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">head</span><span class="p">,</span> <span class="n">whole</span> <span class="o">=</span> <span class="n">_bounded</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="n">zlib</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="ne">EOFError</span><span class="p">,</span> <span class="n">gzip</span><span class="o">.</span><span class="n">BadGzipFile</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">if</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\0</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">head</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">_mostly_utf8</span><span class="p">(</span><span class="n">head</span><span class="p">):</span>
+    <span class="k">if</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">head</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">_mostly_utf8</span><span class="p">(</span><span class="n">head</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">None</span>
-    <span class="n">lines</span> <span class="o">=</span> <span class="n">head</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">head</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">whole</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># the last is cut short</span>
-    <span class="k">if</span> <span class="n">extension</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">".gz"</span><span class="p">)</span> <span class="ow">in</span> <span class="n">JSON_LINES_SUFFIXES</span> <span class="o">|</span> <span class="p">{</span><span class="s2">".json"</span><span class="p">}:</span>
+    <span class="k">if</span> <span class="n">extension</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">&quot;.gz&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">JSON_LINES_SUFFIXES</span> <span class="o">|</span> <span class="p">{</span><span class="s2">&quot;.json&quot;</span><span class="p">}:</span>
         <span class="n">shown</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"{"</span><span class="p">,</span> <span class="s2">"["</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;[&quot;</span><span class="p">)):</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">shown</span> <span class="o">+=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
                     <span class="k">continue</span>
@@ -710,88 +712,88 @@
         <span class="n">lines</span> <span class="o">=</span> <span class="n">shown</span>
     <span class="n">cut</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">PREVIEW_LINES</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">whole</span>
     <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">_printable</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[:</span><span class="n">PREVIEW_LINES</span><span class="p">]]</span>
-    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">PREVIEW_LINE_LENGTH</span> <span class="k">else</span> <span class="n">line</span><span class="p">[:</span> <span class="n">PREVIEW_LINE_LENGTH</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"…"</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">]</span>
-    <span class="k">return</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span> <span class="o">+</span> <span class="p">([</span><span class="s2">"…"</span><span class="p">]</span> <span class="k">if</span> <span class="n">cut</span> <span class="k">else</span> <span class="p">[]))</span></div>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">PREVIEW_LINE_LENGTH</span> <span class="k">else</span> <span class="n">line</span><span class="p">[:</span> <span class="n">PREVIEW_LINE_LENGTH</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;…&quot;</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span> <span class="o">+</span> <span class="p">([</span><span class="s2">&quot;…&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">cut</span> <span class="k">else</span> <span class="p">[]))</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_mostly_utf8</span><span class="p">(</span><span class="n">head</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether bytes are UTF-8, allowing a character cut at the end by the limit."""</span>
+<span class="k">def</span> <span class="nf">_mostly_utf8</span><span class="p">(</span><span class="n">head</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether bytes are UTF-8, allowing a character cut at the end by the limit.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">cut</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">head</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">head</span><span class="p">)</span> <span class="o">-</span> <span class="n">cut</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span>
+            <span class="n">head</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">head</span><span class="p">)</span> <span class="o">-</span> <span class="n">cut</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">except</span> <span class="ne">UnicodeDecodeError</span><span class="p">:</span>
             <span class="k">continue</span>
     <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_printable</span><span class="p">(</span><span class="n">line</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A line with control and direction-changing characters taken out; a tab stays."""</span>
-    <span class="k">return</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">line</span> <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span> <span class="ow">or</span> <span class="n">c</span><span class="o">.</span><span class="n">isprintable</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">_printable</span><span class="p">(</span><span class="n">line</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A line with control and direction-changing characters taken out; a tab stays.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">line</span> <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">.</span><span class="n">isprintable</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="preview_kind">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.preview_kind">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">preview_kind</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""``"text"`` or ``"image"`` for a file a page previews, by its name; None for one it does not."""</span>
+<span class="k">def</span> <span class="nf">preview_kind</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;``&quot;text&quot;`` or ``&quot;image&quot;`` for a file a page previews, by its name; None for one it does not.&quot;&quot;&quot;</span>
     <span class="n">kind</span> <span class="o">=</span> <span class="n">extension</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">IMAGE_SUFFIXES</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">"image"</span>
-    <span class="k">if</span> <span class="n">kind</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">".gz"</span><span class="p">)</span> <span class="ow">in</span> <span class="n">TEXT_SUFFIXES</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">"text"</span>
+        <span class="k">return</span> <span class="s2">&quot;image&quot;</span>
+    <span class="k">if</span> <span class="n">kind</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s2">&quot;.gz&quot;</span><span class="p">)</span> <span class="ow">in</span> <span class="n">TEXT_SUFFIXES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;text&quot;</span>
     <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
 <div class="viewcode-block" id="preview_of">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.preview_of">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">preview_of</span><span class="p">(</span><span class="n">listed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""What a files asset's page previews: the first file in its listing that a preview can show.</span>
+<span class="k">def</span> <span class="nf">preview_of</span><span class="p">(</span><span class="n">listed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What a files asset&#39;s page previews: the first file in its listing that a preview can show.</span>
 
 <span class="sd">    :param listed: The files, as the index lists them (``path`` relative to</span>
 <span class="sd">        *root*, and ``size_bytes``), in order.</span>
 <span class="sd">    :param root: The folder they are listed from.</span>
-<span class="sd">    :returns: ``{"path", "kind", "file"}`` (the file on disk), with ``text``</span>
+<span class="sd">    :returns: ``{&quot;path&quot;, &quot;kind&quot;, &quot;file&quot;}`` (the file on disk), with ``text``</span>
 <span class="sd">        for a text file; None when no file listed is one to preview, or the</span>
 <span class="sd">        first that is cannot be read. An image larger than</span>
 <span class="sd">        :data:`THUMBNAIL_BYTES` is not previewed.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">listed</span><span class="p">:</span>
-        <span class="n">relative</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"path"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">relative</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_inside</span><span class="p">(</span><span class="n">relative</span><span class="p">):</span>
             <span class="k">continue</span>  <span class="c1"># a path inside the asset, and nothing else, is read</span>
         <span class="n">kind</span> <span class="o">=</span> <span class="n">preview_kind</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">kind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="n">file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
-        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">"image"</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"size_bytes"</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"size_bytes"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">THUMBNAIL_BYTES</span><span class="p">:</span>
+        <span class="n">file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="o">*</span><span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;size_bytes&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;size_bytes&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">THUMBNAIL_BYTES</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">file</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                 <span class="k">return</span> <span class="kc">None</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">relative</span><span class="p">,</span> <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"image"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">:</span> <span class="n">file</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">relative</span><span class="p">,</span> <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">file</span><span class="p">}</span>
         <span class="n">text</span> <span class="o">=</span> <span class="n">preview_text</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">"path"</span><span class="p">:</span> <span class="n">relative</span><span class="p">,</span> <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"text"</span><span class="p">,</span> <span class="s2">"file"</span><span class="p">:</span> <span class="n">file</span><span class="p">,</span> <span class="s2">"text"</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">relative</span><span class="p">,</span> <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="n">file</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">text</span><span class="p">}</span>
     <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_inside</span><span class="p">(</span><span class="n">relative</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether a path a record lists stays inside its asset on every system: parts joined by ``/``, none empty, ``.`` or ``..``, no ``\\`` and no drive."""</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">relative</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">relative</span> <span class="ow">or</span> <span class="s2">"</span><span class="se">\0</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">relative</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[A-Za-z]:"</span><span class="p">,</span> <span class="n">relative</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_inside</span><span class="p">(</span><span class="n">relative</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a path a record lists stays inside its asset on every system: parts joined by ``/``, none empty, ``.`` or ``..``, no ``\\`` and no drive.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">relative</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">relative</span> <span class="ow">or</span> <span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">relative</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[A-Za-z]:&quot;</span><span class="p">,</span> <span class="n">relative</span><span class="p">):</span>
         <span class="k">return</span> <span class="kc">False</span>
-    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">part</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"."</span><span class="p">,</span> <span class="s2">".."</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">part</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">relative</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="listing_root">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.files.html#chartbook.files.listing_root">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">listing_root</span><span class="p">(</span><span class="n">declared</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The folder an asset's files are listed from: a folder itself, a glob's fixed prefix, a file's own folder."""</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook</span><span class="w"> </span><span class="kn">import</span> <span class="n">hashing</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_glob_pattern</span>
+<span class="k">def</span> <span class="nf">listing_root</span><span class="p">(</span><span class="n">declared</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The folder an asset&#39;s files are listed from: a folder itself, a glob&#39;s fixed prefix, a file&#39;s own folder.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">hashing</span>
+    <span class="kn">from</span> <span class="nn">chartbook.utils</span> <span class="kn">import</span> <span class="n">is_glob_pattern</span>
 
     <span class="n">declared</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">declared</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">declared</span><span class="p">):</span>
@@ -862,8 +864,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

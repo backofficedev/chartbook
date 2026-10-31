@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'design/index-schema';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../_static/logo.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Design: the writer, and what every page shows" href="writer.html" />
     <link rel="prev" title="Design: the asset graph" href="asset-graph.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../_static/searchtools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script src="../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference/stability.html">Stability</a></li>
@@ -344,7 +349,7 @@
 <li class="toctree-l1"><a class="reference internal" href="toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="references.html">Design: references</a></li>
 <li class="toctree-l1"><a class="reference internal" href="asset-graph.html">Design: the asset graph</a></li>
-<li class="toctree-l1 current active"><a aria-current="page" class="current reference internal" href="#">Design: the index</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Design: the index</a></li>
 <li class="toctree-l1"><a class="reference internal" href="writer.html">Design: the writer, and what every page shows</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Design: models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-access.html">Design: data access</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,14 +507,14 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-is">What the index is</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-per-record-kind-and-version">Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#conventions">Conventions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog">Catalog</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe">Dataframe</a></li>
@@ -529,7 +531,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#candidate-additions-deliberately-out-of-v1">Candidate additions, deliberately out of v1</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example">Worked example</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-unblocks">What this unblocks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
 </ul>
 </li>
@@ -600,11 +602,11 @@ which hashes changed, which upstream inputs shifted.</p></li>
 <h2>File shape<a class="headerlink" href="#file-shape" title="Link to this heading">#</a></h2>
 <p>One JSON object: an envelope, then a flat array of self-describing records.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/index/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T22:14:03Z"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/catalog"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">]</span>
+<span class="w">  </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/index/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-11T22:14:03Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generator&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/catalog&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;records&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -615,9 +617,9 @@ list with its own version, holding items that each carry <code class="docutils l
 a decade and hundreds of resource types.</p>
 <section id="why-per-record-kind-and-version">
 <h3>Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code><a class="headerlink" href="#why-per-record-kind-and-version" title="Link to this heading">#</a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
-<span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w">     </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
-<span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w">     </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chart&quot;</span><span class="p">,</span><span class="w">     </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Build&quot;</span><span class="p">,</span><span class="w">     </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;asset&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <ol class="arabic simple">
@@ -662,8 +664,8 @@ ftsfr/fed_yield_curve:file/releases            File
 (a chart) apart. An earlier draft of this document gave both the ID <code class="docutils literal notranslate"><span class="pre">…:gdp</span></code>.</p>
 <p><strong><code class="docutils literal notranslate"><span class="pre">ref</span></code>.</strong> Every asset record, and every <code class="docutils literal notranslate"><span class="pre">Series</span></code> record, also carries the same address as named
 fields, so that no consumer ever has to parse an ID:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"id"</span><span class="p">:</span><span class="w">  </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
-<span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w">  </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">,</span>
+<span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;curve_today&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">name</span></code> are always present; <code class="docutils literal notranslate"><span class="pre">registry</span></code>, <code class="docutils literal notranslate"><span class="pre">scope</span></code>, <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> and <code class="docutils literal notranslate"><span class="pre">part</span></code> appear when
@@ -697,9 +699,9 @@ hidden ones included”. No release carried the earlier rule, so the algorithm p
 unchanged. <code class="docutils literal notranslate"><span class="pre">chartbook.hashing.is_ignored</span></code>.)</em></p></li>
 </ul>
 <p><strong>Location.</strong> Where an asset’s content is, as a typed object. Today there is one kind:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="p">,</span>
-<span class="w">              </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_data/treasury_rates.parquet&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="nt">&quot;resolved_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -738,13 +740,13 @@ cleared”, which matters for diffing.</p>
 <h3>Catalog<a class="headerlink" href="#catalog" title="Link to this heading">#</a></h3>
 <p>The root. Exactly one per index.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Catalog"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/catalog"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"FTSFR Catalog"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"pipelines"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ftsfr/crsp_treasury"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"policy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"warn"</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"dataframes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"description"</span><span class="p">,</span><span class="w"> </span><span class="s2">"sources"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Catalog&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/catalog&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FTSFR Catalog&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;pipelines&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;policy&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warn&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;dataframes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;description&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;sources&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
@@ -762,27 +764,27 @@ proposed; the build still writes the same comparison as a CSV file.)</em></p>
 <section id="pipeline">
 <h3>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading">#</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fed Yield Curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily Treasury constant-maturity yields."</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"maintainer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Jeremy Bejarano"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"contributors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"…"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"repo_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"os_compatibility"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Linux"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Windows"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"build"</span><span class="p">:</span><span class="w"> </span><span class="s2">"doit"</span><span class="p">,</span><span class="w"> </span><span class="nt">"test"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pytest"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pipeline&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Fed Yield Curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Daily Treasury constant-maturity yields.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;maintainer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Jeremy Bejarano&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;contributors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;…&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;repo_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://gitlab.internal/ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;os_compatibility&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Windows&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;build&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;test&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pytest&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;dependencies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/crsp_compustat"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rev"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"git"</span><span class="p">,</span><span class="w"> </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a1b2c3d"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"pinned_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/crsp_compustat&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;via&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rev&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;git&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://gitlab.internal/…&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rev&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;pinned_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"assets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">             </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./README.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"content/ftsfr/fed_yield_curve/readme.md"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;assets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">             </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rendered&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content/ftsfr/fed_yield_curve/readme.md&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -796,10 +798,10 @@ sorted. The build copies them beside the generated pages; a writer lists them in
 table of contents and reads <code class="docutils literal notranslate"><span class="pre">index_toc.md</span></code> if it is one of them. Without hashes for now.)</em></p>
 <p><em>(Added 2026-10-12 with the implementation; proposed.)</em> The example above shows a <code class="docutils literal notranslate"><span class="pre">git</span></code>
 dependency. One that is a directory is written like this:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"../fed_yield_curve"</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;via&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;../fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">path</span></code> is as declared in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>, relative to the pipeline’s root. <code class="docutils literal notranslate"><span class="pre">value</span></code> is the
@@ -818,35 +820,35 @@ in the same file. The same goes for a model’s <code class="docutils literal no
 <section id="dataframe">
 <h3>Dataframe<a class="headerlink" href="#dataframe" title="Link to this heading">#</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Treasury Rates"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Constant-maturity yields from H.15."</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"row_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">15842</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"date_col"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w">  </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS2"</span><span class="p">,</span><span class="w">  </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Treasury Rates&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Constant-maturity yields from H.15.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_data/treasury_rates.parquet&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;resolved_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;row_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15842</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;date_col&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float64&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS2&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float64&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/crsp_compustat:ratings"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"sources"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"FRED"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Federal Reserve Board"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"access_types"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Public"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"license"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Public domain"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"license_expiration"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Interest Rates"</span><span class="p">,</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/dataframes/treasury_rates.md"</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"content/ftsfr/fed_yield_curve/dataframes/treasury_rates.md"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"built_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span>
+<span class="w">  </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/crsp_compustat:ratings&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;FRED&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Federal Reserve Board&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;access_types&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Public&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;license&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Public domain&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;license_expiration&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Interest Rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/treasury_rates.md&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rendered&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;content/ftsfr/fed_yield_curve/dataframes/treasury_rates.md&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;built_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -864,17 +866,17 @@ the Polars type in lower case with its parameters in square brackets: <code clas
 <p>A series needs no storage — the dataframe holds the data. It needs an <em>address</em>, so documentation
 and metadata can attach to one column.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Series"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="nt">"part"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dgs10"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"dataframe"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"declared"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/series/dgs10.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Series&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#dgs10&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;part&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dgs10&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;dataframe&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;declared&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10-Year Treasury Constant Maturity&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;units&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;frequency&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./docs_src/series/dgs10.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rendered&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -898,23 +900,23 @@ have is still recorded, and the build warns.</p>
 <section id="chart">
 <h3>Chart<a class="headerlink" href="#chart" title="Link to this heading">#</a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yield Curve, Latest"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/curve_today.html"</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve/_output/curve_today.html"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
-<span class="w">             </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs2"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Interest Rates"</span><span class="p">],</span>
-<span class="w">  </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"date_cleared_by_iv_and_v"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-15"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"last_legal_clearance_date"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-01-15"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;curve_today&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Yield Curve, Latest&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_output/curve_today.html&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;resolved_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve/_output/curve_today.html&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#dgs10&quot;</span><span class="p">,</span>
+<span class="w">             </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#dgs2&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Interest Rates&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;frequency&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;units&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;date_cleared_by_iv_and_v&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-15&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;last_legal_clearance_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-01-15&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rendered&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -927,25 +929,25 @@ written in the manifest.</p>
 </section>
 <section id="notebook-and-note">
 <h3>Notebook and Note<a class="headerlink" href="#notebook-and-note" title="Link to this heading">#</a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Notebook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:notebook/analysis"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"notebook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"analysis"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Initial exploration"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/analysis.ipynb"</span><span class="p">,</span><span class="w"> </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Notebook&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:notebook/analysis&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;notebook&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;analysis&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Initial exploration&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_output/analysis.ipynb&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;resolved_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Note"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:note/methodology"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">           </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"note"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"methodology"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"resolved_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"docs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./docs_src/methodology.md"</span><span class="p">,</span><span class="w"> </span><span class="nt">"rendered"</span><span class="p">:</span><span class="w"> </span><span class="s2">"…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Note&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:note/methodology&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;note&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;methodology&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;resolved_path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;docs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;rendered&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;…&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>A notebook’s <code class="docutils literal notranslate"><span class="pre">name</span></code> is inferred from its first level-one heading when not declared, as today.</p>
@@ -959,8 +961,8 @@ written in the manifest.</p>
 <code class="docutils literal notranslate"><span class="pre">ftsfr/fed_yield_curve:model/rate_forecaster</span></code>.</p>
 <p>A model whose inputs include another pipeline’s dataframe also has <code class="docutils literal notranslate"><span class="pre">pinned_inputs</span></code>: for each
 such input, its ID as <code class="docutils literal notranslate"><span class="pre">inputs</span></code> writes it, and the content hash <code class="docutils literal notranslate"><span class="pre">chartbook.lock</span></code> pins it at.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast:features"</span><span class="p">],</span>
-<span class="nt">"pinned_inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ftsfr/rate_forecast:features&quot;</span><span class="p">],</span>
+<span class="nt">&quot;pinned_inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>It is absent when nothing is pinned. An input of the pipeline’s own is not in it: a local
@@ -1006,24 +1008,24 @@ and <code class="docutils literal notranslate"><span class="pre">files</span></c
 <p>The derivation record: a complete description of how an asset was produced. One object serving as
 build plan, cache key and provenance record.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"input_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"output_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"recipe_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"params"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
-<span class="w">  </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">"ftsfr/crsp_compustat:ratings"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">"hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rev"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://gitlab.internal/ftsfr/crsp_compustat@a1b2c3d"</span>
+<span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Build&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;asset&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;input_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;output_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;recipe_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">  </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;ftsfr/crsp_compustat:ratings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;via&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rev&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://gitlab.internal/ftsfr/crsp_compustat@a1b2c3d&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"rev"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a1b2c3d4e5f6…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dirty"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"chartbook"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"python"</span><span class="p">:</span><span class="w"> </span><span class="s2">"3.12.4"</span><span class="p">,</span><span class="w"> </span><span class="nt">"polars"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.9.0"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"built_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T21:58:09Z"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"duration_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mf">412.6</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"impure"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"wrds_fetch"</span><span class="p">]</span>
+<span class="w">  </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rev&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;a1b2c3d4e5f6…&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dirty&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;chartbook&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;python&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3.12.4&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;polars&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.9.0&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;built_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-11T21:58:09Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;duration_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">412.6</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;impure&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;wrds_fetch&quot;</span><span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -1077,21 +1079,21 @@ by the maintainer, the details below are proposed.)</em> What the lockfile holds
 paragraph above. There are no <code class="docutils literal notranslate"><span class="pre">Build</span></code> records yet. And the part that freezes anything is
 missing from it: one record for each asset of each dependency, with its <code class="docutils literal notranslate"><span class="pre">content_hash</span></code>.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/lock/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/rate_forecast"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span><span class="w"> </span><span class="nt">"via"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
-<span class="w">          </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"../yield_curve"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">          </span><span class="nt">"pinned_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:9ac2…"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span><span class="w"> </span><span class="nt">"size_bytes"</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/lock/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/rate_forecast&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;records&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pipeline&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/rate_forecast&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;dependencies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;via&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;../yield_curve&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">          </span><span class="nt">&quot;pinned_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:9ac2…&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_data/treasury_rates.parquet&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2148374</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
@@ -1141,62 +1143,62 @@ consumer can tell which views exist.</p></li>
 <h2>Worked example<a class="headerlink" href="#worked-example" title="Link to this heading">#</a></h2>
 <p>The smallest useful index — one pipeline, one dataframe, one documented series, one chart.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">"schema"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/index/v1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T22:14:03Z"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"generator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">"root"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">"records"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Pipeline"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Fed Yield Curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/Users/x/repos/fed_yield_curve"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"scripts"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"build"</span><span class="p">:</span><span class="w"> </span><span class="s2">"doit"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">      </span><span class="nt">"assets"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">                 </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/index/v1&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-11T22:14:03Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;generator&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;root&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;records&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pipeline&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Fed Yield Curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;path&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/Users/x/repos/fed_yield_curve&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;scripts&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;build&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doit&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;dependencies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">      </span><span class="nt">&quot;assets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">                 </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
 
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Treasury Rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_data/treasury_rates.parquet"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"date_col"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"columns"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">                   </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"dtype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"float64"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
-<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
-<span class="w">      </span><span class="nt">"built_by"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:9ac2…"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Treasury Rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_data/treasury_rates.parquet&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;date_col&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;date&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">                   </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;dtype&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float64&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">      </span><span class="nt">&quot;built_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:9ac2…&quot;</span><span class="w"> </span><span class="p">},</span>
 
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Series"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dataframe"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"treasury_rates"</span><span class="p">,</span><span class="w"> </span><span class="nt">"part"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dgs10"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"dataframe"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DGS10"</span><span class="p">,</span><span class="w"> </span><span class="nt">"declared"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10-Year Treasury Constant Maturity"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"units"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Percent"</span><span class="p">,</span><span class="w"> </span><span class="nt">"frequency"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Daily"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Series&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#dgs10&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;treasury_rates&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;part&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dgs10&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;dataframe&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DGS10&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;declared&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10-Year Treasury Constant Maturity&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;units&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;frequency&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="w"> </span><span class="p">},</span>
 
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:chart/curve_today"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"ref"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr"</span><span class="p">,</span><span class="w"> </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fed_yield_curve"</span><span class="p">,</span>
-<span class="w">               </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chart"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curve_today"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"pipeline"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yield Curve, Latest"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"location"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./_output/curve_today.html"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"content_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:cc71…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates#dgs10"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:chart/curve_today&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;scope&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chart&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;curve_today&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;pipeline&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Yield Curve, Latest&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;location&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./_output/curve_today.html&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;content_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:cc71…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates#dgs10&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
 
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Build"</span><span class="p">,</span><span class="w"> </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"chartbook/v1"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"asset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ftsfr/fed_yield_curve:treasury_rates"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"input_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:0e55…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"output_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:4b1f…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"recipe_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sha256:7721…"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"inputs"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
-<span class="w">      </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"chartbook"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.2.0"</span><span class="p">,</span><span class="w"> </span><span class="nt">"python"</span><span class="p">:</span><span class="w"> </span><span class="s2">"3.12.4"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">      </span><span class="nt">"built_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-10-11T21:58:09Z"</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">"impure"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"fred_api_fetch"</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Build&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;chartbook/v1&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;asset&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ftsfr/fed_yield_curve:treasury_rates&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;input_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:0e55…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;output_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:4b1f…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;recipe_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sha256:7721…&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">      </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;chartbook&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;python&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3.12.4&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;built_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-10-11T21:58:09Z&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;impure&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;fred_api_fetch&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
 </pre></div>
@@ -1361,8 +1363,7 @@ warning, and does not stop the build.</p></li>
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1370,14 +1371,14 @@ warning, and does not stop the build.</p></li>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-index-is">What the index is</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#file-shape">File shape</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-per-record-kind-and-version">Why per-record <code class="docutils literal notranslate"><span class="pre">kind</span></code> and <code class="docutils literal notranslate"><span class="pre">version</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#conventions">Conventions</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-kinds">Record kinds</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog">Catalog</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe">Dataframe</a></li>
@@ -1394,7 +1395,7 @@ warning, and does not stop the build.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#candidate-additions-deliberately-out-of-v1">Candidate additions, deliberately out of v1</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example">Worked example</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-this-unblocks">What this unblocks</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-first-implementation-does">What the first implementation does</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#decided-while-building-it">Decided while building it</a></li>
 </ul>
 </li>
@@ -1446,8 +1447,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

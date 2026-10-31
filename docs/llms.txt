@@ -8,7 +8,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 - [Getting Started](getting-started.html): `pip install chartbook` — one install, everything included
 - [Vocabulary](guide/vocabulary.html): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](reference/cli.html): `chartbook init`, `chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
+- [CLI Reference](reference/cli.html): `chartbook init`, `chartbook docs build`, `chartbook run`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
 
 ## Guides
 
@@ -33,10 +33,10 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ```bash
 chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
-chartbook docs generate      # Render the HTML documentation website (was `chartbook docs`)
-chartbook build -f           # Make everything current: run [scripts] build, then render the site
-chartbook docs generate -f   # Force overwrite existing docs
-chartbook docs generate -f --watch  # Rebuild incrementally on every file change
+chartbook docs build      # Render the HTML documentation website (was `chartbook docs`)
+chartbook run           # Make everything current: run [scripts] build, then render the site
+chartbook docs build -f   # Force overwrite existing docs
+chartbook docs build -f --watch  # Rebuild incrementally on every file change
 chartbook docs open          # Open the generated site (was `chartbook browse`)
 chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 # every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
@@ -66,7 +66,7 @@ chartbook update [dep...]    # Move pins forward to each dependency's newest sna
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on, but --upstream builds and snapshots one with no snapshot
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
-chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)
+chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --repository, --list, --forget)
 chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)
@@ -76,9 +76,9 @@ chartbook store import DIR    # Copy the snapshots in DIR (an export, or a pipel
 chartbook config             # Configure default catalog path
 chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
 chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
-chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook store add NAME URL  # Add a store; a pipeline enters by snapshot
 chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
-chartbook catalog generate   # Render the catalog site (was `catalog build`)
+chartbook catalog build   # Render the catalog site (was `catalog build`)
 chartbook catalog open       # Open the catalog site in the browser
 chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls dataframes      # List dataframes only
@@ -148,3 +148,18 @@ my-pipeline/
 - [Examples](examples.html): The bundled example pipelines and catalog
 - [Contributing](contributing.html): Development guidelines
 - [Changelog](changelog.html): Version history
+
+## Catalogs and stores in 0.4.0
+
+A catalog is `catalog.toml`, listing stores rather than working folders. `chartbook catalog migrate` keeps a backup when upgrading the old file. `chartbook catalog build` renders hubs over stored versions. `chartbook docs build` renders a pipeline site. A task runner owns the documentation step of `chartbook run`.
+
+```console
+chartbook store add NAME URL
+chartbook store remove NAME
+chartbook store move ID --to NAME --dry-run
+chartbook ls stores
+chartbook ls versions
+chartbook link ID FOLDER
+```
+
+Writes follow catalog routing; reads search every store. Dependency entries may name a portable publishing URL, with anonymous S3 reads via `?anonymous=true`. Links explicitly override pins during local development, are recorded in build provenance, are ignored in CI and frozen runs, and prevent snapshots until removed.

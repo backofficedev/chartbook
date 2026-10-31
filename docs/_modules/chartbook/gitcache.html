@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -14,72 +15,71 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/gitcache';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -87,6 +87,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -94,17 +95,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -117,18 +118,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -141,7 +139,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -164,8 +163,7 @@
       
         
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -178,18 +176,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -202,7 +197,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -229,17 +225,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -326,6 +326,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -349,6 +354,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -357,14 +363,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -413,23 +414,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 
 </div></div>
       
@@ -456,16 +458,16 @@
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.gitcache</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Fetching a ``git`` dependency: clones kept under ``~/.chartbook/git/``.</span>
+<span></span><span class="sd">&quot;&quot;&quot;Fetching a ``git`` dependency: clones kept under ``~/.chartbook/git/``.</span>
 
 <span class="sd">A dependency may be a git repository instead of a directory::</span>
 
 <span class="sd">    [dependencies]</span>
-<span class="sd">    "ftsfr/ref_data" = { git = "https://gitlab.example.org/ftsfr/ref_data", rev = "v1.2" }</span>
+<span class="sd">    &quot;ftsfr/ref_data&quot; = { git = &quot;https://gitlab.example.org/ftsfr/ref_data&quot;, rev = &quot;v1.2&quot; }</span>
 
-<span class="sd">To pin it, ChartBook needs the repository's files at one commit on this</span>
+<span class="sd">To pin it, ChartBook needs the repository&#39;s files at one commit on this</span>
 <span class="sd">disk. This module gets them there and nothing more. From then on the</span>
-<span class="sd">checkout is a directory like any ``path`` dependency's, and pinning treats</span>
+<span class="sd">checkout is a directory like any ``path`` dependency&#39;s, and pinning treats</span>
 <span class="sd">it as one.</span>
 
 <span class="sd">::</span>
@@ -485,106 +487,106 @@
 <span class="sd">    Turn a ``rev`` (a branch, a tag, a commit, or nothing for the default</span>
 <span class="sd">    branch) into the full hash of one commit. Looks only at the clone.</span>
 <span class="sd">``checkout``</span>
-<span class="sd">    Write that commit's files into its own directory, if they are not</span>
+<span class="sd">    Write that commit&#39;s files into its own directory, if they are not</span>
 <span class="sd">    there. Looks only at the clone.</span>
 
 <span class="sd">ChartBook runs the ``git`` on your ``PATH``, so whatever lets you clone the</span>
 <span class="sd">repository by hand lets ChartBook: SSH keys, credential helpers, a proxy.</span>
-<span class="sd">A URL is handed to git on each call and is never written into the clone's</span>
+<span class="sd">A URL is handed to git on each call and is never written into the clone&#39;s</span>
 <span class="sd">configuration, so a token in a URL does not end up on disk here, and a URL</span>
 <span class="sd">is shown without its credentials in every message.</span>
 
 <span class="sd">**A clone has what the repository commits, and no more.** Built data is</span>
 <span class="sd">usually git-ignored, so a pipeline fetched this way has its code and its</span>
 <span class="sd">manifest and, typically, none of its data. What a ``git`` dependency</span>
-<span class="sd">declares and does not commit is "not built", exactly as for a ``path``</span>
+<span class="sd">declares and does not commit is &quot;not built&quot;, exactly as for a ``path``</span>
 <span class="sd">dependency that has not been run. ``chartbook pin`` does not run it.</span>
 
 <span class="sd">``chartbook run`` does. It makes a **working copy** of the commit, which</span>
-<span class="sd">is the same files and writable, and runs the dependency's ``build`` there</span>
+<span class="sd">is the same files and writable, and runs the dependency&#39;s ``build`` there</span>
 <span class="sd">(:meth:`GitCache.work_copy`), once. What that build produces can then be</span>
 <span class="sd">pinned. A file in the copy says the build has finished (:func:`is_built`).</span>
 <span class="sd">A dependency that has a working copy is pinned from it, since it holds</span>
 <span class="sd">everything the checkout does and whatever was built besides. The checkout</span>
 <span class="sd">itself is never written to.</span>
-<span class="sd">"""</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">stat</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">stat</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_git_cache_path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">chartbook.identity</span><span class="w"> </span><span class="kn">import</span> <span class="n">strip_url_credentials</span>
+<span class="kn">from</span> <span class="nn">chartbook.config</span> <span class="kn">import</span> <span class="n">get_git_cache_path</span>
+<span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">strip_url_credentials</span>
 
-<span class="c1">#: Where bare clones are, under the cache's root.</span>
-<span class="n">REPOS_DIR</span> <span class="o">=</span> <span class="s2">"repos"</span>
+<span class="c1">#: Where bare clones are, under the cache&#39;s root.</span>
+<span class="n">REPOS_DIR</span> <span class="o">=</span> <span class="s2">&quot;repos&quot;</span>
 
 <span class="c1">#: Where checkouts are: one directory per repository, one inside it per commit.</span>
-<span class="n">CHECKOUTS_DIR</span> <span class="o">=</span> <span class="s2">"checkouts"</span>
+<span class="n">CHECKOUTS_DIR</span> <span class="o">=</span> <span class="s2">&quot;checkouts&quot;</span>
 
 <span class="c1">#: Where working copies are: laid out like the checkouts, and writable. A</span>
-<span class="c1">#: working copy is where ``chartbook run`` runs a git dependency's build.</span>
-<span class="n">WORK_DIR</span> <span class="o">=</span> <span class="s2">"work"</span>
+<span class="c1">#: working copy is where ``chartbook run`` runs a git dependency&#39;s build.</span>
+<span class="n">WORK_DIR</span> <span class="o">=</span> <span class="s2">&quot;work&quot;</span>
 
 <span class="c1">#: A file in a working copy that says a build has finished there. It is</span>
 <span class="c1">#: inside the copy, so it goes when the copy goes.</span>
-<span class="n">BUILT_MARKER</span> <span class="o">=</span> <span class="s2">".chartbook-built"</span>
+<span class="n">BUILT_MARKER</span> <span class="o">=</span> <span class="s2">&quot;.chartbook-built&quot;</span>
 
-<span class="c1">#: The ref a clone keeps the repository's default branch under, so that a</span>
+<span class="c1">#: The ref a clone keeps the repository&#39;s default branch under, so that a</span>
 <span class="c1">#: dependency with no ``rev`` has something to mean.</span>
-<span class="n">DEFAULT_REF</span> <span class="o">=</span> <span class="s2">"refs/chartbook/default"</span>
+<span class="n">DEFAULT_REF</span> <span class="o">=</span> <span class="s2">&quot;refs/chartbook/default&quot;</span>
 
-<span class="c1">#: The transports git may use for a dependency. Git's ``ext::`` transport</span>
+<span class="c1">#: The transports git may use for a dependency. Git&#39;s ``ext::`` transport</span>
 <span class="c1">#: runs a command; a manifest must not be able to ask for it.</span>
-<span class="n">ALLOWED_PROTOCOLS</span> <span class="o">=</span> <span class="s2">"file:git:http:https:ssh"</span>
+<span class="n">ALLOWED_PROTOCOLS</span> <span class="o">=</span> <span class="s2">&quot;file:git:http:https:ssh&quot;</span>
 
 <span class="c1">#: git as the cache runs it. A clone of a local repository is kept under a</span>
-<span class="c1">#: folder named after that repository's own path, so its files' paths can be</span>
+<span class="c1">#: folder named after that repository&#39;s own path, so its files&#39; paths can be</span>
 <span class="c1">#: longer than the 260 characters Windows otherwise allows a path.</span>
-<span class="n">GIT</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"git"</span><span class="p">,</span> <span class="s2">"-c"</span><span class="p">,</span> <span class="s2">"core.longpaths=true"</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span> <span class="k">else</span> <span class="p">(</span><span class="s2">"git"</span><span class="p">,)</span>
+<span class="n">GIT</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="s2">&quot;core.longpaths=true&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;nt&quot;</span> <span class="k">else</span> <span class="p">(</span><span class="s2">&quot;git&quot;</span><span class="p">,)</span>
 
-<span class="n">_FULL_COMMIT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[0-9a-f]</span><span class="si">{40}</span><span class="s2">$"</span><span class="p">)</span>
-<span class="n">_HEX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[0-9a-f]{7,40}$"</span><span class="p">)</span>
+<span class="n">_FULL_COMMIT</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[0-9a-f]</span><span class="si">{40}</span><span class="s2">$&quot;</span><span class="p">)</span>
+<span class="n">_HEX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[0-9a-f]{7,40}$&quot;</span><span class="p">)</span>
 <span class="c1"># What a revision may be: a branch, a tag or a commit. It is handed to git</span>
 <span class="c1"># as an argument, so it must never be able to read as an option.</span>
-<span class="n">_REV</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z0-9][A-Za-z0-9._/-]*$"</span><span class="p">)</span>
+<span class="n">_REV</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z0-9][A-Za-z0-9._/-]*$&quot;</span><span class="p">)</span>
 <span class="n">_READ_ONLY</span> <span class="o">=</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IRUSR</span> <span class="o">|</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IRGRP</span> <span class="o">|</span> <span class="n">stat</span><span class="o">.</span><span class="n">S_IROTH</span>
 <span class="c1"># git@host:owner/name, or host:owner/name. Not C:\repo, which is a path.</span>
-<span class="n">_SCP_LIKE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^(?:[^@/\s]+@)?([^:/\s]{2,}):(?![/</span><span class="se">\\</span><span class="s2">])(.+)$"</span><span class="p">)</span>
+<span class="n">_SCP_LIKE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(?:[^@/\s]+@)?([^:/\s]{2,}):(?![/</span><span class="se">\\</span><span class="s2">])(.+)$&quot;</span><span class="p">)</span>
 
 
 <span class="c1">#: What git takes from the environment about which repository it is in. A</span>
 <span class="c1">#: git hook sets some of them; none may reach a command on another repository.</span>
 <span class="n">GIT_LOCATION_VARIABLES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
-    <span class="s2">"GIT_DIR"</span><span class="p">,</span> <span class="s2">"GIT_WORK_TREE"</span><span class="p">,</span> <span class="s2">"GIT_INDEX_FILE"</span><span class="p">,</span> <span class="s2">"GIT_OBJECT_DIRECTORY"</span><span class="p">,</span>
-    <span class="s2">"GIT_ALTERNATE_OBJECT_DIRECTORIES"</span><span class="p">,</span> <span class="s2">"GIT_COMMON_DIR"</span><span class="p">,</span> <span class="s2">"GIT_NAMESPACE"</span><span class="p">,</span> <span class="s2">"GIT_PREFIX"</span><span class="p">,</span>
+    <span class="s2">&quot;GIT_DIR&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_WORK_TREE&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_INDEX_FILE&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_OBJECT_DIRECTORY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GIT_ALTERNATE_OBJECT_DIRECTORIES&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_COMMON_DIR&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_NAMESPACE&quot;</span><span class="p">,</span> <span class="s2">&quot;GIT_PREFIX&quot;</span><span class="p">,</span>
 <span class="p">})</span>
 
 
 <div class="viewcode-block" id="check_git_url">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.check_git_url">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">check_git_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Refuse a repository URL that git could read as something else.</span>
+<span class="k">def</span> <span class="nf">check_git_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Refuse a repository URL that git could read as something else.</span>
 
 <span class="sd">    :returns: The URL, unchanged.</span>
 <span class="sd">    :raises ValueError: If it is empty, starts with ``-`` (git would take it</span>
 <span class="sd">        for an option), or asks for a transport that runs a command.</span>
-<span class="sd">    """</span>
-    <span class="n">text</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"::"</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span> <span class="ow">or</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;::&quot;</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">url</span><span class="si">!r}</span><span class="s2"> is not a repository ChartBook will fetch. Give a URL "</span>
-            <span class="sa">f</span><span class="s2">"(https://…, ssh://…, git@host:owner/name) or a path."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">url</span><span class="si">!r}</span><span class="s2"> is not a repository ChartBook will fetch. Give a URL &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(https://…, ssh://…, git@host:owner/name) or a path.&quot;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">url</span></div>
 
@@ -592,14 +594,14 @@
 
 <div class="viewcode-block" id="local_url">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.local_url">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">local_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Make a repository that is a path on this disk an absolute one.</span>
+<span class="k">def</span> <span class="nf">local_url</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Make a repository that is a path on this disk an absolute one.</span>
 
-<span class="sd">    ``git = "../ref_data"`` in a manifest is relative to that manifest. A</span>
+<span class="sd">    ``git = &quot;../ref_data&quot;`` in a manifest is relative to that manifest. A</span>
 <span class="sd">    URL with a scheme, or in the ``host:path`` form, is returned as it is.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">or</span> <span class="n">_SCP_LIKE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">in</span> <span class="n">text</span> <span class="ow">or</span> <span class="n">_SCP_LIKE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">url</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">text</span><span class="p">)))</span></div>
 
@@ -607,17 +609,17 @@
 
 <div class="viewcode-block" id="check_rev">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.check_rev">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">check_rev</span><span class="p">(</span><span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Refuse a revision that is not a plain branch, tag or commit name.</span>
+<span class="k">def</span> <span class="nf">check_rev</span><span class="p">(</span><span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Refuse a revision that is not a plain branch, tag or commit name.</span>
 
 <span class="sd">    :returns: The revision, unchanged.</span>
 <span class="sd">    :raises ValueError: If it could be read as an option or an expression.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rev</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_REV</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">rev</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> is not a revision ChartBook will ask git for. A rev is a "</span>
-            <span class="sa">f</span><span class="s2">"branch, a tag or a commit: letters, digits, '.', '_', '/' and "</span>
-            <span class="sa">f</span><span class="s2">"'-', not starting with '-'."</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rev</span><span class="si">!r}</span><span class="s2"> is not a revision ChartBook will ask git for. A rev is a &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;branch, a tag or a commit: letters, digits, &#39;.&#39;, &#39;_&#39;, &#39;/&#39; and &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;-&#39;, not starting with &#39;-&#39;.&quot;</span>
         <span class="p">)</span>
     <span class="k">return</span> <span class="n">rev</span></div>
 
@@ -625,24 +627,24 @@
 
 <div class="viewcode-block" id="GitError">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">GitError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Raised when git cannot do what a ``git`` dependency needs."""</span></div>
+<span class="k">class</span> <span class="nc">GitError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when git cannot do what a ``git`` dependency needs.&quot;&quot;&quot;</span></div>
 
 
 
 <div class="viewcode-block" id="Checkout">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.Checkout">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">Checkout</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A repository's files at one commit, on this disk.</span>
+<span class="k">class</span> <span class="nc">Checkout</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A repository&#39;s files at one commit, on this disk.</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        url: The repository's URL, without credentials.</span>
+<span class="sd">        url: The repository&#39;s URL, without credentials.</span>
 <span class="sd">        rev: The revision that was asked for, or None for the default</span>
 <span class="sd">            branch.</span>
 <span class="sd">        commit: The full hash of the commit it resolved to.</span>
 <span class="sd">        path: The directory the files are in.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
@@ -651,22 +653,22 @@
 
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_paths_ignore_case</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether one folder's path may be written in either case: on Windows."""</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span>
+<span class="k">def</span> <span class="nf">_paths_ignore_case</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether one folder&#39;s path may be written in either case: on Windows.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;nt&quot;</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">_remove_staging</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Remove a folder made on the way, its read-only files too, as far as it can be.</span>
+<span class="k">def</span> <span class="nf">_remove_staging</span><span class="p">(</span><span class="n">folder</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove a folder made on the way, its read-only files too, as far as it can be.</span>
 
-<span class="sd">    git's objects are read-only, and Windows does not remove a read-only</span>
+<span class="sd">    git&#39;s objects are read-only, and Windows does not remove a read-only</span>
 <span class="sd">    file: each is made writable and tried again. What still cannot be</span>
 <span class="sd">    removed is left; it is a temporary folder no one reads.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">top</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">writable_then_again</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">_error</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">writable_then_again</span><span class="p">(</span><span class="n">function</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">_error</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">function</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">rmdir</span><span class="p">):</span>
             <span class="k">return</span>  <span class="c1"># a folder that could not be listed: left</span>
         <span class="k">try</span><span class="p">:</span>
@@ -686,150 +688,150 @@
 
 <div class="viewcode-block" id="repository_slug">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.repository_slug">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""A relative path for a repository, made from its URL: ``host/owner/name``.</span>
+<span class="k">def</span> <span class="nf">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A relative path for a repository, made from its URL: ``host/owner/name``.</span>
 
 <span class="sd">    The same repository reached two ways (``https://host/a/b.git``,</span>
 <span class="sd">    ``git@host:a/b``) gets one path, and so one clone. A repository on this</span>
-<span class="sd">    disk goes under ``local/``, by its folder's name and a short hash of its</span>
+<span class="sd">    disk goes under ``local/``, by its folder&#39;s name and a short hash of its</span>
 <span class="sd">    whole path: the path in full would make one in the cache longer than</span>
-<span class="sd">    the 260 characters Windows lets git work in. Nothing of a URL's user</span>
+<span class="sd">    the 260 characters Windows lets git work in. Nothing of a URL&#39;s user</span>
 <span class="sd">    name or password is in it, and no component can climb out of the</span>
 <span class="sd">    cache. A port stays, as</span>
 <span class="sd">    ``host_8443``, and a component with a character that is not kept gets</span>
 <span class="sd">    a short hash of itself, so that two different repositories never share</span>
 <span class="sd">    a clone.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">text</span> <span class="o">=</span> <span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">url</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
     <span class="n">scp_like</span> <span class="o">=</span> <span class="n">_SCP_LIKE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-    <span class="n">with_scheme</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/]*@)?([^/:]*)(?::(\d+))?/(.*)$"</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">with_scheme</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"file:"</span><span class="p">):</span>
+    <span class="n">with_scheme</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/]*@)?([^/:]*)(?::(\d+))?/(.*)$&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">with_scheme</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;file:&quot;</span><span class="p">):</span>
         <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">with_scheme</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">with_scheme</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">with_scheme</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">port</span><span class="p">:</span>
-            <span class="n">host</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">"</span>
-    <span class="k">elif</span> <span class="n">scp_like</span> <span class="ow">and</span> <span class="s2">"://"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
+            <span class="n">host</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">elif</span> <span class="n">scp_like</span> <span class="ow">and</span> <span class="s2">&quot;://&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">text</span><span class="p">:</span>
         <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">scp_like</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">scp_like</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">"local"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^file://"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"\.git/?$"</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">host</span> <span class="o">==</span> <span class="s2">"local"</span><span class="p">:</span>
+        <span class="n">host</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^file://&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\.git/?$&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
         <span class="c1"># One folder: its name, and a hash of the whole path written one</span>
         <span class="c1"># way: with /, so that C:\\repos\\x, C:/repos/x and file:///C:/repos/x</span>
         <span class="c1"># are one repository; on Windows, whose paths are one in any case,</span>
         <span class="c1"># in lower case, as a terminal may give c:\\ where another gives C:\\</span>
-        <span class="n">whole</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[/</span><span class="se">\\</span><span class="s2">]+"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^/[A-Za-z]:"</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
+        <span class="n">whole</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[/</span><span class="se">\\</span><span class="s2">]+&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^/[A-Za-z]:&quot;</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
             <span class="n">whole</span> <span class="o">=</span> <span class="n">whole</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-        <span class="k">if</span> <span class="n">_paths_ignore_case</span><span class="p">()</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[A-Za-z]:"</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_paths_ignore_case</span><span class="p">()</span> <span class="ow">or</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z]:&quot;</span><span class="p">,</span> <span class="n">whole</span><span class="p">):</span>
             <span class="n">whole</span> <span class="o">=</span> <span class="n">whole</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="n">_paths_ignore_case</span><span class="p">()</span> <span class="k">else</span> <span class="n">whole</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">+</span> <span class="n">whole</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">part</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">))</span> <span class="k">if</span> <span class="n">part</span> <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">"."</span><span class="p">}),</span> <span class="s2">"repository"</span><span class="p">)</span>
-        <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
-        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"local"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^A-Za-z0-9._-]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"~"</span> <span class="o">+</span> <span class="n">digest</span><span class="p">)</span>
-    <span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">host</span><span class="p">,</span> <span class="o">*</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[/</span><span class="se">\\</span><span class="s2">]+"</span><span class="p">,</span> <span class="n">path</span><span class="p">)]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">part</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">))</span> <span class="k">if</span> <span class="n">part</span> <span class="ow">and</span> <span class="nb">set</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">&quot;.&quot;</span><span class="p">}),</span> <span class="s2">&quot;repository&quot;</span><span class="p">)</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">whole</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^A-Za-z0-9._-]&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;~&quot;</span> <span class="o">+</span> <span class="n">digest</span><span class="p">)</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="p">[</span><span class="n">host</span><span class="p">,</span> <span class="o">*</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[/</span><span class="se">\\</span><span class="s2">]+&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)]</span>
     <span class="n">safe</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">part</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"."</span><span class="p">}:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">part</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">part</span><span class="p">)</span> <span class="o">==</span> <span class="p">{</span><span class="s2">&quot;.&quot;</span><span class="p">}:</span>
             <span class="k">continue</span>
-        <span class="n">cleaned</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^A-Za-z0-9._-]"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">part</span><span class="p">)</span>
+        <span class="n">cleaned</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[^A-Za-z0-9._-]&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="n">part</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cleaned</span> <span class="o">!=</span> <span class="n">part</span><span class="p">:</span>
-            <span class="n">cleaned</span> <span class="o">+=</span> <span class="s2">"~"</span> <span class="o">+</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
+            <span class="n">cleaned</span> <span class="o">+=</span> <span class="s2">&quot;~&quot;</span> <span class="o">+</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">part</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()[:</span><span class="mi">8</span><span class="p">]</span>
         <span class="n">safe</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="o">*</span><span class="n">safe</span><span class="p">)</span> <span class="k">if</span> <span class="n">safe</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"local"</span><span class="p">,</span> <span class="s2">"repository"</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="o">*</span><span class="n">safe</span><span class="p">)</span> <span class="k">if</span> <span class="n">safe</span> <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="s2">&quot;repository&quot;</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="GitCache">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">GitCache</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The clones and checkouts that ``git`` dependencies are fetched into.</span>
+<span class="k">class</span> <span class="nc">GitCache</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The clones and checkouts that ``git`` dependencies are fetched into.</span>
 
-<span class="sd">    :param root: The cache's directory. It need not exist yet.</span>
-<span class="sd">    """</span>
+<span class="sd">    :param root: The cache&#39;s directory. It need not exist yet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()))</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">"GitCache(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span><span class="si">!r}</span><span class="s2">)"</span>
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;GitCache(</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span><span class="si">!r}</span><span class="s2">)&quot;</span>
 
 <div class="viewcode-block" id="GitCache.repo_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.repo_path">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">repo_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Where the bare clone of a repository is, or would be."""</span>
+    <span class="k">def</span> <span class="nf">repo_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Where the bare clone of a repository is, or would be.&quot;&quot;&quot;</span>
         <span class="n">slug</span> <span class="o">=</span> <span class="n">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">/</span> <span class="n">REPOS_DIR</span> <span class="o">/</span> <span class="n">slug</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">slug</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">".git"</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">/</span> <span class="n">REPOS_DIR</span> <span class="o">/</span> <span class="n">slug</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="p">(</span><span class="n">slug</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.git&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="GitCache.checkout_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.checkout_path">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">checkout_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Where a repository's files at one commit are, or would be.</span>
+    <span class="k">def</span> <span class="nf">checkout_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Where a repository&#39;s files at one commit are, or would be.</span>
 
 <span class="sd">        :raises ValueError: If *commit* is not a full commit hash.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_FULL_COMMIT</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">commit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">!r}</span><span class="s2"> is not a full commit hash."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commit</span><span class="si">!r}</span><span class="s2"> is not a full commit hash.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">/</span> <span class="n">CHECKOUTS_DIR</span> <span class="o">/</span> <span class="n">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">/</span> <span class="n">commit</span></div>
 
 
 <div class="viewcode-block" id="GitCache.find">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.find">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""A checkout that is already here, without running git; else None."""</span>
+    <span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A checkout that is already here, without running git; else None.&quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkout_path</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="GitCache.work_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_path">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">work_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Where the working copy of a repository at one commit is, or would be.</span>
+    <span class="k">def</span> <span class="nf">work_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Where the working copy of a repository at one commit is, or would be.</span>
 
 <span class="sd">        :raises ValueError: If *commit* is not a full commit hash.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_FULL_COMMIT</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">commit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">!r}</span><span class="s2"> is not a full commit hash."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commit</span><span class="si">!r}</span><span class="s2"> is not a full commit hash.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">/</span> <span class="n">WORK_DIR</span> <span class="o">/</span> <span class="n">repository_slug</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="o">/</span> <span class="n">commit</span></div>
 
 
 <div class="viewcode-block" id="GitCache.find_work">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.find_work">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">find_work</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""A working copy that is already here, without running git; else None."""</span>
+    <span class="k">def</span> <span class="nf">find_work</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A working copy that is already here, without running git; else None.&quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work_path</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="GitCache.files">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.files">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""The best copy of a commit's files that is on this disk; else None.</span>
+    <span class="k">def</span> <span class="nf">files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The best copy of a commit&#39;s files that is on this disk; else None.</span>
 
 <span class="sd">        The working copy if there is one, because it has what was built in</span>
 <span class="sd">        it as well as what was committed; otherwise the checkout.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_work</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="GitCache.work_copy">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.work_copy">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">work_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Make a writable copy of a commit's files, if there is none yet.</span>
+    <span class="k">def</span> <span class="nf">work_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make a writable copy of a commit&#39;s files, if there is none yet.</span>
 
-<span class="sd">        This is where a ``git`` dependency's build is run. It starts as the</span>
-<span class="sd">        checkout's files and keeps whatever a build writes into it, so a</span>
-<span class="sd">        second run finds the first one's work. One working copy is shared</span>
+<span class="sd">        This is where a ``git`` dependency&#39;s build is run. It starts as the</span>
+<span class="sd">        checkout&#39;s files and keeps whatever a build writes into it, so a</span>
+<span class="sd">        second run finds the first one&#39;s work. One working copy is shared</span>
 <span class="sd">        by every project of this user that depends on that commit.</span>
 
-<span class="sd">        :returns: The working copy's directory.</span>
+<span class="sd">        :returns: The working copy&#39;s directory.</span>
 <span class="sd">        :raises GitError: If the clone does not have the commit.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">final</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">work_path</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">final</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">final</span>
         <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkout</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
         <span class="n">final</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">staging</span> <span class="o">=</span> <span class="n">final</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp"</span><span class="p">)</span>
+        <span class="n">staging</span> <span class="o">=</span> <span class="n">final</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">staging</span><span class="p">,</span> <span class="n">symlinks</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">staging</span><span class="p">):</span>
@@ -848,72 +850,72 @@
         <span class="k">return</span> <span class="n">final</span></div>
 
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_git</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Run git, and return what it printed. Never shows a URL's credentials."""</span>
+    <span class="k">def</span> <span class="nf">_git</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run git, and return what it printed. Never shows a URL&#39;s credentials.&quot;&quot;&quot;</span>
 
-        <span class="k">def</span><span class="w"> </span><span class="nf">shown</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">shown</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">url</span><span class="p">))</span> <span class="k">if</span> <span class="n">url</span> <span class="k">else</span> <span class="n">text</span>
 
         <span class="n">environment</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="c1"># Not where a git hook's environment says the repository is: this</span>
-            <span class="c1"># runs on the cache's own clones, and must never touch the user's</span>
+            <span class="c1"># Not where a git hook&#39;s environment says the repository is: this</span>
+            <span class="c1"># runs on the cache&#39;s own clones, and must never touch the user&#39;s</span>
             <span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">GIT_LOCATION_VARIABLES</span><span class="p">},</span>
             <span class="c1"># Fail, do not wait for someone to type a password</span>
-            <span class="s2">"GIT_TERMINAL_PROMPT"</span><span class="p">:</span> <span class="s2">"0"</span><span class="p">,</span>
-            <span class="s2">"GIT_ALLOW_PROTOCOL"</span><span class="p">:</span> <span class="n">ALLOWED_PROTOCOLS</span><span class="p">,</span>
+            <span class="s2">&quot;GIT_TERMINAL_PROMPT&quot;</span><span class="p">:</span> <span class="s2">&quot;0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;GIT_ALLOW_PROTOCOL&quot;</span><span class="p">:</span> <span class="n">ALLOWED_PROTOCOLS</span><span class="p">,</span>
             <span class="o">**</span><span class="p">(</span><span class="n">env</span> <span class="ow">or</span> <span class="p">{}),</span>
         <span class="p">}</span>
-        <span class="n">environment</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"GIT_SSH_COMMAND"</span><span class="p">,</span> <span class="s2">"ssh -o BatchMode=yes"</span><span class="p">)</span>
+        <span class="n">environment</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;GIT_SSH_COMMAND&quot;</span><span class="p">,</span> <span class="s2">&quot;ssh -o BatchMode=yes&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="p">[</span><span class="o">*</span><span class="n">GIT</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span>
+                <span class="p">[</span><span class="o">*</span><span class="n">GIT</span><span class="p">,</span> <span class="o">*</span><span class="n">arguments</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">environment</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span>
-                <span class="s2">"git is not installed, or is not on the PATH. A git dependency "</span>
-                <span class="s2">"is fetched with it."</span>
-            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+                <span class="s2">&quot;git is not installed, or is not on the PATH. A git dependency &quot;</span>
+                <span class="s2">&quot;is fetched with it.&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">message</span> <span class="o">=</span> <span class="n">shown</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
-            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="n">message</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">"git </span><span class="si">{</span><span class="n">shown</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2"> failed"</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="n">message</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;git </span><span class="si">{</span><span class="n">shown</span><span class="p">(</span><span class="n">arguments</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s2"> failed&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
 
 <div class="viewcode-block" id="GitCache.fetch">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.fetch">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Bring the clone of a repository up to date. This uses the network.</span>
+    <span class="k">def</span> <span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Bring the clone of a repository up to date. This uses the network.</span>
 
 <span class="sd">        The first time, the clone is made. Every branch and tag is fetched,</span>
-<span class="sd">        and the repository's default branch is noted.</span>
+<span class="sd">        and the repository&#39;s default branch is noted.</span>
 
 <span class="sd">        :param url: The repository, as ``[dependencies]`` writes it.</span>
-<span class="sd">        :returns: The bare clone's directory.</span>
+<span class="sd">        :returns: The bare clone&#39;s directory.</span>
 <span class="sd">        :raises GitError: If the repository cannot be reached.</span>
 <span class="sd">        :raises ValueError: If the URL is one git could misread.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">check_git_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">repo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">"HEAD"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="n">repo</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">staging</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">repo</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp"</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span><span class="s2">"init"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="s2">"--bare"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">staging</span><span class="p">))</span>
+            <span class="n">staging</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">repo</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span><span class="s2">&quot;init&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span> <span class="s2">&quot;--bare&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">staging</span><span class="p">))</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">staging</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
                 <span class="n">_remove_staging</span><span class="p">(</span><span class="n">staging</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">"HEAD"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
                     <span class="k">raise</span>
         <span class="c1"># The URL is given here and now, and is not kept in the clone</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-            <span class="s2">"fetch"</span><span class="p">,</span>
-            <span class="s2">"--quiet"</span><span class="p">,</span>
-            <span class="s2">"--prune"</span><span class="p">,</span>
-            <span class="s2">"--force"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;fetch&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;--prune&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
             <span class="n">url</span><span class="p">,</span>
-            <span class="s2">"+refs/heads/*:refs/heads/*"</span><span class="p">,</span>
-            <span class="s2">"+refs/tags/*:refs/tags/*"</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">"+HEAD:</span><span class="si">{</span><span class="n">DEFAULT_REF</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="s2">&quot;+refs/heads/*:refs/heads/*&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;+refs/tags/*:refs/tags/*&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;+HEAD:</span><span class="si">{</span><span class="n">DEFAULT_REF</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">repo</span></div>
@@ -921,64 +923,64 @@
 
 <div class="viewcode-block" id="GitCache.resolve">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.resolve">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Turn a revision into the full hash of a commit, from the clone.</span>
+    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Turn a revision into the full hash of a commit, from the clone.</span>
 
 <span class="sd">        :param rev: A branch, a tag or a commit; None for the default branch.</span>
 <span class="sd">        :raises GitError: If the repository has not been fetched, or has no</span>
 <span class="sd">            such revision.</span>
 <span class="sd">        :raises ValueError: If *rev* is not a plain revision name.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">check_rev</span><span class="p">(</span><span class="n">rev</span><span class="p">)</span>
         <span class="n">repo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">shown</span> <span class="o">=</span> <span class="n">strip_url_credentials</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">"HEAD"</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has not been fetched."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">repo</span> <span class="o">/</span> <span class="s2">&quot;HEAD&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has not been fetched.&quot;</span><span class="p">)</span>
         <span class="n">wanted</span> <span class="o">=</span> <span class="n">rev</span> <span class="k">if</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">DEFAULT_REF</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">found</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"rev-parse"</span><span class="p">,</span> <span class="s2">"--verify"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">wanted</span><span class="si">}</span><span class="s2">^</span><span class="se">{{</span><span class="s2">commit</span><span class="se">}}</span><span class="s2">"</span>
+                <span class="sa">f</span><span class="s2">&quot;--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;--verify&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">wanted</span><span class="si">}</span><span class="s2">^</span><span class="se">{{</span><span class="s2">commit</span><span class="se">}}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="n">GitError</span><span class="p">:</span>
-            <span class="n">what</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"no revision </span><span class="si">{</span><span class="n">rev</span><span class="si">!r}</span><span class="s2">"</span> <span class="k">if</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">"no default branch"</span>
-            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="kc">None</span>
+            <span class="n">what</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;no revision </span><span class="si">{</span><span class="n">rev</span><span class="si">!r}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">rev</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;no default branch&quot;</span>
+            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="kc">None</span>
         <span class="n">commit</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">_FULL_COMMIT</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">commit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">wanted</span><span class="si">!r}</span><span class="s2"> did not resolve to a commit."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">GitError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">wanted</span><span class="si">!r}</span><span class="s2"> did not resolve to a commit.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">commit</span></div>
 
 
 <div class="viewcode-block" id="GitCache.checkout">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.checkout">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">checkout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Write a commit's files into its own directory, if they are not there.</span>
+    <span class="k">def</span> <span class="nf">checkout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a commit&#39;s files into its own directory, if they are not there.</span>
 
 <span class="sd">        The directory is made whole or not at all, and its files are</span>
 <span class="sd">        read-only: a checkout is a copy of one commit, not a place to work.</span>
 
-<span class="sd">        :returns: The checkout's directory.</span>
+<span class="sd">        :returns: The checkout&#39;s directory.</span>
 <span class="sd">        :raises GitError: If the clone does not have the commit.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">final</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">checkout_path</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">final</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">return</span> <span class="n">final</span>
         <span class="n">repo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">final</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="n">staging</span> <span class="o">=</span> <span class="n">final</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp"</span><span class="p">)</span>
+        <span class="n">staging</span> <span class="o">=</span> <span class="n">final</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">commit</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">.tmp&quot;</span><span class="p">)</span>
         <span class="n">staging</span><span class="o">.</span><span class="n">mkdir</span><span class="p">()</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="n">staging</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="n">staging</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">".index"</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">staging</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="n">staging</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.index&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="c1"># An index of its own, so two checkouts at once do not collide</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">"--work-tree=</span><span class="si">{</span><span class="n">staging</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-                <span class="s2">"checkout"</span><span class="p">,</span>
-                <span class="s2">"--quiet"</span><span class="p">,</span>
-                <span class="s2">"--force"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;--git-dir=</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;--work-tree=</span><span class="si">{</span><span class="n">staging</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;checkout&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
                 <span class="n">commit</span><span class="p">,</span>
-                <span class="s2">"--"</span><span class="p">,</span>
-                <span class="s2">"."</span><span class="p">,</span>
-                <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="s2">"GIT_INDEX_FILE"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)},</span>
+                <span class="s2">&quot;--&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+                <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;GIT_INDEX_FILE&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)},</span>
             <span class="p">)</span>
             <span class="k">for</span> <span class="n">folder</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">names</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">staging</span><span class="p">):</span>
                 <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
@@ -1002,8 +1004,8 @@
 
 <div class="viewcode-block" id="GitCache.get">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.GitCache.get">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Checkout</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Fetch a repository, resolve a revision and check it out.</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rev</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fetch</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Checkout</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch a repository, resolve a revision and check it out.</span>
 
 <span class="sd">        :param fetch: If False, the network is not used: the clone is taken</span>
 <span class="sd">            as it is.</span>
@@ -1011,7 +1013,7 @@
 <span class="sd">        :raises GitError: If any step cannot be done.</span>
 <span class="sd">        :raises ValueError: If the URL or the revision is one git could</span>
 <span class="sd">            misread.</span>
-<span class="sd">        """</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">check_git_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
         <span class="n">check_rev</span><span class="p">(</span><span class="n">rev</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">fetch</span><span class="p">:</span>
@@ -1023,7 +1025,7 @@
                 <span class="k">raise</span>
             <span class="c1"># A commit that no branch or tag leads to has to be asked for</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_git</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">"--git-dir=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"fetch"</span><span class="p">,</span> <span class="s2">"--quiet"</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">url</span>
+                <span class="sa">f</span><span class="s2">&quot;--git-dir=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">repo_path</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;fetch&quot;</span><span class="p">,</span> <span class="s2">&quot;--quiet&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">url</span>
             <span class="p">)</span>
             <span class="n">commit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">rev</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">Checkout</span><span class="p">(</span>
@@ -1038,30 +1040,30 @@
 
 <div class="viewcode-block" id="is_built">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.is_built">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">is_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Whether a working copy's build has finished: ``chartbook run`` ran it."""</span>
+<span class="k">def</span> <span class="nf">is_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether a working copy&#39;s build has finished: ``chartbook run`` ran it.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">work_copy</span><span class="p">)</span> <span class="o">/</span> <span class="n">BUILT_MARKER</span><span class="p">)</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span></div>
 
 
 
 <div class="viewcode-block" id="mark_built">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.mark_built">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">mark_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Note in a working copy that its build has finished.</span>
+<span class="k">def</span> <span class="nf">mark_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Note in a working copy that its build has finished.</span>
 
 <span class="sd">    A git dependency is built once for a commit. This is what says it has</span>
 <span class="sd">    been, so that the next run leaves it alone.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">work_copy</span><span class="p">)</span> <span class="o">/</span> <span class="n">BUILT_MARKER</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
-        <span class="s2">"chartbook run finished this pipeline's build here.</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="s2">&quot;chartbook run finished this pipeline&#39;s build here.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
     <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="forget_built">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.forget_built">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">forget_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Take that note away, before a build is run there again."""</span>
+<span class="k">def</span> <span class="nf">forget_built</span><span class="p">(</span><span class="n">work_copy</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Take that note away, before a build is run there again.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">work_copy</span><span class="p">)</span> <span class="o">/</span> <span class="n">BUILT_MARKER</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
     <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
@@ -1071,12 +1073,12 @@
 
 <div class="viewcode-block" id="default_git_cache">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.gitcache.html#chartbook.gitcache.default_git_cache">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">default_git_cache</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">GitCache</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""The cache this user's ChartBook fetches ``git`` dependencies into.</span>
+<span class="k">def</span> <span class="nf">default_git_cache</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">GitCache</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The cache this user&#39;s ChartBook fetches ``git`` dependencies into.</span>
 
 <span class="sd">    ``CHARTBOOK_GIT_CACHE`` if it is set; otherwise ``[git] path`` in</span>
 <span class="sd">    ``~/.chartbook/settings.toml``; otherwise ``~/.chartbook/git``.</span>
-<span class="sd">    """</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">GitCache</span><span class="p">(</span><span class="n">get_git_cache_path</span><span class="p">())</span></div>
 
 </pre></div>
@@ -1141,8 +1143,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

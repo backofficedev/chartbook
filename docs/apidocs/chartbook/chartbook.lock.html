@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 
@@ -15,74 +16,73 @@
     document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
     document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
   </script>
-  <!--
-    this give us a css class that will be invisible only if js is disabled
-  -->
-  <noscript>
-    <style>
-      .pst-js-only { display: none !important; }
-
-    </style>
-  </noscript>
   
   <!-- Loaded before other Sphinx assets -->
-  <link href="../../_static/styles/theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
-<link href="../../_static/styles/pydata-sphinx-theme.css?digest=18bd87630a240e9c25be" rel="stylesheet" />
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
 
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
-    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=eba8b062" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css?v=8cd3d715" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=83f9ed06" />
   
-  <!-- So that users can add custom icons -->
-  <script defer src="../../_static/scripts/fontawesome.js?digest=18bd87630a240e9c25be"></script>
   <!-- Pre-loaded scripts that we'll load fully later -->
-  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be" />
-<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be" />
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=6512192e"></script>
-    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
-    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/documentation_options.js?v=9453eeee"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=f281be69"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.lock';</script>
-    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <link rel="icon" href="../../_static/logo.png"/>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="chartbook.lineage" href="chartbook.lineage.html" />
     <link rel="prev" title="chartbook.versions" href="chartbook.versions.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="color-scheme" content="light dark"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="" />
-  
-    
-    <script src="../../_static/searchtools.js"></script>
-    <script src="../../_static/language_data.js"></script>
-    <script src="../../searchindex.js"></script>
-  
   </head>
-  <body data-default-mode="">
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
   
   
   <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
-
   
   <div id="pst-scroll-pixel-helper"></div>
   
   <button type="button" class="btn rounded-pill" id="pst-back-to-top">
     <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
   
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
   
-  
-  <dialog id="pst-search-dialog">
-    
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
 <form class="bd-search d-flex align-items-center"
       action="../../search.html"
       method="get">
@@ -90,6 +90,7 @@
   <input type="search"
          class="form-control"
          name="q"
+         id="search-input"
          placeholder="Search..."
          aria-label="Search..."
          autocomplete="off"
@@ -97,17 +98,17 @@
          autocapitalize="off"
          spellcheck="false"/>
   <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
-</form>
-  </dialog>
+</form></div>
+  </div>
 
   <div class="pst-async-banner-revealer d-none">
   <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
 
   
-    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button type="button" class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -120,18 +121,15 @@
       
         <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
       
         <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -144,7 +142,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
       
@@ -155,7 +154,7 @@
   
 
   
-    <button type="button" class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -169,8 +168,7 @@
       
       
       
-      <dialog id="pst-primary-sidebar-modal"></dialog>
-      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+      <div class="bd-sidebar-primary bd-sidebar">
         
 
   
@@ -183,18 +181,15 @@
         
           <div class="navbar-item">
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div></div>
+`);
+</script></div>
         
           <div class="navbar-item"><ul class="navbar-icon-links"
     aria-label="Icon Links">
@@ -207,7 +202,8 @@
           
           
           
-          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i><span class="visually-hidden">Repository</span></a>
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
         </li>
 </ul></div>
         
@@ -234,17 +230,21 @@
     
     
     <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
-    <img src="../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
   
   
 </a></div>
         <div class="sidebar-primary-item">
 
-<button type="button" class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
- <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Search</span>
- <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
-</button></div>
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
     <div class="bd-toc-item navbar-nav active">
         
@@ -316,7 +316,7 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.sharing.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sharing</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.snapshot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.snapshot</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.versions.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.versions</span></code></a></li>
-<li class="toctree-l2 current active"><a aria-current="page" class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lock</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.lineage.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.lineage</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.gitcache.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.gitcache</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.run.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.run</span></code></a></li>
@@ -331,6 +331,11 @@
 <li class="toctree-l2"><a class="reference internal" href="chartbook.sitefiles.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.sitefiles</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.multi_store.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.multi_store</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.catalog_config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.catalog_config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.links.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.links</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.hubs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.hubs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.transfer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.transfer</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference/stability.html">Stability</a></li>
@@ -354,6 +359,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../design/keep.html">Design: keeping costly outputs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/reading-other-pipelines.html">Design: reading another pipeline while you work</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.3.0.html">Design: the plan for 0.3.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/plan-0.4.0.html">Design: the plan for 0.4.0</a></li>
 </ul>
 
     </div>
@@ -362,14 +368,9 @@
   
   
   <div class="sidebar-primary-items__end sidebar-primary__section">
-      <div class="sidebar-primary-item">
-<div id="ethical-ad-placement"
-      class="flat"
-      data-ea-publisher="readthedocs"
-      data-ea-type="readthedocs-sidebar"
-      data-ea-manual="true">
-</div></div>
   </div>
+  
+  <div id="rtd-footer-container"></div>
 
 
       </div>
@@ -466,23 +467,24 @@
 
 
 
-<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
-  <button type="button" class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
-    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
-    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
-    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
   </button>
-  <ul class="dropdown-menu dropdown-menu-end">
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
-    <li><button type="button" class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
-  </ul>
-</div>
+`);
+</script>
 
 
-<button type="button" class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-</button>
+  </button>
+`);
+</script>
 <button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <span class="fa-solid fa-list"></span>
 </button>
@@ -505,12 +507,12 @@
                 <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
-                <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem"><code class="docutils literal notranslate"><span class="pre">FrozenProblem</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem.asset"><code class="docutils literal notranslate"><span class="pre">FrozenProblem.asset</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem.dependency"><code class="docutils literal notranslate"><span class="pre">FrozenProblem.dependency</span></code></a></li>
@@ -647,8 +649,8 @@ either way.</p>
 <p>::</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>from chartbook import lock
 
-report = lock.pin("path/to/pipeline")       # pin what has no pin yet
-report = lock.update("path/to/pipeline")    # move every pin forward
+report = lock.pin(&quot;path/to/pipeline&quot;)       # pin what has no pin yet
+report = lock.update(&quot;path/to/pipeline&quot;)    # move every pin forward
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">pin</span></code> never moves a pin that exists. It pins a dependency that has no
@@ -798,7 +800,7 @@ in <code class="docutils literal notranslate"><span class="pre">docs_src/design/
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenProblem">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">FrozenProblem</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#FrozenProblem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.FrozenProblem" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">FrozenProblem</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#FrozenProblem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.FrozenProblem" title="Link to this definition">#</a></dt>
 <dd><p>One reason a pipeline cannot be built from its lockfile alone.</p>
 <p>Attributes:
 dependency: The dependency’s key in <code class="docutils literal notranslate"><span class="pre">[dependencies]</span></code>; empty when
@@ -812,24 +814,24 @@ for a dependency with no asset in the lockfile, which may be one
 that declares none. Empty otherwise.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenProblem.asset">
-<span class="sig-name descname"><span class="pre">asset</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.FrozenProblem.asset" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">asset</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.FrozenProblem.asset" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenProblem.dependency">
-<span class="sig-name descname"><span class="pre">dependency</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenProblem.dependency" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">dependency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenProblem.dependency" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenProblem.kind">
-<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.lock.FrozenProblem.kind" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">kind</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></em><a class="headerlink" href="#chartbook.lock.FrozenProblem.kind" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenProblem.message">
-<span class="sig-name descname"><span class="pre">message</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenProblem.message" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">message</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenProblem.message" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -837,7 +839,7 @@ that declares none. Empty otherwise.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">FrozenReport</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#FrozenReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.FrozenReport" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">FrozenReport</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#FrozenReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.FrozenReport" title="Link to this definition">#</a></dt>
 <dd><p>What :func:<code class="docutils literal notranslate"><span class="pre">verify</span></code> found: whether every pin can be had, with nothing written but a note for <code class="docutils literal notranslate"><span class="pre">store</span> <span class="pre">gc</span></code>.</p>
 <p>Attributes:
 lockfile: The lockfile’s path.
@@ -849,44 +851,44 @@ was written now, to name what it pins (:func:<code class="docutils literal notra
 unrooted: Why that note could not be written, when it could not.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.dependencies">
-<span class="sig-name descname"><span class="pre">dependencies</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenReport.dependencies" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">dependencies</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenReport.dependencies" title="Link to this definition">#</a></dt>
 <dd><p>0</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.lockfile">
-<span class="sig-name descname"><span class="pre">lockfile</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenReport.lockfile" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">lockfile</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenReport.lockfile" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.noted">
-<span class="sig-name descname"><span class="pre">noted</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenReport.noted" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">noted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenReport.noted" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.pins">
-<span class="sig-name descname"><span class="pre">pins</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><a class="headerlink" href="#chartbook.lock.FrozenReport.pins" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pins</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#chartbook.lock.FrozenReport.pins" title="Link to this definition">#</a></dt>
 <dd><p>0</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.problems">
-<span class="sig-name descname"><span class="pre">problems</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.FrozenProblem" title="chartbook.lock.FrozenProblem"><span class="pre">chartbook.lock.FrozenProblem</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.FrozenReport.problems" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">problems</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.FrozenProblem" title="chartbook.lock.FrozenProblem"><span class="pre">chartbook.lock.FrozenProblem</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.FrozenReport.problems" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.FrozenReport.unrooted">
-<span class="sig-name descname"><span class="pre">unrooted</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.lock.FrozenReport.unrooted" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">unrooted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></em><a class="headerlink" href="#chartbook.lock.FrozenReport.unrooted" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="chartbook.lock.GcError">
-<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">GcError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">removed_snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">removed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">failures</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/lock.html#GcError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.GcError" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">GcError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">removed_snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">removed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">failures</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/lock.html#GcError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.GcError" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#chartbook.lock.LockError" title="chartbook.lock.LockError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">chartbook.lock.LockError</span></code></a></p>
 <p>Raised by :func:<code class="docutils literal notranslate"><span class="pre">run_gc</span></code> when something the plan said to remove could not be: it removed the rest.</p>
 <p>In a store users share, an object or a record another user put there
@@ -905,7 +907,7 @@ what it is, and the store’s words on why and what to do.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">GcPlan</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#GcPlan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.GcPlan" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">GcPlan</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#GcPlan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.GcPlan" title="Link to this definition">#</a></dt>
 <dd><p>What clearing out a store would keep and what it would remove.</p>
 <p>Attributes:
 lockfiles: Each lockfile the store has a note of, and whether it
@@ -952,145 +954,145 @@ with, so that it can be made again the same way when it is
 carried out.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.aggressive">
-<span class="sig-name descname"><span class="pre">aggressive</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.aggressive" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">aggressive</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.aggressive" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.delete">
-<span class="sig-name descname"><span class="pre">delete</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.delete" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">delete</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.delete" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.elsewhere">
-<span class="sig-name descname"><span class="pre">elsewhere</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.elsewhere" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">elsewhere</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.elsewhere" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.files">
-<span class="sig-name descname"><span class="pre">files</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.files" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">files</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.files" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.forget">
-<span class="sig-name descname"><span class="pre">forget</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.forget" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">forget</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.forget" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.forget_missing">
-<span class="sig-name descname"><span class="pre">forget_missing</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.forget_missing" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">forget_missing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.forget_missing" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.forget_old">
-<span class="sig-name descname"><span class="pre">forget_old</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.forget_old" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">forget_old</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.forget_old" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.keep_days">
-<span class="sig-name descname"><span class="pre">keep_days</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.keep_days" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">keep_days</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.keep_days" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.keep_lineage">
-<span class="sig-name descname"><span class="pre">keep_lineage</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.keep_lineage" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">keep_lineage</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.keep_lineage" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.kept">
-<span class="sig-name descname"><span class="pre">kept</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.kept" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">kept</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.kept" title="Link to this definition">#</a></dt>
 <dd><p>0</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.kept_versions">
-<span class="sig-name descname"><span class="pre">kept_versions</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.kept_versions" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">kept_versions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.kept_versions" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.lockfiles">
-<span class="sig-name descname"><span class="pre">lockfiles</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.lockfiles" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">lockfiles</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.lockfiles" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.not_read">
-<span class="sig-name descname"><span class="pre">not_read</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.not_read" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">not_read</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.not_read" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.pinned_delete">
-<span class="sig-name descname"><span class="pre">pinned_delete</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.pinned_delete" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pinned_delete</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.pinned_delete" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.pinned_kept">
-<span class="sig-name descname"><span class="pre">pinned_kept</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.pinned_kept" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pinned_kept</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.pinned_kept" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.read_here">
-<span class="sig-name descname"><span class="pre">read_here</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.read_here" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">read_here</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.read_here" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.recent">
-<span class="sig-name descname"><span class="pre">recent</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.GcPlan.recent" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">recent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.GcPlan.recent" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.recent_files">
-<span class="sig-name descname"><span class="pre">recent_files</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.recent_files" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">recent_files</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.recent_files" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.recent_seconds">
-<span class="sig-name descname"><span class="pre">recent_seconds</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.recent_seconds" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">recent_seconds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><span class="pre">float</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.recent_seconds" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.size_bytes">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size_bytes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.size_bytes" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">size_bytes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.size_bytes" title="Link to this definition">#</a></dt>
 <dd><p>The total size of what would be removed.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.snapshots">
-<span class="sig-name descname"><span class="pre">snapshots</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">snapshots</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><span class="pre">int</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots" title="Link to this definition">#</a></dt>
 <dd><p>0</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.snapshots_delete">
-<span class="sig-name descname"><span class="pre">snapshots_delete</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots_delete" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">snapshots_delete</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots_delete" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.snapshots_kept">
-<span class="sig-name descname"><span class="pre">snapshots_kept</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots_kept" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">snapshots_kept</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.snapshots_kept" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.GcPlan.unused">
-<span class="sig-name descname"><span class="pre">unused</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></span><a class="headerlink" href="#chartbook.lock.GcPlan.unused" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">unused</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a></em><a class="headerlink" href="#chartbook.lock.GcPlan.unused" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
@@ -1104,7 +1106,7 @@ carried out.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.Lock">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">Lock</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#Lock"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.Lock" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">Lock</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#Lock"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.Lock" title="Link to this definition">#</a></dt>
 <dd><p>What a lockfile holds.</p>
 <p>Attributes:
 root: The ID of the pipeline the lockfile belongs to.
@@ -1118,7 +1120,7 @@ assets: One record for each asset of each dependency, by asset ID.
 A record with a <code class="docutils literal notranslate"><span class="pre">content_hash</span></code> is a pin.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.Lock.assets">
-<span class="sig-name descname"><span class="pre">assets</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.Lock.assets" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">assets</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.Lock.assets" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
@@ -1130,7 +1132,7 @@ A record with a <code class="docutils literal notranslate"><span class="pre">con
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.Lock.dependencies">
-<span class="sig-name descname"><span class="pre">dependencies</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.Lock.dependencies" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">dependencies</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.Lock.dependencies" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
@@ -1154,7 +1156,7 @@ pipeline’s snapshots; empty for a pin that names no snapshot.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.Lock.root">
-<span class="sig-name descname"><span class="pre">root</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lock.Lock.root" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">root</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.lock.Lock.root" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -1176,7 +1178,7 @@ lockfile edited by hand) names no snapshot a store keeps.</p>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="chartbook.lock.LockError">
-<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">LockError</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#LockError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.LockError" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">LockError</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#LockError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.LockError" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#Exception" title="(in Python v3.15)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
 <p>Raised when a lockfile cannot be read, or a project cannot be pinned.</p>
 <p class="rubric">Initialization</p>
@@ -1203,7 +1205,7 @@ lockfile edited by hand) names no snapshot a store keeps.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">PinEvent</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#PinEvent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.PinEvent" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">PinEvent</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#PinEvent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.PinEvent" title="Link to this definition">#</a></dt>
 <dd><p>One thing pinning did, or found.</p>
 <p>Attributes:
 status: What happened. For an asset: <code class="docutils literal notranslate"><span class="pre">pinned</span></code>, <code class="docutils literal notranslate"><span class="pre">restored</span></code> (put
@@ -1243,36 +1245,36 @@ new: The content hash it is pinned at now, if it is.
 detail: More to say: a path, or why.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.asset">
-<span class="sig-name descname"><span class="pre">asset</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.PinEvent.asset" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">asset</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.PinEvent.asset" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.dependency">
-<span class="sig-name descname"><span class="pre">dependency</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lock.PinEvent.dependency" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">dependency</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.lock.PinEvent.dependency" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.detail">
-<span class="sig-name descname"><span class="pre">detail</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.lock.PinEvent.detail" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">detail</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></em><a class="headerlink" href="#chartbook.lock.PinEvent.detail" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.new">
-<span class="sig-name descname"><span class="pre">new</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.PinEvent.new" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">new</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.PinEvent.new" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.old">
-<span class="sig-name descname"><span class="pre">old</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.PinEvent.old" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">old</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.PinEvent.old" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinEvent.status">
-<span class="sig-name descname"><span class="pre">status</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><a class="headerlink" href="#chartbook.lock.PinEvent.status" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">status</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><a class="headerlink" href="#chartbook.lock.PinEvent.status" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
@@ -1280,7 +1282,7 @@ detail: More to say: a path, or why.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">PinReport</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#PinReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.PinReport" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">PinReport</span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#PinReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.PinReport" title="Link to this definition">#</a></dt>
 <dd><p>What a <code class="docutils literal notranslate"><span class="pre">pin</span></code> or an <code class="docutils literal notranslate"><span class="pre">update</span></code> did.</p>
 <p>Attributes:
 lockfile: The lockfile’s path.
@@ -1311,47 +1313,47 @@ otherwise.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.events">
-<span class="sig-name descname"><span class="pre">events</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.PinEvent" title="chartbook.lock.PinEvent"><span class="pre">chartbook.lock.PinEvent</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.PinReport.events" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">events</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.PinEvent" title="chartbook.lock.PinEvent"><span class="pre">chartbook.lock.PinEvent</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.PinReport.events" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.git">
-<span class="sig-name descname"><span class="pre">git</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a></span><a class="headerlink" href="#chartbook.lock.PinReport.git" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">git</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#set" title="(in Python v3.15)"><span class="pre">set</span></a></em><a class="headerlink" href="#chartbook.lock.PinReport.git" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.lockfile">
-<span class="sig-name descname"><span class="pre">lockfile</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span><a class="headerlink" href="#chartbook.lock.PinReport.lockfile" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">lockfile</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></em><a class="headerlink" href="#chartbook.lock.PinReport.lockfile" title="Link to this definition">#</a></dt>
 <dd><p>None</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.problems">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">problems</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.PinEvent" title="chartbook.lock.PinEvent"><span class="pre">chartbook.lock.PinEvent</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#chartbook.lock.PinReport.problems" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">problems</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.lock.PinEvent" title="chartbook.lock.PinEvent"><span class="pre">chartbook.lock.PinEvent</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.lock.PinReport.problems" title="Link to this definition">#</a></dt>
 <dd><p>The events that mean something could not be pinned.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.refused">
-<span class="sig-name descname"><span class="pre">refused</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.lock.PinReport.refused" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">refused</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></em><a class="headerlink" href="#chartbook.lock.PinReport.refused" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.snapshots">
-<span class="sig-name descname"><span class="pre">snapshots</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span><a class="headerlink" href="#chartbook.lock.PinReport.snapshots" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">snapshots</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></em><a class="headerlink" href="#chartbook.lock.PinReport.snapshots" title="Link to this definition">#</a></dt>
 <dd><p>‘field(…)’</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.unrooted">
-<span class="sig-name descname"><span class="pre">unrooted</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></span><a class="headerlink" href="#chartbook.lock.PinReport.unrooted" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">unrooted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;Multiline-String&gt;</span></em><a class="headerlink" href="#chartbook.lock.PinReport.unrooted" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="chartbook.lock.PinReport.written">
-<span class="sig-name descname"><span class="pre">written</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span><a class="headerlink" href="#chartbook.lock.PinReport.written" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">written</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></em><a class="headerlink" href="#chartbook.lock.PinReport.written" title="Link to this definition">#</a></dt>
 <dd><p>False</p>
 </dd></dl>
 
@@ -1385,7 +1387,7 @@ with a scope is taken for the ID, and one without is given a place for it.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.lock.choose_for_rev">
-<span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">choose_for_rev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">was</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.15)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">git_cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.gitcache.html#chartbook.gitcache.GitCache" title="chartbook.gitcache.GitCache"><span class="pre">chartbook.gitcache.GitCache</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">pinned</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#choose_for_rev"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.choose_for_rev" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">choose_for_rev</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">was</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.15)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">git_cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="chartbook.gitcache.html#chartbook.gitcache.GitCache" title="chartbook.gitcache.GitCache"><span class="pre">chartbook.gitcache.GitCache</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.15)"><span class="pre">pathlib.Path</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pinned</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><span class="pre">tuple</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#choose_for_rev"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.choose_for_rev" title="Link to this definition">#</a></dt>
 <dd><p>For a dependency named by its ID with a <code class="docutils literal notranslate"><span class="pre">rev</span></code>: what to pin it from.</p>
 <p><code class="docutils literal notranslate"><span class="pre">&quot;acme/rates&quot;</span> <span class="pre">=</span> <span class="pre">{</span> <span class="pre">rev</span> <span class="pre">=</span> <span class="pre">&quot;main&quot;</span> <span class="pre">}</span></code> takes the newest snapshot at or
 before the commit <code class="docutils literal notranslate"><span class="pre">main</span></code> is in its repository, which only the
@@ -1405,7 +1407,7 @@ entry to keep, or a <code class="docutils literal notranslate"><span class="pre"
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.lock.clone_instead">
-<span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">clone_instead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">was</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.15)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">built_here</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">pinned</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#clone_instead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.clone_instead" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">chartbook.lock.</span></span><span class="sig-name descname"><span class="pre">clone_instead</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">entry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">was</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.15)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">may_move</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshots</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.15)"><span class="pre">Callable</span></a><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">built_here</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.15)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pinned</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><span class="pre">bool</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/lock.html#clone_instead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.lock.clone_instead" title="Link to this definition">#</a></dt>
 <dd><p>The entry to pin a dependency by: for one named by its ID that is to be got from its repository, a <code class="docutils literal notranslate"><span class="pre">git</span></code> one.</p>
 <p>Decision 1a: a pipeline named by its ID is read from its snapshots in
 the store, and its repository is wanted only when the store has no
@@ -1827,8 +1829,7 @@ cannot be read.</p></li>
             
             
               
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
 
 
   <div class="sidebar-secondary-item">
@@ -1836,12 +1837,12 @@ cannot be read.</p></li>
     <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav class="bd-toc-nav page-toc">
-    <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="pst-show_toc_level nav section-nav flex-column">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#classes">Classes</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem"><code class="docutils literal notranslate"><span class="pre">FrozenProblem</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem.asset"><code class="docutils literal notranslate"><span class="pre">FrozenProblem.asset</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.lock.FrozenProblem.dependency"><code class="docutils literal notranslate"><span class="pre">FrozenProblem.dependency</span></code></a></li>
@@ -1996,8 +1997,8 @@ By Jeremiah Bejarano
   </div>
   
   <!-- Scripts loaded after <body> so the DOM is not blocked -->
-  <script defer src="../../_static/scripts/bootstrap.js?digest=18bd87630a240e9c25be"></script>
-<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=18bd87630a240e9c25be"></script>
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
 
   <footer class="bd-footer">
   </footer>

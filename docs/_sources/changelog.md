@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-30
+
+### Read this first: upgrading from 0.3.0
+
+0.4.0 makes a catalog a view of stored snapshots. Its file is `catalog.toml`, and its `[stores]` table lists the stores to read. A pipeline appears after its owner makes a snapshot; the catalog no longer reads working folders. The snapshot layout, plugin Store contract, content hashes, and lockfile format are unchanged, so a 0.3.0 store needs no store migration.
+
+Run `chartbook catalog migrate` once to convert your existing catalog. It keeps an exact `chartbook.toml.pre-0.4.bak` backup, preserves project settings and pipeline notes, and lists pipelines that need a snapshot. Run `chartbook snapshot` in each of those pipeline folders, then `chartbook catalog build -f`. With a catalog elsewhere, pass `--catalog PATH` to migration. After checking the new catalog's `[stores]`, remove the obsolete `[store]` table from `~/.chartbook/settings.toml` if you no longer need it as a fallback for other catalogs; leaving it there produces an ignored-setting warning.
+
+Update build scripts, including `dodo.py`: replace `chartbook docs generate -f` with `chartbook docs build -f`, and `chartbook catalog generate` with `chartbook catalog build`. Replace calls that run the pipeline's build with `chartbook run`. The pipeline's build script must run `chartbook docs build -f` as its final documentation task; `run` does not add that step itself. To replace `chartbook catalog add FOLDER`, run `chartbook snapshot --project-dir FOLDER`. To connect an existing store, use `chartbook store add NAME URL`.
+
+**Breaking changes:**
+
+- Catalogs use `catalog.toml` and named `[stores]`. Working-folder `[pipelines]` paths and `members` are removed; optional notes may still disable a pipeline or select its repository.
+- `chartbook catalog add`, catalog execution, catalog member checks and `chartbook trust --members` are removed. Run and check individual pipelines; the catalog's Diagnostics page checks snapshot metadata.
+- `chartbook build` is removed. `docs generate` becomes `docs build`, and `catalog generate` becomes `catalog build`. Old spellings fail with replacement instructions.
+- Catalog reads require snapshots. The implicit working-folder fallback is removed; use an explicit `chartbook.links.toml` override in a consumer during development.
+- `CHARTBOOK_STORE` selects the process's only store, overriding the catalog's stores.
+- Catalog pipeline and asset pages are hubs with new addresses. Version sites keep their paths.
+
+### Added — named stores and publishing destinations
+
+Reads choose the newest snapshots across stores. Writes follow catalog routing, allow repeated `snapshot --store NAME`, and can publish verified copies to several stores. Read-only stores refuse writes; unavailable stores are reported. `store add` and `store remove` preserve catalog comments. `store move` verifies copies before removing sources, supports a dry run and keeping source copies, and updates routing. Garbage collection uses each store's own retention notes.
+
+Dependencies may name a portable publishing store URL. S3 supports `?anonymous=true`; `chartbook add URL` records the upstream repository. `chartbook ls stores`, `ls versions` and the catalog's Stores page show the configured stores and their snapshots.
+
+### Added — explicit working-copy links
+
+`chartbook link ID FOLDER` checks identity and writes `chartbook.links.toml`. Reads follow those overrides, warn, and record them in build indexes and provenance. Frozen runs and CI ignore links, and snapshots refuse while a links file exists.
+
+### Changed — catalogs render snapshot hubs
+
+Pipeline and asset hubs show versions, differences between their indexes, and current metadata from stored snapshots. Table and query version pages read stored parquet. Published indexes omit local store paths. Dataframe version entries stay beneath the Versions heading, separate from the current data dictionary. Catalog pages describe stored snapshots without claiming that a working folder is absent from this machine.
+
+### Removed — working-folder catalog membership and combined builds
+
+Pipelines enter catalogs through snapshots. The pipeline's task runner owns its final documentation step. Catalog migration reports missing snapshots and explains how to retire the settings' old store table. See {doc}`design/plan-0.4.0` and {doc}`guide/catalogs-and-data`.
+
 ## [0.3.0] - 2026-10-29
 
 ### Read this first: upgrading from 0.2.0

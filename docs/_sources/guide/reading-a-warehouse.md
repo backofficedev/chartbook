@@ -99,7 +99,7 @@ ChartBook itself runs nothing but `select` there. The SQL you run with `data.sql
 
 ## On the site
 
-`chartbook docs generate` describes each table and query from the warehouse: its columns with the
+`chartbook docs build` describes each table and query from the warehouse: its columns with the
 warehouse's type names, its row count, its first rows, and the first and last date of its
 `date_col`. This runs queries in the warehouse when the site is built, so the machine building the
 site needs the same settings. Where it cannot reach the warehouse, the page says so and the site is
@@ -150,7 +150,7 @@ and needs no card. It has one small SQL warehouse and a daily usage quota.
 
    ```console
    $ python -c 'from chartbook import data; print(data.load("curve").collect())'
-   $ chartbook docs generate
+   $ chartbook docs build
    ```
 
 The first query after the warehouse has been idle can take a minute, while it starts.
