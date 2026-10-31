@@ -194,7 +194,7 @@ def resolve_project_type(raw_manifest: dict, source: str = "chartbook.toml") -> 
         raise ValueError(f"{source}: [project] must be a table, not {type(project).__name__}.")
     require_chartbook(raw_manifest, source)
     explicit = project.get("type")
-    has_registry = "pipelines" in raw_manifest
+    has_registry = "pipelines" in raw_manifest or "stores" in raw_manifest
     entity_sections = [
         s for s in ENTITY_SECTIONS if raw_manifest.get(s)
     ]
@@ -244,12 +244,22 @@ def _read_manifest_file(base_dir: Path) -> dict:
         the file, since a catalog reads several in one go.
     :raises V1FormatError: If the file uses the v1 layout.
     """
-    chartbook_toml_path = Path(base_dir) / "chartbook.toml"
+    catalog_path = Path(base_dir) / "catalog.toml"
+    chartbook_toml_path = catalog_path if catalog_path.is_file() else Path(base_dir) / "chartbook.toml"
     if not chartbook_toml_path.is_file():
         raise FileNotFoundError(f"No chartbook.toml found in directory: {base_dir}")
     raw_manifest = _parse_toml_file(chartbook_toml_path)
     if detect_v1_format(raw_manifest):
         raise V1FormatError(chartbook_toml_path)
+    if chartbook_toml_path.name == "catalog.toml":
+        project = raw_manifest.get("project", {})
+        if not isinstance(project, dict):
+            raise ValueError(f"{chartbook_toml_path}: [project] must be a table")
+        if project.get("type") not in (None, "catalog"):
+            raise ValueError(f"{chartbook_toml_path} is a catalog file; pipeline manifests are chartbook.toml")
+        raw_manifest.setdefault("project", {})["type"] = "catalog"
+    elif resolve_project_type(raw_manifest, source=str(chartbook_toml_path)) == "catalog":
+        raise ValueError(f"{chartbook_toml_path} is an old catalog. Run `chartbook catalog migrate`.")
     return raw_manifest
 
 
@@ -759,7 +769,7 @@ def validate_dataframe_location(entry: dict, dataframe_id: str, sources: dict) -
 
 
 #: The keys an entry of ``[dependencies]`` may have.
-DEPENDENCY_KEYS = ("path", "git", "rev", "id", "commit", "repository")
+DEPENDENCY_KEYS = ("path", "git", "rev", "id", "commit", "repository", "store")
 
 _DEPENDENCY_EXAMPLE = (
     '"ftsfr/fed_yield_curve" = {} (its snapshots in the store, by its ID), '
@@ -838,6 +848,12 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                 f"{where} must be a table that says where the pipeline is, "
                 f"e.g. {_DEPENDENCY_EXAMPLE}."
             )
+        if "store" in entry:
+            import re
+            from chartbook.config import store_kind
+            url = entry["store"]
+            if not isinstance(url, str) or not re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", url) or store_kind(url) == "folder":
+                raise ValueError(f"{where}: store must be a portable store URL, never a folder")
         unknown = sorted(set(entry) - set(DEPENDENCY_KEYS))
         if unknown:
             if all(isinstance(entry[name], dict) for name in unknown):
@@ -1278,7 +1294,8 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     if not project["repo_url"]:
         # The repository's own remote, as a web address with any credentials
         # removed. Looked up once per directory, and already needed above.
-        project["repo_url"] = remote_to_web_url(get_git_remote_url(base_dir))
+        from chartbook.identity import read_version_file
+        project["repo_url"] = remote_to_web_url(read_version_file(base_dir).get("repository") or get_git_remote_url(base_dir))
 
     if not project["site_url"]:
         webpage_path = Path(base_dir) / "docs" / "index.html"
@@ -1303,7 +1320,7 @@ _PROJECT_EXAMPLES = {
     "favicon": "./docs_src/favicon.ico",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
-    "requires_chartbook": ">=0.3.0",
+    "requires_chartbook": ">=0.4.0",
     "site_dir": "./docs_src/site/",
     "writer": "sphinx",
 }
@@ -2069,7 +2086,7 @@ def _load_catalog_manifest(raw_manifest):
     """
     manifest = raw_manifest.copy()
     base_dir = manifest["base_dir"]
-    source = str(Path(base_dir) / "chartbook.toml")
+    source = str(Path(base_dir) / "catalog.toml")
 
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "catalog")
     manifest["project"]["_resolved_site_dir"] = None
@@ -2083,7 +2100,7 @@ def _load_catalog_manifest(raw_manifest):
     if "scripts" in raw_manifest:
         raise ValueError(
             f"{source}: a catalog has no [scripts]. `chartbook run` in a "
-            f"catalog runs each of its pipelines' own scripts."
+            f"catalog has no working scripts. Run it in a pipeline."
         )
     if "sources" in raw_manifest:
         raise ValueError(
@@ -2091,39 +2108,31 @@ def _load_catalog_manifest(raw_manifest):
             f"sources its own dataframes live in."
         )
 
-    entries = _catalog_entries(raw_manifest, base_dir, source)
-
-    manifest["pipelines"] = {}
-    # A pipeline with no folder here: the catalog shows its snapshots in the store
-    manifest["store_pipelines"] = sorted(
-        pipeline_id for pipeline_id, pipeline_entry in entries.items() if pipeline_entry.get("path") is None
-    )
-    for pipeline_id in entries:
-        pipeline_entry = entries[pipeline_id]
-        path_to_pipeline = pipeline_entry.get("path")
-        if path_to_pipeline is None:
-            continue
-        pipeline_base_dir = catalog_entry_dir(
-            base_dir, resolve_platform_path(path_to_pipeline), where=f"{source}: [pipelines.\"{pipeline_id}\"]"
-        )
+    from chartbook.multi_store import Stores
+    from chartbook.snapshot import readable_snapshots
+    notes = raw_manifest.get("pipelines", {})
+    if not isinstance(notes, dict):
+        raise ValueError("[pipelines] must be a table of optional notes")
+    for key, note in notes.items():
         try:
-            assert validate_manifest_file(pipeline_base_dir)
-            sub_manifest = load_manifest(base_dir=pipeline_base_dir)
-        except RequiresChartbookError as error:
-            raise RequiresChartbookError(
-                f"{source}: [pipelines.\"{pipeline_id}\"]: {error}\nTo build the catalog without it until "
-                f"then: `chartbook catalog disable {pipeline_id}`."
-            ) from None
-        if sub_manifest["project"]["type"] != "pipeline":
-            raise ValueError(
-                f"{source}: [pipelines.\"{pipeline_id}\"] points at "
-                f"{pipeline_base_dir}, which is a catalog, not a pipeline.\n"
-                f"To fix: remove the entry (catalogs cannot nest inside catalogs)."
-            )
-        # The catalog key is the authoritative identity within this catalog.
-        sub_manifest["project"]["id"] = pipeline_id
-        manifest["pipelines"][pipeline_id] = sub_manifest
-
+            validate_pipeline_id(key)
+        except ValueError as error:
+            raise type(error)(f"{source}: [pipelines] {key!r}: {error}") from None
+        if not isinstance(note, dict) or set(note) - {"disabled", "repository"}:
+            raise ValueError(f"[pipelines.{key}] accepts only disabled and repository; run `chartbook catalog migrate`.")
+        if "repository" in note:
+            from chartbook.identity import web_link, remote_to_web_url
+            if not isinstance(note["repository"], str) or not web_link(remote_to_web_url(note["repository"])):
+                raise ValueError(f"[pipelines.{key}] repository must be a repository URL")
+        if "disabled" in note and not isinstance(note["disabled"], bool):
+            raise ValueError(f"[pipelines.{key}] disabled must be a boolean")
+    stores = Stores.configured(Path(base_dir) / "catalog.toml")
+    found, _ = readable_snapshots(stores)
+    entries = {t.pipeline: {} for t in found if not notes.get(t.pipeline, {}).get("disabled", False)}
+    manifest["stores"] = stores
+    manifest["pipeline_notes"] = notes
+    manifest["pipelines"] = {}
+    manifest["store_pipelines"] = sorted(entries)
     return manifest
 
 
@@ -2270,7 +2279,7 @@ def apply_code_change_times(manifest: dict, known: Union[dict, None] = None) -> 
     """
     known = known or {}
     times = {}
-    for pipeline_id in get_pipeline_ids(manifest):
+    for pipeline_id in _working_pipeline_ids(manifest):
         if manifest["project"]["type"] == "catalog":
             pipeline_manifest = manifest["pipelines"][pipeline_id]
         else:
@@ -2325,6 +2334,13 @@ def get_default_branding_path(filename: str) -> Path:
 
 
 def get_pipeline_ids(manifest):
+    """Every pipeline shown by a manifest, including a catalog's stored pipelines."""
+    if manifest["project"]["type"] == "catalog":
+        return sorted(set(manifest.get("pipelines", {})) | set(manifest.get("store_pipelines", [])))
+    return [manifest["project"]["id"]]
+
+
+def _working_pipeline_ids(manifest):
     """Get a list of pipeline IDs from the manifest.
 
     :param manifest: The manifest dictionary.
@@ -2354,7 +2370,7 @@ def get_pipeline_dirs(manifest: dict) -> dict:
         pipeline_id: Path(
             get_pipeline_manifest(manifest, pipeline_id)["pipeline_base_dir"]
         )
-        for pipeline_id in get_pipeline_ids(manifest)
+        for pipeline_id in _working_pipeline_ids(manifest)
     }
 
 

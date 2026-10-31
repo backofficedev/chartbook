@@ -189,40 +189,6 @@ def _set_host(work: Path, value: str) -> None:
 
 
 class TestWhatTheReviewFound:
-    def test_a_catalog_run_never_clones_its_own_pipeline(self, host):
-        from chartbook import run
-
-        _upstream(host, 9.0)  # the host's acme/rates: never to be built here
-        marker = host / "host-built"
-        (host / "host" / "acme" / "rates" / "chartbook.toml").write_text(
-            tomli_w.dumps({
-                "project": {"id": "acme/rates"},
-                "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
-                "scripts": {"build": f"{sys.executable} -c \"open(r'{marker}', 'w').close()\""},
-            }), encoding="utf-8", newline="\n"
-        )
-        _commit(host / "host" / "acme" / "rates", "A build")
-        catalog = host / "catalog"
-        rates = catalog / "rates"
-        (rates / "_data").mkdir(parents=True)
-        (rates / "chartbook.toml").write_text(tomli_w.dumps({
-            "project": {"id": "acme/rates"},
-            "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
-            "scripts": {"build": f"{sys.executable} -c \"import polars as pl; pl.DataFrame({{'d': ['2024-01-01'], 'r': [1.0]}}).write_parquet('_data/treasury.parquet')\""},
-        }), encoding="utf-8", newline="\n")
-        _forecast(catalog / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
-        (catalog / "chartbook.toml").write_text(tomli_w.dumps({
-            "project": {"type": "catalog", "id": "cat"},
-            "pipelines": {"acme/forecast": {"path": "./forecast"}, "acme/rates": {"path": "./rates"}},
-        }), encoding="utf-8", newline="\n")
-        _git(catalog, "init", "--quiet", "-b", "main")
-        (catalog / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
-        _commit(catalog)
-        report = run.run(catalog, snapshot=True, echo=lambda *a, **k: None)
-        assert report.failed is None, report.reason
-        assert [step.id for step in report.ran] == ["acme/rates", "acme/forecast"]
-        assert not marker.exists()
-        assert _entry(catalog / "forecast")["via"] == "store"
 
     def test_a_pin_from_its_repository_puts_lost_bytes_back(self, host):
         repository = _upstream(host, 4.0)

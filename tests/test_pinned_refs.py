@@ -235,14 +235,15 @@ class TestWhatIsMissing:
         """The chain's second step makes the error useful; it grants no access in a batch run."""
         monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         catalog = create_catalog_project(work / "cat")
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.setattr(
-            resolve_module, "get_default_catalog_path", lambda: catalog / "chartbook.toml"
+            resolve_module, "get_default_catalog_path", lambda: catalog / "catalog.toml"
         )
         with pytest.raises(DependencyNotDeclaredError) as e:
             data.path("pipeline_a:dataframe_0", project_dir=pinned)
         message = str(e.value)
-        assert "Your catalog has it, as 'pipeline_a'." in message
-        assert '    "pipeline_a" = { path = "../cat/pipelines/pipeline_a" }' in message
+        assert '"pipeline_a" = { id = "pipeline_a" }' in message
 
     def test_a_dependency_that_has_not_been_pinned(self, downstream, store, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_BATCH", "1")  # a batch run does not pin on first read
@@ -445,6 +446,8 @@ class TestLoad:
         assert data.load("upstream:dataframe_0").collect().height == 10
 
     def test_through_a_catalog_is_as_it_was(self, catalog_project):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         by_keyword = data.load(
             pipeline="pipeline_a", dataframe="dataframe_0", catalog_path=catalog_project
         )
@@ -539,23 +542,6 @@ class TestInTheIndex:
         assert "pinned_inputs" not in self._record(built, "Model")
         assert "pinned_hash" not in self._record(built, "Pipeline")["dependencies"][0]
 
-    def test_in_a_catalog_it_is_keyed_by_the_catalogs_id(self, work, store):
-        catalog = create_catalog_project(work / "cat").resolve()
-        manifest_path = catalog / "chartbook.toml"
-        manifest_path.write_text(
-            manifest_path.read_text(encoding="utf-8")
-            .replace("[pipelines.pipeline_a]", '[pipelines."acme/pipeline_a"]')
-            .replace("[pipelines.pipeline_b]", '[pipelines."acme/pipeline_b"]'), encoding="utf-8", newline="\n"
-        )
-        pipeline_a = catalog / "pipelines" / "pipeline_a"
-        with open(pipeline_a / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
-            f.write('\n[dependencies]\nup = { path = "../pipeline_b" }\n')
-        self._add_model(pipeline_a, ["up:dataframe_0"])
-        pin_from_snapshots(pipeline_a, store)
-
-        model = self._record(index.build_index(load_manifest(catalog)), "Model")
-        assert model["inputs"] == ["acme/pipeline_b:dataframe_0"]
-        assert list(model["pinned_inputs"]) == ["acme/pipeline_b:dataframe_0"]
 
     def test_the_record_fits_its_schema(self, with_data):
         reader, _ = with_data
@@ -582,7 +568,7 @@ class TestInTheIndex:
         reader, _ = with_data
         self._add_model(reader, ["upstream:dataframe_0"])
         monkeypatch.chdir(reader)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         built = json.loads((reader / "docs" / "index.json").read_text(encoding="utf-8"))
         pinned_at = lock.read_lock(reader).assets["upstream:dataframe_0"]["content_hash"]

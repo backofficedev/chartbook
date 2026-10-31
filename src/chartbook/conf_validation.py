@@ -249,12 +249,12 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     from pathlib import Path
 
     from chartbook.errors import MissingFile
-    from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+    from chartbook.manifest import _working_pipeline_ids, get_pipeline_manifest
 
     base_dir = Path(base_dir).resolve()
     missing_files = []
 
-    pipeline_ids = get_pipeline_ids(manifest)
+    pipeline_ids = _working_pipeline_ids(manifest)
 
     for pipeline_id in pipeline_ids:
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)

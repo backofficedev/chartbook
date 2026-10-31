@@ -398,6 +398,9 @@ def locate_in_catalog(catalog_manifest: dict, pipeline: str) -> str:
     :raises KeyError: If the catalog has no such pipeline, or a bare name
         is ambiguous in it.
     """
+    if catalog_manifest.get("stores") is not None:
+        from chartbook.identity import resolve_pipeline_ref
+        return resolve_pipeline_ref(catalog_manifest.get("store_pipelines", []), pipeline)
     pipelines = catalog_manifest.get("pipelines", {})
     catalog = {key: entry["pipeline_base_dir"] for key, entry in pipelines.items()}
     try:
@@ -411,9 +414,9 @@ def locate_in_catalog(catalog_manifest: dict, pipeline: str) -> str:
         if named:
             raise KeyError(
                 f"The catalog names {named[0]!r}, but it has no folder on this machine: the "
-                f"catalog only shows its snapshots in the store. To read its data here, add its "
-                f"folder to the catalog (chartbook catalog add), or read it from a pipeline that "
-                f"declares it in [dependencies] and pins it."
+                f"catalog only shows its snapshots in the store. Read it from a pipeline that "
+                f"declares it in [dependencies] and pins it, or use `chartbook link ID FOLDER` "
+                f"in that consumer to read a working copy."
             ) from None
         raise
 
@@ -434,16 +437,16 @@ def resolve_catalog_path(catalog_path: Optional[Union[str, Path]] = None) -> Pat
     2. Global settings (``~/.chartbook/settings.toml``)
     3. Raise :class:`CatalogNotConfiguredError`
 
-    :param catalog_path: Explicit path to a catalog ``chartbook.toml`` or its parent directory.
+    :param catalog_path: Explicit path to a catalog ``catalog.toml`` or its parent directory.
     :type catalog_path: Optional[Union[str, Path]]
-    :returns: Resolved path to the catalog's ``chartbook.toml``.
+    :returns: Resolved path to the catalog's ``catalog.toml``.
     :rtype: Path
     :raises CatalogNotConfiguredError: If no catalog is configured.
     """
     if catalog_path is not None:
         catalog_path = Path(catalog_path)
         if catalog_path.is_dir():
-            catalog_path = catalog_path / MANIFEST_NAME
+            catalog_path = catalog_path / "catalog.toml"
         return catalog_path.resolve()
 
     default_path = get_default_catalog_path()
@@ -468,7 +471,7 @@ def find_manifest_dir(*starts: Union[str, Path]) -> Path:
     start_dirs = [Path(s).resolve() for s in starts] or [Path.cwd().resolve()]
     for start in start_dirs:
         for directory in (start, *start.parents):
-            if (directory / MANIFEST_NAME).is_file():
+            if (directory / MANIFEST_NAME).is_file() or (directory / "catalog.toml").is_file():
                 return directory
     raise ManifestNotFoundError(start_dirs)
 
@@ -695,7 +698,7 @@ def _read_lock(manifest_dir: Path):
     return locked
 
 
-def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, str]]:
+def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, Optional[str]]]:
     """Where the user's catalog says an undeclared pipeline is, if it says.
 
     This is the second step of the chain, used only to make an error more
@@ -705,12 +708,11 @@ def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, str]
     :returns: The catalog's key for it and its directory relative to
         *manifest_dir*, or None.
     """
-    from chartbook.manifest import get_pipeline_dirs, load_manifest
+    from chartbook.manifest import load_manifest
 
     try:
         catalog = load_manifest(base_dir=resolve_catalog_path().parent)
-        found = locate_pipeline(pipeline, catalog=get_pipeline_dirs(catalog))
-        return found.id, Path(os.path.relpath(found.path, manifest_dir)).as_posix()
+        return locate_in_catalog(catalog, pipeline), None
     except Exception:  # noqa: BLE001 - a hint is never worth failing for
         return None
 
@@ -757,6 +759,11 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     from chartbook.manifest import validate_dependencies
     from chartbook.store import default_store
     from chartbook.utils import is_glob_pattern
+
+    from chartbook.links import resolve as linked_location
+    linked = linked_location(asset, manifest_dir)
+    if linked is not None:
+        return linked
 
     manifest_path = manifest_dir / MANIFEST_NAME
     raw = _read_raw_manifest(manifest_path)
@@ -874,7 +881,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"folder; for a git repository, `chartbook run` here). Then "
             f"`chartbook update` in {manifest_dir} pins it.",
         )
-    store = default_store()
+    from chartbook.multi_store import with_dependencies
+    store = with_dependencies(manifest_dir)
     if not store.has(content_hash):
         raise AssetNotPinnedError(
             asset_id,
@@ -1264,9 +1272,9 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
     from chartbook.manifest import resolve_project_type
 
     name, table = asset.name, asset.table
-    manifest_path = manifest_dir / MANIFEST_NAME
+    manifest_path = manifest_dir / ("catalog.toml" if (manifest_dir / "catalog.toml").is_file() else MANIFEST_NAME)
     raw = _read_raw_manifest(manifest_path)
-    if resolve_project_type(raw, source=str(manifest_path)) == "catalog":
+    if manifest_path.name == "catalog.toml" or resolve_project_type(raw, source=str(manifest_path)) == "catalog":
         raise ValueError(
             f"{manifest_path} is a catalog, which declares no assets of its "
             f"own. A local reference resolves against a pipeline's "
@@ -1427,7 +1435,7 @@ def resolve(
         catalog = resolve_catalog_path(catalog_path)
         listed = _catalog_manifest(catalog)
         key = locate_in_catalog(listed, pipeline)
-        folder = listed["pipelines"][key].get("pipeline_base_dir")
+        folder = listed.get("pipelines", {}).get(key, {}).get("pipeline_base_dir")
     except (CatalogNotConfiguredError, KeyError, OSError, ValueError) as error:
         why_not = error  # the store may still have it
     try:
@@ -1440,16 +1448,28 @@ def resolve(
     def from_the_catalog(asset: AssetRef, why: str, error: Exception) -> Location:
         if why_not is not None:
             raise why_not from None
-        working = Path(folder) if folder else catalog.parent
-        _refuse_working_in_a_batch(asset, why, working)
-        location = _resolve_in_catalog(catalog, key, str(ref))
-        _warn_working(asset, location, working, why)
-        return location
+        raise error from None
 
     try:
         manifest_dir = find_manifest_dir(*start_dirs)
     except ManifestNotFoundError:
         manifest_dir = None
+    if catalog is not None and (catalog.parent / "catalog.toml").is_file() and (manifest_dir is None or (manifest_dir / "catalog.toml").is_file()):
+        from chartbook import lock
+        if why_not is not None:
+            raise why_not from None
+        stores = listed["stores"]
+        found = _snapshots_in(stores)
+        repository = listed.get("pipeline_notes", {}).get(key, {}).get("repository")
+        newest, why, _ = lock._newest_in_store(key, None, stores, repository, found=found, named=bool(repository))
+        if newest is None:
+            raise AssetNotPinnedError(str(asset), "no_snapshot", f"{asset}: {why}. Run `chartbook snapshot` in its pipeline.")
+        if asset.local_name not in newest.assets:
+            raise KeyError(f"Dataframe {asset.name!r} not found in pipeline {key!r} in its newest snapshot. Available assets: {', '.join(sorted(newest.assets))}")
+        location, why = _held_in(asset, newest, found, stores)
+        if location is None:
+            raise AssetNotPinnedError(str(asset), "no_snapshot", str(why))
+        return location
     return _read_another(asset, manifest_dir, from_the_catalog, folder=folder)
 
 
@@ -1515,6 +1535,8 @@ def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder
     """
     from chartbook.manifest import resolve_project_type
 
+    if manifest_dir is not None and (manifest_dir / "catalog.toml").is_file():
+        manifest_dir = None
     if manifest_dir is not None:
         raw = _read_raw_manifest(manifest_dir / MANIFEST_NAME)
         if resolve_project_type(raw, source=str(manifest_dir / MANIFEST_NAME)) == "catalog":
@@ -1725,22 +1747,11 @@ def _warn_working(asset: AssetRef, location: Location, folder: Path, why: str) -
 
 
 def _read_working(asset: AssetRef, folder: Path, why: str) -> Location:
-    """Read another pipeline's asset from its working folder, and say so loudly; refused in a batch run."""
-    _refuse_working_in_a_batch(asset, why, folder)
-    if not (Path(folder) / MANIFEST_NAME).is_file():
-        raise AssetNotPinnedError(
-            str(asset), "no_snapshot", f"{asset} cannot be read: {why}, and {folder} has no {MANIFEST_NAME}."
-        )
-    try:
-        location = _resolve_local(AssetRef(kind=asset.kind, name=asset.name, rev=asset.rev), Path(folder))
-    except AssetNotDeclaredError:
-        raise AssetNotPinnedError(
-            str(asset),
-            "no_snapshot",
-            f"{asset} cannot be read: {why}, and its working folder, {folder}, declares no {asset.local_name} either.",
-        ) from None
-    _warn_working(asset, location, Path(folder), why)
-    return location
+    """A working read requires an explicit consumer-local link."""
+    raise AssetNotPinnedError(
+        str(asset), "no_snapshot",
+        f"{asset} has no snapshot: {why}. Run `chartbook snapshot` in {folder}, or explicitly link it with `chartbook link {asset.pipeline_id} {folder}`.",
+    )
 
 
 def _in_a_catalog_folder(catalog_path=None):

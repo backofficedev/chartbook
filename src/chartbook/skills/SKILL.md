@@ -2,7 +2,7 @@
 name: chartbook
 description: Help users work with ChartBook - a data science documentation platform for organizing pipelines, charts, and dataframes
 metadata:
-  chartbook-version: "0.3.0"
+  chartbook-version: "0.4.0"
 ---
 
 # ChartBook Assistant
@@ -28,11 +28,10 @@ ChartBook is a developer platform for data science teams to discover, document, 
 chartbook init              # Scaffold new project from the cookiecutter template
 chartbook init --git        # ...and git init + initial commit
 chartbook init --github     # ...and create a private GitHub repo with gh, then push (--public to override)
-chartbook docs generate     # Render the HTML documentation website (was `chartbook docs`; `chartbook build` before that)
-chartbook build -f          # Make everything current: run [scripts] build, THEN render the site. In a dodo.py task, use `chartbook docs generate -f`, never `chartbook build`
-chartbook docs generate -f  # Force overwrite existing docs
-chartbook docs generate -f --incremental  # Keep _docs/ and redo only what changed since last time
-chartbook docs generate -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
+chartbook docs build     # Render the HTML documentation website (was `chartbook docs`; `chartbook run` before that)
+chartbook docs build -f  # Force overwrite existing docs
+chartbook docs build -f --incremental  # Keep _docs/ and redo only what changed since last time
+chartbook docs build -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook docs open         # Open project docs in default browser (was `chartbook browse`)
 # every build also writes docs/index.json: one record per pipeline, dataframe, column,
 # chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
@@ -41,9 +40,8 @@ chartbook docs open         # Open project docs in default browser (was `chartbo
 # around a built site or catalog, read its llms.txt first
 chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
-chartbook trust             # Say this folder's pipeline is yours to build (at a terminal, the first build/run/docs generate asks instead: y trusts, r renders without its code, Enter stops). Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `build`/`run` REFUSE to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
+chartbook trust             # Say this folder's pipeline is yours to build (at a terminal, the first build/run/docs build asks instead: y trusts, r renders without its code, Enter stops). Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `run` REFUSES to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
 chartbook trust --render    # ...to render only: queries run and files it names are read, no build script
-chartbook trust --members   # In a catalog: the catalog's folder and each member folder here (a catalog builds only when all are trusted). --repository: this folder's origin repository, every clone of it. --list shows the record (~/.chartbook/trust.toml); --forget removes
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>, file/<name>)
 chartbook path file/<name> --files  # the asset's files, one per line, sorted: a folder's files, a glob's matches
@@ -75,12 +73,17 @@ chartbook store import DIR  # Copy the snapshots DIR holds (an export, or a pipe
 chartbook config            # Configure default catalog path (interactive)
 chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
 chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
-chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml (its folder is recorded as trusted to run)
-chartbook catalog add <path>     # Add pipeline(s) to catalog (each folder is recorded as trusted to render; `chartbook trust` there to run its build script)
-chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
+chartbook catalog init      # Create ~/.chartbook/catalog.toml
+chartbook catalog migrate   # Upgrade an old folder catalog, keeping a backup
+chartbook store add team /path/to/shared/store --pipelines acme/rates
+chartbook store remove team # Remove the definition; keep the files
+chartbook store move acme/rates --to team --dry-run
+chartbook ls stores
+chartbook ls versions
+chartbook link acme/rates ../rates # Local working-copy override; delete chartbook.links.toml to restore pins
 chartbook catalog disable <id>   # Disable a pipeline (skip during builds)
 chartbook catalog enable <id>    # Re-enable a disabled pipeline
-chartbook catalog generate       # Render the global catalog's site (was `catalog build`)
+chartbook catalog build       # Render the global catalog's site (was `catalog generate`)
 chartbook catalog open           # Open the global catalog's site in the browser (was `catalog browse`)
 chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
@@ -98,7 +101,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 ```
 ~/.chartbook/
 ├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
-├── chartbook.toml       # Default global catalog
+├── catalog.toml         # Default global catalog; [stores] lists named stores
 ├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
 ├── trust.toml           # Pipelines and repositories this user trusts a build of (chartbook trust); CI trusts the checkout, CHARTBOOK_TRUST=all every folder
 ├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
@@ -106,7 +109,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 ├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
 ├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
-├── docs/                # Rendered catalog HTML (from `catalog generate`)
+├── docs/                # Rendered catalog HTML (from `catalog build`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
 └── _docs_src/           # Temp source dir (auto-cleaned)
 ```
@@ -114,7 +117,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 **Catalog path resolution order:**
 1. Explicit `--catalog` flag on CLI commands
 2. `catalog.path` from `~/.chartbook/settings.toml`
-3. `~/.chartbook/chartbook.toml` if it exists
+3. `~/.chartbook/catalog.toml` if it exists
 4. Auto-prompt to create one (interactive TTY only)
 
 ## Configuration File
@@ -122,7 +125,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 Projects use `chartbook.toml` with these sections (all `[project]` keys are optional — an empty file is a valid pipeline manifest):
 
 - `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`, `writer` (`"sphinx"` by default; `"mkdocs"` builds the site with MkDocs, `pip install chartbook[mkdocs]`). `build` here is the old place for `[scripts] build`, still read
-- `[scripts]`: Named commands, one string each; `build` is what `chartbook run` and `chartbook build` run
+- `[scripts]`: Named commands, one string each; `build` is what `chartbook run` and `chartbook run` run
 - `[models]`: Trained models (`path`, `trained_on`, `metrics_path`, a write-up), with `[models.<id>.aliases]` for labelled versions
 - `[files]`: Files that are not tables, whatever is inside (gzipped JSON lines, text, HTML, PDFs, images, arrays, a SQLite file, a vendor's zip): `path` (a file, a folder or a glob) and a dataframe's governance fields (`description`, a write-up, `sources`, `providers`, `license`, `restrictions`, `tags`, `keep`). Addressed `file/<name>`
 - `[dependencies]`: Other pipelines this one reads from, by ID: `"acme/rates" = {}` (its snapshots in the store), `{ path = "../x" }` (a folder, for two pipelines in one repository) or `{ git = "…" }` (a repository)
@@ -134,7 +137,7 @@ Projects use `chartbook.toml` with these sections (all `[project]` keys are opti
 - `[pipelines]`: Pipeline registry (catalogs only, scoped keys like `"ftsfr/crsp_treasury"`)
 - `[policy]`: Required-field policy. A catalog's holds its pipelines to it; a lone pipeline's own holds it when it is checked or built by itself
 
-Project type is inferred: a `[pipelines]` table means catalog, otherwise pipeline. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key.
+A pipeline uses `chartbook.toml`; a catalog uses `catalog.toml` with `[stores]`. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key.
 
 For complete TOML field references, required fields, and full configuration examples, see **manifest_files.md**.
 
@@ -144,11 +147,9 @@ Pipelines in a catalog can be temporarily disabled by adding `disabled = true`:
 
 ```toml
 [pipelines."ftsfr/sovereign_bonds"]
-path = "../sovereign_bonds"
 disabled = true
 ```
 
-Disabled pipelines are skipped during builds. Use `chartbook catalog disable <id>` / `chartbook catalog enable <id>` to toggle. Re-adding a disabled pipeline with `chartbook catalog add` automatically re-enables it.
 
 ## Data Loading API
 
@@ -170,7 +171,7 @@ df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="pandas")
 # Load with explicit catalog path
 lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/path/to/catalog")
 # Through a catalog, it is the pipeline's NEWEST SNAPSHOT in the store (its pin, in a pipeline
-# that declares it); with no snapshot, its working folder, with a WorkingVersionWarning.
+# that declares it). With no snapshot, make one or explicitly link the dependency.
 
 # Get data file path (through the catalog)
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
@@ -214,9 +215,10 @@ table = assets.index("file/filings")          # LazyFrame: path, size_bytes, sha
 # or just a first data.load(), which pins it and says so on stderr. Before a pin:
 #   declared, not pinned      -> pinned now to its newest snapshot (a git one: `chartbook pin`)
 #   not in [dependencies]     -> its newest snapshot + UnrecordedReadWarning; `chartbook add <id>`
-#   no snapshot, folder here  -> its WORKING version + WorkingVersionWarning
+#   no snapshot              -> snapshot required, or explicit `chartbook link ID FOLDER`
 #   no chartbook.toml at all  -> its newest snapshot, silently
-# In a build under `chartbook run` (CHARTBOOK_BATCH=1) only a pin is read; the others are errors. After that,
+# Explicit links override pins for development, warn, and prevent snapshots. CI and --frozen ignore them.
+# In a build under `chartbook run` (CHARTBOOK_BATCH=1), unrecorded reads are refused. After that,
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
 # not its working directory. It changes only on `chartbook update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy
@@ -326,7 +328,7 @@ name = "My Pipeline"
 description = "Description"
 maintainer = "Your Name"
 # id = "myorg/my_pipeline"       # Optional: scoped ID (default derived from git remote + dirname)
-requires_chartbook = ">=0.3.0"   # Optional: an older ChartBook stops and says how to upgrade (`chartbook init` writes it)
+requires_chartbook = ">=0.4.0"   # Optional: an older ChartBook stops and says how to upgrade (`chartbook init` writes it)
 # site_dir = "./docs_src/site/"  # Optional: default when the directory exists
 # writer = "mkdocs"              # Optional: build the site with MkDocs instead of Sphinx (pip install chartbook[mkdocs])
 ```

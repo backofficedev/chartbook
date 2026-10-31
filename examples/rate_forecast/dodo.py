@@ -44,7 +44,7 @@ def task_train_rate_forecast():
 def task_compile_sphinx_docs():
     """Compile the documentation site"""
     return {
-        "actions": ["chartbook docs generate -f"],
+        "actions": ["chartbook docs build -f"],
         "targets": ["./docs/index.html"],
         "file_dep": [
             "./README.md",

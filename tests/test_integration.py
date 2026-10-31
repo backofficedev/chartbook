@@ -107,12 +107,8 @@ class TestManifestToGeneratorCatalogWorkflow:
         assert "pipeline_a" in pipeline_ids
         assert "pipeline_b" in pipeline_ids
 
-        # Verify each pipeline has full manifest
-        for pid in pipeline_ids:
-            pipeline_manifest = get_pipeline_manifest(manifest, pid)
-            assert pipeline_manifest["project"]["type"] == "pipeline"
-            assert "dataframes" in pipeline_manifest
-            assert "charts" in pipeline_manifest
+        assert manifest["pipelines"] == {}
+        assert set(get_pipeline_ids(manifest)) == set(manifest["store_pipelines"])
 
     def test_catalog_platform_paths_resolution(self, catalog_project_platform_paths):
         """Test catalog with platform-specific path dictionaries."""
@@ -124,10 +120,7 @@ class TestManifestToGeneratorCatalogWorkflow:
         assert "pipeline_x" in pipeline_ids
         assert "pipeline_y" in pipeline_ids
 
-        # Each should have valid manifest
-        for pid in pipeline_ids:
-            pipeline_manifest = get_pipeline_manifest(manifest, pid)
-            assert pipeline_manifest["project"]["id"] == pid
+        assert manifest["pipelines"] == {}
 
 
 class TestWorkflowErrorHandling:
@@ -176,6 +169,34 @@ class TestExampleProjects:
     dependencies on external APIs (FRED, OFR, Federal Reserve). The mock
     data is copied to the example _data directories before running doit.
     """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_example_repository(self, tmp_path, monkeypatch):
+        """Exercise edited examples without committing or cleaning the developer's checkout."""
+        source = Path(__file__).resolve().parents[1]
+        work = tmp_path / "example_repository"
+        work.mkdir()
+        names = subprocess.check_output(["git", "ls-files", "--", "examples"], cwd=source, text=True).splitlines()
+        for name in names:
+            original = source / name
+            if not original.is_file():
+                continue
+            target = work / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(original, target)
+        # New example files (including a renamed catalog.toml) are part of
+        # the working source under test, even before they are staged.
+        for original in (source / "examples").rglob("catalog.toml"):
+            target = work / original.relative_to(source)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(original, target)
+        shutil.copy2(source / ".gitignore", work / ".gitignore")
+        from tests.test_model_versions import _git
+        _git(work, "init", "--quiet", "-b", "main")
+        _git(work, "remote", "add", "origin", "https://github.com/backofficedev/chartbook")
+        _git(work, "add", "-A")
+        _git(work, "commit", "--quiet", "-m", "Examples under test")
+        monkeypatch.chdir(work)
 
     @staticmethod
     def _clean_example_dirs(example_path: Path):
@@ -576,17 +597,22 @@ class TestExampleProjects:
         self._build_rate_forecast(tmp_path / "store")
         lockfile = rate_forecast_path / "chartbook.lock"
         try:
+            snapshot_env = self._get_env_with_pythonpath()
+            snapshot_env["CHARTBOOK_STORE"] = str(tmp_path / "store")
+            self._snapshot(fred_charts_path, snapshot_env)
+            self._snapshot(rate_forecast_path, snapshot_env)
+
             # Now render the catalog's site
             result = subprocess.run(
-                ["chartbook", "docs", "generate", "-f"],
+                ["chartbook", "docs", "build", "-f"],
                 cwd=catalog_path,
                 capture_output=True,
                 text=True,
                 timeout=300,
-                env=self._get_env_with_pythonpath(), encoding="utf-8", errors="replace"
+                env=snapshot_env, encoding="utf-8", errors="replace"
             )
 
-            assert result.returncode == 0, f"chartbook docs generate failed: {result.stderr}"
+            assert result.returncode == 0, f"chartbook docs build failed: {result.stderr}"
 
             # Verify outputs exist
             assert (catalog_path / "docs" / "index.html").exists()

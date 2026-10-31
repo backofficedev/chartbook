@@ -65,13 +65,15 @@
       "type": "object",
       "description": "Where the asset's content is.",
       "required": [
-        "kind",
-        "path"
+        "kind"
       ],
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "const": "file"
+          "enum": [
+            "file",
+            "store"
+          ]
         },
         "path": {
           "type": "string",
@@ -287,6 +289,10 @@
           }
         }
       }
+    },
+    "snapshots": {
+      "type": "array",
+      "description": "Catalog hub versions, newest first, with presence and consecutive-index changes."
     }
   },
   "additionalProperties": true

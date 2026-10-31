@@ -143,7 +143,7 @@ class TestManifest:
 
     def test_a_catalog_has_no_sources(self, tmp_path):
         _manifest(tmp_path / "p", {"project": {"id": "p"}})
-        (tmp_path / "chartbook.toml").write_text(
+        (tmp_path / "catalog.toml").write_text(
             tomli_w.dumps(
                 {
                     "project": {"type": "catalog"},
@@ -572,7 +572,7 @@ class TestIndexAndSite:
         }
         _manifest(pipeline, dated)
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text(encoding="utf-8")
         assert "| Data available up to (min)     | 2024-01-01" in page
@@ -590,7 +590,7 @@ class TestIndexAndSite:
 
     def test_the_page_describes_the_table(self, pipeline, monkeypatch):
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text(encoding="utf-8")
         assert "A query in source 'local' (duckdb): 2 rows, 2 columns." in page
@@ -656,11 +656,11 @@ class TestNotPinnedAcrossPipelines:
         assert ("rates:curve", "kept") in [(e.asset, e.status) for e in report.events]
 
     def test_a_catalog_reaches_a_table_of_a_pipeline_it_lists(self, pipeline, tmp_path):
-        """Found by a reviewer: the catalog path blamed a missing `path`."""
-        (tmp_path / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}}), encoding="utf-8", newline="\n"
-        )
-        location = resolve("curve", pipeline="acme/rates", catalog_path=tmp_path / "chartbook.toml")
-        assert isinstance(location, TableLocation) and location.identifier == "curve"
-        frame = data.load("acme/rates", "slopes", catalog_path=tmp_path / "chartbook.toml")
-        assert frame.collect().height == 2
+        from chartbook import snapshot
+        from tests.fixtures import commit_pipeline
+        from chartbook.config import get_store_url
+        commit_pipeline(pipeline)
+        snapshot.make(pipeline)
+        path = tmp_path / "catalog.toml"
+        path.write_text(tomli_w.dumps({"stores": {"mine": {"url": get_store_url()}}}), encoding="utf-8", newline="\n")
+        assert resolve("curve", pipeline="acme/rates", catalog_path=path).path.suffix == ".parquet"

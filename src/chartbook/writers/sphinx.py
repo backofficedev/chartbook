@@ -348,6 +348,9 @@ def _from_the_store(record: dict) -> dict:
 
     shown = {key: record[key] for key in ("kind", "version", "id", "snapshots") if key in record}
     shown["location"] = {"kind": "store"}
+    shown["metadata_present"] = record.get("metadata_present", [])
+    from chartbook.hubs import dependency_records
+    shown["dependencies"] = dependency_records(record.get("dependencies", []))
     for key in ("name", "description", "maintainer"):
         if _as_text(record.get(key)):
             shown[key] = _as_text(record[key])
@@ -433,7 +436,8 @@ class SphinxWriter:
         depth = self.page_path(record).count("/")
         if self.theme == "pipeline":
             return "../" * depth + "index.md"
-        return "../" * (depth - 1) + f"pipelines/{_slug(record['pipeline'])}_README.md"
+        import posixpath
+        return posixpath.relpath(self.pipeline_page_path(self.records[record["pipeline"]]), posixpath.dirname(self.page_path(record)))
 
     def page_path(self, record: dict) -> str:
         """Where a record's page is, under the pages folder."""
@@ -449,6 +453,8 @@ class SphinxWriter:
         """Where a pipeline's page is: the site's front page in the pipeline theme, a README page in a catalog."""
         if self.theme == "pipeline":
             return "index.md"
+        if self.index.get("stores") is not None:
+            return f"cb/pipelines/{_slug(record['id'])}.md"
         return f"cb/pipelines/{_slug(record['id'])}_README.md"
 
     def dataframe_page_path(self, record: dict) -> str:
@@ -488,6 +494,8 @@ class SphinxWriter:
         from chartbook.sitefiles import download_link, downloadable, not_built, not_built_text
 
         record = self.records[record_id]
+        if (record.get("location") or {}).get("kind") == "store":
+            return self._asset_hub(record)
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
         environment = self._environment(base_dir)
@@ -503,7 +511,7 @@ class SphinxWriter:
             # Declared and not built yet: the provenance panel says so too.
             # The glimpse is shown as code, so this is plain text, and there
             # are no dates to give
-            glimpse = not_built_text(path=location.get("path", ""), command="chartbook build")
+            glimpse = not_built_text(path=location.get("path", ""), command="chartbook run")
             first, last = None, None
             freshness = []
         else:
@@ -555,6 +563,8 @@ class SphinxWriter:
         from chartbook.sitefiles import download_link, downloadable
 
         record = self.records[record_id]
+        if (record.get("location") or {}).get("kind") == "store":
+            return self._asset_hub(record)
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
         environment = self._environment(base_dir)
@@ -615,6 +625,8 @@ class SphinxWriter:
         pin in ``pinned_inputs``. The model's bytes are never read.
         """
         record = self.records[record_id]
+        if (record.get("location") or {}).get("kind") == "store":
+            return self._asset_hub(record)
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
         environment = self._environment(base_dir)
@@ -668,6 +680,8 @@ class SphinxWriter:
         from chartbook.sitefiles import not_built_text, thumbnail_path
 
         record = self.records[record_id]
+        if (record.get("location") or {}).get("kind") == "store":
+            return self._asset_hub(record)
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
         environment = self._environment(base_dir)
@@ -697,7 +711,7 @@ class SphinxWriter:
             pipeline_page_link=self.pipeline_page_link(record),
             dot_or_dotdot="../..",
             listing=_listing(record),
-            not_built=not_built_text(path=_code(location.get("path", "")), command="`chartbook build`"),
+            not_built=not_built_text(path=_code(location.get("path", "")), command="`chartbook run`"),
             preview=preview,
             freshness=[fact for fact in [_freshness("Files updated", location.get("modified_at"))] if fact],
         )
@@ -813,7 +827,7 @@ class SphinxWriter:
         the file's own words only.
         """
         raw = {record["id"]: record for record in self.index.get("records", []) if isinstance(record, dict) and "id" in record}
-        shown = {kind: sorted((r for r in self.records.values() if r["kind"] == kind), key=lambda r: r["id"]) for kind, _ in self.ASSISTANT_SECTIONS}
+        shown = {kind: sorted((r for r in self.records.values() if r["kind"] == kind and r.get("current", True)), key=lambda r: r["id"]) for kind, _ in self.ASSISTANT_SECTIONS}
         catalog = next((r for r in self.records.values() if r["kind"] == "Catalog"), None)
         about = []
         if self.theme == "catalog":
@@ -842,6 +856,14 @@ class SphinxWriter:
             if description:
                 about += [f"What it says of itself: “{_link_text(description)}”", ""]
         lines = [f"# {_link_text(title)}", "", f"> {summary}", "", *about]
+        if self.index.get("stores") is not None:
+            lines += ["## Stores", ""]
+            for entry in self.index["stores"]:
+                status = "read-only" if entry.get("read_only") else "writable"
+                if not entry.get("reachable"):
+                    status += ", unreachable"
+                lines += [f"- {_link_text(_one_line(entry['name']))}: {status}."]
+            lines += [""]
         lines += [
             "Each line links a page of this site, relative to this file, then gives the record's ID and, in "
             "quotation marks, what its owner wrote of it. Every record, with its fields, inputs and content "
@@ -875,7 +897,7 @@ class SphinxWriter:
         line = f"- [{_link_text(name)}]({page}): `{record['id']}`."
         description = _one_line(raw.get("description") or "", 300)
         if _is_from_the_store(record):
-            line += " Not on this machine: the catalog shows it from its snapshots in the store."
+            line += " The catalog shows its stored snapshots."
             if description:
                 line += f" Its newest snapshot says: “{_link_text(description)}”"
         elif description:
@@ -889,7 +911,7 @@ class SphinxWriter:
                 continue
             made = f"{entry['made_at'][:10]} {entry['made_at'][11:19]} UTC"
             if entry.get("rendered", True):
-                lines.append(f"  - Version `{entry['commit'][:7]}`, made {made}: [its llms.txt]({root}/{self.ASSISTANT_FILE})")
+                lines.append(f"  - Version `{entry['commit'][:7]}`, made {made}, store {_link_text(_one_line(entry.get('store', 'default')))}: [its llms.txt]({root}/{self.ASSISTANT_FILE})")
             else:
                 lines.append(f"  - Version `{entry['commit'][:7]}`, made {made}, whose site could not be built: [why]({root}/index.html)")
         older = len(listed) - self.ASSISTANT_VERSIONS
@@ -921,7 +943,7 @@ class SphinxWriter:
         has_models = any(r["kind"] == "Model" for r in self.records.values())
         has_files = any(r["kind"] == "File" for r in self.records.values())
         has_versions = self._has_versions()
-        return [
+        return (["cb/stores.md"] if self.index.get("stores") is not None else []) + [
             p for p in self.CATALOG_PAGES
             if (has_models or p != "cb/models.md") and (has_files or p != "cb/files.md")
             and (has_versions or p != "cb/versions.md")
@@ -937,7 +959,7 @@ class SphinxWriter:
         # The record's text is already plain (see _from_the_store): never markup
         lines = [f"# `{pipeline['id']}` {pipeline.get('name', '')}", ""]
         lines.append(
-            "Not on this machine: the catalog shows this pipeline from the store, each snapshot "
+            "The catalog shows this pipeline’s stored snapshots, each "
             "as its owner declared it ready."
         )
         lines.append("")
@@ -973,6 +995,32 @@ class SphinxWriter:
                     else f'- <a href="{a["link"]}">{a["title"]}</a> · {a["kind"]} `{a["id"]}`'
                     for a in assets
                 ]
+            if pipeline.get("dependencies"):
+                lines += ["", "## Dependencies", ""]
+                for dependency in pipeline["dependencies"]:
+                    commit = dependency.get("location", {}).get("commit")
+                    name = dependency["id"]
+                    version = self._version_site(name, commit, dependency.get("snapshot"))
+                    link = "../" * self.pipeline_page_path(pipeline).count("/") + version[0] + "/index.html" if version else ""
+                    label = f"{_as_text(name)} · {_as_text((commit or '')[:7])} · {_as_text(dependency.get('snapshot', ''))}"
+                    lines += [f'- <a href="{link}">{label}</a>' if link else "- " + label]
+            lines += ["", "## Versions", ""]
+            for entry in snapshots:
+                version_target = site_path(pipeline["id"], entry["name"])
+                store_name = _as_text(entry.get("store", "default"))
+                details = []
+                tags = [tag for tag in entry.get("tags", []) if isinstance(tag, str)]
+                if tags:
+                    details.append("tagged " + ", ".join(_as_text(tag) for tag in tags))
+                pinned_by = sorted({other["id"] for other in self.records.values() if other.get("kind") == "Pipeline"
+                                    for dependency in other.get("dependencies", [])
+                                    if dependency.get("id") == pipeline["id"] and
+                                    (dependency.get("location") or {}).get("commit") == entry["commit"] and
+                                    dependency.get("snapshot") == entry["made_at"]})
+                if pinned_by:
+                    details.append("pinned by " + ", ".join(_as_text(owner) for owner in pinned_by))
+                suffix = " · " + " · ".join(details) if details else ""
+                lines += [f'- <a href="../../{version_target}/index.html">`{entry["commit"][:7]}` · {entry["made_at"]}</a> · {store_name}{suffix}']
         else:
             lines.append("No snapshot of it is in the store yet.")
         return "\n".join(lines) + "\n"
@@ -1007,7 +1055,11 @@ class SphinxWriter:
                 ref = _own_asset(pipeline["id"], asset_id)
                 if ref is None or ref.kind not in kinds:
                     continue
-                link = self._version_page(from_path, asset_id, newest.get("commit"), newest.get("made_at"))
+                if asset_id in self.records:
+                    import posixpath
+                    link = posixpath.relpath(self.page_path(self.records[asset_id]), posixpath.dirname(from_path)).removesuffix(".md") + ".html"
+                else:
+                    link = self._version_page(from_path, asset_id, newest.get("commit"), newest.get("made_at"))
                 if link:
                     title = (pipeline.get("asset_names") or {}).get(asset_id) or _as_text(ref.name)
                     own.append({"kind": ref.kind, "id": asset_id, "title": title, "pipeline": pipeline["id"], "link": link})
@@ -1039,6 +1091,7 @@ class SphinxWriter:
             versions = [
                 {
                     "short": entry["commit"][:7],
+                    "store": entry.get("store", "default"),
                     "made": f"{entry['made_at'][:10]} {entry['made_at'][11:16]} UTC",
                     "link": f"../{site_path(record['id'], entry['name'])}/index.html",
                     "built_by_run": bool(entry.get("built_by_run")),
@@ -1051,7 +1104,7 @@ class SphinxWriter:
                 {
                     "id": record["id"],
                     "name": record.get("name") or record["id"],
-                    "readme": f"pipelines/{_slug(record['id'])}_README.md",
+                    "readme": self.pipeline_page_path(record).removeprefix("cb/"),
                     "working": (record.get("location") or {}).get("kind") != "store",
                     "versions": versions,
                 }
@@ -1072,9 +1125,20 @@ class SphinxWriter:
             raise ValueError("This index has no Catalog record: it is a pipeline's, and a pipeline site has no catalog pages.")
         base_dir = Path((catalog.get("location") or {}).get("value") or self.docs_src_dir)
         environment = self._environment(base_dir)
-        dataframes = sorted(self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe")
-        models = sorted(self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model")
-        files = sorted(self.files_page_path(r) for r in self.records.values() if r["kind"] == "File")
+        dataframes = sorted(self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe" and r.get("current", True))
+        models = sorted(self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model" and r.get("current", True))
+        files = sorted(self.files_page_path(r) for r in self.records.values() if r["kind"] == "File" and r.get("current", True))
+        if page_path == "cb/stores.md":
+            lines = ["# Stores", ""]
+            for entry in self.index.get("stores", []):
+                lines += [f"## {_as_text(entry['name'])}", "", _code(entry.get("url", "")), ""]
+                lines += ["Read-only" if entry["read_only"] else "Writable", "Reachable" if entry["reachable"] else "Unreachable", ""]
+                for pipeline, count in entry.get("pipelines", {}).items():
+                    lines += [f"- {_as_text(pipeline)}: {count} snapshot(s)"]
+                lines += ["", "Routed: " + ", ".join(_as_text(p) for p in entry.get("routing", [])), ""]
+                if entry.get("newest"):
+                    lines += ["Newest: " + _as_text(entry["newest"]), ""]
+            return "\n".join(lines)
         if page_path == "index.md":
             return environment.get_template("index.md").render(
                 manifest={"project": {"name": catalog.get("name", "")}},
@@ -1084,9 +1148,10 @@ class SphinxWriter:
                 readme_text="",
                 dot_or_dotdot="cb",
                 has_versions=self._has_versions(),
+                has_stores=self.index.get("stores") is not None,
             )
         if page_path == "cb/versions.md":
-            return environment.get_template("versions.md").render(pipelines=self._versions())
+            return environment.get_template("versions.md").render(pipelines=self._versions(), from_stores=self.index.get("stores") is not None)
         if page_path == "cb/dataframes.md":
             return environment.get_template("dataframes.md").render(
                 dataframe_file_list=[p.removeprefix("cb/") for p in dataframes],
@@ -1167,8 +1232,11 @@ class SphinxWriter:
             project["site_dir"] = (pipeline.get("site_dir") or {}).get("path")
             project["id"], project["type"] = pipeline_id, "pipeline"
             project["enable_data_download"] = self.enable_data_download  # a bool is never missing
+            if (pipeline.get("location") or {}).get("kind") == "store" and "metadata_present" in pipeline:
+                project = {field: True for field in pipeline["metadata_present"]}
             missing = _collect_missing_fields(project, required["project"])
-            rows.append(self._row("pipeline", pipeline.get("name", pipeline_id), pipeline_id, pipeline_id, missing, "../index.html"))
+            pipeline_link = "./" + self.pipeline_page_path(pipeline).removeprefix("cb/").removesuffix(".md") + ".html" if self.index.get("stores") is not None else "../index.html"
+            rows.append(self._row("pipeline", pipeline.get("name", pipeline_id), pipeline_id, pipeline_id, missing, pipeline_link))
             for kind, table in kinds.items():
                 if kind == "Notebook" and not required.get("notebooks"):
                     continue
@@ -1188,7 +1256,7 @@ class SphinxWriter:
                         "File": f"./files/{slug}/{name}.html",
                         "Notebook": "",
                     }[kind]
-                    rows.append(self._row(kind.lower(), record.get("name", name), name, pipeline_id, missing, link))
+                    rows.append(self._row(kind.lower(), _as_text(record.get("name", name)) if (record.get("location") or {}).get("kind") == "store" else record.get("name", name), name, pipeline_id, missing, link))
         return rows
 
     def _as_declared(self, record: dict) -> dict:
@@ -1202,6 +1270,8 @@ class SphinxWriter:
         and `series` from the records that point at it; a model's
         `trained_on` from its inputs.
         """
+        if (record.get("location") or {}).get("kind") == "store" and "metadata_present" in record:
+            return {field: True for field in record["metadata_present"]}
         skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes", "row_count",
                 "columns", "definition_hash", "date_range", "docs", "inputs", "files", "pinned_inputs",
                 "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "versions",
@@ -1510,7 +1580,7 @@ class SphinxWriter:
             for asset_id in pipeline.get("assets", [])
             if self.records.get(asset_id, {}).get("kind") == "Dataframe"
         }
-        shown = {"project": project, "dataframes": dataframes, "from_the_store": _is_from_the_store(pipeline)}
+        shown = {"project": project, "dataframes": dataframes, "from_the_store": _is_from_the_store(pipeline), "page": self.pipeline_page_path(pipeline).removeprefix("cb/")}
         if pipeline.get("code_changed_at"):
             # In UTC, and said so, as every time on the site is
             shown["source_last_modified_date"] = _as_utc(pipeline["code_changed_at"]).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -1550,8 +1620,61 @@ class SphinxWriter:
 
     # --- one entry point for the build ---------------------------------------
 
+    def _asset_hub(self, record):
+        from chartbook.versions import site_path
+        from_path = self.page_path(record)
+        prefix = "../" * from_path.count("/")
+        lines = [f"# {_as_text(record.get('name') or record['id'])}", "", _as_text(record.get("description")), ""]
+        try:
+            fact = _freshness("Data updated", (record.get("location") or {}).get("modified_at"))
+        except (ValueError, TypeError):
+            fact = None
+        if fact:
+            lines[2:2] = [self._environment(Path(".")).get_template("freshness.md").render(freshness=[fact]), ""]
+        if record.get("kind") == "Model":
+            lines += ["## Trained On", ""]
+            for entry in self._trained_on(record, from_path):
+                link = entry.get("html_link") or entry.get("link", "").removesuffix(".md") + (".html" if entry.get("link") else "")
+                label = _as_text(entry["label"])
+                shown = f'<a href="{link}">{label}</a>' if link else label
+                lines += [f"- {shown} - {_as_text(entry.get('name', ''))} {_as_text(entry.get('note', ''))}"]
+            lines += [""]
+        facts = self._panel(record["id"], from_path)
+        if facts and facts.get("inputs"):
+            lines += ["## Inputs", ""]
+            for entry in facts["inputs"]:
+                label = _as_text(entry["id"])
+                link = entry.get("link")
+                lines += [f'- <a href="{link}">{label}</a>: {_as_text(entry.get("words", ""))}' if link else f"- {label}: {_as_text(entry.get('words', ''))}"]
+            lines += [""]
+        columns = record.get("columns")
+        if isinstance(columns, list) and columns:
+            lines += ["## Current data dictionary", "", "| Column | Type |", "|---|---|"]
+            for column in columns:
+                if isinstance(column, dict):
+                    lines += [f"| {_as_text(column.get('name'))} | {_as_text(column.get('dtype'))} |"]
+            lines += [""]
+        # A version's page path is the pipeline writer's existing path.
+        lines += ["## Versions", ""]
+        for entry in record.get("snapshots", []):
+            label = f"{entry['commit'][:7]} · {entry['made_at']} · {_as_text(entry.get('store', ''))}"
+            if entry.get("present"):
+                target = self.page_path(record).removesuffix(".md") + ".html"
+                pipeline_entry = next((p for p in self.records[record["pipeline"]].get("snapshots", []) if p.get("name") == entry["name"]), {})
+                if pipeline_entry.get("rendered") is False:
+                    target = "index.html"
+                link = prefix + site_path(record["pipeline"], entry["name"]) + "/" + target
+                lines += [f'- <a href="{link}">{label}</a>']
+            else:
+                lines += [f"- {label}: this asset did not exist in this version."]
+            if entry.get("changes"):
+                lines += ["", _as_text(entry["changes"]), ""]
+        return "\n".join(lines) + "\n"
+
     def page(self, record: dict) -> str:
         """The page of any record that has one: dataframe, chart, model, files or pipeline."""
+        if record.get("kind") != "Pipeline" and (record.get("location") or {}).get("kind") == "store":
+            return self._asset_hub(record)
         return {
             "Dataframe": self.dataframe_page,
             "Chart": self.chart_page,

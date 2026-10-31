@@ -176,7 +176,7 @@ class TestScripts:
 
     def test_a_catalog_has_none(self, work):
         _pipeline(work / "p", {"build": "doit"})
-        (work / "chartbook.toml").write_text(
+        (work / "catalog.toml").write_text(
             tomli_w.dumps(
                 {
                     "project": {"type": "catalog"},
@@ -214,34 +214,9 @@ class TestPlan:
         _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
         assert [step.id for step in plan(a)] == ["a"]
 
-    def test_a_catalog_is_its_pipelines_each_after_one_it_depends_on(self, chain, work):
-        _pipeline(work / "apart", {"build": LOG})
-        steps = plan(_catalog(work, "top", "apart", "middle", "bottom"))
-        assert [step.id for step in steps] == ["bottom", "middle", "top", "apart"]
-        assert {step.source for step in steps} == {"asked"}
 
-    def test_a_catalog_does_not_reach_outside_itself(self, chain, work):
-        """``top`` depends on ``middle``, which this catalog does not list."""
-        assert [step.id for step in plan(_catalog(work, "top"))] == ["top"]
 
-    def test_one_that_two_of_a_catalogs_pipelines_depend_on_is_there_once(self, work):
-        _pipeline(work / "shared", {"build": LOG})
-        _pipeline(work / "left", {"build": LOG}, {"shared": {"path": "../shared"}})
-        _pipeline(work / "right", {"build": LOG}, {"shared": {"path": "../shared"}})
-        _pipeline(
-            work / "top",
-            {"build": LOG},
-            {"left": {"path": "../left"}, "right": {"path": "../right"}},
-        )
-        steps = plan(_catalog(work, "top", "left", "right", "shared"))
-        assert [step.id for step in steps] == ["shared", "left", "right", "top"]
 
-    def test_a_catalogs_pipelines_that_depend_on_each_other_have_no_order(self, work):
-        _pipeline(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
-        _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
-        with pytest.raises(RunError, match="depend on each other") as e:
-            plan(_catalog(work, "a", "b"))
-        assert f"{work / 'a'} -> {work / 'b'} -> {work / 'a'}" in str(e.value)
 
     def test_a_manifest_that_cannot_be_read_names_the_file(self, work):
         """A catalog reads several in one run, so the error says which."""
@@ -361,17 +336,6 @@ class TestRun:
         assert [step.id for step in report.ran] == ["top"]
         assert report.failed is None and report.exit_code == 0 and report.script == "build"
 
-    def test_a_catalog_runs_each_of_its_pipelines_in_order(self, chain, work):
-        said = []
-        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=said.append)
-        assert _order(work) == ["bottom", "middle", "top"]
-        assert [step.id for step in report.ran] == ["bottom", "middle", "top"]
-        # None of them is where the command was given, so each says where it is
-        assert said == [
-            f"bottom: build    in {work / 'bottom'}",
-            f"middle: build    in {work / 'middle'}",
-            f"top: build    in {work / 'top'}",
-        ]
 
     def test_the_script_runs_every_time(self, chain, work):
         """The pipeline's own tool is what skips; this runs it."""
@@ -379,15 +343,6 @@ class TestRun:
         run.run(chain, echo=lambda line: None)
         assert _order(work) == ["top", "top"]
 
-    def test_the_first_failure_stops_the_run(self, work):
-        _pipeline(work / "bottom", {"build": LOG})
-        _pipeline(work / "middle", {"build": "exit 3"})
-        _pipeline(work / "top", {"build": LOG})
-        report = run.run(_catalog(work, "bottom", "middle", "top"), echo=lambda line: None)
-        assert report.failed.id == "middle" and report.exit_code == 3
-        assert report.reason == "its 'build' script exited with 3"
-        assert [step.id for step in report.ran] == ["bottom"]
-        assert _order(work) == ["bottom"]  # and top was never run
 
     def test_another_script_by_name(self, work):
         top = _pipeline(work / "top", {"build": LOG, "test": "echo tested >> ../order.log"})
@@ -402,19 +357,7 @@ class TestRun:
         assert 'put the command under [scripts] in chartbook.toml: test = "…".' in str(e.value)
         assert _order(work) == []  # found out before anything was run
 
-    def test_a_catalog_passes_over_a_pipeline_without_the_script(self, chain, work):
-        _pipeline(work / "apart", {"build": LOG, "test": LOG})
-        said = []
-        report = run.run(_catalog(work, "top", "apart"), "test", echo=said.append)
-        assert [step.id for step in report.ran] == ["apart"]
-        assert [(step.id, why) for step, why in report.skipped] == [
-            ("top", "it has no script named 'test'")
-        ]
-        assert "top: not run. It has no script named 'test'." in said
 
-    def test_a_script_nobody_has(self, chain, work):
-        with pytest.raises(RunError, match="No pipeline here has a script named 'deploy'"):
-            run.run(_catalog(work, "top", "middle"), "deploy")
 
 
 @pytest.fixture
@@ -577,17 +520,6 @@ class TestPinning:
         run.run(reader, echo=_quiet)
         assert (reader / "_output" / "read.txt").read_text(encoding="utf-8") != first
 
-    def test_a_pipeline_with_nothing_to_run_is_not_pinned_for(self, work):
-        """No script runs in it, so nothing in it needs a pin."""
-        _with_data(work / "bottom", {"build": LOG})
-        middle = _with_data(work / "middle", None, {"bottom": {"path": "../bottom"}})
-        top = _with_data(work / "top", {"build": LOG}, {"bottom": {"path": "../bottom"}})
-        _commit(work)
-        snapshot.make(work / "bottom")
-        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=_quiet)
-        assert [step.id for step in report.ran] == ["bottom", "top"]
-        assert not (middle / lock.LOCK_FILE).exists()
-        assert (top / lock.LOCK_FILE).exists()
 
     def test_another_script_pins_nothing(self, work):
         _with_data(work / "upstream")
@@ -705,19 +637,6 @@ class TestRunThenSnapshot:
         with pytest.raises(RunError, match="A snapshot is of what `build` makes"):
             run.run(directory, "test", echo=_quiet, snapshot=True)
 
-    def test_in_a_catalog_each_is_built_and_declared_ready_in_turn(self, reader, work):
-        """So the second pins what the first has just declared ready."""
-        with open(work / "reader" / "chartbook.toml", "a", encoding="utf-8", newline="\n") as f:
-            f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
-        _commit(work)
-        _catalog(work, "reader", "upstream")
-        report = run.run(work, echo=_quiet, snapshot=True)
-        assert report.failed is None, report.reason
-        assert [step.id for step in report.ran] == ["upstream", "reader"]
-        assert [taken.snapshot.pipeline for taken in report.snapshots] == ["upstream", "reader"]
-        (was,) = report.snapshots[1].snapshot.inputs
-        assert was["id"] == "upstream"
-        assert was["snapshot"] == report.snapshots[0].snapshot.made_at
 
     def test_a_git_dependency_is_built_and_not_snapshotted(self, work):
         repository = _pipeline(work / "ref", {"build": "true"})
@@ -742,6 +661,7 @@ class TestRunThenSnapshot:
             f"upstream at {commit[:7]}: 1 asset(s) in the store",
             "Snapshot made. A pipeline that depends on this one gets it with "
             "`chartbook update`.",
+            "Stores: default",
             "Ran build in 1 pipeline(s).",
         ]
 
@@ -1112,12 +1032,12 @@ class TestCommand:
         assert _order(work) == ["top"]
 
     def test_run_in_a_catalog(self, chain, work, monkeypatch):
-        monkeypatch.chdir(_catalog(work, "top", "middle", "bottom"))
+        monkeypatch.chdir(_catalog(work, "a", "b"))
+        (work / "chartbook.toml").rename(work / "catalog.toml")
         result = self._run()
-        assert result.exit_code == 0, result.output
-        assert _order(work) == ["bottom", "middle", "top"]
-        assert result.output.splitlines()[-1] == "Ran build in 3 pipeline(s)."
-        assert f"bottom: build    in {work / 'bottom'}" in result.output.splitlines()
+        assert result.exit_code == 1
+        assert "A catalog lists stored snapshots" in result.output
+        assert _order(work) == []
 
     def test_a_named_script_and_a_project_dir(self, work, monkeypatch):
         top = _pipeline(work / "top", {"build": LOG, "test": LOG})
@@ -1210,12 +1130,12 @@ class TestCommand:
         assert result.output.startswith("Error: top has no script named 'deploy'.")
 
     def test_a_catalogs_pipelines_in_a_loop_are_a_clean_error(self, work, monkeypatch):
-        _pipeline(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
-        _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
         monkeypatch.chdir(_catalog(work, "a", "b"))
+        (work / "chartbook.toml").rename(work / "catalog.toml")
         result = self._run()
         assert result.exit_code == 1
-        assert "depend on each other" in result.output
+        assert "A catalog lists stored snapshots" in result.output
+        assert _order(work) == []
 
     def test_it_is_in_help(self):
         result = CliRunner().invoke(main, ["--help"])

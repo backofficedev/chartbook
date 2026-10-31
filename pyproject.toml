@@ -29,6 +29,7 @@ dependencies = [
     "click>=8.1.7",
     "tomli>=2.2.1",
     "tomli-w>=1.1.0",
+    "tomlkit>=0.13",
     # Data loading
     "packaging",
     # DuckDB's lazy frames are built on polars' IO-plugin seam: DuckDB 1.5's

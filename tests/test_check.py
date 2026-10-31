@@ -39,7 +39,7 @@ LENIENT_POLICY = {
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = project_dir / "chartbook.toml"
+    toml_path = project_dir / ("catalog.toml" if (project_dir / "catalog.toml").is_file() else "chartbook.toml")
     with open(toml_path, "rb") as f:
         config = tomli.load(f)
     edit(config)
@@ -477,24 +477,12 @@ class TestCheckRequiredFields:
         assert problem.message == "required by the format, but missing or empty"
 
     def test_catalog_policy_points_at_each_member_manifest(self, catalog_project):
-        def edit(config):
-            config["policy"] = {
-                "mode": "warn",
-                "required": {
-                    "project": ["repo_url"],
-                    "dataframes": [],
-                    "charts": [],
-                },
-            }
-
-        _edit_toml(catalog_project, edit)
-        manifest = load_manifest(catalog_project)
-        problems = check_required_fields(manifest, catalog_project)
-        assert {p.file for p in problems} == {
-            catalog_project.resolve() / "pipelines" / pid / "chartbook.toml"
-            for pid in ("pipeline_a", "pipeline_b")
-        }
-        assert {(p.table, p.field) for p in problems} == {("project", "repo_url")}
+        from chartbook.diagnostics import build_diagnostics
+        _edit_toml(catalog_project, lambda config: config.update(policy={"required": {"project": ["repo_url"], "dataframes": [], "charts": []}}))
+        rows = build_diagnostics(load_manifest(catalog_project))
+        projects = [row for row in rows if row.object_type == "pipeline"]
+        assert {row.pipeline_id for row in projects} == {"pipeline_a", "pipeline_b"}
+        assert all(row.missing_fields == "repo_url" for row in projects)
 
     def test_the_default_policy_recommends_the_build_script_in_scripts(self, pipeline_project):
         """Found by a new user's walkthrough: with no build script, check named `[project] build`,
@@ -516,20 +504,24 @@ class TestCheckRequiredFields:
         assert not any("build:" in str(warning.message) for warning in caught)
 
     def test_a_catalogs_policy_naming_build_is_met_by_either_place(self, catalog_project):
-        """`project = ["build"]` in a catalog's [policy] goes on working, and says where to write it."""
-
-        def require_build(config):
-            config["policy"] = {"required": {"project": ["build"], "dataframes": [], "charts": []}}
-
-        _edit_toml(catalog_project, require_build)
-        member_a = catalog_project / "pipelines" / "pipeline_a"
-        member_b = catalog_project / "pipelines" / "pipeline_b"
-        _edit_toml(member_a, lambda config: config.setdefault("scripts", {}).update(build="doit"))
-        (problem,) = check_required_fields(load_manifest(catalog_project), catalog_project)
-        assert problem.file == member_b.resolve() / "chartbook.toml"
-        assert problem.format().endswith("[scripts] build: required by the active policy, but missing or empty")
-        _edit_toml(member_b, lambda config: config["project"].update(build="doit"))
-        assert check_required_fields(load_manifest(catalog_project), catalog_project) == []
+        from chartbook.diagnostics import build_diagnostics
+        from chartbook import snapshot
+        from tests.test_model_versions import _git
+        _edit_toml(catalog_project, lambda config: config.update(policy={"required": {"project": ["build"], "dataframes": [], "charts": []}}))
+        a, b = [catalog_project / "pipelines" / name for name in ("pipeline_a", "pipeline_b")]
+        _edit_toml(a, lambda config: config.setdefault("scripts", {}).update(build="doit"))
+        def missing():
+            return {row.pipeline_id for row in build_diagnostics(load_manifest(catalog_project)) if row.object_type == "pipeline" and row.missing_fields}
+        assert missing() == {"pipeline_a", "pipeline_b"}  # working edits have no catalog effect
+        _git(catalog_project, "add", "-A")
+        _git(catalog_project, "commit", "--quiet", "-m", "Build script")
+        snapshot.make(a)
+        assert missing() == {"pipeline_b"}
+        _edit_toml(b, lambda config: config["project"].update(build="doit"))
+        _git(catalog_project, "add", "-A")
+        _git(catalog_project, "commit", "--quiet", "-m", "Second build script")
+        snapshot.make(b)
+        assert missing() == set()
 
 
 def load_policy_dict():
@@ -599,10 +591,8 @@ class TestProblemFormat:
 class TestRunChecks:
     def test_problems_are_grouped_by_manifest(self, catalog_project):
         manifest = load_manifest(catalog_project)
-        problems = run_checks(manifest, catalog_project, today=TODAY)
-        files = [p.file for p in problems]
-        assert files == sorted(files)
-        assert len(set(files)) == 2
+        with pytest.raises(ValueError, match="Diagnostics"):
+            run_checks(manifest, catalog_project, today=TODAY)
 
 
 class TestCheckCommand:
@@ -670,16 +660,10 @@ class TestCheckCommand:
         assert "inside the 60-day window" in result.output
 
     def test_catalog_checks_every_member(self, catalog_project):
-        def edit(config):
-            config["policy"] = {"required": {"project": ["repo_url"]}}
-
-        _edit_toml(catalog_project, edit)
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
-        assert "required by the catalog policy" in result.output
-        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url" in result.output
-        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url" in result.output
-        assert "in 2 manifest(s)" in result.output
+        assert "Catalog member checks are gone" in result.output
+        assert "Diagnostics" in result.output
 
     def test_policy_of_a_catalog_that_sets_none_only_warns(self, pipeline_project, catalog_project):
         """Found by a reviewer: `--policy ../catalog`, the documented way for a member to
@@ -690,29 +674,16 @@ class TestCheckCommand:
         assert "required by" not in result.output
 
     def test_catalog_with_no_policy_only_warns(self, catalog_project):
-        """A member's own [policy] is ignored inside a catalog, so none is given."""
-
-        def edit(config):
-            config["policy"] = {"required": {"project": ["repo_url"]}}
-
-        _edit_toml(catalog_project / "pipelines" / "pipeline_a", edit)
         result = _invoke("--project-dir", catalog_project)
-        assert result.exit_code == 0, result.output
-        assert os.path.join("pipeline_a", "chartbook.toml") + ": [project] repo_url: recommended" in (
-            result.stderr
-        )
-        assert os.path.join("pipeline_b", "chartbook.toml") + ": [project] repo_url: recommended" in (
-            result.stderr
-        )
+        assert result.exit_code == 1
+        assert "Catalog member checks are gone" in result.output
+        assert "Diagnostics" in result.output
 
     def test_catalog_passes_with_policy_it_satisfies(self, catalog_project):
-        def edit(config):
-            config["policy"] = LENIENT_POLICY["policy"]
-
-        _edit_toml(catalog_project, edit)
         result = _invoke("--project-dir", catalog_project)
-        assert result.exit_code == 0, result.output
-        assert "OK (2 pipeline(s), 2 dataframes, 2 charts, 0 notebooks)" in result.output
+        assert result.exit_code == 1
+        assert "Catalog member checks are gone" in result.output
+        assert "Diagnostics" in result.output
 
     def test_warn_mode_still_fails_the_check(self, catalog_project):
         """policy.mode governs builds; a check reports missing fields regardless."""
@@ -789,7 +760,7 @@ class TestCheckCommand:
         assert "[dataframes.dataframe_0] path: not built yet:" in without.output
         assert "[charts.chart_0_0] path: not built yet:" in without.output
         assert "file not found" not in without.output
-        # It has no build script, so `chartbook build` would build nothing
+        # It has no build script, so `chartbook run` would build nothing
         assert "Nothing is built yet: build its outputs (it has no build script" in without.output
         assert "the same check with --skip-outputs checks the rest" in without.output
 
@@ -812,20 +783,13 @@ class TestCheckCommand:
         remove_tree(project / "_output")
         result = _invoke("--project-dir", project, "--policy", lenient_policy)
         assert result.exit_code == 1
-        assert "Nothing is built yet: `chartbook build` builds it" in result.output
+        assert "Nothing is built yet: `chartbook run` builds it" in result.output
 
     def test_a_catalog_is_told_a_file_is_not_found(self, catalog_project, lenient_policy):
-        """`chartbook docs generate` tells "not built yet" for a lone pipeline only; so does check."""
-        import shutil
-
-        # pipeline_a has built nothing, pipeline_b everything: "nothing is built" would be wrong
-        remove_tree(catalog_project / "pipelines" / "pipeline_a" / "_data")
-        remove_tree(catalog_project / "pipelines" / "pipeline_a" / "_output")
-        result = _invoke("--project-dir", catalog_project, "--policy", lenient_policy)
-        assert result.exit_code == 1, result.output
-        assert "file not found" in result.output
-        assert "not built yet" not in result.output
-        assert "Nothing is built yet" not in result.output
+        result = _invoke("--project-dir", catalog_project)
+        assert result.exit_code == 1
+        assert "Catalog member checks are gone" in result.output
+        assert "Diagnostics" in result.output
 
     def test_a_pipeline_built_in_part_lacks_a_file(self, pipeline_project, lenient_policy):
         """Built, and one output missing: that is a mistake, and no "nothing is built" hint."""
@@ -908,10 +872,9 @@ class TestCheckCommand:
         assert f"Error: {policy} is not valid TOML: " in result.output and "Traceback" not in result.output
 
     def test_a_catalog_member_that_is_not_toml_is_named(self, catalog_project):
-        """Found by a reviewer: the error was `Illegal character '\\n' (at line 2, column 15)` and no file."""
         member = catalog_project / "pipelines" / "pipeline_a" / "chartbook.toml"
-        member.write_text("[project]\nname = \"unterminated\n", encoding="utf-8", newline="\n")
+        member.write_text("not = [valid TOML", encoding="utf-8", newline="\n")
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
-        assert f"Error: {member} is not valid TOML: " in result.output
-        assert "Traceback" not in result.output
+        assert "Diagnostics" in result.output
+        assert "not valid TOML" not in result.output  # no working member was read

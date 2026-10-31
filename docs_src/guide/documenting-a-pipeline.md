@@ -1,6 +1,6 @@
 # Documenting a Pipeline
 
-A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook is not the tool that builds them; you build the artifacts however you like (`doit`, `make`, plain scripts), and `chartbook.toml` describes what they are, where they live, how they fit together, and the command that builds them. `chartbook docs generate` then renders that description into a website, and `chartbook run` runs the command.
+A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook is not the tool that builds them; you build the artifacts however you like (`doit`, `make`, plain scripts), and `chartbook.toml` describes what they are, where they live, how they fit together, and the command that builds them. `chartbook docs build` then renders that description into a website, and `chartbook run` runs the command.
 
 This page covers the describing. For the field-by-field reference, see {doc}`../reference/configuration`.
 
@@ -41,7 +41,7 @@ doit
 """
 ```
 
-`build`, under `[scripts]`, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines (on Windows it is a batch file, where a line that runs another batch file, such as `conda activate`, must begin with `call`, or nothing after it runs). It is shown on the pipeline's page, and it is run: `chartbook run` runs it in the pipeline's directory, and `chartbook build` runs it and then renders the site, which `chartbook docs generate` does alone. Make it the command that builds the pipeline, not a note about the environment. `build` under `[project]`, the old place, is still read and means the same thing; give it in one place. See {ref}`[scripts] <scripts>` in the reference and {ref}`chartbook run <chartbook-run>`.
+`build`, under `[scripts]`, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines (on Windows it is a batch file, where a line that runs another batch file, such as `conda activate`, must begin with `call`, or nothing after it runs). It is shown on the pipeline's page, and it is run: `chartbook run` runs it in the pipeline's directory, and `chartbook docs build` renders the site. A task runner can render it as the final step. Make it the command that builds the pipeline, not a note about the environment. `build` under `[project]`, the old place, is still read and means the same thing; give it in one place. See {ref}`[scripts] <scripts>` in the reference and {ref}`chartbook run <chartbook-run>`.
 
 ## Charts
 
@@ -294,9 +294,9 @@ API_KEY = chartbook.env.get("FRED_API_KEY", default="")  # .env file or environm
 
 ## Checking your work
 
-While you are writing, `chartbook docs generate -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
+While you are writing, `chartbook docs build -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
 
-`chartbook docs generate` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. The exception is a lone pipeline (not a catalog, where it is an error) that has built none of its data, charts, notebooks and models yet, as a new project or a fresh clone has not: its site is rendered with each of them shown as not built, and the command warns, listing them. Given `--strict`, that is an error after all, which is what CI wants after a build; and `chartbook build`, which has just run the build, makes no such exception. In a catalog, `--no-strict` downgrades a missing file to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
+`chartbook docs build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. The exception is a lone pipeline (not a catalog, where it is an error) that has built none of its data, charts, notebooks and models yet, as a new project or a fresh clone has not: its site is rendered with each of them shown as not built, and the command warns, listing them. Given `--strict`, that is an error after all, which is what CI wants after a build; and `chartbook run`, which has just run the build, makes no such exception. In a catalog, `--no-strict` downgrades a missing file to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
 
 - Unknown `[project]` keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.
 - `chartbook create-data-glimpses` writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every dataframe declared in `chartbook.toml`, whatever tool builds them.

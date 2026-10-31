@@ -85,11 +85,14 @@ class MkDocsWriter(SphinxWriter):
     def _pages(self, kind: str, from_root: bool = True) -> list:
         """The pages of one kind, as a list of titles and links, by pipeline then name."""
         records = sorted(
-            (r for r in self.records.values() if r["kind"] == kind),
+            (r for r in self.records.values() if r["kind"] == kind and r.get("current", True)),
             key=lambda r: (r.get("pipeline", ""), _local_name(r)),
         )
         entries = []
         for record in records:
+            if (record.get("location") or {}).get("kind") == "store" and record.get("kind") != "Pipeline":
+                from chartbook.writers.sphinx import _as_text
+                record = {**record, "name": _as_text(record.get("name")), "description": _as_text(record.get("description"))}
             path = self.page_path(record)
             entries.append(
                 {
@@ -127,6 +130,7 @@ class MkDocsWriter(SphinxWriter):
                 readme_text="",
                 today=_built_at(),
                 has_versions=self._has_versions(),
+                has_stores=self.index.get("stores") is not None,
             )
         if page_path == "cb/dataframes.md":
             return environment.get_template("dataframes.md").render(
@@ -269,6 +273,8 @@ class MkDocsWriter(SphinxWriter):
             )
             if self._has_versions():
                 nav.append({"Versions": "cb/versions.md"})
+            if self.index.get("stores") is not None:
+                nav.append({"Stores": "cb/stores.md"})
             nav.append({"Diagnostics": "cb/diagnostics.md"})
             nav.append({"Contributing": "contributing.md"})
         configuration = {

@@ -619,6 +619,7 @@ class TestPin:
 
     def test_a_catalog_has_nothing_to_pin(self, work, store):
         catalog = create_catalog_project(work / "cat")
+        (catalog / "chartbook.toml").rename(catalog / "catalog.toml")
         with pytest.raises(LockError, match="is a catalog"):
             pin_from_snapshots(catalog, store)
 
@@ -1095,6 +1096,8 @@ class TestCommands:
 
     def test_pin_in_a_catalog_is_a_clean_error(self, here, work, monkeypatch):
         monkeypatch.chdir(create_catalog_project(work / "cat"))
+        catalog = Path.cwd()
+        (catalog / "chartbook.toml").rename(catalog / "catalog.toml")
         result = self._run("pin")
         assert result.exit_code == 1
         assert result.output.startswith("Error: ") and "is a catalog" in result.output

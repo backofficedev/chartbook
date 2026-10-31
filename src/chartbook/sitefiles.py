@@ -441,7 +441,7 @@ def write_site(
         page = docs_build_dir / writer.page_path(record)
         page.parent.mkdir(parents=True, exist_ok=True)
         page.write_text(writer.page(record), encoding="utf-8", newline="\n")
-        if kind == "Chart":
+        if kind == "Chart" and (record.get("location") or {}).get("kind") != "store":
             check_front_matter(page, owner, record["ref"]["name"])
 
     copy_files(

@@ -17,12 +17,13 @@ A **pipeline** manifest has one metadata table plus entity sections:
 [dependencies]     # Other pipelines this one reads from
 ```
 
-A **catalog** manifest has the metadata table plus a registry:
+A **catalog**, in `catalog.toml`, has project metadata and stores:
 
 ```toml
 [project]          # Project metadata
-[pipelines]        # Registered pipelines (scoped keys)
-[policy]           # Optional: required-field policy for member pipelines
+[stores]           # Named store locations
+[pipelines]        # Optional disabled/repository notes
+[policy]           # Optional: metadata policy for snapshot diagnostics
 ```
 
 ## Project Types
@@ -54,7 +55,7 @@ Every field is optional. Types and defaults:
 | `favicon` | path | bundled default |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed). The same as `build` in {ref}`[scripts] <scripts>` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name: `">=0.3.0"`, `">=0.3,<0.5"`. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member's stops the catalog, and the message names `chartbook catalog disable` to leave it out meanwhile. `chartbook trust`, `store gc` and `init` do not read it. A bare version (`"0.3.0"`) or the whole requirement (`"chartbook>=0.3"`) is refused with the specifier to write. `chartbook init` writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name: `">=0.4.0"`, `">=0.4,<0.6"`. Every command that acts on the manifest (renders, builds, runs, pins, snapshots, restores, checks, reads data) stops first when the ChartBook running does not meet it, and says how to install one that does; in a catalog, a member's stops the catalog, and the message names `chartbook catalog disable` to leave it out meanwhile. `chartbook trust`, `store gc` and `init` do not read it. A bare version (`"0.3.0"`) or the whole requirement (`"chartbook>=0.3"`) is refused with the specifier to write. `chartbook init` writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key | `""` (any) |
 | `site_dir` | path | `"./docs_src/site/"` when that directory exists |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool the pages are written for. MkDocs needs `pip install chartbook[mkdocs]`; the build says so when it is missing | `"sphinx"` |
@@ -63,7 +64,7 @@ Each field has the one type the table gives, and a value of another type does no
 
 Unknown keys in `[project]` produce a warning naming the closest known key, so typos don't silently become dead metadata.
 
-`name`, `maintainer` and `copyright` are written into the site's Sphinx configuration, so each is one line of letters, digits, spaces, accented letters and the punctuation `-_.,!?&:'`, at most 200 characters. `chartbook docs generate` refuses anything else, a line break or a quotation mark included, and names the field.
+`name`, `maintainer` and `copyright` are written into the site's Sphinx configuration, so each is one line of letters, digits, spaces, accented letters and the punctuation `-_.,!?&:'`, at most 200 characters. `chartbook docs build` refuses anything else, a line break or a quotation mark included, and names the field.
 
 A fully populated pipeline:
 
@@ -121,7 +122,7 @@ The remote may be written in any form git takes (`https://`, `ssh://`, `git@host
 
 So adding a remote to a pipeline that had none changes its ID, from `first_pipeline` to `testorg/first_pipeline`, and its next snapshot is made under the new one. Whatever goes by the ID goes with it: a catalog's Versions page and a model's versions list the snapshots of each ID apart, and the pipeline's pages in a site move, since their path holds its ID (`cb/pipelines/testorg--first_pipeline_README.html`). A dependency named by the old ID stays at the last snapshot made under it: `chartbook pin` and `chartbook update` say when the store has newer snapshots of the same repository (by its address, or by its first commit where a snapshot records no address, or a clone of it whose remote was set to a new address, as when the repository moves to another owner) and folder under another ID, and name the entry to write, `"first_pipeline" = { id = "testorg/first_pipeline" }`; `chartbook check` warns when a catalog's key, or a dependency named by its ID, is not what the pipeline's folder calls itself now. Set `id` to keep one ID whatever happens to the folder or the remote.
 
-Two checkouts of one repository, its main worktree and another, or two clones (of one remote's address, or of one first commit where either has no remote), are one pipeline with one ID. A catalog's `members` that find both list it once, from the main worktree (else the one found first) or from the catalog's explicit entry, with a warning naming the other; `chartbook catalog add` of the second says it is already in the catalog, under whatever key, and enables it again if it was disabled.
+Two checkouts of one repository share an ID. Catalogs show the snapshots published to their stores, independently of checkout folders.
 
 A scope derived from a remote is in lowercase, and a reference must be too: `Acme/rates`, as a web page shows the owner, does not find `acme/rates`, and the error suggests it.
 
@@ -144,49 +145,36 @@ Two extensions of the ID grammar are **reserved**: the parser recognizes them an
 
 A registry prefix is the first of exactly three components, and looks like a host — it contains `.` or `:`, or is `localhost` (the rule Docker uses). `acme/rates` therefore means the same thing whether or not a registry ever exists, and a two-component ID is always `scope/name`, even if the scope contains a dot. See {doc}`../design/asset-graph`.
 
-## `[pipelines]` — Catalog Registry
+## `catalog.toml` and several stores
 
-Catalog keys are pipeline IDs; scoped keys contain a `/` and must be quoted:
-
-```toml
-[project]
-name = "My Catalog"
-
-[pipelines."ftsfr/crsp_treasury"]
-path = "../crsp_treasury"
-
-[pipelines."ftsfr/fed_yield_curve"]
-path = "../fed_yield_curve"
-disabled = true                    # kept but skipped during builds
-
-[pipelines."finm-33200/news_headlines"]
-path = { unix = "/data/pipelines/news_headlines", windows = "T:/pipelines/news_headlines" }
-```
-
-Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool); any other key is an error. A plain string value is shorthand for the path. An entry with no `path`, `"acme/rates" = {}`, is a pipeline whose folder is not on this machine: the catalog shows it from its snapshots in the store, with a page that links its newest version and the Versions page. Its name, description and maintainer are what its newest snapshot's own index says, shown as plain text (never read as Markdown or HTML, with `< > " '` and the backtick shown as look-alikes and `&` as "and", since anyone who can write to the store wrote them), and its repository and site only when they are `http` or `https` addresses. Its assets are those its newest snapshot's own index lists: its page lists its dataframes, charts and models, and the catalog's Dataframes page lists its dataframes after the catalog's own, each linked to its page in that snapshot's site and named as plain text. It has no working version, and `check`, `run` and the policy pass it by; `chartbook ls` lists it as store only, with its dataframes and charts, and loading its data through the catalog reads its newest snapshot from the store. A folder of the same ID, added with `chartbook catalog add` or found by `members`, fills the entry in. `chartbook catalog add <dir>` writes the key for you, the pipeline's ID (see [Pipeline Identity](#pipeline-identity)).
-
-### Auto-discovery with `members`
-
-For a local catalog, skip per-pipeline entries entirely and declare membership as path patterns — new projects dropped into a matched directory join the catalog automatically:
+A catalog lists stores, independently of pipeline manifests. See {doc}`../guide/catalogs-and-data` for routing and migration.
 
 ```toml
 [project]
 name = "My Catalog"
 
-[pipelines]
-members = [
-    "../GitRepositories/ftsfr_repos/*",
-    "../GitRepositories/finm33200/news_headlines",
-]
-disabled = ["ftsfr/sovereign_bonds"]   # switch members off by ID
-exclude = ["../GitRepositories/ftsfr_repos/scratch_*"]   # optional
+[stores.mine]
+url = "~/data/chartbook"
+
+[stores.team]
+url = { unix = "/shared/chartbook", windows = "T:/chartbook" }
+pipelines = ["acme/rates"]
+
+[stores.archive]
+url = "s3://acme-archive/chartbook?anonymous=true"
+read_only = true
+
+[pipelines."acme/hidden"]
+disabled = true
+
+[pipelines."acme/rates"]
+repository = "https://github.com/acme/rates"
 ```
 
-Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a *literal* member path that's broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Two members that are checkouts of one repository at the same place in it (a worktree beside its repository, a second clone) are one pipeline, not an error: the catalog lists the main worktree's, else the one found first, or the explicit entry's, and a warning names the other. Explicit entries coexist with `members` and win when they point at the same directory (useful to rename a pipeline in your catalog). `members`, `exclude`, and `disabled` are reserved keys and can't be used as bare pipeline IDs.
+The first store is the default destination. A pipeline in one or several `pipelines` lists is written to those stores; reads always search all stores, with newest snapshots chosen within a repository. `read_only` prevents writes. A relative URL names a folder relative to this file. Duplicate locations are rejected. `CHARTBOOK_STORE` overrides the catalog with one isolated store. Without catalog stores the settings' `[store] url`, then `~/.chartbook/store`, remain the fallback.
 
-This is designed for the **local** catalog — publishing to a shared catalog should stay an explicit act.
+`[pipelines."ID"]` accepts only `disabled` and `repository`. Working-folder paths and member globs are replaced by snapshots. Use `chartbook catalog migrate` to upgrade a former catalog file. `chartbook.links.toml` beside a consumer's manifest supplies explicit local working-copy overrides; never commit it.
 
-(policy)=
 ## `[policy]` — Which Fields Are Required
 
 The format itself is permissive; **which fields are required is a policy**, and usually your catalog's:
@@ -207,7 +195,7 @@ Without a `[policy]` section, chartbook's default recommended-field lists apply,
 
 A pipeline may have a `[policy]` section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog's policy applies and the pipeline's is ignored: whoever gathers the pipelines together decides what they must say.
 
-To enforce a policy in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`. `check --policy FILE` replaces the pipeline's own `[policy]` with the one in that file, as a catalog's replaces its members'; a file with no `[policy]` table gives no policy. When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), `check` reports the missing recommended fields as `warning:` lines, and they do not make it exit nonzero. An empty write-up (`docs_path` or `docs`) still fails it: the format requires one.
+To enforce a pipeline's policy in CI, run {doc}`chartbook check <cli>`. `check --policy FILE` replaces its own policy; otherwise the machine catalog's policy supplies a fallback. Catalogs compare stored metadata with their `[policy]` on the Diagnostics page. A catalog never checks working folders.
 
 ## `[charts]` — Chart Definitions
 
@@ -678,9 +666,9 @@ An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newe
 - `index.json` lists them, under `dependencies` in the pipeline's record.
 - A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
 
-- `data.load` of a dependency that is declared and not pinned pins it, from its newest snapshot, on the first read, and says so; of a pipeline not declared, it reads its newest snapshot with a warning; of one with no snapshot, its working folder with a louder one. In a build under `chartbook run` (`CHARTBOOK_BATCH=1`) only pins are read. See {doc}`../guide/depending-on-pipelines`.
+- `data.load` of a dependency that is declared and not pinned pins it, from its newest snapshot, on the first read, and says so; of a pipeline not declared, it reads its newest snapshot with a warning; of one with no snapshot, it requires a snapshot or an explicit `chartbook link`. In a build under `chartbook run` (`CHARTBOOK_BATCH=1`) only pins are read. See {doc}`../guide/depending-on-pipelines`.
 - `chartbook pin` freezes what each dependency was declared ready with. A pipeline named by its ID alone is pinned from its newest **snapshot** in the store, found by that ID. A folder (`path`) is pinned from its newest snapshot at or before the commit the folder is on, which its owner makes there with `chartbook snapshot`; the folder itself is never read, so it can be half-way through a change. A repository (`git`) is pinned from a clean copy of a commit. The content hash of every asset, and the commit, are written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
-- **Your code reads the pinned copy.** `data.path("fed_yield_curve:treasury_rates")`, `data.load(…)`, `assets.path(…)`, `models.path(…)` and `chartbook path …` all resolve a reference to another pipeline's asset through `chartbook.lock` into the store, not to that pipeline's working directory. No catalog is needed. Before it is pinned, a read in a notebook pins it, or reads a pipeline not declared here with a warning, or a working folder with a louder one; a build under `chartbook run` refuses all but the pin (see {doc}`../guide/depending-on-pipelines`).
+- **Your code reads the pinned copy.** `data.path("fed_yield_curve:treasury_rates")`, `data.load(…)`, `assets.path(…)`, `models.path(…)` and `chartbook path …` all resolve a reference to another pipeline's asset through `chartbook.lock` into the store, not to that pipeline's working directory. No catalog is needed. Before it is pinned, a read in a notebook pins it, or reads a pipeline not declared here with a warning, or follows an explicit `chartbook.links.toml` link; a build under `chartbook run` refuses all but the pin (see {doc}`../guide/depending-on-pipelines`).
 - A reference to a pipeline that is not in this table is read from its newest snapshot with a warning that names the `chartbook add` command that declares it; in a build under `chartbook run` it fails.
 
 **What it does not do yet.**
@@ -805,7 +793,7 @@ path = "/a/bigger/disk/chartbook-git"
 
 Nothing in it is precious. Delete it and the next `chartbook pin` or `chartbook update` that needs a repository fetches it again.
 
-**Trust.** A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: the first build of it asks you at a terminal, or {ref}`chartbook trust <chartbook-trust>` in its folder says it beforehand. Until then `chartbook docs generate` renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja's sandbox), and `chartbook build` and `chartbook run` refuse to run its build script. The record is `~/.chartbook/trust.toml`, this user's, beside `settings.toml`:
+**Trust.** A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: the first build of it asks you at a terminal, or {ref}`chartbook trust <chartbook-trust>` in its folder says it beforehand. Until then `chartbook docs build` renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja's sandbox), and `chartbook run` and `chartbook run` refuse to run its build script. The record is `~/.chartbook/trust.toml`, this user's, beside `settings.toml`:
 
 ```toml
 [[pipeline]]
@@ -821,9 +809,9 @@ level = "run"
 since = "2026-10-18T22:14:05Z"
 ```
 
-A folder's level is the highest of every entry that covers it: a `[[pipeline]]` entry whose path is the folder or a parent of it, and a `[[repository]]` entry whose url is the repository the folder's `origin` remote names (in any spelling: `git@github.com:Acme/Rates.git` is `https://github.com/acme/rates`). Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside (an unpacked archive) may name any repository in its `.git/config`, and is trusted by its path. `render` lets queries run and the files the manifest names be read wherever they are; `run` lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning that names it, and kept as it was; a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it. It is written by `chartbook trust`, by `chartbook init` for the project it makes (at `run`), by `chartbook catalog init` for the catalog's folder (at `run`) and by `chartbook catalog add` for each folder added (at `render`, unless it is trusted already), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under `CI` (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. The reasoning is {doc}`../design/trust`.
+A folder's level is the highest of every entry that covers it: a `[[pipeline]]` entry whose path is the folder or a parent of it, and a `[[repository]]` entry whose url is the repository the folder's `origin` remote names (in any spelling: `git@github.com:Acme/Rates.git` is `https://github.com/acme/rates`). Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside (an unpacked archive) may name any repository in its `.git/config`, and is trusted by its path. `render` lets queries run and the files the manifest names be read wherever they are; `run` lets the build script run too. The file is read as the settings are: one that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning that names it, and kept as it was; a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it. It is written by `chartbook trust`, by `chartbook init` for the project it makes (at `run`), by `chartbook catalog init` for the catalog's folder (at `run`), whole or not at all; a hand edit is read, and the next write rewrites the file without its comments. Two environment variables sit above it. Under `CI` (set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code, and is the one value the variable takes. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. The reasoning is {doc}`../design/trust`.
 
-**Set by ChartBook for its own child processes.** Five more variables are not settings: ChartBook sets them for a process it starts, and a build script may read them. `CHARTBOOK_RUN_DIR` and `CHARTBOOK_RUN_SCRIPT` are set for a script that {ref}`chartbook run <chartbook-run>` or `chartbook build` runs: the pipeline's directory, and the script's name (`build`, or the one named). They are how `chartbook build`, called from inside the build script, tells that it was, and renders the site without running the script again; `CHARTBOOK_RUN_STACK` is the whole chain of scripts being run, outermost first, as a JSON list of `[directory, script]` pairs. For `build`, `CHARTBOOK_BATCH=1` is set with them, and CI may set that one itself. `CHARTBOOK_UNTRUSTED_SOURCE=1` is set by a catalog's build for its build of a version laid out from the store, whose files anyone who can write to the store may have written: that build takes no template from the project's folder, copies only pages and pictures of its site folder, runs no table or query, and lets no page take in a file from outside the site (the whole list is under Versions in {doc}`../guide/catalogs-and-data`). `chartbook docs generate` sets it for itself, too, in a pipeline folder you have not trusted (above).
+**Set by ChartBook for its own child processes.** Five more variables are not settings: ChartBook sets them for a process it starts, and a build script may read them. `CHARTBOOK_RUN_DIR` and `CHARTBOOK_RUN_SCRIPT` are set for a script that {ref}`chartbook run <chartbook-run>` or `chartbook run` runs: the pipeline's directory, and the script's name (`build`, or the one named). They are how `chartbook run`, called from inside the build script, tells that it was, and renders the site without running the script again; `CHARTBOOK_RUN_STACK` is the whole chain of scripts being run, outermost first, as a JSON list of `[directory, script]` pairs. For `build`, `CHARTBOOK_BATCH=1` is set with them, and CI may set that one itself. `CHARTBOOK_UNTRUSTED_SOURCE=1` is set by a catalog's build for its build of a version laid out from the store, whose files anyone who can write to the store may have written: that build takes no template from the project's folder, copies only pages and pictures of its site folder, runs no table or query, and lets no page take in a file from outside the site (the whole list is under Versions in {doc}`../guide/catalogs-and-data`). `chartbook docs build` sets it for itself, too, in a pipeline folder you have not trusted (above).
 
 **The default host.** A dependency named by its ID alone, `"acme/rates" = {}`, is read from the store. When the store has no snapshot of it at all, its repository is wanted, and the ID says where it is on a git host the machine or the organization sets:
 
@@ -852,6 +840,6 @@ chartbook validates the manifest when running commands. Common errors:
 - A file that is not valid TOML, named, a catalog member's included
 - A chart's `dataframe` key referencing a missing dataframe
 - Explicit `type` contradicting the file's structure
-- Referenced files that don't exist (run `chartbook check`, or `chartbook docs generate`)
+- Referenced files that don't exist (run `chartbook check`, or `chartbook docs build`)
 
-Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook docs generate` and on the catalog's diagnostics page. `chartbook check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.
+Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook docs build` and on the catalog's diagnostics page. `chartbook check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.

@@ -183,3 +183,5 @@ not expire to test with.* Whether a warehouse pin should be a version where the 
 only where it does not, which is the recommendation here. How a database used as a *store*
 lays out objects and snapshots inside it. Each is marked where it arises, and each waits for the
 maintainer.
+
+The 0.4.0 catalog and several-store behavior is described in {doc}`plan-0.4.0` and {doc}`../guide/catalogs-and-data`: catalogs list stores, reads span them, and new snapshots follow catalog routing. The individual Store plugin contract and snapshot layout stay unchanged.

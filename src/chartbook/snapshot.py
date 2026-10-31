@@ -337,6 +337,7 @@ class SnapshotReport:
     skipped_labels: list[tuple[str, str]] = field(default_factory=list)
     index_skipped: Optional[str] = None
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
+    stores: list[str] = field(default_factory=list)
 
 
 def asset_record(
@@ -2233,6 +2234,7 @@ def make(
     built_by_run: bool = False,
     ignoring: tuple = (),
     deep: bool = False,
+    store_names: Optional[list[str]] = None,
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -2261,8 +2263,38 @@ def make(
         has anything uncommitted, or has built nothing.
     """
     directory = Path(project_dir).resolve()
+    if os.path.lexists(directory / "chartbook.links.toml"):
+        raise SnapshotError("Cannot snapshot while chartbook.links.toml exists. Delete it, run `chartbook update`, then snapshot.")
     pipeline = pipeline_in(directory)
     code = require_committed(directory, pipeline, ignoring)
+    from chartbook.multi_store import Stores
+    if store is None or isinstance(store, Stores):
+        stores = Stores.configured() if store is None else store
+        if store_names is None and stores.catalog and not any(pipeline in e.pipelines for e in stores.entries):
+            writable = [e for e in stores.entries if not e.read_only]
+            import sys
+            if len(writable) > 1 and sys.stdin.isatty() and not os.environ.get("CI") and not os.environ.get("CHARTBOOK_BATCH"):
+                import click
+                choices = ", ".join(e.name for e in writable)
+                answer = click.prompt(f"Write snapshots of {pipeline} to which stores? ({choices}; comma-separated)", default=writable[0].name)
+                store_names = [name.strip() for name in answer.split(",") if name.strip()]
+                stores.for_writing(pipeline, store_names)
+                from chartbook.catalog_config import route
+                route(pipeline, store_names, stores.catalog)
+        targets = stores.for_writing(pipeline, store_names)
+        # Validate every target before writing the first one. A partial fan-out
+        # remains recoverable: repeating the command skips existing snapshots.
+        require_lineage(directory, pipeline, stores)
+        report = make(directory, targets[0], made_at, built_by_run, ignoring, deep)
+        if len(targets) > 1:
+            from chartbook.transfer import copy_snapshot
+            for target in targets[1:]:
+                try:
+                    copy_snapshot(report.snapshot, targets[0], target)
+                except (StoreError, OSError) as error:
+                    raise SnapshotError(f"Snapshot written to {targets[0]}, but copy to {target} failed: {error}. Rerun the snapshot to finish the remaining copies.") from error
+        report.stores = [e.name for e in stores.entries if e.store in targets]
+        return report
 
     store = store if store is not None else default_store()
     require_lineage(directory, pipeline, store)
@@ -2284,7 +2316,9 @@ def make(
     made_at = made_at or _now()
     pending = store.begin(pipeline, code.commit, made_at, base=directory)
     try:
-        return _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep)
+        report = _make(directory, pipeline, code, raw, store, pending, made_at, built_by_run, deep)
+        report.stores = [str(store)]
+        return report
     except BaseException:
         # What was put in a snapshot that is not written goes with it
         pending.discard()
@@ -2762,7 +2796,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
 
     The folder is then the pipeline at that version, as far as a site is
-    concerned: ``chartbook docs generate`` builds the version's site there with the
+    concerned: ``chartbook docs build`` builds the version's site there with the
     repository gone. Its code is not in it; the commit names that. Beside
     the documents and the assets:
 
@@ -2831,7 +2865,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     report = Materialized(folder.resolve())
 
     # The version file first, so that nothing a record names can take its place
-    marker = {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at}
+    marker = {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at, "repository": taken.repository}
     if taken.subdirectory:
         marker["subdirectory"] = taken.subdirectory
     code_changed_at = _code_changed_at(taken, store)
@@ -2861,6 +2895,35 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             continue
         report.assets.append(record["id"])
 
+    # Materialized tables are file inputs to the version renderer; no database
+    # or warehouse connection is opened while rendering a published snapshot.
+    manifest_path = folder / "chartbook.toml"
+    raw = _read_manifest_file(folder) if manifest_path.is_file() else {}
+    changed = False
+    for record in taken.assets.values():
+        if record.get("kind") != "Dataframe" or (record.get("location") or {}).get("kind") not in ("table", "query") or not record.get("content_hash"):
+            continue
+        name = record.get("ref", {}).get("name")
+        if not isinstance(name, str) or plain_name(materialized_name(record)) is None:
+            continue
+        relative = f"_chartbook/tables/{materialized_name(record)}"
+        held = Path(store.get(record["content_hash"], taken.pipeline, name=materialized_name(record)))
+        if _copy_regular_file(held / materialized_name(record), folder / relative):
+            entry = raw.get("dataframes", {}).get(name)
+            if isinstance(entry, dict):
+                for key in ("source", "table", "query", "format", "read_options"):
+                    entry.pop(key, None)
+                entry["path"] = relative
+                entry["format"] = "parquet"
+                changed = True
+                report.assets.append(record["id"])
+                report.left_out = [(key, why) for key, why in report.left_out if key != record["id"]]
+    if changed:
+        import tomli_w
+        manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
+    if taken.index and taken.index.get("content_hash"):
+        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE))
+        _copy_regular_file(held / INDEX_FILE, folder / "_chartbook" / INDEX_FILE)
     _write_back(taken, folder, report)
     # Whatever the filesystem made of the names written, there is no repository here
     if os.path.lexists(folder / ".git"):

@@ -97,6 +97,9 @@ Decided by the maintainer, 2026-10-12.
 - **0.3.0 is next** ({doc}`plan-0.3.0`, proposed 2026-10-28): the store laid out by pipeline,
   with each file stored once, and the issues that came in after 0.2.0. What lands goes under
   "Unreleased" until it is published. *Built by 2026-10-29, and staged as 0.3.0 in the changelog.*
+- **0.4.0** ({doc}`plan-0.4.0`, proposed 2026-10-30): a catalog is its stores, a machine may have
+  several, hubs over versions, the links file, and `run` / `docs build` / `catalog build`. *Built
+  and released 2026-10-30, the same day it was planned.*
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 
@@ -115,6 +118,7 @@ Decided by the maintainer, 2026-10-12.
 | 9 | {doc}`versioned-catalog` | Index and snapshot settled; a catalog of every version of every pipeline | Step 1, the self-sufficient snapshot, built 2026-10-16 |
 | 10 | {doc}`trust` | What a build of a folder on this machine may do before you have trusted the pipeline, and how you say so | Built 2026-10-18: `chartbook trust`, `~/.chartbook/trust.toml`, the gates in `docs`, `build`, `run` and `catalog build` |
 | 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
+| 12 | {doc}`plan-0.4.0` | What 0.4.0 is for: a catalog is its stores and a machine may have several; the catalog's pages as hubs over versions; a link file for two pipelines at once; `run`, `docs build`, `catalog build` | Proposed and built 2026-10-30 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
@@ -2200,6 +2204,7 @@ maintainer.
 | 2026-10-16 | Index and snapshot stay two documents sharing one record format; a snapshot holds the index of its version and the files a writer needs, so any version renders from the store alone. A catalog shows every snapshot in the store of every pipeline plus each pipeline's working version (never "latest"); links follow pins; a version list on each pipeline page. Written up in `versioned-catalog.md`; the self-sufficient snapshot first | Jeremy, me |
 | 2026-10-25 | Dependencies between pipelines must form a directed acyclic graph. `chartbook run`, `chartbook build` and `chartbook snapshot` refuse a cycle (a run before it pins or builds anything, with the pins it would make worked out first and not written, `lock.would_pin`; a pin is held back until it is let through, so a refused one writes nothing), and `chartbook check` reports one, naming who depends on whom and where it was read. The graph is read from the folders on this machine first (a cycle is found as soon as it is declared) and through the pins and snapshots in the store otherwise (`chartbook.lineage.cycle`) | Jeremy, me; {doc}`../guide/depending-on-pipelines` |
 | 2026-10-28 | For 0.3.0: the store's top layer is one folder per pipeline, flat, under `pipelines/`, its name the ID with `+` for `/`, with Windows path lengths weighed; inside it, a folder for each snapshot, named `<time>_<commit>` so that a sort is by time and the two split at `_` (one commit can have several snapshots), holding the pipeline's files under their own names in their own places and ChartBook's own in one reserved folder, `_chartbook/`, each file kept once, in the first snapshot that had it, with a dictionary of every file's hash, size and place; a snapshot that holds the pipeline's code as well waits for a later release; the store never holds a file twice, and keeps only its own bytes (reflink or copy); the "before" hash stays the git commit, with no input hash or build key; `store export` writes no readable copy beside the store's; `store gc` clears what migration could not assign; 0.3.0 also holds `store export` and `store import`, #133, #134, the rest of #135, and #136; #9 closed, built in 0.2.0 | Jeremy, me; {doc}`plan-0.3.0` |
+| 2026-10-30 | For 0.4.0: a catalog is a list of stores and shows no working folder, so a pipeline enters a catalog by `chartbook snapshot` alone and `catalog add` goes; its file is `catalog.toml` (not `charthub.toml`: a hub is a registry, for which the grammar keeps a slot); a machine may have several stores, named in the catalog, with `settings.toml` left to machine plumbing and its `[store] url` as the fallback; reading takes the newest snapshot across every store within the repository the pin keeps to, with no per-pipeline precedence; where a new snapshot is written is routed centrally in the catalog, asked once at the first unrouted snapshot; a dependency may name a public store by URL, never by path, and the lockfile never names one; `chartbook add URL` writes `repository = URL`; the catalog's pages are hubs over versions, every version rendered alike; `chartbook.links.toml` beside a pipeline's manifest points dependencies at working folders, and `snapshot` refuses while it exists; `chartbook build` goes, `docs generate` is `docs build`, `catalog generate` is `catalog build`; the pipeline-page fix was folded into the hubs rather than shipped as 0.3.1 | Jeremy, me; {doc}`plan-0.4.0` |
 
 ## Open questions, collected
 
@@ -2221,15 +2226,15 @@ Each is explained where it lives.
 - The seventeen things settled while building snapshots, and its known gaps. Two were
   answered the same day: `chartbook run --snapshot` builds first, and "Clearing old
   snapshots" says how old ones go. (Step 4 above, "4b, as built")
-- Whether `chartbook check` should run `--frozen`'s check too, so that CI is one command; and
-  whether a lockfile should record which store its pins were made into. (Step 4 above, "4g, as
-  built")
+- Whether `chartbook check` should run `--frozen`'s check too, so that CI is one command. (Step 4
+  above, "4g, as built") Whether a lockfile should record which store its pins were made into
+  was answered on 2026-10-30: no ({doc}`plan-0.4.0`, "Portability").
 - For data in a database: when a second engine is wanted and the backend contract is
   extracted; whether a table-backed dataframe can be pinned, by hash of a snapshot of its
   rows or not at all. (Step 5 above)
-- What `chartbook catalog build` should be called now that `chartbook build` runs a build
-  script, and whether a build script should still render the site itself. (Step 4 above, "4c,
-  as built")
+- What `chartbook catalog build` should be called, and whether a build script should still render
+  the site itself: answered on 2026-10-30 (`catalog build`; yes, and `chartbook build` goes;
+  {doc}`plan-0.4.0`, "The commands").
 - A shared store, as a second way for a `git` dependency's built data to get here. The first
   is built: `chartbook run` builds it. (Step 4 above, "4a, as built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)

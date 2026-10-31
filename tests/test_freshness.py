@@ -226,9 +226,7 @@ class TestBuiltSite:
             assert 'Code updated <time class="cb-relative-time"' in front_page
             assert "Date of Last Code Update" in front_page
         else:
-            assert "Date of Last Code Update" in (
-                output_dir / "cb" / "pipelines.html"
-            ).read_text(encoding="utf-8")
+            assert "Versions" in (output_dir / "cb" / "pipelines.html").read_text(encoding="utf-8")
 
     def test_script_is_identical_in_both_themes(self):
         scripts = [

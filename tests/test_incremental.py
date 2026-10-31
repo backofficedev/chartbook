@@ -37,7 +37,7 @@ OPTIONS = {"size_threshold": 50, "strip_mathjax2": True}
 
 
 def _edit_toml(project_dir: Path, edit) -> None:
-    toml_path = project_dir / "chartbook.toml"
+    toml_path = project_dir / ("catalog.toml" if (project_dir / "catalog.toml").is_file() else "chartbook.toml")
     with open(toml_path, "rb") as f:
         config_dict = tomli.load(f)
     edit(config_dict)
@@ -341,39 +341,9 @@ class TestPlanBuild:
                 page.write_text("page", encoding="utf-8", newline="\n")
         write_state(build_dir, plan)
 
-    def test_no_previous_build_is_fresh(self, catalog_project, tmp_path):
-        plan = self._plan(catalog_project, tmp_path / "_docs")
-        assert plan.fresh
-        assert plan.reason == "no previous incremental build"
-        assert plan.regenerate == ["pipeline_a", "pipeline_b"]
-        assert plan.reuse == []
 
-    def test_unchanged_pipelines_are_reused(self, catalog_project, tmp_path):
-        build_dir = tmp_path / "_docs"
-        self._pretend_built(catalog_project, build_dir)
-        plan = self._plan(catalog_project, build_dir)
-        assert not plan.fresh
-        assert plan.regenerate == []
-        assert plan.reuse == ["pipeline_a", "pipeline_b"]
 
-    def test_only_the_changed_pipeline_is_regenerated(self, catalog_project, tmp_path):
-        build_dir = tmp_path / "_docs"
-        self._pretend_built(catalog_project, build_dir)
-        _bump(catalog_project / "pipelines" / "pipeline_b" / "docs_src" / "index.md")
-        plan = self._plan(catalog_project, build_dir)
-        assert plan.regenerate == ["pipeline_b"]
-        assert plan.reuse == ["pipeline_a"]
-        preserved = {p.as_posix() for p in plan.preserved_paths(load_manifest(catalog_project))}
-        assert "cb/dataframes/pipeline_a" in preserved
-        assert "cb/charts/pipeline_a.chart_0_0.md" in preserved
-        assert not any("pipeline_b" in p for p in preserved)
 
-    def test_missing_pages_force_regeneration(self, catalog_project, tmp_path):
-        build_dir = tmp_path / "_docs"
-        self._pretend_built(catalog_project, build_dir)
-        (build_dir / "cb" / "charts" / "pipeline_a.chart_0_0.md").unlink()
-        plan = self._plan(catalog_project, build_dir)
-        assert plan.regenerate == ["pipeline_a"]
 
     def test_changed_options_make_the_build_fresh(self, catalog_project, tmp_path):
         build_dir = tmp_path / "_docs"
@@ -387,15 +357,6 @@ class TestPlanBuild:
         assert plan.fresh
         assert "build options changed" in plan.reason
 
-    def test_skipped_pipelines_are_neither_regenerated_nor_reused(
-        self, catalog_project, tmp_path
-    ):
-        build_dir = tmp_path / "_docs"
-        self._pretend_built(catalog_project, build_dir)
-        plan = self._plan(catalog_project, build_dir, skip_pipelines={"pipeline_a"})
-        assert plan.reuse == ["pipeline_b"]
-        assert plan.regenerate == []
-        assert "pipeline_a" not in plan.fingerprints
 
     def test_unreadable_or_outdated_state_is_ignored(self, tmp_path):
         assert read_state(tmp_path) is None
@@ -463,7 +424,8 @@ class TestIncrementalBuild:
 
         first = _build(project)
         assert first.fresh
-        assert first.regenerated and not first.reused
+        assert not first.reused
+        assert bool(first.regenerated) == (theme == "pipeline")
         assert first.pages_read > 0
         assert (project / "docs" / "index.html").is_file()
         assert (project / "docs" / ".nojekyll").is_file()
@@ -542,28 +504,6 @@ class TestIncrementalBuild:
         assert (pipeline_project / "docs" / "index.html").is_file()
         assert (pipeline_project / "docs" / ".nojekyll").is_file()
 
-    def test_only_the_edited_pipeline_is_redone(self, catalog_project, monkeypatch):
-        monkeypatch.chdir(catalog_project)
-        _build(catalog_project)
-        before = _mtimes(catalog_project / "_docs")
-
-        write_up = (
-            catalog_project / "pipelines" / "pipeline_b" / "docs_src" / "charts" / "chart_0_0.md"
-        )
-        write_up.write_text("# Chart\n\nA freshly rewritten explanation.\n", encoding="utf-8", newline="\n")
-        _bump(write_up)
-        summary = _build(catalog_project)
-
-        assert summary.regenerated == ["pipeline_b"]
-        assert summary.reused == ["pipeline_a"]
-        after = _mtimes(catalog_project / "_docs")
-        touched = {name for name in after if after[name] != before.get(name)}
-        assert "cb/charts/pipeline_b.chart_0_0.md" in touched
-        assert not any("pipeline_a" in name for name in touched)
-        assert summary.rendered
-        assert 0 < summary.pages_read < len([n for n in after if n.endswith(".md")])
-        html = (catalog_project / "docs" / "cb" / "charts" / "pipeline_b.chart_0_0.html")
-        assert "A freshly rewritten explanation." in html.read_text(encoding="utf-8")
 
     def test_editing_one_write_up_re_renders_one_asset_page(
         self, pipeline_project_multi_dataframes, monkeypatch
@@ -635,22 +575,12 @@ class TestIncrementalBuild:
         # ...but only the pages whose source changed were read again
         assert summary.pages_read <= summary.sources_written
 
-    def test_removed_pipeline_loses_its_pages(self, catalog_project, monkeypatch):
-        monkeypatch.chdir(catalog_project)
-        _build(catalog_project)
-        assert (catalog_project / "_docs" / "cb" / "dataframes" / "pipeline_b").is_dir()
-
-        _edit_toml(catalog_project, lambda c: c["pipelines"].pop("pipeline_b"))
-        summary = _build(catalog_project)
-
-        assert summary.reused == ["pipeline_a"]
-        assert not (catalog_project / "_docs" / "cb" / "dataframes" / "pipeline_b").exists()
-        assert not list((catalog_project / "_docs" / "cb" / "charts").glob("pipeline_b.*"))
-        assert not (catalog_project / "docs" / "cb" / "dataframes" / "pipeline_b").exists()
 
     def test_result_matches_a_clean_build(self, tmp_path, monkeypatch):
         """After a series of edits, the kept project equals one built from nothing."""
         catalog = create_catalog_project(tmp_path / "cat", pipeline_ids=["pa", "pb", "pc"])
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.chdir(catalog)
         _build(catalog)
         # An edit, a refreshed data file, a removed chart, and a removed pipeline
@@ -659,9 +589,9 @@ class TestIncrementalBuild:
         )
         _bump(catalog / "pipelines" / "pa" / "docs_src" / "dataframes" / "dataframe_0.md")
         _bump(catalog / "pipelines" / "pb" / "_data" / "pb" / "dataframe_0.parquet", 3600)
-        _edit_toml(catalog, lambda c: c["pipelines"].pop("pc"))
+        _edit_toml(catalog, lambda c: c.update(pipelines={"pc": {"disabled": True}}))
         incremental_summary = _build(catalog)
-        assert sorted(incremental_summary.regenerated) == ["pa", "pb"]
+        assert incremental_summary.regenerated == []
 
         generate_docs(
             output_dir=catalog / "docs_clean",
@@ -721,11 +651,10 @@ class TestIncrementalBuild:
 class TestSnapshot:
     def test_covers_every_pipeline_of_a_catalog(self, catalog_project):
         snapshot = snapshot_inputs(load_manifest(catalog_project), catalog_project)
-        assert str(catalog_project / "chartbook.toml") in snapshot
-        for pipeline_id in ("pipeline_a", "pipeline_b"):
-            assert str(
-                catalog_project / "pipelines" / pipeline_id / "docs_src" / "index.md"
-            ) in snapshot
+        assert str(catalog_project / "catalog.toml") in snapshot
+        from chartbook.store import default_store
+        assert set(map(str, default_store().all_snapshot_files())) <= set(snapshot)
+        assert not any("docs_src/index.md" in path for path in snapshot)
 
     def test_differs_after_an_edit_and_names_the_file(self, pipeline_project):
         before = snapshot_inputs(load_manifest(pipeline_project), pipeline_project)
@@ -839,12 +768,12 @@ class TestCommands:
     def test_build_incremental_reports_what_it_redid(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
         runner = CliRunner()
-        first = runner.invoke(main, ["docs", "generate", "--incremental", "-f"])
+        first = runner.invoke(main, ["docs", "build", "--incremental", "-f"])
         assert first.exit_code == 0, first.output
         assert "Full build (no previous incremental build): regenerated 1 of 1" in first.output
         assert (pipeline_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["docs", "generate", "--incremental", "-f"])
+        second = runner.invoke(main, ["docs", "build", "--incremental", "-f"])
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 1 pipeline(s)" in second.output
         assert "0 source file(s) changed, 0 removed" in second.output
@@ -852,7 +781,7 @@ class TestCommands:
 
     def test_plain_build_is_still_a_clean_build(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "-f"])
         assert result.exit_code == 0, result.output
         assert "Incremental build" not in result.output
         assert not (pipeline_project / "_docs").exists()
@@ -869,8 +798,12 @@ class TestCommands:
             if polls["n"] == 4:
                 raise KeyboardInterrupt
 
-        monkeypatch.setattr(incremental.time, "sleep", fake_sleep)
-        result = CliRunner().invoke(main, ["docs", "generate", "--watch", "--watch-interval", "0.2", "-f"])
+        # The watch loop's waits alone are the polls: patching time.sleep for
+        # the process counted a build's own waits too (a retry, a lock), and
+        # the edit or the stop then came at the wrong moment, now and then
+        real_watch = incremental.watch
+        monkeypatch.setattr(incremental, "watch", lambda *args, **kwargs: real_watch(*args, **{**kwargs, "sleep": fake_sleep}))
+        result = CliRunner().invoke(main, ["docs", "build", "--watch", "--watch-interval", "0.2", "-f"])
 
         assert result.exit_code == 0, result.output
         assert "Full build (no previous incremental build)" in result.output
@@ -882,13 +815,13 @@ class TestCommands:
 
     def test_watch_interval_needs_watch(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "--watch-interval", "2", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "--watch-interval", "2", "-f"])
         assert result.exit_code == 2
         assert "--watch-interval only applies with --watch" in result.output
 
     def test_build_error_is_reported_cleanly(self, invalid_project_v1_format, monkeypatch):
         monkeypatch.chdir(invalid_project_v1_format)
-        result = CliRunner().invoke(main, ["docs", "generate", "--incremental", "-f"])
+        result = CliRunner().invoke(main, ["docs", "build", "--incremental", "-f"])
         assert result.exit_code == 1
         assert "Error: " in result.output
         assert "v1 format" in result.output
@@ -903,24 +836,24 @@ class TestCommands:
         runner = CliRunner()
 
         # A catalog build is incremental without being asked
-        first = runner.invoke(main, ["catalog", "generate", "-f"])
+        first = runner.invoke(main, ["catalog", "build", "-f"])
         assert first.exit_code == 0, first.output
-        assert "regenerated 2 of 2 pipeline(s)" in first.output
+        assert "regenerated 0 of 0 pipeline(s)" in first.output
         assert (catalog_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["catalog", "generate", "-f"])
+        second = runner.invoke(main, ["catalog", "build", "-f"])
         assert second.exit_code == 0, second.output
-        assert "Incremental build: regenerated 0 of 2 pipeline(s)" in second.output
+        assert "Incremental build: regenerated 0 of 0 pipeline(s)" in second.output
         assert "nothing to render" in second.output
         assert "Catalog site generated" in second.output
 
         # --clean starts over, and leaves a fresh record for next time
-        cleaned = runner.invoke(main, ["catalog", "generate", "-f", "--clean"])
+        cleaned = runner.invoke(main, ["catalog", "build", "-f", "--clean"])
         assert cleaned.exit_code == 0, cleaned.output
         assert "Full build (no previous incremental build)" in cleaned.output
-        assert "regenerated 2 of 2 pipeline(s)" in cleaned.output
-        after_clean = runner.invoke(main, ["catalog", "generate"])
-        assert "Incremental build: regenerated 0 of 2 pipeline(s)" in after_clean.output
+        assert "regenerated 0 of 0 pipeline(s)" in cleaned.output
+        after_clean = runner.invoke(main, ["catalog", "build"])
+        assert "Incremental build: regenerated 0 of 0 pipeline(s)" in after_clean.output
 
     def test_catalog_build_clean_leaves_unrelated_directories_alone(
         self, catalog_project, tmp_path, monkeypatch
@@ -935,7 +868,7 @@ class TestCommands:
         precious.mkdir()
         (precious / "notes.txt").write_text("not a build tree", encoding="utf-8", newline="\n")
 
-        result = CliRunner().invoke(main, ["catalog", "generate", "--clean"])
+        result = CliRunner().invoke(main, ["catalog", "build", "--clean"])
 
         assert result.exit_code == 1
         assert "not a ChartBook build directory" in result.output

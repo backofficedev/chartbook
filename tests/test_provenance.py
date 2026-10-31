@@ -146,7 +146,7 @@ class TestPanel:
 class TestOnThePage:
     def test_every_asset_page_carries_the_panel_from_the_index(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         built = json.loads((pipeline_project / "_docs" / "index.json").read_text(encoding="utf-8"))
         records = {r["id"]: r for r in built["records"]}
@@ -201,67 +201,16 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         _edit_toml(a / "chartbook.toml", model)
         return catalog
 
-    def test_an_upstream_rebuild_and_a_new_user_reach_the_reused_pages(self, tmp_path, monkeypatch):
-        catalog = self._catalog(tmp_path)
-        monkeypatch.chdir(catalog)
-        runner = CliRunner()
-        model_page = catalog / "_docs" / "cb" / "models" / "acme--pipeline_a" / "m.md"
-        upstream_page = catalog / "_docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.md"
-        parquet = next((catalog / "pipelines" / "pipeline_b" / "_data").rglob("dataframe_0.parquet"))
-
-        from chartbook import index as index_module
-
-        builds = []
-        real_build = index_module.build_index
-        monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (builds.append(1), real_build(*a, **k))[1])
-
-        first = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
-        assert first.exit_code == 0, first.output
-        assert len(builds) == 1  # the index is built once per build, and handed to the pages
-        pipelines = {r["id"]: r for r in json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["kind"] == "Pipeline"}
-        assert all(p["code_changed_at"].endswith("Z") for p in pipelines.values())  # a docs build dates the code
-        index_1 = json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))
-        hash_1 = next(r for r in index_1["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
-        # The model page, built for real, carries the panel from the index, in the catalog theme
-        text = model_page.read_text(encoding="utf-8")
-        assert "## Provenance" in text and f"- `acme/pipeline_b:dataframe_0`: now at `{hash_1[:19]}…`" in text
-        assert "| What                           | Model `acme/pipeline_a:model/m`" in text
-
-        # Nothing changed: both pipelines are reused
-        again = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
-        assert again.exit_code == 0 and "regenerated 0 of 2" in again.output, again.output
-
-        # The upstream rebuilds its dataframe: pipeline_a's own files are the
-        # same, and its model page must still say the new hash
-        parquet.write_bytes(parquet.read_bytes() + b"\0")
-        second = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
-        assert second.exit_code == 0, second.output
-        index_2 = json.loads((catalog / "_docs" / "index.json").read_text(encoding="utf-8"))
-        hash_2 = next(r for r in index_2["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
-        assert hash_2 != hash_1
-        assert f"now at `{hash_2[:19]}…`" in model_page.read_text(encoding="utf-8")
-        assert "regenerated 2 of 2" in second.output, second.output
-
-        # A second model in pipeline_a uses the upstream dataframe: the
-        # upstream's page, whose own files did not change, lists it
-        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}", encoding="utf-8", newline="\n")
-        _edit_toml(
-            catalog / "pipelines" / "pipeline_a" / "chartbook.toml",
-            lambda c: c["models"].update({"m2": {"path": "./_models/m2.json", "trained_on": ["acme/pipeline_b:dataframe_0"], "docs": "d"}}),
-        )
-        third = runner.invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
-        assert third.exit_code == 0, third.output
-        assert "regenerated 2 of 2" in third.output, third.output  # pipeline_b on its panels alone
-        assert "`acme/pipeline_a:model/m2`" in upstream_page.read_text(encoding="utf-8")
-        assert len(builds) == 4
 
     def test_a_directory_that_is_not_a_build_tree_is_refused_before_any_work(self, tmp_path, monkeypatch):
-        catalog = self._catalog(tmp_path)
+        catalog = create_catalog_project(tmp_path / "cat")
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog)
         monkeypatch.chdir(catalog)
         (catalog / "_docs").mkdir()
         (catalog / "_docs" / "unrelated.txt").write_text("mine", encoding="utf-8", newline="\n")
         from chartbook import index as index_module
 
         monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (_ for _ in ()).throw(AssertionError("the index was built first")))
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert result.exit_code != 0 and "is not a ChartBook build directory" in result.output

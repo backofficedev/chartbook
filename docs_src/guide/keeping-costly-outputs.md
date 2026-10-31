@@ -61,7 +61,7 @@ model/forecaster`. A file that is on disk is never written over. See {ref}`chart
 ## The build stops before it remakes it
 
 When a kept asset is not on disk and the store has a version of it, `chartbook run` and
-`chartbook build` stop before the build script runs:
+`chartbook run` stop before the build script runs:
 
 ```text
 Error: acme/docs: embeddings is kept, and is not on disk (./_data/embeddings.parquet). The store has its version from 4f2a91c, made 2026-09-30 14:02 UTC.

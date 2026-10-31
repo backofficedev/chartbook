@@ -3,13 +3,13 @@
 What ChartBook does now, what is an early experiment, and what may come next. Nothing below the first
 section is a promise; it is where the work is pointed.
 
-## Now: one machine, and a folder shared between machines
+## Now: catalogs of snapshots across several stores
 
 ChartBook is meant to be useful on one laptop with nothing but `pip install chartbook`:
 
 - A pipeline documents its charts, dataframes, notebooks and models in `chartbook.toml`, and
-  `chartbook build` makes a site of them.
-- A catalog gathers several pipelines into one site.
+  `chartbook docs build` makes a site of them.
+- A catalog lists stores in `catalog.toml` and renders hubs over every pipeline and snapshot in them. New snapshots follow catalog routing; reads search every store.
 - One pipeline reads another's data by name, from a **snapshot** in the **store**, pinned in its
   lockfile, so that what it read is recorded and can be read again
   ({doc}`guide/depending-on-pipelines`).
@@ -31,6 +31,18 @@ snapshots hold it, so a dataset that grows by a file a year no longer stores a f
 With it come files that are not tables, tables stored as CSV, JSON lines or Arrow IPC, more for
 datasets of many files, and a clear message about long paths on Windows. A store made by 0.2 is
 moved to it once with `chartbook store migrate` (the {doc}`changelog`, "Read this first").
+
+## 0.4.0
+
+0.4.0 carries out {doc}`design/plan-0.4.0`. A catalog becomes a list of stores, and nothing else:
+every pipeline with a snapshot in any of them, every version of each rendered from the store alone,
+with the data dictionary as it was then and what changed between versions, and a page for the
+stores themselves. A machine may have several stores, one Drive folder per collaborator, say, with
+each pipeline's new snapshots routed to the stores that should hold it, and a dependency may name a
+public store by URL so that a stranger who clones a downstream repository can fetch what its
+lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` beside a pipeline's
+manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
+the build script, `chartbook docs build` renders the site.
 
 ## Experimental: Databricks
 

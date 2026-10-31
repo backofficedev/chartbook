@@ -65,7 +65,7 @@ class TestACatalogsFile:
         assert "[index.json](index.json)" in text
         assert _links(text) and _all_resolve(site, text) == []
         block = _block(text, "pipeline_a")
-        assert "cb/pipelines/pipeline_a_README.html" in block[0]
+        assert "cb/pipelines/pipeline_a.html" in block[0]
         # Newest first, each on its own line, linking the version site's own file, which is there
         versions = [link for line in block[1:] for link in _links(line) if link.startswith("versions/")]
         assert len(versions) == 2 and all(link.endswith("/llms.txt") for link in versions)
@@ -87,7 +87,8 @@ class TestACatalogsFile:
         site = root / "docs"
         text = (site / "llms.txt").read_text(encoding="utf-8")
         line = _block(text, "pipeline_c")[0]
-        assert "Not on this machine" in line and "Its newest snapshot says: “" in line
+        assert "stored snapshots" in line and "Its newest snapshot says: “" in line
+        assert "not on this machine" not in line.lower()
         # Only the links the writer made: the page and the version; all in the site
         assert _all_resolve(site, text) == []
         assert not any("example.org" in link or "javascript" in link for link in _links(text))
@@ -96,9 +97,9 @@ class TestACatalogsFile:
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = catalog
-        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest = tomli.loads((root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).read_text(encoding="utf-8"))
         manifest["project"]["writer"] = "mkdocs"
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         site = root / "docs"
         text = (site / "llms.txt").read_text(encoding="utf-8")
@@ -113,9 +114,9 @@ class TestWhatTheReviewFound:
         root, first, second = catalog
         _elsewhere_with(tmp_path, description=description)
         _show_from_the_store(root)
-        manifest = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+        manifest = tomli.loads((root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).read_text(encoding="utf-8"))
         manifest["project"]["description"] = description
-        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+        (root / ("catalog.toml" if (root / "catalog.toml").is_file() else "chartbook.toml")).write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
         _build(root, monkeypatch)
         site = root / "docs"
         files = [site / "llms.txt", *sorted((site / "versions").rglob("llms.txt"))]
@@ -125,11 +126,12 @@ class TestWhatTheReviewFound:
             text = file.read_text(encoding="utf-8")
             headings, items = _structure(text)
             assert [tag for tag, _ in headings].count("h1") == 1, (file, headings)
-            assert all(content in ("Pipelines", "Dataframes", "Charts", "Models") for tag, content in headings if tag == "h2")
+            assert all(content in ("Pipelines", "Dataframes", "Charts", "Models", "Stores") for tag, content in headings if tag == "h2")
             assert not [tag for tag, _ in headings if tag not in ("h1", "h2")]
             # One list item per record line and per version line, none from the text
             lines = [line for line in text.splitlines() if line.startswith(("- [", "  - "))]
-            assert items == len(lines), file
+            store_items = len(__import__("json").loads((file.parent / "index.json").read_text(encoding="utf-8")).get("stores", []))
+            assert items == len(lines) + store_items, file
             assert _all_resolve(file.parent, text) == []
 
     def test_older_versions_are_on_the_versions_page(self, catalog, monkeypatch):
@@ -149,7 +151,7 @@ class TestAPipelinesFile:
     def _site(self, tmp_path, monkeypatch, *arguments) -> Path:
         project = create_pipeline_project(tmp_path / "rates", pipeline_id="rates", pipeline_name="Rates")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", *arguments])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", *arguments])
         assert result.exit_code == 0, result.output
         return project / "docs"
 
@@ -165,7 +167,7 @@ class TestAPipelinesFile:
     def test_an_incremental_build_keeps_it_and_leaves_it_alone(self, tmp_path, monkeypatch):
         site = self._site(tmp_path, monkeypatch, "--incremental")
         written = (site / "llms.txt").stat().st_mtime_ns
-        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
+        result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
         assert (site / "llms.txt").stat().st_mtime_ns == written
 

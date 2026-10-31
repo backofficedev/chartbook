@@ -146,7 +146,7 @@ from chartbook.store import (
 )
 
 #: The query keys a store URL may carry. Never a credential.
-URL_OPTIONS = ("endpoint", "region")
+URL_OPTIONS = ("endpoint", "region", "anonymous")
 
 #: What a snapshot's ``_chartbook/`` holds in a bucket while it is being
 #: made: its claim of the folder, written only if no other snapshot has it.
@@ -232,6 +232,8 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
                 f"the keys are: {', '.join(URL_OPTIONS)}."
             )
         options[key] = value
+    if options.get("anonymous", "false") not in ("true", "false"):
+        raise ValueError("The anonymous option must be true or false")
     return bucket, prefix, options
 
 
@@ -462,7 +464,9 @@ class S3Store(Store):
             "s3",
             endpoint_url=self.options.get("endpoint") or None,
             region_name=self.options.get("region") or None,
-            config=botocore.config.Config(retries={"max_attempts": 5, "mode": "standard"}),
+            config=botocore.config.Config(
+                signature_version=botocore.UNSIGNED if self.options.get("anonymous") == "true" else None,
+                retries={"max_attempts": 5, "mode": "standard"}),
         )
 
     def __repr__(self) -> str:

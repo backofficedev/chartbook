@@ -310,37 +310,19 @@ class TestLoadManifestCatalogWorkflow:
     """Integration tests for reading catalog manifest with multiple pipelines."""
 
     def test_load_manifest_catalog_with_multiple_pipelines(self, catalog_project):
-        """Test reading a catalog with multiple sub-pipelines."""
         manifest = load_manifest(catalog_project)
-
-        # Verify resolved type
         assert manifest["project"]["type"] == "catalog"
-
-        # Verify both pipelines discovered
-        assert "pipelines" in manifest
-        assert "pipeline_a" in manifest["pipelines"]
-        assert "pipeline_b" in manifest["pipelines"]
-
-        # Verify each sub-pipeline has full manifest, with the catalog key
-        # as its authoritative id
-        for pipeline_id in ["pipeline_a", "pipeline_b"]:
-            pipeline_manifest = manifest["pipelines"][pipeline_id]
-            assert pipeline_manifest["project"]["type"] == "pipeline"
-            assert pipeline_manifest["project"]["id"] == pipeline_id
-            assert "dataframes" in pipeline_manifest
-            assert "charts" in pipeline_manifest
+        assert manifest["pipelines"] == {}
+        assert set(manifest["store_pipelines"]) == {"pipeline_a", "pipeline_b"}
+        from chartbook import index
+        built = index.build_index(manifest)
+        assert len([r for r in built["records"] if r["kind"] == "Pipeline"]) == 2
+        assert all(r["snapshots"] for r in built["records"] if r["kind"] == "Pipeline")
 
     def test_load_manifest_catalog_platform_paths(self, catalog_project_platform_paths):
-        """Test catalog with platform-specific path dictionaries."""
         manifest = load_manifest(catalog_project_platform_paths)
-
-        # Should resolve paths correctly for current platform
-        assert "pipeline_x" in manifest["pipelines"]
-        assert "pipeline_y" in manifest["pipelines"]
-
-        # Each pipeline should have valid manifest
-        for pid in ["pipeline_x", "pipeline_y"]:
-            assert manifest["pipelines"][pid]["project"]["type"] == "pipeline"
+        assert set(get_pipeline_ids(manifest)) == {"pipeline_x", "pipeline_y"}
+        assert manifest["pipelines"] == {}
 
     def test_catalog_gets_default_policy(self, catalog_project):
         """A catalog without [policy] resolves to the default warn policy."""
@@ -368,15 +350,10 @@ class TestLoadManifestCatalogWorkflow:
         assert "test_pipeline" in pipeline_ids
 
     def test_get_pipeline_manifest_from_catalog(self, catalog_project):
-        """Test extracting individual pipeline manifest from a catalog."""
         manifest = load_manifest(catalog_project)
-
-        pipeline_a_manifest = get_pipeline_manifest(manifest, "pipeline_a")
-        assert pipeline_a_manifest["project"]["id"] == "pipeline_a"
-        assert "dataframes" in pipeline_a_manifest
-
-        pipeline_b_manifest = get_pipeline_manifest(manifest, "pipeline_b")
-        assert pipeline_b_manifest["project"]["id"] == "pipeline_b"
+        with pytest.raises(KeyError):
+            get_pipeline_manifest(manifest, "pipeline_a")
+        assert "pipeline_a" in manifest["store_pipelines"]
 
 
 class TestSiteDirResolution:
@@ -476,8 +453,14 @@ class TestLoadManifestValidationErrors:
             load_manifest(invalid_project_type_conflict)
 
 
-class TestCatalogMembers:
-    """Tests for [pipelines] members auto-discovery, exclude, and disabled."""
+def _migration_entries(folder):
+    from chartbook.manifest import _catalog_entries, _parse_toml_file
+    path = folder / "chartbook.toml"
+    return {"pipelines": _catalog_entries(_parse_toml_file(path), folder, str(path))}
+
+
+class TestLegacyMembersReadForMigration:
+    """The migration reader preserves discovery, exclude, and disabled rules of legacy catalogs."""
 
     @staticmethod
     def _make_pipeline(root, dirname, project=None):
@@ -503,7 +486,7 @@ class TestCatalogMembers:
         self._make_pipeline(tmp_path / "repos", "beta")
         catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert sorted(manifest["pipelines"]) == ["alpha", "beta"]
 
     def test_glob_skips_non_pipeline_dirs_and_catalogs(self, tmp_path):
@@ -515,7 +498,7 @@ class TestCatalogMembers:
             tomli_w.dump({"project": {"type": "catalog"}, "pipelines": {}}, f)
         catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
     def test_member_uses_explicit_id_from_pipeline(self, tmp_path):
@@ -524,9 +507,9 @@ class TestCatalogMembers:
         )
         catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["myscope/alpha"]
-        assert manifest["pipelines"]["myscope/alpha"]["project"]["id"] == "myscope/alpha"
+        assert "alpha" in manifest["pipelines"]["myscope/alpha"]["path"]
 
     def test_exclude_removes_member(self, tmp_path):
         self._make_pipeline(tmp_path / "repos", "alpha")
@@ -535,7 +518,7 @@ class TestCatalogMembers:
             tmp_path, {"members": ["../repos/*"], "exclude": ["../repos/beta"]}
         )
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
     def test_disabled_list_removes_member(self, tmp_path):
@@ -545,7 +528,7 @@ class TestCatalogMembers:
             tmp_path, {"members": ["../repos/*"], "disabled": ["beta"]}
         )
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
     def test_disabled_unknown_id_warns_with_suggestion(self, tmp_path):
@@ -555,14 +538,14 @@ class TestCatalogMembers:
         )
 
         with pytest.warns(UserWarning, match="'alpah'.*'alpha'"):
-            manifest = load_manifest(catalog)
+            manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
     def test_string_shorthand_entry(self, tmp_path):
         alpha = self._make_pipeline(tmp_path / "repos", "alpha")
         catalog = self._make_catalog(tmp_path, {"alpha": str(alpha)})
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
     def test_explicit_entry_coexists_with_members(self, tmp_path):
@@ -572,7 +555,7 @@ class TestCatalogMembers:
             tmp_path, {"members": ["../repos/*"], "gamma": str(gamma)}
         )
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert sorted(manifest["pipelines"]) == ["alpha", "gamma"]
 
     def test_explicit_entry_overrides_member_for_same_dir(self, tmp_path):
@@ -581,7 +564,7 @@ class TestCatalogMembers:
             tmp_path, {"members": ["../repos/*"], "renamed/alpha": str(alpha)}
         )
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["renamed/alpha"]
 
     def test_duplicate_derived_id_is_hard_error(self, tmp_path):
@@ -592,13 +575,13 @@ class TestCatalogMembers:
         )
 
         with pytest.raises(ValueError, match=r"(?s)same pipeline ID 'alpha'.*To fix"):
-            load_manifest(catalog)
+            _migration_entries(catalog)
 
     def test_explicit_member_path_missing_is_hard_error(self, tmp_path):
         catalog = self._make_catalog(tmp_path, {"members": ["../does_not_exist"]})
 
         with pytest.raises(ValueError, match=r"(?s)does not exist.*To fix"):
-            load_manifest(catalog)
+            _migration_entries(catalog)
 
     def test_v1_member_is_hard_error_with_migrate_hint(self, tmp_path):
         d = tmp_path / "repos" / "old_style"
@@ -608,27 +591,27 @@ class TestCatalogMembers:
         catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
 
         with pytest.raises(ValueError, match=r"(?s)v1.*migrate_toml_v2"):
-            load_manifest(catalog)
+            _migration_entries(catalog)
 
     def test_glob_matching_nothing_warns(self, tmp_path):
         (tmp_path / "repos").mkdir()
         catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
 
         with pytest.warns(UserWarning, match="matched no directories"):
-            manifest = load_manifest(catalog)
+            manifest = _migration_entries(catalog)
         assert manifest["pipelines"] == {}
 
     def test_members_must_be_string_list(self, tmp_path):
         catalog = self._make_catalog(tmp_path, {"members": "../repos/*"})
 
         with pytest.raises(ValueError, match="must be an array of strings"):
-            load_manifest(catalog)
+            _migration_entries(catalog)
 
     def test_catalog_does_not_discover_itself(self, tmp_path):
         self._make_pipeline(tmp_path, "alpha")
         catalog = self._make_catalog(tmp_path, {"members": ["../*"]})
 
-        manifest = load_manifest(catalog)
+        manifest = _migration_entries(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
 
 
@@ -646,7 +629,7 @@ class TestWhatTheReleaseReviewFound:
         return folder
 
     def test_a_docs_path_that_is_not_a_string_is_named(self, tmp_path):
-        """`chartbook check` and `chartbook docs generate` died on `.strip()` of the integer."""
+        """`chartbook check` and `chartbook docs build` died on `.strip()` of the integer."""
         folder = self._pipeline(tmp_path, dataframes={"x": {"path": "./x.parquet", "docs_path": 5}})
         with pytest.raises(ValueError) as e:
             load_manifest(folder)
@@ -775,15 +758,12 @@ class TestWhatTheReleaseReviewFound:
         catalog = tmp_path / "catalog"
         catalog.mkdir()
         (catalog / "chartbook.toml").write_text('[pipelines]\nbroken = { path = "../p" }\n', encoding="utf-8", newline="\n")
-        with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'} is not valid TOML: ")):
-            load_manifest(catalog)
-        (catalog / "chartbook.toml").write_text('[pipelines]\nmembers = ["../p"]\n', encoding="utf-8", newline="\n")
-        with pytest.raises(ValueError, match=re.escape(f"catalog member {folder / 'chartbook.toml'} is not valid TOML: ")):
+        with pytest.raises(ValueError, match="chartbook catalog migrate"):
             load_manifest(catalog)
 
     def test_a_catalog_key_that_is_not_an_id_names_the_file_and_the_table(self, tmp_path):
         catalog = tmp_path / "catalog"
         catalog.mkdir()
-        (catalog / "chartbook.toml").write_text('[pipelines]\n"acme/rates@v1" = { path = "../p" }\n', encoding="utf-8", newline="\n")
-        with pytest.raises(ValueError, match=re.escape(f"{catalog / 'chartbook.toml'}: [pipelines] 'acme/rates@v1': Invalid pipeline id 'acme/rates@v1'")):
+        (catalog / "catalog.toml").write_text('[pipelines]\n"acme/rates@v1" = { path = "../p" }\n', encoding="utf-8", newline="\n")
+        with pytest.raises(ValueError, match=re.escape(f"{catalog / 'catalog.toml'}: [pipelines] 'acme/rates@v1': Invalid pipeline id 'acme/rates@v1'")):
             load_manifest(catalog)

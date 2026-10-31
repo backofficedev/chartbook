@@ -1,6 +1,6 @@
 """The index: one JSON description of everything a build contains.
 
-``chartbook docs generate`` produces a website and, beside it, ``index.json``: the
+``chartbook docs build`` produces a website and, beside it, ``index.json``: the
 resolved, composed view of the manifests, as a flat list of self-describing
 records. Every pipeline and every asset is in it once, with a fully
 qualified ID, a content hash, and what it was made from. A renderer, a
@@ -46,7 +46,7 @@ from chartbook.__about__ import __version__
 from chartbook.identity import ID_COMPONENT_PATTERN, strip_url_credentials
 from chartbook.manifest import (
     get_pipeline_dirs,
-    get_pipeline_ids,
+    _working_pipeline_ids,
     get_pipeline_manifest,
 )
 from chartbook.refs import KIND_TABLES, AssetRef, parse_asset_ref
@@ -979,7 +979,7 @@ def pipeline_records(
     return [record, *assets]
 
 
-def _add_snapshots(records: list[dict]) -> None:
+def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
     """Give each Pipeline record the snapshots of it that are in the store, newest first.
 
     Read from the store of the machine that builds the index, as a model's
@@ -995,7 +995,8 @@ def _add_snapshots(records: list[dict]) -> None:
     from chartbook.versions import version_name
 
     try:
-        found, unreadable = snapshots.readable_snapshots(default_store())
+        store = store if store is not None else default_store()
+        found, unreadable = snapshots.readable_snapshots(store)
     except (StoreError, ValueError, OSError) as error:
         warnings.warn(f"The snapshots in the store are not in the index: {error}", stacklevel=3)
         return
@@ -1010,8 +1011,12 @@ def _add_snapshots(records: list[dict]) -> None:
         by_pipeline.setdefault(taken.pipeline, []).append(taken)
     for record in pipelines:
         listed = []
-        for taken in sorted(by_pipeline.get(record["id"], []), key=lambda t: t.made_at, reverse=True):
+        from chartbook.hubs import selected_snapshots
+        own = selected_snapshots(found, record["id"], (notes or {}).get(record["id"], {}).get("repository")) if notes is not None else by_pipeline.get(record["id"], [])
+        for taken in sorted(own, key=lambda t: t.made_at, reverse=True):
             entry = {"commit": taken.commit, "made_at": taken.made_at, "name": version_name(taken.commit, taken.made_at)}
+            if hasattr(store, "name_of"):
+                entry["store"] = store.name_of(taken.path)
             if taken.built_by_run:
                 entry["built_by_run"] = True
             if taken.tags:
@@ -1022,7 +1027,7 @@ def _add_snapshots(records: list[dict]) -> None:
     _add_trained_from(records, by_pipeline)
 
 
-def _describe_from_the_store(records: list[dict]) -> None:
+def _describe_from_the_store(records: list[dict], store=None) -> None:
     """Give a pipeline shown from the store alone what its newest snapshot's own index says of it.
 
     Its name, description and maintainer as plain text, and its repository
@@ -1043,7 +1048,7 @@ def _describe_from_the_store(records: list[dict]) -> None:
     ]
     if not from_store:
         return
-    store = default_store()
+    store = store if store is not None else default_store()
     found, _ = snapshots.readable_snapshots(store)
     for record in from_store:
         newest = record["snapshots"][0]
@@ -1054,6 +1059,9 @@ def _describe_from_the_store(records: list[dict]) -> None:
         own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
         stored = snapshots.stored_assets(taken, store) if taken is not None else []
         record["assets"] = [asset["id"] for asset in stored]
+        from chartbook.hubs import dependency_records, metadata_present
+        record["metadata_present"] = metadata_present(own)
+        record["dependencies"] = dependency_records(own.get("dependencies", []), taken.inputs if taken else ())
         named = {asset["id"]: asset["name"] for asset in stored if asset["name"]}
         if named:
             record["asset_names"] = named
@@ -1208,7 +1216,7 @@ def build_index(
     """
     cache = cache if cache is not None else hashing.HashCache()
     skipped = set(skip_pipelines)
-    pipeline_ids = sorted(p for p in get_pipeline_ids(manifest) if p not in skipped)
+    pipeline_ids = sorted(p for p in _working_pipeline_ids(manifest) if p not in skipped)
     project = manifest["project"]
 
     records: list[dict] = []
@@ -1224,7 +1232,7 @@ def build_index(
         # Where the catalog is, as for a pipeline: a writer looks there for
         # the catalog's own template overrides. Dropped when published
         catalog["location"] = {"kind": "path", "value": Path(manifest["base_dir"]).resolve().as_posix()}
-        catalog["pipelines"] = pipeline_ids
+        catalog["pipelines"] = sorted((set(pipeline_ids) | set(manifest.get("store_pipelines", []))) - skipped)
         if manifest.get("policy"):
             catalog["policy"] = _jsonable(manifest["policy"])
         records.append(catalog)
@@ -1243,6 +1251,8 @@ def build_index(
     if project["type"] == "catalog":
         # A pipeline the catalog names with no folder here is shown from the store
         for pipeline_id in manifest.get("store_pipelines") or []:
+            if pipeline_id in skipped:
+                continue
             records.append(
                 {
                     "kind": "Pipeline",
@@ -1254,9 +1264,41 @@ def build_index(
                 }
             )
         # A catalog shows every version of its pipelines; a pipeline's own site does not
-        _add_snapshots(records)
-        _describe_from_the_store(records)
+        _add_snapshots(records, manifest.get("stores"), manifest.get("pipeline_notes"))
+        _describe_from_the_store(records, manifest.get("stores"))
 
+    if project["type"] == "pipeline":
+        from chartbook.identity import read_version_file
+        if read_version_file(manifest["base_dir"]):
+            saved = Path(manifest["base_dir"]) / "_chartbook" / INDEX_FILE
+            try:
+                stored = json.loads(saved.read_text(encoding="utf-8"))
+                by_id = {r["id"]: r for r in stored.get("records", []) if isinstance(r, dict) and isinstance(r.get("id"), str)}
+                for record in records:
+                    was = by_id.get(record["id"], {})
+                    if was.get("location", {}).get("modified_at"):
+                        record.setdefault("location", {})["modified_at"] = was["location"]["modified_at"]
+            except (OSError, ValueError, TypeError):
+                pass
+        from chartbook.links import provenance
+        linked = provenance(manifest["base_dir"])
+        if linked:
+            for record in records:
+                if record.get("kind") == "Pipeline":
+                    record["links"] = linked
+    stores_info = None
+    if project["type"] == "catalog" and manifest.get("stores") is not None:
+        from chartbook.hubs import enrich
+        stores_info = enrich(records, manifest["stores"], manifest.get("pipeline_notes"))
+        from chartbook import snapshot as snapshots
+        found, _ = snapshots.readable_snapshots(manifest["stores"])
+        by_pipeline = {}
+        for taken in found:
+            by_pipeline.setdefault(taken.pipeline, []).append(taken)
+        _add_trained_from(records, by_pipeline)
+        for record in records:
+            if record.get("kind") == "Catalog":
+                record["stores"] = stores_info
     moment = generated_at or datetime.now(timezone.utc)
     return {
         "schema": SCHEMA,
@@ -1264,6 +1306,7 @@ def build_index(
         "generator": {"name": "chartbook", "version": __version__},
         "root": project["id"],
         "records": records,
+        **({"stores": stores_info} if stores_info is not None else {}),
     }
 
 
@@ -1276,7 +1319,18 @@ def published(index: dict) -> dict:
     included, is unchanged.
     """
     public = copy.deepcopy(index)
+    for entry in public.get("stores", []):
+        from chartbook.config import store_kind
+        if store_kind(entry.get("url", "")) == "folder":
+            entry.pop("url", None)
     for record in public.get("records", []):
+        if "stores" in record:
+            for entry in record["stores"]:
+                from chartbook.config import store_kind
+                if store_kind(entry.get("url", "")) == "folder":
+                    entry.pop("url", None)
+        for linked in record.get("links", []):
+            linked.pop("path", None)
         location = record.get("location")
         if not isinstance(location, dict):
             continue

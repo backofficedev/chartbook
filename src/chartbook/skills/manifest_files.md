@@ -56,7 +56,7 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
-| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.3.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
+| `requires_chartbook` | a version specifier, as a pip requirement has it after the name (`">=0.4.0"`); every command that acts on the manifest stops first, saying how to install a ChartBook that meets it; a bare version, or the name with it, is refused with the specifier to write | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
@@ -233,9 +233,9 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
   no new snapshot is not seen at all.
 - To see a change in a pipeline you are changing too: commit it, run
   `chartbook snapshot` there, then `chartbook update` here. A lockfile never
-  records a read of a working folder. In a notebook, `data.load()` reads a
-  dependency with no snapshot yet from its folder, with a `WorkingVersionWarning`,
-  and pins nothing.
+  records a read of a working folder. For local development, `chartbook link ID FOLDER` makes
+  reads follow an explicit working copy and warn that pins are not in use.
+  Snapshots refuse links; CI and `--frozen` ignore them.
 - Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
@@ -322,77 +322,35 @@ data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normali
 
 ## Catalog Configuration
 
-A catalog aggregates multiple pipelines into unified documentation. Catalog
-keys under `[pipelines]` are canonical scoped pipeline IDs; TOML requires
-quoting keys that contain `/`:
+A catalog is `catalog.toml`, a list of stores. It shows every pipeline and version published there, without working folders.
 
 ```toml
 [project]
 name = "Company Analytics Catalog"
-maintainer = "Data Team"
 
-[pipelines."acme/sales"]
-path = "../pipelines/sales"
+[stores.mine]
+url = "~/data/chartbook"
 
-[pipelines."acme/marketing"]
-path = "../pipelines/marketing"
+[stores.team]
+url = "s3://team-data/chartbook"
+pipelines = ["acme/rates"]
 
-# Disabled pipeline — skipped during builds
-[pipelines."acme/broken_pipeline"]
-path = "../pipelines/broken"
+[stores.shared]
+url = { unix = "/shared/chartbook", windows = "T:/chartbook" }
+read_only = true
+
+[pipelines."acme/hidden"]
 disabled = true
 
-# Platform-specific paths
-[pipelines."acme/finance"]
-path = { unix = "/data/pipelines/finance", windows = "T:/pipelines/finance" }
-```
-
-Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table for
-platform-specific locations) and `disabled` (bool, default false).
-
-`chartbook catalog add <dir>` writes the pipeline's ID as the key (see
-[Pipeline Identity](#pipeline-identity)).
-
-### Catalog Auto-Discovery
-
-Local catalogs can declare membership as path patterns instead of explicit entries; matched directories with a pipeline `chartbook.toml` join under their derived scoped IDs:
-
-```toml
-[pipelines]
-members = ["../my_repos/*"]
-disabled = ["scope/some_pipeline"]   # switch members off by ID
-exclude = ["../my_repos/scratch_*"]  # optional
-```
-
-`members`, `exclude`, and `disabled` are reserved keys (not usable as pipeline IDs). Globs skip non-pipeline directories silently; literal broken paths, v1-format members, and duplicate derived IDs are hard errors with fix suggestions. Explicit entries coexist and win over a member pointing at the same directory. A plain string entry value is shorthand for `{ path = ... }`.
-
-### Catalog Policy
-
-The format itself is permissive; **requiredness is policy**. A catalog may
-declare which fields its member pipelines must fill in, and a lone pipeline may
-declare what it holds itself to:
-
-```toml
-[policy]
-mode = "warn"          # "warn" (default): report in the diagnostics page
-                       # "strict": fail the build
-
 [policy.required]
-project    = ["description", "maintainer", "repo_url"]
-dataframes = ["date_col", "pull_method"]
-charts     = ["units", "frequency"]
-notebooks  = ["description"]
+project = ["description", "maintainer", "repo_url"]
 ```
 
-- With no `[policy]` section, a default warn-only policy of recommended fields
-  applies, reported on the diagnostics page.
-- A pipeline may have a `[policy]` of its own: it applies when the pipeline is
-  checked or built by itself. Inside a catalog, the catalog's policy applies and
-  the pipeline's is ignored.
-- `mode = "strict"` fails the build, a catalog's or a lone pipeline's, on a
-  missing required field. `chartbook check` exits nonzero on one whatever the
-  mode; with no policy anywhere it reports the recommended fields as warnings
-  and exits 0.
+The first store is the default destination. `pipelines` routes writes, including writes to several stores; reads choose newest snapshots across all stores, within a repository. `snapshot --store NAME` overrides the destination once. `read_only` prevents writes. Relative folders are relative to this file. Missing named folders are unreachable, never silently created. Duplicate locations are rejected. `CHARTBOOK_STORE` means exactly one isolated store.
+
+`[pipelines."ID"]` accepts only `disabled` and `repository`. There are no member globs or working-folder entries. A pipeline enters by snapshot; a store enters with `chartbook store add NAME URL`. Use `catalog migrate` for the old format. Diagnostics compare snapshots' indexes against the catalog policy.
+
+For local development, `chartbook.links.toml` in a consumer explicitly maps upstream IDs to working folders. Reads warn, the build records link provenance, and snapshots refuse until the file is removed. Frozen runs and CI ignore it. Never commit it.
 
 ## Required Fields
 

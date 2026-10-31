@@ -165,6 +165,7 @@ def panel(record_id: str, records: dict, reversed_index: Optional[dict] = None) 
         "series": series,
         "version": version,
         "stale": sorted(stale),
+        "links": (pipeline or {}).get("links", []),
     }
 
 

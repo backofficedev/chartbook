@@ -1002,7 +1002,8 @@ def _sync_now(
         own guard decides instead.
     """
     project_dir = Path(project_dir).resolve()
-    store = store if store is not None else default_store()
+    from chartbook.multi_store import with_dependencies
+    store = with_dependencies(project_dir, store)
     the_store = store
     if not isinstance(store, _PutLater):
         # What the pin puts in the store is put only once the lockfile may be written
@@ -1513,7 +1514,8 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, n
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
     project_dir = Path(project_dir).resolve()
-    store = store if store is not None else default_store()
+    from chartbook.multi_store import with_dependencies
+    store = with_dependencies(project_dir, store)
     _, dependencies = _read_pipeline(project_dir)
     lock_path = project_dir / LOCK_FILE
     report = FrozenReport(lockfile=lock_path, dependencies=len(dependencies))

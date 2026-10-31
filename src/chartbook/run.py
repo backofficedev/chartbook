@@ -121,7 +121,7 @@ def _stack() -> list[tuple[str, str]]:
 def running(directory: Union[str, Path], script: str) -> bool:
     """Whether this process is inside that script of that pipeline.
 
-    A build script that calls ``chartbook build`` or ``chartbook run`` in
+    A build script that calls ``chartbook run`` in
     its own pipeline would be run by the command it calls, without end; so
     would two pipelines whose build scripts each run the other's. Every
     script ChartBook is running is in :data:`RUN_STACK_ENV_VAR`, and a
@@ -221,8 +221,9 @@ def build_tool_runs_chartbook_build(
     """A line of a pipeline's build tool's own file that runs ``chartbook build``: the file, the line number, what it runs.
 
     Before 0.2.0, ``chartbook build`` rendered the site, and a ``dodo.py``
-    task said ``chartbook build -f`` to do it. Now ``chartbook build`` runs
-    the pipeline's build command first, which is that same build tool. Only
+    task said ``chartbook build -f`` to do it. From 0.2 through 0.3 that
+    command ran the build script first; 0.4 removes it. Such tasks must
+    now use ``chartbook docs build -f``. Only
     the task file of the tool *command* runs is read: ``dodo.py`` for doit,
     a ``Makefile`` for make, a ``justfile`` for just (each, with *command*
     None). What is not run is not taken: a comment, a docstring, a
@@ -451,12 +452,8 @@ def plan(
     except FileNotFoundError:
         raise RunError(f"No {MANIFEST_NAME} in {start}.") from None
     if resolve_project_type(raw, source=str(start / MANIFEST_NAME)) == "catalog":
-        roots = [
-            directory.resolve()
-            for directory in get_pipeline_dirs(load_manifest(start)).values()
-        ]
-    else:
-        roots = [start]
+        raise RunError("A catalog lists stored snapshots. Run `chartbook run` in a pipeline, or orchestrate pipelines with doit.")
+    roots = [start]
     asked = set(roots)
 
     order: list[Step] = []
@@ -1006,7 +1003,7 @@ def run(
         the build would make the costly asset again
         (:func:`kept_missing`, ``docs_src/design/keep.md``).
     :param remake_command: The command line that says *remake*, for the
-        message: ``chartbook build --remake`` from ``chartbook build``.
+        message: ``chartbook run --remake`` from ``chartbook run``.
     :param upstream: Before the pipelines asked for, build and snapshot each
         ``path`` dependency on this machine that has no snapshot to pin and
         is not pinned yet, its own first, so that it can be pinned
@@ -1024,6 +1021,8 @@ def run(
         and the report says so.
     """
     here = Path(project_dir).resolve()
+    if snapshot and os.path.lexists(here / "chartbook.links.toml"):
+        raise RunError("Cannot snapshot while chartbook.links.toml exists. Remove it, update pins, then snapshot.")
     building = script == BUILD_SCRIPT
     if frozen and snapshot:
         raise RunError(
@@ -1305,7 +1304,17 @@ def run(
 
             where = "" if step.directory == here else f"    in {step.directory}"
             echo(f"{step.id}: {script}{where}")
-            code = execute(command, step.directory, script, foreign=step.source == "git")
+            old_frozen = os.environ.get("CHARTBOOK_FROZEN")
+            if frozen:
+                os.environ["CHARTBOOK_FROZEN"] = "1"
+            try:
+                code = execute(command, step.directory, script, foreign=step.source == "git")
+            finally:
+                if frozen:
+                    if old_frozen is None:
+                        os.environ.pop("CHARTBOOK_FROZEN", None)
+                    else:
+                        os.environ["CHARTBOOK_FROZEN"] = old_frozen
             if code != 0:
                 report.failed, report.exit_code = step, code
                 report.reason = f"its {script!r} script exited with {code}"

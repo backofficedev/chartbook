@@ -1,6 +1,6 @@
 # How the Build Works
 
-`chartbook docs generate` turns a repository into a site in three steps. Each is a transformation of the
+`chartbook docs build` turns a repository into a site in three steps. Each is a transformation of the
 one before, and each leaves something you can look at.
 
 ```{image} ../_static/diagrams/chain-light.svg
@@ -30,7 +30,7 @@ when a value on a page looks wrong (the index says what the build recorded), and
 change how a page looks (templates can be overridden).
 
 One thing comes before the three steps: whose folder this is. A build reads the files the manifest
-names, runs a dataframe's `query` for its first rows, and (`chartbook build`) runs the build
+names, runs a dataframe's `query` for its first rows, and (`chartbook run`) runs the build
 script, so a folder you did not make is built as a version from a store is until you say it is
 yours to build: no query run, nothing read from outside the folder, no script run, and a warning
 that says so. The first build of it asks you, at a terminal, whether it is yours; `chartbook trust`
@@ -46,7 +46,7 @@ says. It is a flat list of records:
 {
   "schema": "chartbook/index/v1",
   "generated_at": "2026-10-15T19:02:11Z",
-  "generator": { "name": "chartbook", "version": "0.3.0" },
+  "generator": { "name": "chartbook", "version": "0.4.0" },
   "root": "ftsfr/fed_yield_curve",
   "records": [
     { "kind": "Pipeline", "version": "chartbook/v1", "id": "ftsfr/fed_yield_curve", "…": "…" },
@@ -225,7 +225,7 @@ By default `_docs/` and `_docs_src/` are deleted afterwards, whether the build s
 `--keep-build-dirs` keeps them, which is what you want when a build fails:
 
 ```console
-chartbook docs generate --keep-build-dirs
+chartbook docs build --keep-build-dirs
 cat _docs/cb/charts/acme--yield_curve.repo_rates.md   # the Markdown Sphinx saw
 cat _docs/index.json                                    # the full index, with resolved paths
 cat _docs/conf.py
@@ -234,7 +234,7 @@ cat _docs/conf.py
 ## Incremental builds and watch mode
 
 Everything above is a **clean build**: both directories start empty, every page is written, Sphinx
-renders all of them. That is the default, and the right thing in CI. `chartbook docs generate
+renders all of them. That is the default, and the right thing in CI. `chartbook docs build
 --incremental` keeps `_docs/` and makes the next build do less, in three places.
 
 **Unchanged pipelines are not rewritten.** Before writing anything, the build takes a
@@ -255,7 +255,7 @@ is not re-read.
 **Sphinx keeps its cache.** `_docs/_build/` survives, so Sphinx re-renders only the pages whose
 source changed; if none did and the last render succeeded, it is not run.
 
-The fingerprints live in `_docs/.chartbook-build-state.json`. Deleting `_docs/` is always safe:
+The fingerprints live in `_docs/.chartbook-run-state.json`. Deleting `_docs/` is always safe:
 the next incremental build is a full one. An upgrade to ChartBook, Sphinx or a theme, an edit to a
 packaged template, or a different `--size-threshold` can change every page, so any of these starts
 over from nothing. When the *set* of pages changes, the rendered site is dropped and every page is
@@ -266,14 +266,14 @@ and does not redraw the navigation of pages that did not change.
 and has the usual blind spot: a file replaced by different content of the same size and timestamp
 is not noticed. A clean build is never wrong; when in doubt, run one.
 
-`chartbook docs generate --watch` is the incremental build in a loop: build, check the project's files once
+`chartbook docs build --watch` is the incremental build in a loop: build, check the project's files once
 a second (`--watch-interval`), rebuild when any differs. A build that fails, typically because a
 file was caught half-saved, is reported and the loop carries on. There is no server and no live
 reload: open the site with `chartbook docs open` and refresh after a rebuild.
 
 ## The build directory
 
-After `chartbook docs generate --keep-build-dirs`:
+After `chartbook docs build --keep-build-dirs`:
 
 ```
 _docs/
@@ -321,5 +321,5 @@ _docs/
 
 - {doc}`vocabulary`: the words this page uses, defined once
 - {doc}`documenting-a-pipeline`: the manifest that all of this starts from
-- {doc}`../reference/cli`: every option of `chartbook docs generate`
+- {doc}`../reference/cli`: every option of `chartbook docs build`
 - {doc}`../design/writer`: the design of the writer, and what every page shows

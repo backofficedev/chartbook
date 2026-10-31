@@ -303,8 +303,8 @@ def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) 
             )
         elif manifest["project"].get("build"):
             hint.append(
-                "`chartbook build` runs the build script, which makes data, charts, notebooks "
-                "and models, and then renders the site."
+                "`chartbook run` runs the build script, which makes data, charts, notebooks "
+                "and models. The script owns the documentation step."
             )
     return hint
 
@@ -343,9 +343,9 @@ def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -
     ]
     lines += listed
     if manifest["project"].get("build"):
-        lines.append("`chartbook build` runs its build script and renders the site again.")
+        lines.append("`chartbook run` runs its build script. `chartbook docs build` renders the site.")
     else:
-        lines.append("Build them, then run `chartbook docs generate` again.")
+        lines.append("Build them, then run `chartbook docs build` again.")
     lines.append("With --strict, this is an error.")
     click.echo("\n".join(lines), err=True)
 
@@ -497,7 +497,7 @@ def generate_docs(
             click.echo(
                 click.style("Error: ", fg="red", bold=True)
                 + "--incremental and --watch build with Sphinx; a site with [project] writer = "
-                "\"mkdocs\" is built whole. Run `chartbook docs generate` without them.",
+                "\"mkdocs\" is built whole. Run `chartbook docs build` without them.",
                 err=True,
             )
             raise SystemExit(1)
@@ -589,6 +589,7 @@ def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
 
     return versions.render_listed(
         built,
+        store=manifest.get("stores"),
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
     )
 
@@ -604,6 +605,7 @@ def _add_versions(manifest: dict, built: dict, html_build_dir: Path, rendered: O
     versions.add_to_site(
         built,
         html_build_dir,
+        store=manifest.get("stores"),
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
         rendered_by_moment=rendered,
     )
@@ -932,7 +934,7 @@ def _generate_docs_incremental(
     from chartbook import hashing, incremental, index
 
     from chartbook import provenance
-    from chartbook.manifest import get_pipeline_ids
+    from chartbook.manifest import _working_pipeline_ids
 
     pipeline_theme = manifest["project"]["type"]
     options = {"size_threshold": size_threshold, "strip_mathjax2": strip_mathjax2}
@@ -948,7 +950,7 @@ def _generate_docs_incremental(
     records = {record["id"]: record for record in built["records"]}
     salts = {
         pipeline_id: provenance.digest(pipeline_id, records)
-        for pipeline_id in get_pipeline_ids(manifest)
+        for pipeline_id in _working_pipeline_ids(manifest)
         if pipeline_id not in set(skip_pipelines)
     }
     plan = incremental.plan_build(

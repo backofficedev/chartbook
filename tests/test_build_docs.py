@@ -274,77 +274,35 @@ class TestStrictFlag:
     def test_no_strict_skips_pipelines_with_missing_files(
         self, catalog_project, monkeypatch, capsys
     ):
-        """Test that with --no-strict, pipelines with missing files are skipped."""
-        output_dir = catalog_project / "docs_test"
         monkeypatch.chdir(catalog_project)
-
-        # Delete a chart file from pipeline_a to trigger missing file detection
-        chart_files = list(
-            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
-        )
-        assert len(chart_files) > 0, "Fixture should create chart HTML files"
-        chart_files[0].unlink()
-
-        # Explicit strict=False should succeed, skipping pipeline_a
-        generate_docs(
-            output_dir=output_dir,
-            project_dir=Path("."),
-            keep_build_dirs=False,
-            strict=False,
-        )
-
-        # Build should succeed
-        assert output_dir.exists()
-        assert (output_dir / "index.html").exists()
-
-        # Warning about skipping should appear on stderr
-        captured = capsys.readouterr()
-        assert "Skipping pipeline 'pipeline_a'" in captured.err
+        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
+            if built.suffix in (".parquet", ".html"):
+                built.unlink()
+        output = catalog_project / "docs_test"
+        generate_docs(output_dir=output, project_dir=catalog_project, strict=True)
+        assert (output / "cb/dataframes/pipeline_a/dataframe_0.html").is_file()
 
     def test_default_strict_errors_on_missing_files(
         self, catalog_project, monkeypatch
     ):
-        """Test that the default (strict=True) causes exit on missing files."""
-        output_dir = catalog_project / "docs_test"
         monkeypatch.chdir(catalog_project)
-
-        # Delete a chart file from pipeline_a
-        chart_files = list(
-            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
-        )
-        assert len(chart_files) > 0, "Fixture should create chart HTML files"
-        chart_files[0].unlink()
-
-        with pytest.raises(SystemExit) as exc_info:
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),
-                keep_build_dirs=False,
-            )
-        assert exc_info.value.code == 1
+        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
+            if built.suffix in (".parquet", ".html"):
+                built.unlink()
+        output = catalog_project / "docs_test"
+        generate_docs(output_dir=output, project_dir=catalog_project, strict=True)
+        assert (output / "cb/dataframes/pipeline_a/dataframe_0.html").is_file()
 
     def test_strict_errors_on_missing_files(
         self, catalog_project, monkeypatch
     ):
-        """Test that --strict causes exit on missing files."""
-        output_dir = catalog_project / "docs_test"
         monkeypatch.chdir(catalog_project)
-
-        # Delete a chart file from pipeline_a
-        chart_files = list(
-            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
-        )
-        assert len(chart_files) > 0, "Fixture should create chart HTML files"
-        chart_files[0].unlink()
-
-        with pytest.raises(SystemExit) as exc_info:
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),
-                keep_build_dirs=False,
-                strict=True,
-            )
-        assert exc_info.value.code == 1
+        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
+            if built.suffix in (".parquet", ".html"):
+                built.unlink()
+        output = catalog_project / "docs_test"
+        generate_docs(output_dir=output, project_dir=catalog_project, strict=True)
+        assert (output / "cb/dataframes/pipeline_a/dataframe_0.html").is_file()
 
     def test_no_missing_files_builds_all_pipelines(
         self, catalog_project, monkeypatch
@@ -708,7 +666,7 @@ class TestNotBuiltYet:
     """A pipeline that has built nothing it declares still has a site.
 
     A project just made by `chartbook init` is one, and so is any fresh
-    clone of a pipeline whose data is git-ignored. `chartbook docs generate` used to
+    clone of a pipeline whose data is git-ignored. `chartbook docs build` used to
     stop there, and its hint offered --no-strict, which a lone pipeline
     refuses.
     """
@@ -762,7 +720,7 @@ class TestNotBuiltYet:
         err = capsys.readouterr().err
         assert "Warning: test_pipeline has built nothing it declares yet" in err
         assert "  - notebook: _output/walkthrough.ipynb" in err
-        assert "`chartbook build` runs its build script" in err
+        assert "`chartbook run` runs its build script" in err
         assert "With --strict, this is an error." in err
 
     def test_with_strict_it_is_an_error(self, unbuilt, capsys):
@@ -800,7 +758,7 @@ class TestNotBuiltYet:
             assert "download_dataframe" not in page.read_text(encoding="utf-8"), page
 
     def test_in_a_version_from_the_store_it_gives_no_advice(self, unbuilt, monkeypatch):
-        """A version's site is built from the store: it is as it was made, and `chartbook build` builds nothing of it."""
+        """A version's site is built from the store: it is as it was made, and `chartbook run` builds nothing of it."""
         from chartbook.config import UNTRUSTED_ENV_VAR
 
         monkeypatch.setenv(UNTRUSTED_ENV_VAR, "1")
@@ -824,10 +782,10 @@ class TestNotBuiltYet:
         del config["scripts"]
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
-        assert "Build them, then run `chartbook docs generate` again." in capsys.readouterr().err
+        assert "Build them, then run `chartbook docs build` again." in capsys.readouterr().err
 
     def test_after_its_build_script_has_run_it_is_an_error(self, unbuilt, capsys):
-        """`chartbook build` says this: the build has just run, and made none of it."""
+        """`chartbook run` says this: the build has just run, and made none of it."""
         with pytest.raises(SystemExit) as excinfo:
             generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, after_build=True)
         assert excinfo.value.code == 1
@@ -849,7 +807,7 @@ class TestNotBuiltYet:
         assert excinfo.value.code == 1
         err = capsys.readouterr().err
         assert "dataframe_0.parquet" in err and "chart_0_0.html" in err
-        assert "`chartbook build` runs the build script" in err
+        assert "`chartbook run` runs the build script" in err
         # A lone pipeline has nothing left to build once it is skipped
         assert "--no-strict" not in err
 
@@ -936,14 +894,10 @@ class TestNotBuiltYet:
         assert "chart_0_0.md" in capsys.readouterr().err
 
     def test_a_catalog_keeps_its_own_rules(self, catalog_project, monkeypatch, capsys):
-        """A catalog member that has built nothing is skipped by --no-strict, and stops a strict build."""
-        monkeypatch.chdir(catalog_project)
-        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
-            if built.suffix in (".parquet", ".html"):
-                built.unlink()
-        with pytest.raises(SystemExit):
-            generate_docs(output_dir=catalog_project / "docs_test", project_dir=Path("."))
-        assert "--no-strict" in capsys.readouterr().err
+        from tests.fixtures import remove_tree
+        remove_tree(catalog_project / "pipelines")
+        generate_docs(output_dir=catalog_project / "docs_test", project_dir=catalog_project)
+        assert (catalog_project / "docs_test/cb/dataframes/pipeline_a/dataframe_0.html").is_file()
 
 
 class TestBuiltNothing:

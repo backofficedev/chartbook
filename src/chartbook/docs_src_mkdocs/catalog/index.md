@@ -12,3 +12,6 @@ Last updated: {{ today }}
 - 🩺 **[Diagnostics](cb/diagnostics.md)**: which pipelines, dataframes and charts are missing the fields the catalog's policy asks for, with a CSV to download.
 
 {{ readme_text }}
+
+{% if has_stores %}- **[Stores](cb/stores.md)**: locations, routing, reachability and snapshot counts.
+{% endif %}

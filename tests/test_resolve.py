@@ -35,7 +35,7 @@ from tests.fixtures import create_pipeline_project
 
 def _edit_toml(project_dir: Path, edit) -> None:
     """Load a project's chartbook.toml, apply ``edit(config)``, write it back."""
-    toml_path = project_dir / "chartbook.toml"
+    toml_path = project_dir / ("catalog.toml" if (project_dir / "catalog.toml").is_file() else "chartbook.toml")
     with open(toml_path, "rb") as f:
         config = tomli.load(f)
     edit(config)
@@ -417,6 +417,8 @@ class TestResolveLocal:
 
 class TestResolveInCatalog:
     def test_catalog_reference_gives_a_file_location(self, catalog_project):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         location = resolve(
             "dataframe_0", pipeline="pipeline_a", catalog_path=catalog_project
         )
@@ -425,6 +427,8 @@ class TestResolveInCatalog:
         assert location.path.exists()
 
     def test_unknown_dataframe(self, catalog_project):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         with pytest.raises(KeyError, match="not found in pipeline"):
             resolve("nope", pipeline="pipeline_a", catalog_path=catalog_project)
 
@@ -575,6 +579,8 @@ class TestSharedResolver:
         return calls
 
     def test_get_data_path_delegates(self, spy, catalog_project):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         result = data.get_data_path("pipeline_a", "dataframe_0", catalog_project)
         assert result.name == "dataframe_0.parquet"
         ((ref, kwargs),) = spy
@@ -586,6 +592,8 @@ class TestSharedResolver:
     def test_load_calls_the_resolver_not_the_path_functions(
         self, spy, catalog_project, monkeypatch
     ):
+        from tests.fixtures import publish_catalog
+        publish_catalog(catalog_project)
         def must_not_be_called(*args, **kwargs):
             raise AssertionError("load() must call the resolver directly")
 

@@ -8,6 +8,14 @@ import tomli_w
 from chartbook import config
 
 
+@pytest.fixture(autouse=True)
+def modern_catalog_file(request):
+    if "catalog_project" in request.fixturenames:
+        root = request.getfixturevalue("catalog_project")
+        if (root / "chartbook.toml").exists():
+            (root / "chartbook.toml").rename(root / "catalog.toml")
+
+
 @pytest.fixture
 def fake_config_dir(tmp_path, monkeypatch):
     """Redirect the global config directory to a temporary path."""
@@ -54,7 +62,7 @@ def test_get_default_catalog_path_when_no_file(fake_config_dir):
 def test_set_default_catalog_path_creates_dir(fake_config_dir, catalog_project):
     """set_default_catalog_path creates the config directory if needed."""
     assert not fake_config_dir.exists()
-    config.set_default_catalog_path(catalog_project / "chartbook.toml")
+    config.set_default_catalog_path(catalog_project / "catalog.toml")
     assert fake_config_dir.exists()
     assert config.get_default_catalog_path() is not None
 
@@ -79,4 +87,4 @@ def test_set_default_catalog_path_accepts_directory(
     """set_default_catalog_path accepts a directory and appends chartbook.toml."""
     config.set_default_catalog_path(catalog_project)
     result = config.get_default_catalog_path()
-    assert result == (catalog_project / "chartbook.toml").resolve()
+    assert result == (catalog_project / "catalog.toml").resolve()
