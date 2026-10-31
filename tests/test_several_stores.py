@@ -134,6 +134,77 @@ def test_move_copies_verifies_and_routes_before_source_disappears(tmp_path, monk
     assert "acme/upstream" in Stores.configured().named("two").pipelines
 
 
+def _files_under(folder):
+    return sorted(p.relative_to(folder).as_posix() for p in Path(folder).rglob("*") if p.is_file())
+
+
+def test_move_leaves_no_files_of_the_pipeline_in_its_source(tmp_path):
+    import os
+    from chartbook.multi_store import NamedStore
+    from chartbook.store import pipeline_folder
+    from chartbook.transfer import move
+    folder = pipeline(tmp_path)
+    other = create_pipeline_project(tmp_path / "other", pipeline_id="acme/other")
+    _git(other, "init", "--quiet", "-b", "main")
+    _git(other, "add", "-A")
+    _git(other, "commit", "--quiet", "-m", "Initial")
+    (tmp_path / "two").mkdir()
+    source, target = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
+    # The second snapshot uses the files the first one's folder keeps
+    first = snapshot.make(folder, source, made_at="2026-01-01T00:00:00Z").snapshot
+    (folder / "README.md").write_text("Changed\n")
+    _git(folder, "commit", "--quiet", "-am", "Change the README")
+    second = snapshot.make(folder, source, made_at="2026-01-02T00:00:00Z").snapshot
+    assert first.commit != second.commit
+    kept = snapshot.make(other, source).snapshot
+    # A sync service's copy beside another pipeline's files, an hour old: only gc removes it
+    stray = Path(kept.path).parent.parent / "README (1).md"
+    stray.write_text("copy")
+    os.utime(stray, (0, 0))
+    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/other"))
+    stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(target), target)])
+    count, _ = move("acme/upstream", stores, "two")
+    assert count == 2
+    assert not _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
+    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/other")) == before
+    assert not source.verify(kept.hashes())
+    assert not target.verify(first.hashes() | second.hashes())
+
+
+def test_move_that_cannot_remove_files_still_routes_and_says_what_moved(tmp_path, monkeypatch):
+    from chartbook.store import StoreError, TidyError
+    from chartbook.transfer import move
+    folder = pipeline(tmp_path)
+    source = FolderStore(tmp_path / "one")
+    snapshot.make(folder, source)
+    (tmp_path / "two").mkdir()
+    configure(tmp_path, monkeypatch, {"one": {"url": str(source)}, "two": {"url": str(tmp_path / "two")}})
+
+    def refuse(self, pipeline, dry_run=False):
+        raise TidyError("Cannot remove one/pipelines/acme+upstream/x: Permission denied.", [], [("x", "Permission denied")])
+
+    monkeypatch.setattr(FolderStore, "tidy_pipeline", refuse)
+    with pytest.raises(StoreError, match="Moved 1 snapshot.*left behind.*Permission denied"):
+        move("acme/upstream", Stores.configured(), "two")
+    assert not source.all_snapshot_files()
+    assert "acme/upstream" in Stores.configured().named("two").pipelines
+
+
+def test_move_with_keep_leaves_the_source_whole(tmp_path):
+    from chartbook.multi_store import NamedStore
+    from chartbook.store import pipeline_folder
+    from chartbook.transfer import move
+    folder = pipeline(tmp_path)
+    (tmp_path / "two").mkdir()
+    source, target = FolderStore(tmp_path / "one"), FolderStore(tmp_path / "two")
+    taken = snapshot.make(folder, source).snapshot
+    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
+    stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(target), target)])
+    move("acme/upstream", stores, "two", keep=True)
+    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream")) == before
+    assert not source.verify(taken.hashes())
+
+
 def test_pin_and_frozen_find_newest_in_second_store(tmp_path, monkeypatch):
     from chartbook import lock
     folder = pipeline(tmp_path)
@@ -210,12 +281,15 @@ def test_move_between_folder_and_s3_preserves_files_and_retention_notes(tmp_path
         stores = Stores([NamedStore("local", str(local), local), NamedStore("remote", str(remote), remote)])
         move("acme/upstream", stores, "remote")
         assert not local.all_snapshot_files()
+        assert not _files_under(local.root / "pipelines" / "acme+upstream")
         assert remote.all_snapshot_files()
         assert not remote.verify(taken.hashes())
         root = remote.root_of(lockfile, "colleague")
         assert root is not None and set(root.hashes) == taken.hashes()
         move("acme/upstream", stores, "local")
         assert not remote.all_snapshot_files()
+        left = client.list_objects_v2(Bucket="chartbook-move-test", Prefix="data/pipelines/acme+upstream/")
+        assert not left.get("Contents")
         assert local.all_snapshot_files()
         assert not local.verify(taken.hashes())
 

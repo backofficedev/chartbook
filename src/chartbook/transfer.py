@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from chartbook import snapshot
-from chartbook.store import StoreError
+from chartbook.store import StoreError, TidyError
 
 
 def copy_snapshot(taken, source, target):
@@ -93,12 +93,21 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
         problems = target.verify(hashes)
         if problems:
             raise StoreError(f"Target failed verification; source retained: {problems[0]}")
+    stuck = []
     if not keep:
         for entry, chosen in sources:
             # Oldest first lets the store preserve files referenced by remaining snapshots.
             for taken in sorted(chosen, key=lambda t: t.made_at):
                 entry.store.remove_snapshot(taken.path)
+            # Clearing a record leaves its files for a tidy; this pipeline's go now, and no other's
+            try:
+                entry.store.tidy_pipeline(pipeline)
+            except TidyError as error:
+                stuck.append(str(error))
     if route and stores.catalog:
         from chartbook.catalog_config import route as set_route
         set_route(pipeline, [to], stores.catalog)
-    return sum(len(t) for _, t in sources), total
+    count = sum(len(t) for _, t in sources)
+    if stuck:
+        raise StoreError(f"Moved {count} snapshot(s) of {pipeline} to {to}, but some of their files are left behind. {' '.join(stuck)}")
+    return count, total
