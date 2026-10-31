@@ -190,6 +190,44 @@ def test_move_that_cannot_remove_files_still_routes_and_says_what_moved(tmp_path
     assert "acme/upstream" in Stores.configured().named("two").pipelines
 
 
+def test_move_refuses_one_store_under_two_names(tmp_path):
+    import os
+    from chartbook.multi_store import NamedStore
+    from chartbook.store import StoreError, pipeline_folder
+    from chartbook.transfer import move
+    folder = pipeline(tmp_path)
+    source = FolderStore(tmp_path / "one")
+    taken = snapshot.make(folder, source).snapshot
+    try:
+        os.symlink(tmp_path / "one", tmp_path / "alias")
+    except OSError:
+        pytest.skip("no symlinks here")
+    alias = FolderStore(tmp_path / "alias")
+    before = _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream"))
+    stores = Stores([NamedStore("one", str(source), source), NamedStore("two", str(alias), alias)])
+    with pytest.raises(StoreError, match="one store under two names"):
+        move("acme/upstream", stores, "two")
+    assert _files_under(source.root / "pipelines" / pipeline_folder("acme/upstream")) == before
+    assert not source.verify(taken.hashes())
+
+
+def test_move_whose_source_cannot_be_tidied_still_routes(tmp_path, monkeypatch):
+    from chartbook.store import MIGRATE_JOURNAL, StoreError, TMP_DIR
+    from chartbook.transfer import move
+    folder = pipeline(tmp_path)
+    source = FolderStore(tmp_path / "one")
+    snapshot.make(folder, source)
+    (tmp_path / "two").mkdir()
+    configure(tmp_path, monkeypatch, {"one": {"url": str(source)}, "two": {"url": str(tmp_path / "two")}})
+    stores = Stores.configured()
+    (source.root / TMP_DIR).mkdir(exist_ok=True)
+    (source.root / TMP_DIR / MIGRATE_JOURNAL).write_text("")
+    with pytest.raises(StoreError, match="Moved 1 snapshot.*left behind"):
+        move("acme/upstream", stores, "two")
+    assert "acme/upstream" in Stores.configured().named("two").pipelines
+    assert FolderStore(tmp_path / "two").all_snapshot_files()
+
+
 def test_move_with_keep_leaves_the_source_whole(tmp_path):
     from chartbook.multi_store import NamedStore
     from chartbook.store import pipeline_folder

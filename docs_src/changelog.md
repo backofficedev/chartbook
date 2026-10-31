@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed — `chartbook store move` leaves no copy of the pipeline in its source
 
-`store move` cleared the source's snapshot records but left every file they named in the source store, so a move copied the data and removed none of it. It now removes the moved pipeline's files from each source once their copies are verified, as `store gc` would, and looks in no other pipeline's folder. A source that refuses a removal is reported after routing, saying the snapshots moved and which files stayed. `--keep` leaves the source as it was. A store plugin gains `Store.tidy_pipeline(pipeline)`; the default removes nothing, as before. To clear what an earlier move left, run `chartbook store gc --store NAME` on the source.
+`store move` cleared the source's snapshot records but left every file they named in the source store, so a move copied the data and removed none of it. It now removes the moved pipeline's files from each source once their copies are verified, as `store gc` would, and looks in no other pipeline's folder. A source that refuses a removal is reported after routing, saying the snapshots moved and which files stayed. Two names for one store (a folder spelled in another letter case, or reached through a link) are refused before anything is touched, since the move would take the store's own records for the copies and remove them. `--keep` leaves the source as it was. A store plugin gains `Store.tidy_pipeline(pipeline)`; the default removes nothing, as before. To clear what an earlier move left, run `chartbook store gc --store NAME` on the source.
 
 ## [0.4.0] - 2026-10-30
 

@@ -1,9 +1,10 @@
 """Verified copying between Store implementations, without shared physical references."""
 from __future__ import annotations
 import json
+import os
 from pathlib import Path
 from chartbook import snapshot
-from chartbook.store import StoreError, TidyError
+from chartbook.store import StoreError
 
 
 def copy_snapshot(taken, source, target):
@@ -52,6 +53,19 @@ def copy_snapshot(taken, source, target):
         raise
 
 
+def _same_place(a, b):
+    """Whether two stores are one: two names for a folder (letter case, a link) or for a bucket."""
+    if hasattr(a, "bucket") and hasattr(b, "bucket"):
+        return a.bucket == b.bucket and a.prefix.strip("/") == b.prefix.strip("/")
+    first, second = getattr(a, "root", None), getattr(b, "root", None)
+    if isinstance(first, Path) and isinstance(second, Path):
+        try:
+            return os.path.samefile(first, second)
+        except OSError:
+            return False
+    return str(a) == str(b)
+
+
 def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
     from chartbook.identity import validate_pipeline_id
     validate_pipeline_id(pipeline)
@@ -65,6 +79,9 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
             continue
         found = [snapshot.read(p) for p in entry.store.all_snapshot_files() + entry.store.pinned_snapshot_files()]
         chosen = [t for t in found if t.pipeline == pipeline]
+        if chosen and _same_place(entry.store, target):
+            # Its records would be taken for the copies, then removed with their files
+            raise StoreError(f"Stores {entry.name!r} and {to!r} are one store under two names; nothing was moved")
         if chosen and entry.read_only and not keep:
             raise StoreError(f"Source store {entry.name!r} is read-only; use --keep")
         if chosen:
@@ -93,21 +110,30 @@ def move(pipeline, stores, to, *, keep=False, dry_run=False, route=True):
         problems = target.verify(hashes)
         if problems:
             raise StoreError(f"Target failed verification; source retained: {problems[0]}")
-    stuck = []
     if not keep:
         for entry, chosen in sources:
             # Oldest first lets the store preserve files referenced by remaining snapshots.
             for taken in sorted(chosen, key=lambda t: t.made_at):
                 entry.store.remove_snapshot(taken.path)
-            # Clearing a record leaves its files for a tidy; this pipeline's go now, and no other's
-            try:
-                entry.store.tidy_pipeline(pipeline)
-            except TidyError as error:
-                stuck.append(str(error))
     if route and stores.catalog:
         from chartbook.catalog_config import route as set_route
         set_route(pipeline, [to], stores.catalog)
     count = sum(len(t) for _, t in sources)
+    stuck = []
+    if not keep and sources:
+        # Clearing a record leaves its files for a tidy: this pipeline's go now, and no other's,
+        # once the target is seen to hold every record still
+        held = {(t.commit, t.made_at) for t in map(snapshot.read, target.all_snapshot_files() + target.pinned_snapshot_files())
+                if t.pipeline == pipeline}
+        missing = [t for _, chosen in sources for t in chosen if (t.commit, t.made_at) not in held]
+        if missing:
+            raise StoreError(f"Moved {count} snapshot(s) of {pipeline}, but {to!r} no longer lists one made {missing[0].made_at}; "
+                             f"the sources' files are left as they are")
+        for entry, _ in sources:
+            try:
+                entry.store.tidy_pipeline(pipeline)
+            except (StoreError, OSError) as error:
+                stuck.append(f"{entry.name}: {error}")
     if stuck:
         raise StoreError(f"Moved {count} snapshot(s) of {pipeline} to {to}, but some of their files are left behind. {' '.join(stuck)}")
     return count, total
