@@ -21,7 +21,7 @@
     "include_crsp_stock": false,
     "include_crsp_compustat": false,
 
-    "_chartbook_version": "0.3.0",
+    "_chartbook_version": "0.4.0",
 
     "__prompts__": {
         "project_name": "Project name, the site's title",
