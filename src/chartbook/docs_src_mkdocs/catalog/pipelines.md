@@ -11,7 +11,7 @@
 
 {{pipeline_manifest.project.description}}
 {% if pipeline_manifest.from_the_store %}
-Not on this machine: the catalog shows it from its snapshots in the store.
+The catalog shows its stored snapshots.
 {% endif %}
 
   {% include "pipeline_manifest.md" with context %}

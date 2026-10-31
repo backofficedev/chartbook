@@ -87,7 +87,8 @@ class TestACatalogsFile:
         site = root / "docs"
         text = (site / "llms.txt").read_text(encoding="utf-8")
         line = _block(text, "pipeline_c")[0]
-        assert "Not on this machine" in line and "Its newest snapshot says: “" in line
+        assert "stored snapshots" in line and "Its newest snapshot says: “" in line
+        assert "not on this machine" not in line.lower()
         # Only the links the writer made: the page and the version; all in the site
         assert _all_resolve(site, text) == []
         assert not any("example.org" in link or "javascript" in link for link in _links(text))

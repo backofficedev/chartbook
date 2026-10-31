@@ -635,11 +635,13 @@ class TestAPipelineFromTheStoreAlone:
         assert [s["commit"] for s in record["snapshots"]] == [taken.commit]
         page = site / "cb" / "pipelines" / "pipeline_c.html"
         text = page.read_text(encoding="utf-8")
-        assert "Not on this machine" in text
+        assert "stored snapshots" in text
+        assert "not on this machine" not in text.lower()
         links = _links(page)
         assert links and all(_resolves(page, h) for h in links)
         versions_page = (site / "cb" / "versions.html").read_text(encoding="utf-8")
-        assert "not on this machine" in versions_page
+        assert "stored snapshots" in versions_page
+        assert "not on this machine" not in versions_page
         assert "pipeline_c" in (site / "cb" / "pipelines.html").read_text(encoding="utf-8")
         assert "pipeline_c" in (site / "cb" / "diagnostics.html").read_text(encoding="utf-8")
 
@@ -708,7 +710,7 @@ class TestAPipelineFromTheStoreAlone:
         # And `chartbook ls`, in the tree and the flat lists
         tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)])
         assert tree.exit_code == 0, tree.output
-        assert "[pipeline] pipeline_c: (store only" in tree.output
+        assert "[pipeline] pipeline_c: (stored snapshots)" in tree.output
         assert "  [dataframe] pipeline_c:dataframe_0: Dataframe 0\n  [chart] pipeline_c:chart/chart_0_0: Chart 0-0" in tree.output
         flat = CliRunner().invoke(main, ["ls", "--catalog", str(root), "dataframes"])
         assert "pipeline_c:dataframe_0: Dataframe 0" in flat.output
