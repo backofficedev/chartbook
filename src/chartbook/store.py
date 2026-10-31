@@ -1131,6 +1131,15 @@ class Store(abc.ABC):
         """
         return []
 
+    def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
+        """Remove what no snapshot uses from one pipeline's folder, as :meth:`tidy` does from every one; what was removed, or with *dry_run* would be, each with its size.
+
+        For what clears a pipeline's snapshots and not the store's, such as
+        ``store move``: the files of the snapshots it cleared go, and no
+        other pipeline's folder is looked in.
+        """
+        return []
+
     def delete_unowned(self, content_hash: str) -> bool:
         """Remove the object no pipeline owns with this hash, and nothing a snapshot's record names; True if there was one."""
         return self.delete(content_hash)
@@ -2455,14 +2464,25 @@ class FolderStore(Store):
             be, naming each with what the system said and what to do.
         """
         self._check_migrated()
-        removed, failed = [], []
-        keep = list(keep)
         if not dry_run:
             self._tidy_tmp()
         try:
             names = sorted(os.listdir(self.root / PIPELINES_DIR))
         except (FileNotFoundError, NotADirectoryError):
             return []
+        return self._tidy_folders(names, list(keep), dry_run)
+
+    def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
+        """Remove what no snapshot uses from one pipeline's folder (:meth:`sweep`); what was removed, each with its size.
+
+        :raises TidyError: As :meth:`tidy` does.
+        """
+        self._check_migrated()
+        return self._tidy_folders([pipeline_folder(pipeline)], [], dry_run)
+
+    def _tidy_folders(self, names: list[str], keep: list[str], dry_run: bool) -> list[tuple[str, int]]:
+        """Sweep the pipelines' folders of these names; raise :class:`TidyError` once all are swept, if some of it could not be removed."""
+        removed, failed = [], []
         for name in names:
             folder = self.root / PIPELINES_DIR / name
             if name != UNOWNED_DIR and folder.is_dir() and not folder.is_symlink():

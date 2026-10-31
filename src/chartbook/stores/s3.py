@@ -1132,8 +1132,22 @@ class S3Store(Store):
         self._check_layout()
         if not dry_run:
             self._tidy_tmp()
+        return self._tidy(dry_run, keep)
+
+    def tidy_pipeline(self, pipeline: str, dry_run: bool = False) -> list[tuple[str, int]]:
+        """Remove what no snapshot uses from one pipeline's folder, as :meth:`tidy` does from every one; what was removed, each with its size.
+
+        Nothing under ``tmp/`` and no note of origins is looked at: those are the store's, for ``store gc``.
+
+        :raises TidyError: As :meth:`tidy` does.
+        """
+        self._check_layout()
+        return self._tidy(dry_run, (), only=pipeline_folder(pipeline))
+
+    def _tidy(self, dry_run: bool, keep: Iterable[str], only: Optional[str] = None) -> list[tuple[str, int]]:
+        """:meth:`tidy`, after ``tmp/``: of every pipeline's folder, or of the *only* one named."""
         noted = self._notes()
-        seen = self._seen(fresh=True)
+        seen = self._seen(only, fresh=True)
         listing, records = dict(seen.listing), self._records_of(seen)
         keep = {_folded(name) for name in keep}
         now = time.time()
@@ -1169,7 +1183,8 @@ class S3Store(Store):
         ]
         if cleared:
             self._try_delete(cleared)
-        self._tidy_origins(records, now)
+        if only is None:
+            self._tidy_origins(records, now)
         for name, _ in removed:
             if _plain_parts(name) is not None:
                 _remove_file(self._root.joinpath(*name.split("/")))
