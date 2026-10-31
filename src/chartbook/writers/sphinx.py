@@ -511,7 +511,7 @@ class SphinxWriter:
             # Declared and not built yet: the provenance panel says so too.
             # The glimpse is shown as code, so this is plain text, and there
             # are no dates to give
-            glimpse = not_built_text(path=location.get("path", ""), command="chartbook build")
+            glimpse = not_built_text(path=location.get("path", ""), command="chartbook run")
             first, last = None, None
             freshness = []
         else:
@@ -711,7 +711,7 @@ class SphinxWriter:
             pipeline_page_link=self.pipeline_page_link(record),
             dot_or_dotdot="../..",
             listing=_listing(record),
-            not_built=not_built_text(path=_code(location.get("path", "")), command="`chartbook build`"),
+            not_built=not_built_text(path=_code(location.get("path", "")), command="`chartbook run`"),
             preview=preview,
             freshness=[fact for fact in [_freshness("Files updated", location.get("modified_at"))] if fact],
         )
@@ -897,7 +897,7 @@ class SphinxWriter:
         line = f"- [{_link_text(name)}]({page}): `{record['id']}`."
         description = _one_line(raw.get("description") or "", 300)
         if _is_from_the_store(record):
-            line += " Not on this machine: the catalog shows it from its snapshots in the store."
+            line += " The catalog shows its stored snapshots."
             if description:
                 line += f" Its newest snapshot says: “{_link_text(description)}”"
         elif description:
@@ -959,7 +959,7 @@ class SphinxWriter:
         # The record's text is already plain (see _from_the_store): never markup
         lines = [f"# `{pipeline['id']}` {pipeline.get('name', '')}", ""]
         lines.append(
-            "Not on this machine: the catalog shows this pipeline from the store, each snapshot "
+            "The catalog shows this pipeline’s stored snapshots, each "
             "as its owner declared it ready."
         )
         lines.append("")
@@ -1622,10 +1622,9 @@ class SphinxWriter:
 
     def _asset_hub(self, record):
         from chartbook.versions import site_path
-        from chartbook.refs import parse_asset_ref
         from_path = self.page_path(record)
         prefix = "../" * from_path.count("/")
-        lines = [f"# {_as_text(record.get('name') or record['id'])}", "", _as_text(record.get("description")), "", "## Versions", ""]
+        lines = [f"# {_as_text(record.get('name') or record['id'])}", "", _as_text(record.get("description")), ""]
         try:
             fact = _freshness("Data updated", (record.get("location") or {}).get("modified_at"))
         except (ValueError, TypeError):
@@ -1647,7 +1646,7 @@ class SphinxWriter:
                 label = _as_text(entry["id"])
                 link = entry.get("link")
                 lines += [f'- <a href="{link}">{label}</a>: {_as_text(entry.get("words", ""))}' if link else f"- {label}: {_as_text(entry.get('words', ''))}"]
-            lines += ["", "## Snapshot history", ""]
+            lines += [""]
         columns = record.get("columns")
         if isinstance(columns, list) and columns:
             lines += ["## Current data dictionary", "", "| Column | Type |", "|---|---|"]
@@ -1656,7 +1655,7 @@ class SphinxWriter:
                     lines += [f"| {_as_text(column.get('name'))} | {_as_text(column.get('dtype'))} |"]
             lines += [""]
         # A version's page path is the pipeline writer's existing path.
-        ref = parse_asset_ref(record["id"])
+        lines += ["## Versions", ""]
         for entry in record.get("snapshots", []):
             label = f"{entry['commit'][:7]} · {entry['made_at']} · {_as_text(entry.get('store', ''))}"
             if entry.get("present"):

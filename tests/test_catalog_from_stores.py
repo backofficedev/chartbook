@@ -170,3 +170,36 @@ def test_pipeline_hub_lists_tags_and_who_pins_each_version(tmp_path, monkeypatch
     import html
     shown = html.unescape(page)
     assert "tagged v1" in shown and "pinned by acme/downstream" in shown
+
+
+@pytest.mark.parametrize("backend", ["sphinx", "mkdocs"])
+def test_dataframe_hub_keeps_versions_and_changes_out_of_the_dictionary(tmp_path, monkeypatch, backend):
+    import html
+    import re
+    from chartbook.writers.sphinx import SphinxWriter
+    from chartbook.writers.mkdocs import MkDocsWriter
+
+    folder = pipeline(tmp_path)
+    store = FolderStore(tmp_path / "store")
+    snapshot.make(folder, store, made_at="2026-01-01T00:00:00Z")
+    from tests.test_model_versions import _git
+    _git(folder, "commit", "--allow-empty", "-m", "New version, same data")
+    snapshot.make(folder, store, made_at="2026-01-02T00:00:00Z")
+    path = configure(tmp_path, monkeypatch, {"mine": {"url": str(store)}})
+    built = index.build_index(load_manifest(path.parent))
+    record = next(r for r in built["records"] if r["kind"] == "Dataframe")
+    writer = (SphinxWriter if backend == "sphinx" else MkDocsWriter)(built, theme="catalog")
+    page = html.unescape(writer.page(record))
+    sections = dict(re.findall(r"^## ([^\n]+)\n(.*?)(?=^## |\Z)", page, re.M | re.S))
+    dictionary = sections["Current data dictionary"]
+    versions = sections["Versions"]
+    assert "| Column | Type |" in dictionary
+    assert "versions/" not in dictionary and "Nothing changed" not in dictionary
+    assert len(record["snapshots"]) == 2
+    for entry in record["snapshots"]:
+        assert entry["made_at"] in versions
+        assert entry["commit"][:7] in versions
+        if entry.get("changes"):
+            assert entry["changes"] in versions
+    assert versions.count('<a href="') == 2
+    assert "## Snapshot history" not in page
