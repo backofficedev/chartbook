@@ -465,6 +465,28 @@ def test_dodo_py_syntax(template_dir, temp_dir):
         pytest.fail(f"dodo.py has invalid Python syntax: {e}")
 
 
+def test_dodo_quotes_every_path_it_hands_a_shell(template_dir, temp_dir):
+    """A project in a folder whose name has a space ("C:\\Users\\Jane Doe", "My Drive") builds.
+
+    Found on Windows: unquoted, nbconvert wrote the notebook's HTML into a
+    folder beside the project, named for the part before the space, and
+    `move` failed; and Stata is installed under "C:\\Program Files".
+    """
+    project_dir = Path(generate_project(template_dir, temp_dir, FULL_CONTEXT))
+    dodo = (project_dir / "dodo.py").read_text(encoding="utf-8")
+    for quoted in (
+        '--inplace "{notebook_path}"',
+        '--output-dir="{output_dir}" "{notebook_path}"',
+        'move "{from_path}" "{to_path}"',
+        'mv "{from_path}" "{to_path}"',
+        '--output "{notebook_path}" "{pyfile_path}"',
+    ):
+        assert quoted in dodo
+    if "STATA_COMMAND" in dodo:
+        assert '"{config("STATA_EXE")}" /e' in dodo
+    assert not re.search(r"[ =]\{(notebook_path|output_dir|from_path|to_path|pyfile_path)\}", dodo)
+
+
 def test_dodo_src_references_match_filenames(template_dir, temp_dir):
     """Test that every src file named in dodo.py exists with that exact case.
 

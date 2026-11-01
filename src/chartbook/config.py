@@ -286,7 +286,10 @@ def _folder_text(url: str) -> str:
     text = url.strip()
     if not text.lower().startswith("file://"):
         return text
-    text = text[len("file://"):]
+    from urllib.parse import unquote
+
+    # A URL's path is percent-encoded: file:///C:/My%20Drive/store, as a browser or Path.as_uri() writes it
+    text = unquote(text[len("file://"):])
     if os.name == "nt" and re.match(r"^/[A-Za-z]:", text):
         text = text[1:]  # file:///C:/x names the drive, not a root folder
     # On Windows a drive may follow at once (file://C:/x). Anything else is

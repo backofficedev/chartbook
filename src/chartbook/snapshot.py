@@ -789,15 +789,16 @@ def read(path: Union[str, Path]) -> Snapshot:
 
     :raises SnapshotError: If the file is not a record this version reads.
     """
+    from chartbook.store import _any_length, unreadable_detail
+
     path = Path(path)
     try:
-        with open(path, encoding="utf-8") as f:
+        # In the form Windows takes whatever its length: a record another machine wrote may be past this one's limit
+        with open(_any_length(path), encoding="utf-8") as f:
             document = json.load(f)
     except (OSError, ValueError) as error:
         # Not JSON, or not readable: in a store a sync service keeps, a file
         # there before its bytes, most likely
-        from chartbook.store import unreadable_detail
-
         raise SnapshotError(
             f"Cannot read the snapshot {path}: {unreadable_detail(path, error)}. A sync that has not finished is the "
             f"likeliest cause (a file there before its bytes): run this again once it has finished. If it stays "

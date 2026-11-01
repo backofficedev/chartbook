@@ -2115,7 +2115,10 @@ class _S3Pending(PendingSnapshot):
             if self.base is None:
                 raise ValueError("Where it goes in the pipeline's folder is not known: give its place.")
             named = found.files[0] if found.single else found.root
-            place = os.path.relpath(os.path.abspath(named), self.base)
+            try:
+                place = os.path.relpath(os.path.abspath(named), self.base)
+            except ValueError:  # on another drive (Windows): not inside the pipeline's folder, and refused below
+                place = os.path.abspath(named)
         place = "" if place in (".", "") else str(place).replace("\\", "/") if os.name == "nt" else str(place)
         parts = _plain_parts(place) if place else []
         if parts is None or (derived and parts and parts[0] == OWN_DIR):

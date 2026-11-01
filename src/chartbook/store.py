@@ -306,13 +306,24 @@ def _check_length(path: Union[str, Path], folder: bool = False) -> None:
         _check_length(Path(path).parent, folder=True)
 
 
-def _exists(path: Union[str, Path]) -> bool:
-    """Whether a file is there, asked in the form Windows takes whatever its length: a file another machine wrote may be past this one's limit."""
+def _any_length(path: Union[str, Path]) -> str:
+    """*path* in the form Windows takes whatever its length, for ChartBook's own questions and reads of the store.
+
+    A file another machine wrote may be past this one's limit, and Windows
+    says only that it is not there. A reader such as polars or DuckDB is
+    not sure to take the ``\\\\?\\`` form, so a file handed to one is
+    checked with :func:`_check_length` instead.
+    """
     text = str(path)
     if _ON_WINDOWS and len(text) >= WINDOWS_FOLDER_LIMIT and not text.startswith("\\\\?\\"):
         absolute = os.path.abspath(text)
         text = "\\\\?\\UNC\\" + absolute[2:] if absolute.startswith("\\\\") else "\\\\?\\" + absolute
-    return os.path.lexists(text)
+    return text
+
+
+def _exists(path: Union[str, Path]) -> bool:
+    """Whether a file is there, asked in the form Windows takes whatever its length: a file another machine wrote may be past this one's limit."""
+    return os.path.lexists(_any_length(path))
 
 
 class StoreUnreachableError(StoreError):
@@ -399,6 +410,9 @@ class Root:
             snapshot may hold, which the moment alone does not keep, so
             ``store gc`` keeps a snapshot holding each. None for a note
             from before notes recorded them.
+        written: The lockfile's path as the note writes it, for a person to
+            read: another machine's may be another system's path, which
+            :attr:`lockfile` would spell with this one's separators.
     """
 
     lockfile: Path
@@ -409,6 +423,7 @@ class Root:
     snapshots: Optional[tuple[tuple[str, str], ...]] = field(default=None, compare=False)
     node: str = field(default="", compare=False)
     labelled: Optional[tuple[tuple[str, str, str, str], ...]] = field(default=None, compare=False)
+    written: str = field(default="", compare=False)
 
     @property
     def copy(self) -> bool:
@@ -767,7 +782,10 @@ def read_root(stored: dict, note: str = "") -> Root:
             if isinstance(entry, dict)
             and _is_labelled_entry(entry.get("commit"), entry.get("made_at"), entry.get("name"), entry.get("content_hash"))
         }))
-    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node, labelled)
+    root = Root(
+        Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node, labelled,
+        written=stored["lockfile"],
+    )
     for content_hash in root.hashes:
         _split_hash(content_hash)
     return root
@@ -1371,7 +1389,7 @@ _read_records: dict = {}
 
 def _record_stamp(path: Path) -> Optional[tuple]:
     try:
-        seen = os.stat(path)
+        seen = os.stat(_any_length(path))
     except OSError:
         return None
     return (seen.st_mtime_ns, seen.st_size, seen.st_ino)
@@ -1460,7 +1478,7 @@ def read_kept_record(path: Path) -> KeptRecord:
         return known
     folder = path.parent.parent
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(_any_length(path), encoding="utf-8") as f:
             document = json.load(f)
         if document.get("schema") not in ("chartbook/snapshot/v1", "chartbook/snapshot/v2"):
             raise ValueError("a record of another version")  # its dictionary is not this version's to follow
@@ -1570,7 +1588,7 @@ class FolderStore(Store):
                 continue
             for snapshot_name in snapshots:
                 path = pipelines / name / snapshot_name / OWN_DIR / RECORD_FILE
-                if not os.path.isfile(path):
+                if not os.path.isfile(_any_length(path)):  # a record past Windows' limit is there, not being made
                     continue  # being made, or cleared
                 kept = read_kept_record(path)
                 if kept.readable and (pipeline_folder(kept.pipeline) != name or not snapshot_name.endswith("_" + kept.commit[:12])):
@@ -1595,7 +1613,7 @@ class FolderStore(Store):
         found = []
         for snapshot_name in snapshots:
             path = pipeline_path / snapshot_name / OWN_DIR / RECORD_FILE
-            if not os.path.isfile(path):
+            if not os.path.isfile(_any_length(path)):
                 continue
             kept = read_kept_record(path)
             if kept.readable and (pipeline_folder(kept.pipeline) != name or not snapshot_name.endswith("_" + kept.commit[:12])):
@@ -1820,8 +1838,8 @@ class FolderStore(Store):
                 continue
             if not folder.is_dir() or folder.is_symlink():
                 continue
-            recorded = (folder / OWN_DIR / RECORD_FILE).is_file()
-            cleared = (folder / OWN_DIR / CLEARED_FILE).is_file()
+            recorded = os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE))
+            cleared = os.path.isfile(_any_length(folder / OWN_DIR / CLEARED_FILE))
             if not recorded and not cleared:
                 if str(folder) in folders or (older_than and now - _newest_in(folder) < PENDING_FOLDER_SECONDS):
                     continue  # a snapshot being made, most likely
@@ -1864,7 +1882,7 @@ class FolderStore(Store):
             if (only is not None and name != only) or not is_snapshot_folder(name) or not folder.is_dir() or folder.is_symlink():
                 continue
             cleared = folder / OWN_DIR / CLEARED_FILE
-            if cleared.is_file() and not (folder / OWN_DIR / RECORD_FILE).is_file() and not any(
+            if os.path.isfile(_any_length(cleared)) and not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)) and not any(
                 Path(directory) / file_name != cleared for directory, _, files in os.walk(folder) for file_name in files
             ):
                 try:
@@ -1881,7 +1899,7 @@ class FolderStore(Store):
                 except OSError:
                     pass
         if not dry_run and not any(
-            is_snapshot_folder(name) and (pipeline_path / name / OWN_DIR / RECORD_FILE).is_file()
+            is_snapshot_folder(name) and os.path.isfile(_any_length(pipeline_path / name / OWN_DIR / RECORD_FILE))
             for name in (os.listdir(pipeline_path) if pipeline_path.is_dir() else [])
         ):
             # The last snapshot gone, the note for a person who finds the folder goes with it
@@ -3086,7 +3104,7 @@ class _FolderPending(PendingSnapshot):
             # A file a record names that is missing (removed by hand, or lost
             # to a sync): put back where the record says, so that it is whole again
             folder = self.pipeline_path / file.location.relative_to(self.pipeline_path).parts[0]
-            if not (folder / OWN_DIR / RECORD_FILE).is_file():
+            if not os.path.isfile(_any_length(folder / OWN_DIR / RECORD_FILE)):
                 continue
             written, kind = self._write_file(source, file.location, links, expect=content_hash)
             if written == content_hash:
@@ -3123,7 +3141,10 @@ class _FolderPending(PendingSnapshot):
             if self.base is None:
                 raise ValueError("Where it goes in the pipeline's folder is not known: give its place.")
             named = found.files[0] if found.single else found.root
-            place = os.path.relpath(os.path.abspath(named), self.base)
+            try:
+                place = os.path.relpath(os.path.abspath(named), self.base)
+            except ValueError:  # on another drive (Windows): not inside the pipeline's folder, and refused below
+                place = os.path.abspath(named)
         place = "" if place in (".", "") else str(place).replace("\\", "/") if os.name == "nt" else str(place)
         parts = plain_parts(place) if place else []
         if parts is None or (derived and parts and parts[0] == OWN_DIR):
@@ -3220,7 +3241,7 @@ class _FolderPending(PendingSnapshot):
     def discard(self) -> None:
         if self._written:
             return
-        if self.name is not None and (self.pipeline_path / self.name / OWN_DIR / RECORD_FILE).is_file():
+        if self.name is not None and os.path.isfile(_any_length(self.pipeline_path / self.name / OWN_DIR / RECORD_FILE)):
             # Written, though what wrote it was cut short before it could say so: kept
             self._written = True
             self._drop_note()

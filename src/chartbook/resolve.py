@@ -801,6 +801,11 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
 
     # The lockfile knows the pipeline by its key in [dependencies]
     pinned = asset.in_pipeline(dependency.id)
+    if dependency.id != asset.pipeline_id:
+        # Named by less than its key (yield_curve:x for acme/yield_curve): a link is written under the key
+        linked = linked_location(pinned, manifest_dir)
+        if linked is not None:
+            return linked
     asset_id = str(pinned)
     locked = _read_lock(manifest_dir)
     of_dependency = locked.assets_of(dependency.id) if locked else {}

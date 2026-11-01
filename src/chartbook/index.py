@@ -1326,8 +1326,12 @@ def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]
         return None
     folder = Path(resolved)
     pages = sorted(page.relative_to(folder).as_posix() for page in folder.rglob("*.md") if page.is_file())
+    try:
+        shown = Path(os.path.relpath(folder, base_dir)).as_posix()
+    except ValueError:  # on another drive (Windows), where no relative path reaches it
+        shown = folder.as_posix()
     where = {
-        "path": Path(os.path.relpath(folder, base_dir)).as_posix(),
+        "path": shown,
         "resolved_path": folder.as_posix(),
     }
     return where, pages

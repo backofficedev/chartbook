@@ -51,6 +51,8 @@ _DONE = ".chartbook-version-site"
 BUILD_TIMEOUT = 600
 #: A staging folder older than this, in seconds, was left by a build that stopped; it is cleared.
 _ABANDONED = 3600
+#: The longest path in a version's site, past its folder: Sphinx's ``_static/mystnb.<sha256>.css``.
+_LONGEST_IN_A_SITE = "site/_static/mystnb." + "0" * 64 + ".css"
 _NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z$")
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
@@ -161,9 +163,22 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
 
     kept.parent.mkdir(parents=True, exist_ok=True)
     _clear_abandoned(kept.parent)
-    staging = kept.parent / f".{kept.name}.{uuid.uuid4().hex}"
+    # Shorter than the kept folder's name: on Windows a path of 260 characters or more is refused, and
+    # Sphinx's own files are 80 deep in a site (#136)
+    staging = kept.parent / f".{uuid.uuid4().hex[:8]}"
     why = ""
     again = False  # a failure that a later build may not meet: not kept as done
+    longest = kept.joinpath(*_LONGEST_IN_A_SITE.split("/"))
+    from chartbook.store import too_long
+
+    if too_long(longest) is not None:
+        why = (
+            f"its site's paths, under {kept.parent}, would be {len(str(longest))} characters long, and Windows refuses "
+            f"260 or more where long paths are not turned on: turn them on (LongPathsEnabled), or set [cache] path "
+            f"in ~/.chartbook/settings.toml to a shorter folder, such as C:\\cb"
+        )
+        _placeholder(kept / "site", taken, why)  # with no mark of done: tried again once the paths fit
+        return Rendered(kept / "site", built=False, why=why, now=True)
     try:
         with tempfile.TemporaryDirectory(prefix="chartbook-version-") as scratch:
             # Named as the pipeline is, for a manifest whose ID comes from its
@@ -267,7 +282,7 @@ def _placeholder(folder: Path, taken, why: str) -> None:
     )
 
 
-def render_listed(index: dict, store=None, echo=print) -> dict:
+def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
     """Build (or find kept) the site of every snapshot a catalog's index lists, and say on each entry whether it was built.
 
     Called before the catalog's pages are written, so that a page links to
@@ -276,6 +291,11 @@ def render_listed(index: dict, store=None, echo=print) -> dict:
     snapshot that has left the store since the index was made (a ``gc``
     elsewhere) is dropped from its record, so that nothing links to it. A
     version that could not be built is said in one line.
+
+    *into* are the folders the catalog's site is laid out in. A version
+    whose site would be too deep for Windows in one of them (with long
+    paths off) is not linked as built: its page says why, and the catalog
+    is built all the same.
 
     :returns: Each version built or found, by ``(pipeline, commit,
         made_at)``: the snapshot and its :class:`Rendered`, for
@@ -301,6 +321,14 @@ def render_listed(index: dict, store=None, echo=print) -> dict:
                 rendered = render(taken, store)
             except ValueError:
                 continue
+            if rendered.built:
+                targets = [Path(os.path.abspath(folder)) / site_path(record["id"], rendered.folder.parent.parent.name) for folder in into]
+                why = _too_deep(rendered, targets)
+                if why:
+                    stand_in = rendered.folder.parent.parent / ".too-deep" / "site"
+                    shutil.rmtree(stand_in, ignore_errors=True)
+                    _placeholder(stand_in, taken, why)
+                    rendered = Rendered(stand_in, built=False, why=why, now=True)
             entry["rendered"] = rendered.built
             kept.append(entry)
             done[moment] = (taken, rendered)
@@ -349,17 +377,55 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by
             if taken is None:
                 continue
             rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
-            if rendered is None or not rendered.folder.is_dir():
+            # What render_listed built has been said there: only what is built here now is said here
+            said = rendered is not None and rendered.folder.is_dir()
+            if not said:
                 rendered = render(taken, store)  # not built yet, or cleared since: build it now
             target = html_dir / site_path(record["id"], name)
             shutil.rmtree(target, ignore_errors=True)
-            shutil.copytree(rendered.folder, target)
+            not_copied = _copy_site(rendered, target)
+            if not_copied:
+                # One version's pages that cannot be laid out here do not stop the catalog: its page says why
+                shutil.rmtree(target, ignore_errors=True)
+                _placeholder(target, taken, not_copied)
+                echo(f"warning: {record['id']} at {taken.commit[:7]}: {not_copied}")
             wanted.setdefault(folder, set()).add(name)
-            if not rendered.built and rendered.now:
+            if not rendered.built and rendered.now and not said:
                 echo(f"warning: {record['id']} at {taken.commit[:7]}: {rendered.why}")
             done.append(rendered)
     _prune(html_dir / VERSIONS_DIR, wanted)
     return done
+
+
+def _too_deep(rendered: Rendered, targets) -> str:
+    """Why a version's site cannot be copied to one of *targets* on this machine, in one line, or nothing."""
+    from chartbook.store import too_long
+
+    # The deepest of its files as built (a page named for a pipeline and a dataframe may be deeper than Sphinx's own)
+    deepest = max((file for file in rendered.folder.rglob("*") if file.is_file()), key=lambda f: len(str(f)), default=None)
+    if deepest is None:
+        return ""
+    for target in targets:
+        longest = target / deepest.relative_to(rendered.folder)
+        if too_long(longest) is not None:
+            return (
+                f"its pages, under {target}, would be {len(str(longest))} characters long, and Windows refuses 260 or "
+                f"more where long paths are not turned on: turn them on (LongPathsEnabled), or build the catalog in a "
+                f"shorter folder"
+            )
+    return ""
+
+
+def _copy_site(rendered: Rendered, target: Path) -> str:
+    """Copy a version's site into the catalog's; why it could not be, in one line, or nothing."""
+    why = _too_deep(rendered, [target])
+    if why:
+        return why
+    try:
+        shutil.copytree(rendered.folder, target)
+    except (shutil.Error, OSError) as error:
+        return f"its pages could not be copied into the catalog's site: {_one_line(error)}"
+    return ""
 
 
 def _prune(root: Path, wanted: dict[str, set[str]]) -> None:
