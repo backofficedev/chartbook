@@ -1911,7 +1911,10 @@ def catalog_enable(pipeline_id, catalog_path):
     metavar="SECONDS",
     help="How often --watch checks for changes (default: 1)",
 )
-def catalog_generate(force_write, strict, clean, watch, watch_interval):
+@click.option("--gc", "run_gc", is_flag=True, help="After the build, run `chartbook store gc` (without asking)")
+@click.option("--no-gc-reminder", is_flag=True, help="Do not say what `chartbook store gc` would clear")
+@click.pass_context
+def catalog_generate(ctx, force_write, strict, clean, watch, watch_interval, run_gc, no_gc_reminder):
     """Render the global catalog's site, into docs/ beside its catalog.toml.
 
     The catalog is the one ~/.chartbook/settings.toml names, or else
@@ -1923,6 +1926,10 @@ def catalog_generate(force_write, strict, clean, watch, watch_interval):
     Nothing runs in between; it is a record on disk that the next build
     reads. --clean discards it and rebuilds everything. --watch keeps
     rebuilding as files change.
+
+    After the build, one line says what `chartbook store gc` would clear,
+    if anything; --gc runs it then, as `chartbook store gc --yes` would.
+    Nothing is removed from the store unless you ask.
     """
     _check_sphinx_installed()
 
@@ -1993,6 +2000,10 @@ def catalog_generate(force_write, strict, clean, watch, watch_interval):
     click.echo("")
     click.echo(f"Catalog site generated: {output_dir / 'index.html'}")
     click.echo("Run 'chartbook catalog open' to open it in your browser.")
+    if run_gc:
+        ctx.invoke(store_gc, dry_run=False, yes=True, forget_missing=False, keep_days=None, keep_lineage=False, aggressive=False)
+    else:
+        _remind_of_gc(no_gc_reminder)
 
 
 @catalog.command("open")
@@ -2527,7 +2538,8 @@ def add_command(pipeline, key, commit, project_dir):
     help="Also refuse if any snapshot upstream has a gap in its own lineage (see `chartbook lineage`)",
 )
 @click.option("--store", "store_names", multiple=True, help="Write to this catalog store (repeat for several)")
-def snapshot(project_dir, deep, store_names):
+@click.option("--no-gc-reminder", is_flag=True, help="Do not say what `chartbook store gc` would clear")
+def snapshot(project_dir, deep, store_names, no_gc_reminder):
     """Declare this pipeline's build ready for the pipelines that depend on it.
 
     Every asset the pipeline declares and has built is copied into the
@@ -2564,6 +2576,7 @@ def snapshot(project_dir, deep, store_names):
         raise SystemExit(1)
 
     _echo_snapshot(report)
+    _remind_of_gc(no_gc_reminder)
 
 
 def _lineage_line(node) -> str:
@@ -2932,6 +2945,123 @@ def store():
     """
 
 
+@store.command("ls")
+@click.argument("pipeline", required=False)
+@click.option("--store", "store_name", help="List one named catalog store")
+def store_ls(pipeline, store_name):
+    """List the snapshots in the store, each standalone or shared.
+
+    One line per snapshot, newest last within its pipeline: when it was
+    made, its commit, whether its folder is standalone (it holds every
+    file of its version) or shared (it holds only what changed, and the
+    rest of its files sit in earlier snapshots' folders), and how much
+    its own folder holds. The store keeps each file once, which is what
+    keeps a large dataset from costing its size again on every snapshot.
+
+    Because of that, a snapshot's folder is not to be deleted by hand: a
+    later snapshot may keep files in it. `chartbook store gc` removes
+    snapshots safely. `chartbook store export PIPELINE --latest --to
+    FOLDER` writes one complete copy of the newest version wherever you
+    say.
+
+    \b
+    Examples:
+        chartbook store ls
+        chartbook store ls acme/news_headlines
+        chartbook store ls --store team
+    """
+    from chartbook.store import StoreError, StoreUnreachableError
+
+    try:
+        stores = _stores_to_list(store_name)
+    except (ValueError, OSError, StoreError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    shown = 0
+    for name, the_store in stores:
+        records = getattr(the_store, "records", None)
+        if records is None:
+            continue  # a store of a kind that keeps no folders to list
+        try:
+            found = [r for r in records() if r.readable and (pipeline is None or r.pipeline == pipeline)]
+        except (StoreUnreachableError, OSError, StoreError) as error:
+            click.echo(f"Store {name}: {the_store}: unreachable ({_said(error)})", err=True)
+            continue
+        found.sort(key=lambda r: (r.pipeline, r.made_at))
+        if len(stores) > 1 or name:
+            click.echo(f"Store {name or the_store}: {the_store}" if name else f"Store: {the_store}")
+        current = None
+        for record in found:
+            if record.pipeline != current:
+                current = record.pipeline
+                click.echo(f"{current} ({sum(1 for r in found if r.pipeline == current)} snapshot(s))")
+            here = elsewhere = 0
+            for asset in record.assets:
+                for file in asset.files:
+                    if file.location.is_relative_to(record.folder):
+                        here += file.size_bytes
+                    else:
+                        elsewhere += 1
+            kind = "standalone" if elsewhere == 0 else "shared"
+            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in earlier folders"
+            made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
+            click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
+            shown += 1
+    if not shown:
+        click.echo("No snapshots." if pipeline is None else f"No snapshot of {pipeline}.")
+        return
+    click.echo(
+        "A shared snapshot's folder holds only what changed; the rest of its files are in earlier folders, "
+        "which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
+    )
+
+
+def _stores_to_list(store_name):
+    """The stores a listing command looks in, each with its name: one named catalog store, or every configured one, or the default."""
+    import os
+
+    from chartbook.config import get_default_catalog_path
+    from chartbook.multi_store import Stores
+    from chartbook.store import default_store
+
+    if store_name or (not os.environ.get("CHARTBOOK_STORE") and get_default_catalog_path() is not None):
+        configured = Stores.configured()
+        if configured is not None and (configured.catalog is not None or store_name is not None):
+            entries = [configured.named(store_name)] if store_name else configured.entries
+            return [(entry.name, entry.store) for entry in entries if entry.reachable]
+    the_store = default_store()
+    entries = getattr(the_store, "entries", None)
+    if entries is not None:  # several stores read as one: each listed by its name
+        return [(entry.name, entry.store) for entry in entries if entry.reachable]
+    return [("", the_store)]
+
+
+def _remind_of_gc(silenced: bool) -> None:
+    """One line on stderr when `chartbook store gc` would clear snapshots; nothing is removed unless asked.
+
+    After `chartbook snapshot` and `chartbook catalog build`, the two
+    commands that grow the store or read all of it: a store that nobody
+    ever clears grows without bound, and this is where a person learns the
+    command. The plan is the one gc makes, read-only; a store that cannot
+    be read says nothing, since a reminder never fails a command.
+    """
+    if silenced:
+        return
+    try:
+        from chartbook.store import default_store
+
+        clearable = _what_gc_would_clear(default_store())
+    except Exception:  # noqa: BLE001 - a reminder never fails the command it follows
+        return
+    if not clearable:
+        return
+    click.echo(
+        clearable.rstrip(".") + ": older than a week, and neither pinned nor the newest of their pipeline. "
+        "Nothing is removed unless you ask (`--no-gc-reminder` silences this line).",
+        err=True,
+    )
+
+
 @store.command("info")
 @click.option("--store", "store_name", help="Show one named catalog store")
 def store_info(store_name):
@@ -2975,6 +3105,9 @@ def store_info(store_name):
                         click.echo(f"  Newest: {found[-1].made_at}")
                     if unreadable:
                         click.echo(f"  {len(unreadable)} unreadable record(s)")
+                    clearable = _what_gc_would_clear(entry.store)
+                    if clearable:
+                        click.echo(f"  {clearable}")
                 if entry.pipelines:
                     click.echo("  Routed: " + ", ".join(entry.pipelines))
             return
@@ -3029,6 +3162,28 @@ def store_info(store_name):
     click.echo(f"Cache: {shown_store_url(str(cache))}")
     click.echo("  where what is read from a remote store is kept on this machine")
     _say_how_long_paths_are(folder)
+    if folder is None or folder.exists():
+        try:
+            clearable = _what_gc_would_clear(store_for_url(url))
+        except (ValueError, OSError):
+            clearable = None
+        if clearable:
+            click.echo(clearable)
+
+
+def _what_gc_would_clear(the_store) -> "str | None":
+    """In a few words, what `chartbook store gc` would clear from a store; None when nothing, or when that cannot be told."""
+    try:
+        from chartbook import lock
+
+        plan = lock.plan_gc(the_store)
+    except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
+        return None
+    cleared = len(plan.snapshots_delete) + len(plan.pinned_delete)
+    if not cleared and not plan.delete:
+        return None
+    what = f"{cleared} snapshot(s)" if cleared else f"{len(plan.delete)} object(s) nothing names"
+    return f"`chartbook store gc` would clear {what}, freeing {_format_bytes(plan.size_bytes)}."
 
 
 def _say_how_long_paths_are(folder) -> None:
