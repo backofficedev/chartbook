@@ -331,6 +331,13 @@ snapshot); after
 `catalog build --gc` runs gc as `store gc --yes` would. `store export --latest` already writes a
 standalone copy, so nothing was added for that.
 
+*Step 5, PR #153 (2026-10-31).* The guide: `reading-and-writing-data.md` is new;
+`depending-on-pipelines.md`, `catalogs-and-data.md` (titled "Catalogs and Stores", the file name
+kept for its links), `documenting-a-pipeline.md` and `how-the-build-works.md` are cut to the common
+path, each opening with a runnable example; `getting-started.md` writes with `data.path`; the
+vocabulary's store and object rows say files are kept once and read where they are. The reference
+pages were changed only where commands changed, in steps 1 to 4.
+
 ## Decisions, dated
 
 | Date | Decision |

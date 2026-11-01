@@ -71,8 +71,9 @@ from the other.
 A snapshot *holds* the index of its version: the pipeline's own index at that commit, with the
 write-ups and the other files a writer needs, so that the description of the data is preserved
 with the data and a site can be built for any version from the store alone. A catalog shows every
-version of every pipeline this way: each snapshot's site is built from the store, under
-`versions/`, and the catalog's Versions page lists them. The catalog's own index describes the
+version of every pipeline this way: each snapshot's site is built from its documents, charts and
+index, with no data laid out or read, under `versions/`, and the catalog's Versions page lists
+them. The catalog's own index describes the
 working versions, each pipeline's record listing its snapshots, with the comparisons only a site
 can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/versioned-catalog`.
 
@@ -94,8 +95,8 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/version
 | **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.files` for files assets, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is: a file, or a table or query in a source |
 | **record** | One entry in the index, a lockfile or a snapshot. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A folder of files named by their hash: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Holds snapshots and the pinned copies pipelines read |
-| **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
+| **store** | A folder of snapshots, one folder per pipeline: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Each file is kept once, in the first snapshot that had it, and read where it is |
+| **object** | An asset as the store holds it, named by its content hash: its files, each where the store keeps it, under their own names inside the asset |
 | **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: its ID, and where to find it: the store alone (`"acme/rates" = {}`), a folder (`path`) or a repository (`git`) |
 | **pin** | To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
 | **version** | A model's bytes as a snapshot first held them, named by the first twelve digits of their hash (more, if two would otherwise share a name); `[models.x.aliases]` gives labels such as `champion` |

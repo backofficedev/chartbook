@@ -88,36 +88,7 @@ description = "A demo pipeline"
 A demo pipeline showing two random walks.
 ```
 
-**2. Produce the artifacts.** ChartBook doesn't run your analysis — any script that leaves a parquet file and a chart HTML behind will do. `src/build_chart.py`:
-
-```python
-import numpy as np
-import pandas as pd
-
-import chartbook
-
-df = pd.DataFrame({
-    "date": pd.date_range("2024-01-01", periods=365, freq="D"),
-    "walk_a": np.random.randn(365).cumsum() + 100,
-    "walk_b": np.random.randn(365).cumsum() + 100,
-})
-df.to_parquet("_data/walks.parquet")
-
-chartbook.plotting.line(
-    df,
-    x="date",
-    y=["walk_a", "walk_b"],
-    title="Two Random Walks",
-).save(chart_id="random_walks", output_dir="_output")
-```
-
-```console
-python src/build_chart.py
-```
-
-This writes `_data/walks.parquet` plus five chart files in `_output/` — interactive HTML and static PNG/PDF in two sizes (see {doc}`guide/plotting`).
-
-**3. Describe the artifacts.** Add them to `chartbook.toml`:
+**2. Describe the artifacts.** Add them to `chartbook.toml` first, so that your code can ask for their paths by name:
 
 ```toml
 [charts.random_walks]
@@ -140,6 +111,36 @@ docs = "365 daily observations of two cumulative-sum series."
 
 Every chart and dataframe carries a short write-up: inline `docs` as above, or `docs_path` pointing at a markdown file once the write-up outgrows a string.
 
+**3. Produce the artifacts.** ChartBook doesn't run your analysis — any script that leaves a parquet file and a chart HTML behind will do. `src/build_chart.py` asks the manifest where each goes, and the folder is made for it:
+
+```python
+import numpy as np
+import pandas as pd
+
+import chartbook
+from chartbook import data
+
+df = pd.DataFrame({
+    "date": pd.date_range("2024-01-01", periods=365, freq="D"),
+    "walk_a": np.random.randn(365).cumsum() + 100,
+    "walk_b": np.random.randn(365).cumsum() + 100,
+})
+df.to_parquet(data.path("walks"))                 # <project>/_data/walks.parquet
+
+chartbook.plotting.line(
+    df,
+    x="date",
+    y=["walk_a", "walk_b"],
+    title="Two Random Walks",
+).save(chart_id="random_walks", output_dir="_output")
+```
+
+```console
+python src/build_chart.py
+```
+
+This writes `_data/walks.parquet` plus five chart files in `_output/` — interactive HTML and static PNG/PDF in two sizes (see {doc}`guide/plotting`). It runs the same from any folder, since `data.path` finds `chartbook.toml` by walking up from the script ({doc}`guide/reading-and-writing-data`).
+
 **4. Build and view.**
 
 ```console
@@ -153,6 +154,8 @@ Beside the site is `docs/index.json`, the **index**: one record for the pipeline
 
 ## Where next
 
-- {doc}`guide/documenting-a-pipeline` — the full manifest vocabulary: notebooks, metadata, custom site pages
-- {doc}`guide/catalogs-and-data` — register pipelines in a catalog and `data.load()` from anywhere
+- {doc}`guide/reading-and-writing-data` — write your outputs and read any pipeline's data by name
+- {doc}`guide/documenting-a-pipeline` — the manifest: notebooks, models, files, metadata, your own pages
+- {doc}`guide/depending-on-pipelines` — read another pipeline's data as a pinned snapshot
+- {doc}`guide/catalogs-and-data` — a shared store, and a catalog over every snapshot in it
 - {doc}`reference/configuration` — every field, type, and default

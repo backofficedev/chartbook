@@ -121,6 +121,7 @@ root, and `chartbook install claude-skill` installs a ChartBook skill for Claude
 
 getting-started
 guide/vocabulary
+guide/reading-and-writing-data
 guide/documenting-a-pipeline
 guide/depending-on-pipelines
 guide/keeping-costly-outputs
