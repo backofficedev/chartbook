@@ -21,7 +21,7 @@ import subprocess
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import tomli
 
@@ -1409,32 +1409,43 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
             )
 
 
-def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path) -> None:
-    """Refuse a ``[project] scratch`` at or inside a declared dataset, files asset or model.
+def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path, scratch: Optional[str] = None) -> None:
+    """Refuse a scratch folder at or inside a declared dataset, files asset or model.
 
     Its throwaway files would join the asset: hashed with it and copied to
     the store with every snapshot. A glob's matches are its own to choose,
     as ``data.scratch()`` says; a path is a file or a folder, and the
     scratch folder is not to be in it.
 
+    :param scratch: The folder ``data.scratch()`` is about to use, the
+        default included; else the one ``[project] scratch`` declares, and
+        nothing is checked when it declares none (a pipeline that never
+        calls ``data.scratch()`` loads as it did).
     :raises ValueError: Naming the asset.
     """
     from chartbook.snapshot import safe_relative
 
-    declared = (manifest.get("project") or {}).get("scratch")
-    scratch = safe_relative(declared) if isinstance(declared, str) and declared else None
-    if not scratch:
+    project = manifest.get("project") if isinstance(manifest.get("project"), dict) else {}
+    declared = project.get("scratch")
+    used = scratch if scratch is not None else declared
+    plain = safe_relative(used) if isinstance(used, str) and used else None
+    if not plain:
         return
-    inside = scratch.split("/")
+    inside = plain.lower().split("/")  # a disk that tells no letter case apart, as most do
     for table in ("dataframes", "files", "models"):
-        for name, entry in (manifest.get(table) or {}).items():
+        entries = manifest.get(table)
+        for name, entry in (entries.items() if isinstance(entries, dict) else ()):
             path = entry.get("path") if isinstance(entry, dict) else None
-            plain = safe_relative(path) if isinstance(path, str) and path and not is_glob_pattern(path) else None
-            if plain and inside[: len(plain.split("/"))] == plain.split("/"):
+            asset = safe_relative(path) if isinstance(path, str) and path and not is_glob_pattern(path) else None
+            if asset and inside[: len(asset.split("/"))] == asset.lower().split("/"):
+                said = (
+                    f"[project] scratch = {declared!r}" if isinstance(declared, str) and declared
+                    else f"data.scratch()'s folder, {plain} by default,"
+                )
                 raise ValueError(
-                    f"{base_dir / 'chartbook.toml'}: [project] scratch = {declared!r} is inside [{table}.{name}] "
-                    f"path = {path!r}, so its throwaway files would be part of {name} and go to the store with it. "
-                    f'Put it beside the data, e.g. scratch = "./_data/_scratch".'
+                    f"{base_dir / 'chartbook.toml'}: {said} is inside [{table}.{name}] path = {path!r}, so its "
+                    f"throwaway files would be part of {name} and go to the store with it. Name a folder outside "
+                    f'every asset in [project], e.g. scratch = "./_scratch".'
                 )
 
 

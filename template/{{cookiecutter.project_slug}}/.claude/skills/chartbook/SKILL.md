@@ -174,7 +174,8 @@ lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/pat
 # Through a catalog, it is the pipeline's NEWEST SNAPSHOT in the store (its pin, in a pipeline
 # that declares it). With no snapshot, make one or explicitly link the dependency.
 
-# Get data file path (through the catalog)
+# Get data file path (through the catalog). A dataset of one file only: one of several files
+# (a Hive folder or a glob) raises NoSinglePathError; read it with data.load, or list data.files
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
 
 # Inside a pipeline: the path its own chartbook.toml declares for a dataframe.

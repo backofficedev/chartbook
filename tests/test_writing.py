@@ -157,3 +157,27 @@ class TestScratch:
     def test_one_beside_the_data_or_under_a_globs_folder_is_taken(self, tmp_path):
         folder = _pipeline(tmp_path.resolve(), {"scratch": "./_data/_tmp"})
         assert data.scratch(project_dir=folder) == folder / "_data" / "_tmp"
+
+    def test_the_default_inside_a_folder_asset_is_refused_when_it_would_be_made(self, tmp_path):
+        """A pipeline that never calls data.scratch() loads as before; the call says to name one outside."""
+        from chartbook.manifest import load_manifest
+
+        folder = tmp_path.resolve() / "raw"
+        folder.mkdir()
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "raw"}, "files": {"everything": {"path": "./_data", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        load_manifest(folder)
+        with pytest.raises(ValueError, match=r"data.scratch\(\)'s folder, _data/_scratch by default, is inside \[files.everything\]"):
+            data.scratch(project_dir=folder)
+        assert not (folder / "_data").exists()
+
+    def test_a_malformed_table_is_left_to_the_manifest_to_say(self, tmp_path):
+        folder = tmp_path.resolve() / "odd"
+        folder.mkdir()
+        (folder / "chartbook.toml").write_text(
+            '[project]\nid = "odd"\nscratch = "./_tmp"\n[[dataframes]]\npath = "./_data/x.parquet"\n',
+            encoding="utf-8", newline="\n",
+        )
+        assert data.scratch(project_dir=folder) == folder / "_tmp"

@@ -859,6 +859,7 @@ class S3Store(Store):
         try:
             if _is_there(named, file.size_bytes) and os.path.samefile(named, file.location):
                 return named
+            _remove_file(named)  # a link to an old copy, read-only as the cache's files are: Windows replaces none
             named.parent.mkdir(parents=True, exist_ok=True)
             temporary = named.with_name(f".{leaf[-1]}.{uuid.uuid4().hex[:12]}.part")
             os.link(file.location, temporary)

@@ -561,11 +561,26 @@ def _kept_apart(sources, inside) -> list:
     return [] if whole else pairs
 
 
-def _keys_of_pairs(pairs: list) -> dict:
-    """The Hive keys of files kept apart (:func:`_kept_apart`), each pair's from its path inside the asset: ``{key: (type, [value of each pair])}``."""
+def _keys_of_pairs(pairs: list, own: Optional[Mapping] = None) -> dict:
+    """The Hive keys of files kept apart (:func:`_kept_apart`), each pair's from its path inside the asset: ``{key: (type, [value of each pair])}``.
+
+    A key that is a column of the files too (*own*, the first file's
+    schema) is of the column's type, as in polars' Hive read: its value as
+    written, cast to it.
+    """
+    from urllib.parse import unquote
+
     relatives = [relative for _, relative in pairs]
     keys = _partitions(relatives, Path("."), {relative: relative for relative in relatives})
-    return {key: (kind, [values[relative] for relative in relatives]) for key, (kind, values) in keys.items()}
+    found = {}
+    for key, (kind, values) in keys.items():
+        if own is not None and key in own:
+            written = [dict(_keys_of(Path(relative).parent))[key] for relative in relatives]
+            text = [None if value == "__HIVE_DEFAULT_PARTITION__" else unquote(value) for value in written]
+            found[key] = (own[key], pl.Series(text, dtype=pl.String).cast(own[key], strict=False).to_list())
+        else:
+            found[key] = (kind, [values[relative] for relative in relatives])
+    return found
 
 
 def _joined_to_keys(scan, pairs: list):
@@ -578,11 +593,11 @@ def _joined_to_keys(scan, pairs: list):
     import inspect
 
     files = list(dict.fromkeys(location for location, _ in pairs))
-    keys = _keys_of_pairs(pairs)
+    first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
+    keys = _keys_of_pairs(pairs, first)
     given = {}
     takes = inspect.signature(scan).parameters
     if keys and "schema" in takes:
-        first = _scan_files(scan, files[:1], hive_partitioning=False).collect_schema()
         given["schema"] = {**first, **{key: kind for key, (kind, _) in keys.items() if key not in first}}
         if "missing_columns" in takes:
             given["missing_columns"] = "insert"
@@ -1246,9 +1261,10 @@ def _joined_sql(pairs: list) -> str:
     from chartbook.backends import quote_literal
 
     files = list(dict.fromkeys(location for location, _ in pairs))
-    keys = _keys_of_pairs(pairs)
+    schema = pl.scan_parquet(files[0], hive_partitioning=False, glob=False).collect_schema()
+    keys = _keys_of_pairs(pairs, schema)
     read_parquet = f"read_parquet({_listed(files)}, hive_partitioning = false, filename = '{_FILE}')"
-    own = set(pl.scan_parquet(files[0], hive_partitioning=False, glob=False).collect_schema().names()) if keys else set()
+    own = set(schema.names())
     rows = ", ".join(
         "(" + ", ".join([quote_literal(Path(location).as_posix())] + [_literal(values[i], kind) for kind, values in keys.values()]) + ")"
         for i, (location, _) in enumerate(pairs)
@@ -1450,10 +1466,10 @@ def _arrow_kept_apart(location, pairs: list):
     import pyarrow.dataset as ds
     import pyarrow.fs as fs
 
-    keys = _keys_of_pairs(pairs)
+    keys = _keys_of_pairs(pairs, _scan_files(pl.scan_ipc, [pairs[0][0]], hive_partitioning=False).collect_schema())
     loaded = scan_location(location).collect_schema()
     arrow = {key: _plain(pl.Series([], dtype=loaded[key]).to_arrow(compat_level=pl.CompatLevel.oldest()).type) for key in keys}
-    first = ds.dataset([pairs[0][0]], format="ipc").schema
+    first = ds.dataset([Path(pairs[0][0]).as_posix()], format="ipc").schema
     fields = {column.name: column.with_type(_plain(column.type)) for column in first}
     fields.update((key, pa.field(key, kind)) for key, kind in arrow.items())
     plain = pa.schema([fields[name] for name in loaded.names()], metadata=first.metadata)
@@ -1466,7 +1482,8 @@ def _arrow_kept_apart(location, pairs: list):
             said = said & (field.is_null() if value is None else field == pa.scalar(value, type=arrow[key]))
         partitions.append(said)
     return ds.FileSystemDataset.from_paths(
-        [location for location, _ in pairs], schema=plain, format=ds.IpcFileFormat(),
+        # Each path with `/`, as pyarrow writes a file's (arrow_dataset)
+        [Path(location).as_posix() for location, _ in pairs], schema=plain, format=ds.IpcFileFormat(),
         filesystem=fs.LocalFileSystem(), partitions=partitions,
     )
 

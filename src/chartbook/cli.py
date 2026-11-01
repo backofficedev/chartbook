@@ -2773,6 +2773,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         frozen=frozen,
         remake=remake,
         upstream=upstream,
+        no_gc_reminder=no_gc_reminder,
     )
 
 
@@ -2833,7 +2834,7 @@ def _echo_snapshot(report, upstream=False):
 
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
-    upstream=False,
+    upstream=False, no_gc_reminder=False,
 ):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock

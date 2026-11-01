@@ -208,10 +208,20 @@ def _scratch_declared(root: Path) -> Path:
             f"{root / 'chartbook.toml'}: [project] scratch = {declared!r} is not a plain path inside the pipeline. "
             f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
         )
+    return Path(*plain.split("/"))
+
+
+def _scratch_in_no_asset(root: Path, relative: Path) -> None:
+    """Refuse the scratch folder, the default too, where it would join a declared asset (:func:`chartbook.manifest._refuse_scratch_in_an_asset`)."""
+    import tomli
+
     from chartbook.manifest import _refuse_scratch_in_an_asset
 
-    _refuse_scratch_in_an_asset(raw, root)
-    return Path(*plain.split("/"))
+    try:
+        raw = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    _refuse_scratch_in_an_asset(raw, root, relative.as_posix())
 
 
 def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
@@ -244,7 +254,9 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     root = find_manifest_dir(*start_dirs)
-    directory = root / _scratch_declared(root)
+    relative = _scratch_declared(root)
+    _scratch_in_no_asset(root, relative)
+    directory = root / relative
     directory.mkdir(parents=True, exist_ok=True)
     gitignore = directory / ".gitignore"
     if not gitignore.exists():
