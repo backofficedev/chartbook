@@ -949,8 +949,9 @@ def _asset_records(
         elif was is not None:
             # What the snapshot's index recorded, with its glimpse and dates (_recorded_facts)
             columns_were, rows_were = was.get("columns"), was.get("row_count")
-            if isinstance(columns_were, list) and isinstance(rows_were, int):
-                described = (columns_were, rows_were)
+            # Anyone can write a store: its facts are of the shape the writers read, or left out
+            if _well_formed("columns", columns_were) and _well_formed("row_count", rows_were):
+                described = (copy.deepcopy(columns_were), rows_were)
         elif "content_hash" in facts:
             described = _describe_file(facts["location"]["resolved_path"], entry)
             if described is not None:

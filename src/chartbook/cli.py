@@ -2696,7 +2696,8 @@ def lineage_command(project_dir, check, rehash, as_json):
     is_flag=True,
     help="First build and snapshot each pipeline this one depends on by path that has no snapshot to pin, its own first; each must be trusted and committed",
 )
-def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream):
+@click.option("--no-gc-reminder", is_flag=True, help="With --snapshot, do not say what `chartbook store gc` would clear")
+def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstream, no_gc_reminder):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -2772,6 +2773,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake, upstr
         frozen=frozen,
         remake=remake,
         upstream=upstream,
+        no_gc_reminder=no_gc_reminder,
     )
 
 
@@ -2832,7 +2834,7 @@ def _echo_snapshot(report, upstream=False):
 
 def _run_script(
     project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake",
-    upstream=False,
+    upstream=False, no_gc_reminder=False,
 ):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
@@ -2855,7 +2857,7 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: (_echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(False)),
+            on_snapshot=lambda step, made: (_echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(no_gc_reminder)),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,
@@ -2977,15 +2979,21 @@ def store_ls(pipeline, store_name):
     except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
-    shown = 0
-    for name, the_store in stores:
+    shown = unreachable = 0
+    for name, the_store, reachable in stores:
         records = getattr(the_store, "records", None)
         if records is None:
             continue  # a store of a kind that keeps no folders to list
+        if not reachable:
+            # A folder store that is not there lists nothing, which is not "no snapshots" (a Drive not mounted)
+            click.echo(f"Store {name or the_store}: {the_store}: unreachable", err=True)
+            unreachable += 1
+            continue
         try:
             found = [r for r in records() if r.readable and (pipeline is None or r.pipeline == pipeline)]
         except (StoreUnreachableError, OSError, StoreError) as error:
             click.echo(f"Store {name}: {the_store}: unreachable ({_said(error)})", err=True)
+            unreachable += 1
             continue
         found.sort(key=lambda r: (r.pipeline, r.made_at))
         if len(stores) > 1 or name:
@@ -3010,7 +3018,10 @@ def store_ls(pipeline, store_name):
             click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
             shown += 1
     if not shown:
-        click.echo("No snapshots." if pipeline is None else f"No snapshot of {pipeline}.")
+        said = "No snapshots" if pipeline is None else f"No snapshot of {pipeline}"
+        click.echo(f"{said} in the stores that could be read." if unreachable else f"{said}.")
+        if unreachable and unreachable == len(stores):
+            raise SystemExit(1)
         return
     click.echo(
         "A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, "
@@ -3019,7 +3030,7 @@ def store_ls(pipeline, store_name):
 
 
 def _stores_to_list(store_name):
-    """The stores a listing command looks in, each with its name: one named catalog store, or every configured one, or the default."""
+    """The stores a listing command looks in, each with its name and whether it can be reached: one named catalog store, or every configured one, or the default."""
     import os
 
     from chartbook.config import get_default_catalog_path
@@ -3031,20 +3042,20 @@ def _stores_to_list(store_name):
         if configured is not None and (configured.catalog is not None or store_name is not None):
             # An unreachable store is listed too, and said to be unreachable
             entries = [configured.named(store_name)] if store_name else configured.entries
-            return [(entry.name, entry.store) for entry in entries]
+            return [(entry.name, entry.store, entry.reachable) for entry in entries]
         if store_name:
             raise ValueError(f"--store {store_name}: no catalog names stores on this machine (`chartbook store info` says what it uses).")
     the_store = default_store()
     entries = getattr(the_store, "entries", None)
     if entries is not None:  # several stores read as one: each listed by its name
-        return [(entry.name, entry.store) for entry in entries]
-    return [("", the_store)]
+        return [(entry.name, entry.store, entry.reachable) for entry in entries]
+    return [("", the_store, True)]
 
 
 def _remind_of_gc(silenced: bool) -> None:
     """One line on stderr when `chartbook store gc` would clear snapshots; nothing is removed unless asked.
 
-    After `chartbook snapshot` and `chartbook catalog build`, the two
+    After `chartbook snapshot`, `chartbook run --snapshot` and `chartbook catalog build`, the two
     commands that grow the store or read all of it: a store that nobody
     ever clears grows without bound, and this is where a person learns the
     command. The plan is the one gc makes, read-only; a store that cannot
@@ -3053,14 +3064,26 @@ def _remind_of_gc(silenced: bool) -> None:
     if silenced:
         return
     try:
+        from chartbook.multi_store import Stores
         from chartbook.store import default_store
 
-        clearable = _what_gc_would_clear(default_store())
+        the_store = default_store()
+        if isinstance(the_store, Stores):
+            # gc works in one store at a time: each of the catalog's that it could clear, by its name
+            named = [(entry.name, entry.store) for entry in the_store.entries if not entry.read_only and entry.reachable]
+        else:
+            named = [(None, the_store)]
+        said = []
+        for name, one in named:
+            clearable = _what_gc_would_clear(one)
+            if clearable and name is not None:
+                clearable = f"Store {name}: " + clearable.replace("`chartbook store gc`", f"`chartbook store gc --store {name}`", 1)
+            if clearable:
+                said.append(clearable)
     except Exception:  # noqa: BLE001 - a reminder never fails the command it follows
         return
-    if not clearable:
-        return
-    click.echo(clearable + " Nothing is removed unless you ask (`--no-gc-reminder` silences this line).", err=True)
+    for clearable in said:
+        click.echo(clearable + " Nothing is removed unless you ask (`--no-gc-reminder` silences this line).", err=True)
 
 
 @store.command("info")
@@ -4355,12 +4378,17 @@ def _entries_holding(entries, pipeline):
     does not count: `store export` writes what the owner made, as
     :func:`chartbook.sharing.export` does.
     """
+    from chartbook.store import StoreUnreachableError
+
     if not pipeline:
         return [], []
     found, unreadable = [], []
     for entry in entries:
         the_store = entry.store
-        if not entry.reachable or getattr(the_store, "records", None) is None:
+        if getattr(the_store, "records", None) is None:
+            continue
+        if not entry.reachable:
+            unreadable.append((entry.name, StoreUnreachableError(f"unreachable: {the_store}")))
             continue
         try:
             if getattr(the_store, "records_in", None) is not None and hasattr(the_store, "pipeline_path"):

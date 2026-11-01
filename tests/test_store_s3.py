@@ -274,9 +274,11 @@ class TestTheCache:
         original = second._download
         monkeypatch.setattr(second, "_download", lambda key, target, content_hash=None: (downloads.append((key, content_hash)), original(key, target, content_hash))[1])
         held = second.files(content_hash)
-        # Kept in the cache by its hash, against which it was checked as it came, and read there under its own name
+        # Kept in the cache by its hash, against which it was checked as it came, and handed out under its own
+        # name, a hard link to it: data.path() gives it, and a reader goes by its ending
         checked = second.cache / "files" / content_hash[7:9] / content_hash[9:]
-        assert held.one.relative == "rates.parquet" and held.one.location == checked
+        named = second.cache / "named" / content_hash[7:9] / content_hash[9:] / "rates.parquet"
+        assert held.one.relative == "rates.parquet" and held.one.location == named and os.path.samefile(named, checked)
         assert checked.read_bytes() == b"rates-1" and not os.access(checked, os.W_OK)
         assert second.files(content_hash) == held
         assert downloads == [(f"{HERE}/_data/rates.parquet", content_hash)]  # once, against its hash
@@ -403,7 +405,8 @@ class TestTheCache:
         committed = reader.files(content_hash, name="committed.parquet")
         twin = reader.files(content_hash, name="twin.parquet")
         assert (committed.one.relative, twin.one.relative) == ("committed.parquet", "twin.parquet")
-        assert committed.one.location == twin.one.location and twin.one.location.read_bytes() == b"hello"
+        assert (committed.one.location.name, twin.one.location.name) == ("committed.parquet", "twin.parquet")
+        assert os.path.samefile(committed.one.location, twin.one.location) and twin.one.location.read_bytes() == b"hello"
 
     def test_a_record_removed_elsewhere_goes_from_the_cache(self, work, client):
         folder = _pipeline(work, {"_data/rates.parquet": b"rates-1"})
@@ -467,6 +470,7 @@ class TestTheCache:
         cached = store.files(stored.content_hash).home
         assert store.delete(put["rates"].content_hash) is True and store.delete(stored.content_hash) is True
         assert not held.exists() and not cached.exists() and not any((store.cache / "files").rglob("*.*"))
+        assert not any((store.cache / "named").rglob("*.*"))
         assert [k for k in _keys(client) if k.endswith(".parquet")] == []
         # Its record names it still, without holding it, as a store that lost it would
         assert not store.has(put["rates"].content_hash) and not store.has(stored.content_hash)
@@ -1202,7 +1206,9 @@ class TestTwoPipelinesOnAnS3Store:
         assert {e.status for e in report.events if e.asset} == {"pinned"}
         monkeypatch.chdir(forecast)
         assert data.load("rates:treasury").collect().shape == (1, 2)
-        assert data.path("rates:treasury") == cache / "files" / content_hash[7:9] / content_hash[9:]  # the checked file, by its hash
+        # The checked file, by its own name: a hard link to the one kept by its hash
+        assert data.path("rates:treasury") == cache / "named" / content_hash[7:9] / content_hash[9:] / "treasury.parquet"
+        assert os.path.samefile(data.path("rates:treasury"), cache / "files" / content_hash[7:9] / content_hash[9:])
         assert lock.verify(forecast).problems == [] and lock.verify(forecast).pins == 1
 
         # Another machine, with nothing downloaded yet, and the store read-only for it
