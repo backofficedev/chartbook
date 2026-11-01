@@ -2857,6 +2857,11 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         r["content_hash"] for r in taken.assets.values()
         if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file" and (data or r.get("kind") not in DATA_KINDS)
     ]
+    # The snapshot's own index: without its data laid out, a version's pages are built from it
+    index_record = None
+    if isinstance(taken.index, dict) and isinstance(taken.index.get("content_hash"), str):
+        index_record = {**taken.index, "location": {"kind": "file", "path": INDEX_FILE}}
+        named.append(taken.index["content_hash"])
     try:
         missing = [h for h in named if not isinstance(h, str) or not store.has(h)]
     except ValueError as error:  # a hash that is not one: a record written to mislead
@@ -2869,9 +2874,9 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         )
     # Each object whole as its record has it: a site built from a file a
     # sync has half delivered would be wrong, and kept
-    for record in [taken.documents, *taken.assets.values()]:
+    for record in [taken.documents, *taken.assets.values(), *([index_record] if index_record else [])]:
         declared = (record.get("location") or {}).get("path")
-        if record is not taken.documents and safe_relative(declared) is None:
+        if record is not taken.documents and record is not index_record and safe_relative(declared) is None:
             continue  # not laid out at all, and said so below
         if record.get("content_hash") in named:
             unsynced = not_whole(store, record)
@@ -2949,9 +2954,20 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     if changed:
         import tomli_w
         manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
-    if taken.index and taken.index.get("content_hash"):
-        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
-        _copy_regular_file(held, folder / "_chartbook" / INDEX_FILE)
+    if index_record is not None:
+        try:
+            held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
+            copied = _copy_regular_file(held, folder / "_chartbook" / INDEX_FILE)
+        except StoreError as error:
+            copied, error_said = False, str(error)
+        else:
+            error_said = "it is not a regular file, or could not be read"
+        if not copied:
+            # Tried again next time (a sync not finished): a version with no index would show no data at all
+            raise StoreNotReadyError(
+                f"The snapshot of {taken.pipeline} at {taken.commit[:7]} names its index {taken.index['content_hash']}, "
+                f"and the store {store} does not give it: {error_said.rstrip('.')}."
+            )
     _write_back(taken, folder, report)
     # Whatever the filesystem made of the names written, there is no repository here
     if os.path.lexists(folder / ".git"):

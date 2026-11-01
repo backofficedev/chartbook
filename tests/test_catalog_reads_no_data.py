@@ -142,3 +142,115 @@ class TestAVersionIsBuiltWithoutItsData:
         assert NO_GLIMPSE_RECORDED in page and "Error reading file" not in page
         assert "## DataFrame Glimpse\n\n```\n" in page  # the plain fence, when no run of backticks is in the text
 
+
+def _laid_out_index(work: Path, taken, store, edit=None) -> Path:
+    """A version laid out without its data, its stored index edited as a store anyone can write to might have it."""
+    snapshot.materialize(taken, work / "laid", store, data=False)
+    saved = work / "laid" / "_chartbook" / "index.json"
+    if edit is not None:
+        stored = json.loads(saved.read_text(encoding="utf-8"))
+        edit(stored)
+        saved.write_text(json.dumps(stored), encoding="utf-8", newline="\n")
+    return work / "laid"
+
+
+class TestWhatTheReviewFound:
+    def test_a_table_in_a_source_is_shown_from_the_index_too(self, work, store):
+        """A table has a definition hash, not a content hash; its parquet is not laid out either."""
+        import duckdb
+
+        from chartbook.sitefiles import not_built
+        from chartbook.writers.sphinx import SphinxWriter
+
+        folder = work / "rates"
+        (folder / "_data").mkdir(parents=True)
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "rates"},
+                "sources": {"local": {"backend": "duckdb", "url": "duckdb:///./_data/local.duckdb"}},
+                "dataframes": {"curve": {"source": "local", "table": "curve", "docs": "A table.", "date_col": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        con = duckdb.connect(str(folder / "_data" / "local.duckdb"))
+        con.sql("create table curve as select * from (values (date '2024-01-01', 1.0, 4.0), (date '2024-01-02', 1.1, 4.3)) t(d, y02, y10)")
+        con.close()
+        (folder / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
+        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n!/README.md\n", encoding="utf-8", newline="\n")
+        _git(folder, "init", "--quiet", "-b", "main")
+        commit_pipeline(folder)
+        taken = snapshot.make(folder, store=store).snapshot
+        own = _records(folder)["rates:curve"]
+        assert own["glimpse"].startswith("A table curve in source 'local'") and "y02" in own["glimpse"]
+        assert own["last_dates"]["min"].startswith("2024-01-01") and own["last_dates"]["max"].startswith("2024-01-02")
+        assert "definition_hash" in own
+        laid = _laid_out_index(work, taken, store)
+        assert not (laid / "_chartbook" / "tables").exists()
+        curve = _records(laid)["rates:curve"]
+        assert curve["location"]["kind"] == "file" and curve["location"]["path"] == "_chartbook/tables/curve.parquet"
+        assert [c["name"] for c in curve["columns"]] == ["d", "y02", "y10"] and curve["row_count"] == 2
+        assert curve["glimpse"] == own["glimpse"] and curve["definition_hash"] == own["definition_hash"]
+        assert not not_built(curve)
+        rendered = versions.render(taken, store)
+        assert rendered.built, rendered.why
+        page = (rendered.folder / "cb" / "dataframes" / "rates" / "curve.html").read_text(encoding="utf-8")
+        assert "y02" in page and "2024-01-02" in page and "Not built" not in page and "not built" not in page
+
+    def test_an_index_not_whole_in_the_store_is_tried_again_later(self, described, store, work):
+        folder, taken = described
+        held = store.files(taken.index["content_hash"], name="index.json").one.location
+        os.chmod(held, 0o600)
+        held.write_bytes(held.read_bytes()[:-20])  # a sync that has not finished
+        with pytest.raises(snapshot.StoreNotReadyError, match="not fully synced yet"):
+            snapshot.materialize(taken, work / "laid", store, data=False)
+        held.unlink()
+        with pytest.raises(snapshot.StoreNotReadyError):
+            snapshot.materialize(taken, work / "laid-2", store, data=False)
+
+    def test_a_malformed_stored_record_is_passed_over_not_crashed_on(self, described, store, work):
+        folder, taken = described
+
+        def spoil(stored):
+            for record in stored["records"]:
+                if record["id"] == "rates:rates":
+                    record["columns"] = ["date"]
+                    record["row_count"] = "2"
+                    record["last_dates"] = {"min": "<img src=x>", "max": "2024-06-30 00:00:00"}
+                    record["glimpse"] = 7
+                if record["id"] == "rates:file/notes":
+                    record["preview"] = {"path": "../../etc/passwd", "kind": "text", "text": "x"}
+                    record["files"] = [{"path": "readme.txt"}]
+
+        laid = _laid_out_index(work, taken, store, spoil)
+        records = _records(laid)
+        rates = records["rates:rates"]
+        assert rates["content_hash"] == taken.assets["rates"]["content_hash"]
+        assert "columns" not in rates and "row_count" not in rates and "last_dates" not in rates and "glimpse" not in rates
+        notes = records["rates:file/notes"]
+        assert "preview" not in notes and "files" not in notes and notes["file_count"] == 1
+
+    def test_a_folder_of_parts_has_no_last_dates_and_a_csvs_text_dates_are_read(self, work, store):
+        from chartbook.utils import GLIMPSE_MAX_CHARS
+
+        folder = work / "mixed"
+        (folder / "_data" / "parts" / "year=2024").mkdir(parents=True)
+        pl.DataFrame({"date": [date(2024, 1, 1)], "v": [1.0]}).write_parquet(folder / "_data" / "parts" / "year=2024" / "a.parquet")
+        (folder / "_data" / "log.csv").write_text("d,n\n2024-01-01,1\n2024-03-01,\n", encoding="utf-8", newline="\n")
+        pl.DataFrame({"date": [date(2024, 1, 1)], "text": ["x" * (GLIMPSE_MAX_CHARS + 5000)]}).write_parquet(folder / "_data" / "wide.parquet")
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "mixed"},
+                "dataframes": {
+                    "parts": {"path": "./_data/parts", "date_col": "date", "docs": "d"},
+                    "log": {"path": "./_data/log.csv", "date_col": "d", "docs": "d"},
+                    "wide": {"path": "./_data/wide.parquet", "docs": "d"},
+                },
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        records = _records(folder)
+        assert records["mixed:parts"]["last_dates"] == {"min": "N/A", "max": "N/A"}  # not read whole for two dates
+        assert records["mixed:log"]["last_dates"] == {"min": "2024-01-01 00:00:00", "max": "2024-01-01 00:00:00"}
+        wide = records["mixed:wide"]["glimpse"]
+        assert len(wide) <= GLIMPSE_MAX_CHARS + 100 and wide.endswith("characters)")
+

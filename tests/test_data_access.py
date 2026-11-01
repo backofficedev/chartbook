@@ -464,9 +464,11 @@ class TestCredentials:
         monkeypatch.setenv("CHARTBOOK_SOURCE_LOCAL_URL", f"duckdb:///{from_env}")
         assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-ENV"]
         assert resolve("curve", start_dirs=[pipeline]).url == f"duckdb:///{from_env}"
-        # The index describes what the machine opens, and records the manifest's url
+        # The index describes what the machine opens, and records the manifest's url, never the machine's
         record = {r["id"]: r for r in index.build_index(load_manifest(pipeline))["records"]}["acme/rates:curve"]
-        assert record["row_count"] == 1 and "FROM-ENV" not in json.dumps(record)
+        assert record["row_count"] == 1 and str(from_env) not in json.dumps(record)
+        assert record["location"]["url"] == "duckdb:///./_data/local.duckdb"
+        assert "FROM-ENV" in record["glimpse"]  # the table's first rows, which are its data, not its address
 
     def test_a_machine_url_for_another_engine_is_refused(self, pipeline, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_SOURCE_LOCAL_URL", "postgres://warehouse/db")

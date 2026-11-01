@@ -32,7 +32,7 @@ from chartbook.writers import ASSISTANT_FILE
 
 #: What a version's dataframe page shows where the first rows would be, when its snapshot's index recorded none.
 NO_GLIMPSE_RECORDED = (
-    "The first rows were not recorded when this snapshot was made (ChartBook 0.4 or earlier). "
+    "The first rows were not recorded when this snapshot was made (a snapshot made by ChartBook 0.4 or earlier). "
     "A version's page shows its data from the snapshot's index, and the data is not laid out for it."
 )
 
@@ -509,7 +509,8 @@ class SphinxWriter:
         dataframe_manifest = self._dataframe_manifest(record, base_dir)
         unbuilt = not_built(record)
         if location.get("kind") in ("table", "query"):
-            glimpse = _source_glimpse(record, base_dir)
+            recorded = record.get("glimpse")
+            glimpse = recorded if isinstance(recorded, str) else _source_glimpse(record, base_dir)
             span = record.get("date_range") or {}
             first, last = span.get("first"), span.get("last")
             freshness = [_freshness("Data updated", location.get("modified_at"))]
@@ -746,7 +747,8 @@ class SphinxWriter:
         resolved = (record.get("location") or {}).get("resolved_path")
         if not resolved or not record.get("content_hash"):
             return None
-        found = preview_of(record.get("files") or [], listing_root(resolved))
+        # Only where the files are: an absent folder's listing root would be its parent, another asset's files
+        found = preview_of(record.get("files") or [], listing_root(resolved)) if Path(resolved).exists() else None
         if found is not None:
             return found
         # The files are not here (a version laid out from the store without
@@ -1979,43 +1981,7 @@ def _most_recent_valid_datapoints(
 
 
 def _source_glimpse(record: dict, base_dir: Path) -> str:
-    """A table or query's glimpse, from the engine the record's location names.
+    """A table or query's glimpse, from its engine (:func:`chartbook.utils.source_glimpse`)."""
+    from chartbook.utils import source_glimpse
 
-    The location's url is the manifest's, relative to the pipeline's folder
-    for a DuckDB file; the machine's url comes through ``source_url()``, and
-    a relative file is made absolute against the pipeline's folder, never
-    against where the build happens to run.
-    """
-    from chartbook.backends import MEMORY_URL, duckdb_path, open_backend, source_url
-    from chartbook.resolve import QueryLocation, TableLocation
-
-    location = record["location"]
-    where = (
-        f"table {location['identifier']}" if location["kind"] == "table" else "query"
-    ) + f" in source {location.get('source')!r} ({location.get('backend')})"
-    if not location.get("url"):
-        return f"A {where}."
-    try:
-        # A DuckDB file is found through the machine's url, relative to the
-        # pipeline's folder; another engine finds its own from the public one
-        url = location["url"]
-        if location.get("backend") == "duckdb":
-            url = source_url(location["source"], url)
-            path = duckdb_path(url, base_dir)
-            url = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
-    except Exception as error:  # noqa: BLE001 - a page, not a crash
-        return f"A {where}. It could not be read when the site was built: {error}"
-    if location["kind"] == "table":
-        typed = TableLocation(location["source"], location["backend"], url, location["identifier"])
-    else:
-        typed = QueryLocation(location["source"], location["backend"], url, location["sql"])
-    try:
-        backend = open_backend(location["backend"], url, location["source"])
-        columns, rows = backend.describe(typed)
-        sample = backend.scan(typed).head(5).collect()
-    except Exception as error:  # noqa: BLE001 - a page, not a crash
-        return f"A {where}. It could not be read when the site was built: {error}"
-    lines = [f"A {where}: {rows} rows, {len(columns)} columns.", ""]
-    lines += [f"  {column['name']}: {column['dtype']}" for column in columns]
-    lines += ["", "First rows:", str(sample)]
-    return "\n".join(lines)
+    return source_glimpse(record, base_dir)

@@ -259,6 +259,62 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
         return f"Error reading file: {said}"
 
 
+#: The most characters a recorded glimpse keeps: a glimpse is a page's first rows, not the data, and the index carries it.
+GLIMPSE_MAX_CHARS = 20_000
+
+
+def cap_glimpse(text: str) -> str:
+    """A glimpse cut to :data:`GLIMPSE_MAX_CHARS`, with a line saying so: wide or long values must not swell the index."""
+    if len(text) <= GLIMPSE_MAX_CHARS:
+        return text
+    return text[:GLIMPSE_MAX_CHARS].rstrip() + f"\n... (cut at {GLIMPSE_MAX_CHARS:,} characters)"
+
+
+def source_glimpse(record: dict, base_dir) -> str:
+    """A table or query's glimpse, from the engine the record's location names: its shape, columns and first rows.
+
+    The location's url is the manifest's, relative to the pipeline's folder
+    for a DuckDB file; the machine's url comes through ``source_url()``, and
+    a relative file is made absolute against the pipeline's folder, never
+    against where the build happens to run. A page shows this as text; the
+    index records it (:mod:`chartbook.index`) so that a version rendered
+    from the store shows it without opening the engine.
+    """
+    from chartbook.backends import MEMORY_URL, duckdb_path, open_backend, source_url
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    location = record["location"]
+    where = (
+        f"table {location['identifier']}" if location["kind"] == "table" else "query"
+    ) + f" in source {location.get('source')!r} ({location.get('backend')})"
+    if not location.get("url"):
+        return f"A {where}."
+    try:
+        # A DuckDB file is found through the machine's url, relative to the
+        # pipeline's folder; another engine finds its own from the public one
+        url = location["url"]
+        if location.get("backend") == "duckdb":
+            url = source_url(location["source"], url)
+            path = duckdb_path(url, base_dir)
+            url = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
+    except Exception as error:  # noqa: BLE001 - a page, not a crash
+        return f"A {where}. It could not be read when the site was built: {error}"
+    if location["kind"] == "table":
+        typed = TableLocation(location["source"], location["backend"], url, location["identifier"])
+    else:
+        typed = QueryLocation(location["source"], location["backend"], url, location["sql"])
+    try:
+        backend = open_backend(location["backend"], url, location["source"])
+        columns, rows = backend.describe(typed)
+        sample = backend.scan(typed).head(5).collect()
+    except (Exception, pl.exceptions.PanicException) as error:  # noqa: BLE001 - a page, not a crash; polars panics on a type it cannot import
+        return f"A {where}. It could not be read when the site was built: {error}"
+    lines = [f"A {where}: {rows} rows, {len(columns)} columns.", ""]
+    lines += [f"  {column['name']}: {column['dtype']}" for column in columns]
+    lines += ["", "First rows:", str(sample)]
+    return cap_glimpse("\n".join(lines))
+
+
 def most_recent_valid_datapoints(
     path,
     date_col: str = "date",
@@ -280,12 +336,14 @@ def most_recent_valid_datapoints(
 
     if date_col in ("", "NA", "N/A"):
         return "N/A", "N/A"
-    if _is_glob(str(path)):
-        return "N/A", "N/A"
+    if _is_glob(str(path)) or os.path.isdir(path):
+        return "N/A", "N/A"  # a dataset of many parts is not read whole for two dates
     if os.path.getsize(path) / (1024 * 1024) > size_threshold_mb:
         return "N/A (large file)", "N/A (large file)"
     frame = formats.scan(path, format, read_options).collect()
-    if frame[date_col].dtype != pl.Datetime:
+    if frame[date_col].dtype == pl.String:
+        frame = frame.with_columns(pl.col(date_col).str.to_datetime(strict=False))  # text dates, as a CSV has them
+    elif frame[date_col].dtype != pl.Datetime:
         frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
     latest = frame.select(
         [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in frame.columns if col != date_col]

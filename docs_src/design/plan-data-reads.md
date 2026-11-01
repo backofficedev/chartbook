@@ -306,6 +306,13 @@ lays out documents, charts, notebooks, notes and the stored index, and `versions
 `index.stored_index_records` gives a laid-out version's build the facts the snapshot recorded of
 each data asset, and the build counts those files as not missing. A version builds even when its
 data is not in the store. A 0.4 snapshot's version page says the first rows were not recorded.
+After review: a table or query in a source, which has a `definition_hash` and no `content_hash`,
+is shown from the index too, and the index records its glimpse (`utils.source_glimpse`) and dates;
+the snapshot's own index is required whole in the store before a version is laid out, and a
+half-synced one is tried again later rather than kept as a version with no data; every fact taken
+from a stored index is checked for shape (`index._well_formed`), since anyone can write a store;
+a glimpse is capped (`utils.GLIMPSE_MAX_CHARS`); a folder of parts gets `N/A` for its last dates
+rather than being read whole; a CSV's text dates parse under polars 2.
 
 ## Decisions, dated
 

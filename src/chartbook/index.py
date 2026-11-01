@@ -36,6 +36,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import warnings
 from datetime import date, datetime, time, timezone
 from pathlib import Path
@@ -741,18 +742,73 @@ RECORDED_FACTS = (
 
 
 def _from_the_stored_index(stored: Optional[Mapping[str, dict]], asset_id: str, facts: dict) -> Optional[dict]:
-    """The snapshot's own record of an asset whose file is not in a laid-out version; None when there is a file, or no such record."""
+    """The snapshot's own record of an asset whose file is not in a laid-out version; None when there is a file, or no such record.
+
+    A built asset has a ``content_hash``; a table or a query in a source has
+    a ``definition_hash`` instead, and in a laid-out version its manifest
+    names a parquet file that is not laid out either.
+    """
     if not stored or "content_hash" in facts:
         return None
     was = stored.get(asset_id)
-    if not isinstance(was, dict) or not isinstance(was.get("content_hash"), str):
+    if not isinstance(was, dict) or not (isinstance(was.get("content_hash"), str) or isinstance(was.get("definition_hash"), str)):
         return None
     return was
 
 
+#: How the last dates a page shows are written: a date and time, or N/A.
+_LAST_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}:\d{2}(\.\d+)?)?|N/A( \(large file\))?)$")
+
+
+def _well_formed(key: str, value: object) -> bool:
+    """Whether a value a stored index gives for *key* has the shape the writers read: anyone can write a store, so each is checked, and one that is not is left out."""
+    from chartbook.files import _inside
+    from chartbook.utils import GLIMPSE_MAX_CHARS
+
+    def text(v, longest=1000):
+        return isinstance(v, str) and len(v) <= longest
+
+    def path_inside(v):  # a path inside the asset, and nothing else: no `..`, no root, no drive
+        return text(v, 4096) and _inside(v)
+
+    def count(v):
+        return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+    if key in ("content_hash", "definition_hash"):
+        return text(value, 200)
+    if key in ("size_bytes", "row_count", "file_count"):
+        return count(value)
+    if key == "columns":
+        return isinstance(value, list) and all(
+            isinstance(c, dict) and text(c.get("name")) and text(c.get("dtype")) for c in value
+        )
+    if key == "files":
+        return isinstance(value, list) and all(
+            isinstance(f, dict) and path_inside(f.get("path")) and count(f.get("size_bytes"))
+            and ("content_hash" not in f or text(f.get("content_hash"), 200))
+            and ("row_count" not in f or count(f.get("row_count")))
+            and ("partitions" not in f or (isinstance(f["partitions"], dict) and all(text(k) and text(v) for k, v in f["partitions"].items())))
+            for f in value
+        )
+    if key == "extensions":
+        return isinstance(value, dict) and all(text(k) and count(v) for k, v in value.items())
+    if key == "date_range":
+        return isinstance(value, dict) and text(value.get("first"), 64) and text(value.get("last"), 64)
+    if key == "glimpse":
+        return text(value, GLIMPSE_MAX_CHARS + 100)
+    if key == "last_dates":
+        return isinstance(value, dict) and all(isinstance(value.get(k), str) and _LAST_DATE.match(value[k]) for k in ("min", "max"))
+    if key == "preview":
+        return (
+            isinstance(value, dict) and path_inside(value.get("path")) and value.get("kind") in ("text", "image")
+            and ("text" not in value or text(value["text"], 64_000))
+        )
+    return False
+
+
 def _recorded_facts(was: dict) -> dict:
-    """What is taken from a snapshot's own record of an asset (:data:`RECORDED_FACTS`): anyone's text, shown as text by the writers."""
-    return {key: copy.deepcopy(was[key]) for key in RECORDED_FACTS if key in was}
+    """What is taken from a snapshot's own record of an asset (:data:`RECORDED_FACTS`), each of the shape the writers read (:func:`_well_formed`); anyone's text, shown as text."""
+    return {key: copy.deepcopy(was[key]) for key in RECORDED_FACTS if key in was and _well_formed(key, was[key])}
 
 
 def _record_what_a_page_shows(record: dict, resolved: str, entry: dict, size_threshold: float) -> None:
@@ -766,9 +822,9 @@ def _record_what_a_page_shows(record: dict, resolved: str, entry: dict, size_thr
     """
     import polars as pl
 
-    from chartbook.utils import get_dataframe_glimpse, most_recent_valid_datapoints
+    from chartbook.utils import cap_glimpse, get_dataframe_glimpse, most_recent_valid_datapoints
 
-    record["glimpse"] = get_dataframe_glimpse(Path(resolved), entry.get("format"), entry.get("read_options"))
+    record["glimpse"] = cap_glimpse(get_dataframe_glimpse(Path(resolved), entry.get("format"), entry.get("read_options")))
     try:
         first, last = most_recent_valid_datapoints(
             Path(resolved), entry.get("date_col", "") or "", size_threshold, entry.get("format"), entry.get("read_options")
@@ -835,7 +891,8 @@ def _asset_records(
         # A version laid out from the store without its data: the snapshot's
         # own index described the files when it had them, and that is shown
         record.update(_recorded_facts(was))
-        facts["content_hash"] = was["content_hash"]
+        if isinstance(was.get("content_hash"), str):
+            facts["content_hash"] = was["content_hash"]  # a table or query has a definition_hash instead
         modified = (was.get("location") or {}).get("modified_at")
         if isinstance(modified, str) and "location" in record:
             record["location"]["modified_at"] = modified
@@ -885,6 +942,10 @@ def _asset_records(
                 record["definition_hash"] = _definition_hash(
                     record["location"], described[0], (entry.get("_source") or {}).get("url")
                 )
+                # What its page shows, recorded as a file's is: a version rendered from the store opens no engine
+                from chartbook.utils import source_glimpse
+
+                record["glimpse"] = source_glimpse(record, base_dir)
         elif was is not None:
             # What the snapshot's index recorded, with its glimpse and dates (_recorded_facts)
             columns_were, rows_were = was.get("columns"), was.get("row_count")
@@ -920,6 +981,7 @@ def _asset_records(
             span = _describe_span_in_source(entry, date_col)
             if span:
                 record["date_range"] = span
+                record["last_dates"] = {"min": span["first"], "max": span["last"]}  # as a table's page shows them
     elif kind == "chart" and entry.get("dataframe"):
         source = parse_asset_ref(entry["dataframe"], kind="dataframe")
         if source.is_local:

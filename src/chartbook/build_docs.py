@@ -292,7 +292,8 @@ def _not_shown_from_the_index(missing_files: list, project_dir) -> list:
     for missing in missing_files:
         prefix = prefixes.get(missing.file_type)
         record = stored.get(f"{missing.pipeline_id}:{prefix}{missing.item_id}") if prefix is not None else None
-        if isinstance(record, dict) and isinstance(record.get("content_hash"), str):
+        # Built (a hash of its bytes), or a table or query in a source (a hash of its definition)
+        if isinstance(record, dict) and (isinstance(record.get("content_hash"), str) or isinstance(record.get("definition_hash"), str)):
             continue
         kept.append(missing)
     return kept
@@ -390,6 +391,7 @@ def _refuse_unreadable(built: dict) -> None:
         and (record.get("location") or {}).get("kind") == "file"
         and (record.get("location") or {}).get("resolved_path")
         and "content_hash" not in record
+        and "definition_hash" not in record  # a table or query a version shows from its index: no file, and none expected
         and not not_built(record)
     ]
     if not unreadable:
