@@ -150,7 +150,10 @@ model with where its page is, so that a command-line agent finds its way without
    (`materialize`), builds it as the pipeline's own site in a process of its own, with the site
    tool its manifest names, keeps it under `versions/` in the machine's cache, keyed by the
    ChartBook version, and copies it into the catalog's site at
-   `versions/<pipeline>/<commit>-<made_at>/`. A version that cannot be built gets a page that says
+   `versions/<pipeline>/<commit>-<made_at>/`. (*0.5.0:* the time the store names the snapshot's
+   folder by, to the second, unique for a pipeline as the folder is, and the kept site at `versions/<12 hex digits of a hash>/`, with
+   ChartBook's version in its marker of done: the old names put a site's deepest files past
+   Windows' 260 characters under the default cache.) A version that cannot be built gets a page that says
    why, and a `warning:` line, so a link to it never leads nowhere. A laid-out folder's Pipeline
    record says `from_snapshot`, and its front page says which snapshot it is. Built otherwise
    than item 4 of the section above: the version list is one catalog page, `cb/versions.md`, every

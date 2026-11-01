@@ -159,6 +159,7 @@ def _write_sphinx_project(
     hash_cache=None,
     built_index: dict | None = None,
     render_versions: bool = False,
+    versions_into: tuple = (),
 ):
     """Write the complete Sphinx project for a site into a directory.
 
@@ -193,7 +194,7 @@ def _write_sphinx_project(
     # policy.mode = "strict" fails the build on any missing required
     # field. The policy is the catalog's, or a lone pipeline's own.
     _check_policy(manifest, diagnostic_rows)
-    rendered = _render_versions(manifest, built_index) if render_versions and built_index is not None else None
+    rendered = _render_versions(manifest, built_index, versions_into) if render_versions and built_index is not None else None
 
     # Run pipeline publish
     run_build_markdown(
@@ -587,6 +588,7 @@ def generate_docs(
             hash_cache=cache,
             built_index=built,
             render_versions=True,
+            versions_into=(_docs_dir / "_build" / "html", output_dir),
         )
 
         # Run sphinx build
@@ -607,8 +609,13 @@ def generate_docs(
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
 
 
-def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
-    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built."""
+def _render_versions(manifest: dict, built: dict, into: tuple = ()) -> Optional[dict]:
+    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built.
+
+    *into* are the folders the catalog's site is laid out in, where each
+    version's site is copied: one too deep for Windows in any of them is
+    not linked as built.
+    """
     if manifest["project"]["type"] != "catalog":
         return None
     import click
@@ -618,6 +625,7 @@ def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
     return versions.render_listed(
         built,
         store=manifest.get("stores"),
+        into=into,
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
     )
 
@@ -708,7 +716,7 @@ def _generate_docs_mkdocs(
         _refuse_unreadable(built)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
-        rendered = _render_versions(manifest, built)
+        rendered = _render_versions(manifest, built, (_docs_dir / "_build" / "html", output_dir))
         run_build_markdown(
             project_dir=project_dir,
             pipeline_theme=pipeline_theme,
@@ -974,7 +982,7 @@ def _generate_docs_incremental(
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
     built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
     _refuse_unreadable(built)
-    rendered = _render_versions(manifest, built)
+    rendered = _render_versions(manifest, built, (_docs_dir / incremental.SPHINX_BUILD_DIR / "html", output_dir))
     records = {record["id"]: record for record in built["records"]}
     salts = {
         pipeline_id: provenance.digest(pipeline_id, records)

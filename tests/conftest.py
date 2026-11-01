@@ -11,6 +11,24 @@ from tests.fixtures import (
 )
 
 
+def pytest_configure(config):
+    """On Windows with long paths off, make each test's folder in a short one of this run's own.
+
+    pytest's own, ``%TEMP%\\pytest-of-<user>\\pytest-<n>\\``, takes 64
+    characters before a test's name, and a catalog's version pages under
+    it go past the 260 Windows takes: a test then fails for where it ran.
+    A run given ``--basetemp`` keeps it.
+    """
+    import os
+    import tempfile
+
+    from chartbook.store import long_paths_enabled
+
+    if os.name != "nt" or config.option.basetemp or long_paths_enabled():
+        return
+    config.option.basetemp = tempfile.mkdtemp(prefix="cbt-")
+
+
 @pytest.fixture(autouse=True)
 def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     """Point the store and the git cache at scratch directories, for every test.

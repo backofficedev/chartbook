@@ -36,6 +36,7 @@ from chartbook.store import (
     KeptRecord,
     Store,
     StoreError,
+    _any_length,
     _kept_files,
     is_snapshot_folder,
     pipeline_folder,
@@ -69,7 +70,7 @@ def _records_in(folder: Path) -> list[KeptRecord]:
     found = []
     for snapshot in sorted(p for p in folder.iterdir() if p.is_dir() and is_snapshot_folder(p.name)):
         path = snapshot / OWN_DIR / RECORD_FILE
-        if path.is_file():
+        if os.path.isfile(_any_length(path)):  # a record past Windows' limit is there too
             found.append(read_kept_record(path))
     return sorted(found, key=lambda record: (record.made_at, record.folder.name))
 

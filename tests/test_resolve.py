@@ -30,7 +30,7 @@ from chartbook.resolve import (
     parse_declared_ref,
     resolve,
 )
-from tests.fixtures import create_pipeline_project
+from tests.fixtures import create_pipeline_project, needs_symlinks
 
 
 def _edit_toml(project_dir: Path, edit) -> None:
@@ -277,6 +277,7 @@ class TestResolveLocal:
         assert location.path.is_absolute()
         assert location.path.as_posix().endswith("dataframe_0_hive/**/*.parquet")
 
+    @needs_symlinks
     def test_declared_path_is_not_followed_through_a_symlink(self, project, tmp_path):
         """The declared path is the asset's location even if it is a link."""
         declared = project / "_data" / "notes_pipeline" / "dataframe_0.parquet"

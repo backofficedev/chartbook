@@ -34,6 +34,7 @@ from chartbook.store import (
     default_store,
     link_target,
 )
+from tests.fixtures import needs_symlinks, symlinks_work
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
@@ -108,6 +109,8 @@ def partitioned(work):
 def _a_kind(request, work):
     if request.param == "reflink" and not _reflink_works(work):
         pytest.skip("this filesystem cannot clone files")
+    if request.param == "symlink" and not symlinks_work():
+        pytest.skip("this user may not make a symlink here")
     return request.param
 
 
@@ -276,6 +279,7 @@ class TestPut:
         store.put(rates)
         assert list((store.root / "tmp").iterdir()) == []
 
+    @needs_symlinks
     def test_a_file_that_is_a_link_is_stored_as_the_file_it_points_at(self, store, rates, work):
         alias = work / "alias.parquet"
         alias.symlink_to(rates)
@@ -325,12 +329,14 @@ class TestLinks:
         # One file has one set of permissions, so nothing is made read-only
         assert _mode(rates) == mode
 
+    @needs_symlinks
     def test_a_symlink_points_at_the_original_file(self, store, rates):
         stored = store.put(rates, links=("symlink",))
         held = stored.path / "rates.parquet"
         assert stored.frozen is False
         assert held.is_symlink() and link_target(held) == str(rates)
 
+    @needs_symlinks
     def test_each_kind_is_tried_in_turn(self, store, rates, monkeypatch):
         def refuse(*args, **kwargs):
             raise OSError(95, "not supported here")
@@ -406,6 +412,7 @@ class TestAskingForAFrozenObject:
         _rewrite(rates, b"changed upstream")
         assert held.read_bytes() == b"hello" and store.verify() == []
 
+    @needs_symlinks
     def test_a_symlinked_directory_is_replaced_too(self, store, partitioned):
         store.put(partitioned, links=("symlink",))
         frozen = store.put(partitioned, links=self.FROZEN)
@@ -474,6 +481,8 @@ class TestGetHasDelete:
         self, store, rates, kind_of_link
     ):
         """Its permissions are the upstream's business, not the store's."""
+        if kind_of_link == "symlink" and not symlinks_work():
+            pytest.skip("this user may not make a symlink here")
         os.chmod(rates, 0o444)
         stored = store.put(rates, links=(kind_of_link,))
         store_module._make_removable(str(stored.path / "rates.parquet"))
@@ -534,6 +543,7 @@ class TestVerify:
         assert (stored.path / "rates.parquet").read_bytes() == b"hello"
         assert store.verify() == []
 
+    @needs_symlinks
     def test_a_symlink_changes_whenever_the_original_does(self, store, rates):
         store.put(rates, links=("symlink",))
         _replace(rates, b"new numbers")
@@ -542,6 +552,7 @@ class TestVerify:
             problem.message
         )
 
+    @needs_symlinks
     def test_a_symlink_whose_file_has_gone(self, store, rates):
         store.put(rates, links=("symlink",))
         rates.unlink()
@@ -569,6 +580,8 @@ class TestVerify:
         """The whole table: which objects change when the original does."""
         if kind_of_link == "reflink" and not _reflink_works(work):
             pytest.skip("this filesystem cannot clone files")
+        if kind_of_link == "symlink" and not symlinks_work():
+            pytest.skip("this user may not make a symlink here")
         stored = store.put(rates, links=(kind_of_link,))
         assert stored.frozen is (kind_of_link in FROZEN_LINKS)
 

@@ -30,7 +30,7 @@ from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore, ObjectNotFoundError, StoreError, default_store, is_record_name, unsynced_part
 from tests.test_dependencies_by_id import _commit, _forecast, _rates
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 LONG_AGO = "2020-01-01T00:00:00.000000Z"
 
@@ -231,6 +231,7 @@ class TestTheSizesOfAnObject:
         assert what.startswith("holds part-0 (1).parquet, which its record does not list") and not waiting
         assert unsynced_part(tmp_path, 10, {"part-0.parquet": 10}) is None  # one file's other names are other pins'
 
+    @needs_symlinks
     def test_a_link_is_not_judged(self, tmp_path):
         (tmp_path / "elsewhere.txt").write_bytes(b"x" * 3)
         (tmp_path / "object").mkdir()
@@ -330,7 +331,7 @@ class TestASyncServicesCopies:
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         assert [root.note for root in plan.elsewhere] == [copy.name] and plan.forget == [project / lock.LOCK_FILE]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--forget-missing"])
-        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root}/roots/{copy.name})" in result.output
+        assert f"(a sync service's copy of a note: what it recorded at its last pin is kept; note {store.root / 'roots' / copy.name})" in result.output
 
     def test_a_copy_that_cannot_be_read_stops_gc_and_names_itself(self, drive):
         """Half a copy may be the only record of the other side's pins: nothing is removed until it is read or gone."""
@@ -474,7 +475,7 @@ class TestOnePersonsTwoMachines:
         plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
-        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root}/roots/{older.name})" in result.output
+        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root / 'roots' / older.name})" in result.output
 
     def test_gc_says_whose_it_is(self, drive, monkeypatch):
         import socket
@@ -490,7 +491,7 @@ class TestOnePersonsTwoMachines:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0
         assert f"{forecast / lock.LOCK_FILE}  (on another machine, machine-b.local: what it recorded at its last pin is kept;" in result.output
-        assert f"note {default_store().root}/roots/" in result.output
+        assert f"note {default_store().root / 'roots'}{os.sep}" in result.output
         monkeypatch.setattr(socket, "gethostname", lambda: "machine-b.local")  # a machine named as the other is
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert "(noted by machine-b.local under another machine name than this one's now: " in result.output
@@ -1559,7 +1560,7 @@ class TestAnOldNoteGivesWay:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0, result.output
         assert result.output.count(str(project / lock.LOCK_FILE)) == 1, result.output
-        assert f"roots/{root_name(project / lock.LOCK_FILE)}" in result.output
+        assert f"roots{os.sep}{root_name(project / lock.LOCK_FILE)}" in result.output
         lock.run_gc(lock.plan_gc(default_store()), default_store())
         assert not older.exists() and len(default_store().roots()) == 1
 

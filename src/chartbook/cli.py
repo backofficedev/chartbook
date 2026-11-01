@@ -128,9 +128,12 @@ def _remove_old_views() -> None:
     together under ``cache/views/<hash>/``, and nothing removed the folder.
     The cache is disposable by definition, so the folder goes the first time
     a command finds it, and one line on stderr says so. A read-only file in
-    it (Windows) goes too. A marker then says it was done, so that a 0.4
-    install beside this one, which gathers again, is not undone under its
-    feet on every command.
+    it (Windows) goes too. Each asset's folder goes on its own: one a 0.4
+    process is reading as this runs (Windows refuses to remove an open
+    file) stays, the rest go, and the next command tries it again. Once
+    nothing is left, a marker says it was done, so that a 0.4 install beside
+    this one, which gathers again, is not undone under its feet on every
+    command.
     """
     import os
 
@@ -147,19 +150,43 @@ def _remove_old_views() -> None:
     leftovers = [cache / OLD_VIEWS_DIR]
     for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
         leftovers.extend(cache.glob(f"s3/{depth}/{OLD_VIEWS_DIR}"))  # a bucket's cache, laid out as a folder store
+    stayed = False
     for folder in leftovers:
         if not folder.is_dir() or folder.is_symlink():
             continue
+        in_use = 0
         try:
-            _remove_tree(folder, own=True)
+            views = sorted(folder.iterdir())
         except OSError:
+            stayed = True
             continue
+        for view in views:
+            try:
+                if view.is_dir() and not view.is_symlink():
+                    _remove_tree(view, own=True)
+                else:
+                    os.remove(view)
+            except OSError:
+                in_use += 1
+        try:
+            folder.rmdir()
+        except OSError:
+            pass
         if not os.path.lexists(folder):
             click.echo(
                 f"Removed {folder}: ChartBook 0.4 gathered copies of data there for reading, and this version "
                 f"reads files where the store keeps them.",
                 err=True,
             )
+        else:
+            stayed = True
+            click.echo(
+                f"Not all of {folder} could be removed: {in_use} of what ChartBook 0.4 gathered there for reading "
+                f"is in use, most likely by a 0.4 process reading it now. The next command removes it once that has finished.",
+                err=True,
+            )
+    if stayed:
+        return  # no marker yet: what stayed goes on a later command
     try:
         marker.write_text("ChartBook 0.5 removed what 0.4 gathered under views/ here, once.\n", encoding="utf-8", newline="\n")
     except OSError:
@@ -3114,7 +3141,10 @@ def store_info(store_name):
                     status += ", unreachable"
                 click.echo(f"Store {entry.name}: {entry.store} ({status})")
                 if entry.reachable:
-                    from chartbook.store import StoreUnreachableError
+                    from chartbook.store import FolderStore, StoreUnreachableError
+
+                    if isinstance(entry.store, FolderStore):
+                        _say_how_long_paths_are(entry.store.root)
                     try:
                         found, unreadable = readable_snapshots(entry.store)
                     except (StoreUnreachableError, OSError) as error:
@@ -3467,6 +3497,16 @@ def _printable(text) -> str:
     return "".join("?" if ord(c) < 32 or 127 <= ord(c) < 160 else c for c in str(text))
 
 
+def _note_path(the_store, name: str) -> str:
+    """Where a store keeps the note *name* under ``roots/``, as a person finds it: a folder's in its own system's separators."""
+    import os
+
+    from chartbook.store import FolderStore, ROOTS_DIR
+
+    sep = os.sep if isinstance(the_store, FolderStore) else "/"
+    return f"{the_store}{sep}{ROOTS_DIR}{sep}{name}"
+
+
 def _format_bytes(size):
     """A size for a person: ``18.2 KB``, ``4.1 GB``."""
     size = float(size)
@@ -3604,7 +3644,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             # In this user's own store: a note from before notes named their machine, this machine's
             from chartbook.store import root_name
 
-            note += f"  (its note under no machine name goes: {the_store}/roots/{root_name(lockfile)})"
+            note += f"  (its note under no machine name goes: {_note_path(the_store, root_name(lockfile))})"
         click.echo(f"  {_printable(lockfile)}{note}")
     from chartbook.store import this_host
 
@@ -3623,8 +3663,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             whose = f"on another machine, {host}" if root.host else "on another machine"
         read = "; the lockfile here at that path is read as well" if root.lockfile in plan.read_here else ""
         click.echo(
-            f"  {_printable(root.lockfile)}  ({whose}: what it recorded at its last pin is kept{read}; "
-            f"note {the_store}/roots/{_printable(root.note)})"
+            f"  {_printable(root.written or str(root.lockfile))}  ({whose}: what it recorded at its last pin is kept{read}; "
+            f"note {_note_path(the_store, _printable(root.note))})"
         )
     if plan.snapshots_kept:
         reasons = {}

@@ -1173,7 +1173,7 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
         return
     from chartbook import snapshot as snapshots
     from chartbook.store import StoreError, default_store
-    from chartbook.versions import version_name
+    from chartbook.versions import name_of
 
     try:
         store = store if store is not None else default_store()
@@ -1195,7 +1195,7 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
         from chartbook.hubs import selected_snapshots
         own = selected_snapshots(found, record["id"], (notes or {}).get(record["id"], {}).get("repository")) if notes is not None else by_pipeline.get(record["id"], [])
         for taken in sorted(own, key=lambda t: t.made_at, reverse=True):
-            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": version_name(taken.commit, taken.made_at)}
+            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": name_of(taken)}
             if hasattr(store, "name_of"):
                 entry["store"] = store.name_of(taken.path)
             if taken.built_by_run:
@@ -1327,8 +1327,12 @@ def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]
         return None
     folder = Path(resolved)
     pages = sorted(page.relative_to(folder).as_posix() for page in folder.rglob("*.md") if page.is_file())
+    try:
+        shown = Path(os.path.relpath(folder, base_dir)).as_posix()
+    except ValueError:  # on another drive (Windows), where no relative path reaches it
+        shown = folder.as_posix()
     where = {
-        "path": Path(os.path.relpath(folder, base_dir)).as_posix(),
+        "path": shown,
         "resolved_path": folder.as_posix(),
     }
     return where, pages

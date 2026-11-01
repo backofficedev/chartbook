@@ -18,10 +18,13 @@ site, never a notebook run, and a time limit. Every name in a record that
 becomes a folder is checked first (:func:`version_name`, :func:`slug`).
 
 A snapshot never changes, so its site is built once and kept on this
-machine, under ``versions/`` in the cache
-(:func:`chartbook.config.get_cache_path`), keyed by ChartBook's version and
-a fingerprint of its code, so that a change to ChartBook builds it again; a
-catalog build copies it into the site at :func:`site_path`. One that cannot
+machine, under ``versions/<hash>/`` in the cache
+(:func:`chartbook.config.get_cache_path`). The folder's name is a short hash
+of the pipeline and the version, because on Windows a path of 260
+characters or more is refused, and a site is deep enough already. Its
+marker of done says ChartBook's version and a fingerprint of its code, so
+that a change to ChartBook builds it again. A catalog build copies it into
+the site at :func:`site_path`. One that cannot
 be built gets a page that says why, so that a link to it never leads
 nowhere. The versions are separate sites, so the catalog's search finds the
 working versions only.
@@ -51,17 +54,22 @@ _DONE = ".chartbook-version-site"
 BUILD_TIMEOUT = 600
 #: A staging folder older than this, in seconds, was left by a build that stopped; it is cleared.
 _ABANDONED = 3600
-_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z$")
+#: The longest path in a version's site, past its folder: Sphinx's ``_static/mystnb.<sha256>.css``.
+_LONGEST_IN_A_SITE = "site/_static/mystnb." + "0" * 64 + ".css"
+_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}Z$")
+#: How long the name of a version's folder in the cache is: hex digits of a hash.
+_KEPT_NAME_LENGTH = 12
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
 _MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
 
 
 def version_name(commit: str, made_at: str) -> str:
-    """The name of a version's folder: the commit's start and when the snapshot was made.
+    """The name of a version's folder: the commit's start and when the snapshot was made, to the second.
 
-    ``4f2a91c-20261013T182205.123456Z``. One commit may have several
-    snapshots, a pull script having brought other data; the time tells them
-    apart.
+    ``4f2a91c-20261013T182205Z``. One commit may have several snapshots, a
+    pull script having brought other data; the time tells them apart. To
+    the second, as the store names a snapshot's folder: a snapshot takes
+    longer than that to make.
 
     :raises ValueError: If the commit is not a full commit hash or the time
         is not one a snapshot writes: a record written to mislead, whose
@@ -71,9 +79,29 @@ def version_name(commit: str, made_at: str) -> str:
         raise ValueError(f"{commit!r} is not a full commit hash")
     if not isinstance(made_at, str) or not _MADE_AT.match(made_at):
         raise ValueError(f"{made_at!r} is not a time as a snapshot writes one")
-    name = f"{commit[:7]}-{made_at.replace('-', '').replace(':', '')}"
+    name = f"{commit[:7]}-{made_at[:19].replace('-', '').replace(':', '')}Z"
     if not _NAME.match(name):
         raise ValueError(f"{name!r} is not a version's name")
+    return name
+
+
+def name_of(taken) -> str:
+    """The name of a snapshot's version: its commit's start and the time its folder in the store is named by.
+
+    The store names a snapshot's folder by when it was made, to the second,
+    a second later for each other snapshot of the commit made in that
+    second (:func:`chartbook.store.snapshot_folder_name`); so no two
+    versions of a pipeline have one name. A snapshot with no such folder is
+    named by when it was made (:func:`version_name`).
+
+    :raises ValueError: As :func:`version_name`.
+    """
+    from chartbook.store import is_snapshot_folder
+
+    name = version_name(taken.commit, taken.made_at)
+    folder = Path(str(taken.path)).parent.parent.name if taken.path else ""
+    if is_snapshot_folder(folder) and taken.commit.startswith(folder.partition("_")[2]):
+        name = f"{taken.commit[:7]}-{folder.partition('_')[0].replace('-', '')}"
     return name
 
 
@@ -138,9 +166,28 @@ def fingerprint() -> str:
 
 
 def _kept(pipeline_id: str, name: str) -> Path:
+    """Where a version's site is kept on this machine: ``versions/<hash>`` in the cache."""
     from chartbook.config import get_cache_path
 
-    return get_cache_path() / VERSIONS_DIR / slug(pipeline_id) / name / fingerprint()
+    digest = hashlib.sha256(f"{slug(pipeline_id)}/{name}".encode()).hexdigest()
+    return get_cache_path() / VERSIONS_DIR / digest[:_KEPT_NAME_LENGTH]
+
+
+def _kept_by_04(taken) -> Path:
+    """Where ChartBook 0.4 kept a version's site: ``versions/<pipeline>/<version, to the microsecond>``."""
+    from chartbook.config import get_cache_path
+
+    name = f"{taken.commit[:7]}-{taken.made_at.replace('-', '').replace(':', '')}"
+    return get_cache_path() / VERSIONS_DIR / slug(taken.pipeline) / name
+
+
+def _why_done(kept: Path) -> str | None:
+    """Why a kept site could not be built (empty if it was); None if it is not finished, or another ChartBook built it."""
+    try:
+        built_with, _, why = (kept / _DONE).read_text(encoding="utf-8").partition("\n")
+    except OSError:
+        return None
+    return why.strip() if built_with.strip() == fingerprint() else None
 
 
 def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
@@ -153,17 +200,31 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
     from chartbook import snapshot as snapshots
     from chartbook.config import UNTRUSTED_ENV_VAR
 
-    name = version_name(taken.commit, taken.made_at)
+    name = name_of(taken)
     kept = _kept(taken.pipeline, name)
-    if (kept / _DONE).is_file():
-        why = (kept / _DONE).read_text(encoding="utf-8").strip()
+    why = _why_done(kept)
+    if why is not None:
         return Rendered(kept / "site", built=not why, why=why)
 
     kept.parent.mkdir(parents=True, exist_ok=True)
     _clear_abandoned(kept.parent)
-    staging = kept.parent / f".{kept.name}.{uuid.uuid4().hex}"
+    # Shorter than the kept folder's name: on Windows a path of 260 characters or more is refused, and
+    # Sphinx's own files are 80 deep in a site (#136)
+    staging = kept.parent / f".{uuid.uuid4().hex[:8]}"
     why = ""
     again = False  # a failure that a later build may not meet: not kept as done
+    longest = kept.joinpath(*_LONGEST_IN_A_SITE.split("/"))
+    from chartbook.store import too_long
+
+    if too_long(longest) is not None:
+        why = (
+            f"its site's paths, under {kept.parent}, would be {len(str(longest))} characters long, and Windows refuses "
+            f"260 or more where long paths are not turned on: turn them on (LongPathsEnabled), or set [cache] path "
+            f"in ~/.chartbook/settings.toml to a shorter folder, such as C:\\cb"
+        )
+        shutil.rmtree(kept, ignore_errors=True)  # not finished, or another ChartBook's
+        _placeholder(kept / "site", taken, why)  # with no mark of done: tried again once the paths fit
+        return Rendered(kept / "site", built=False, why=why, now=True)
     try:
         with tempfile.TemporaryDirectory(prefix="chartbook-version-") as scratch:
             # Named as the pipeline is, for a manifest whose ID comes from its
@@ -198,20 +259,26 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             shutil.rmtree(staging / "site", ignore_errors=True)
             _placeholder(staging / "site", taken, why)
         if not again:
-            (staging / _DONE).write_text(why + "\n", encoding="utf-8", newline="\n")
-        if kept.is_dir() and not (kept / _DONE).is_file():
-            # The placeholder of a build that is to be tried again, which this one replaces
+            (staging / _DONE).write_text(f"{fingerprint()}\n{why}\n", encoding="utf-8", newline="\n")
+        if kept.is_dir() and _why_done(kept) is None:
+            # The placeholder of a build that is to be tried again, or what another ChartBook built: this replaces it
             shutil.rmtree(kept, ignore_errors=True)
         try:
-            os.replace(staging, kept)
-        except OSError:
-            pass  # another build kept it first; theirs is as good as this one
+            # A virus scanner reading the files just built may hold one for a moment, and Windows refuses the rename
+            from chartbook.gitcache import _rename_when_let
+
+            _rename_when_let(staging, kept)
+        except OSError as error:
+            done = _why_done(kept)
+            if done is None:
+                # Not kept, by this build or another: said, and built again next time
+                why = f"its site was built and could not be kept: {_one_line(error)}"
+                _placeholder(kept / "site", taken, why)
+                return Rendered(kept / "site", built=False, why=why, now=True)
+            why = done  # another build kept it first; theirs is as good as this one
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    # What other ChartBooks built of this version is not what this one shows
-    for other in kept.parent.iterdir():
-        if other.is_dir() and other.name != kept.name and not other.name.startswith("."):
-            shutil.rmtree(other, ignore_errors=True)
+    _forget_04s(taken)
     return Rendered(kept / "site", built=not why, why=why, now=True)
 
 
@@ -221,10 +288,25 @@ def forget(taken) -> bool:
     ``store gc`` calls this for each snapshot it removes, so the cache holds
     no site of a version no catalog will show again.
     """
-    from chartbook.config import get_cache_path
-
     try:
-        folder = get_cache_path() / VERSIONS_DIR / slug(taken.pipeline) / version_name(taken.commit, taken.made_at)
+        folder = _kept(taken.pipeline, name_of(taken))
+    except ValueError:
+        return False
+    old = _forget_04s(taken)
+    if not folder.is_dir():
+        return old
+    shutil.rmtree(folder, ignore_errors=True)
+    return True
+
+
+def _forget_04s(taken) -> bool:
+    """Clear the site ChartBook 0.4 kept of a version, where 0.4 kept it; True if there was one.
+
+    A file a 0.4 process has open now stays (Windows refuses to remove an
+    open file); the rest goes, and 0.4 builds it again if it needs it.
+    """
+    try:
+        folder = _kept_by_04(taken)
     except ValueError:
         return False
     if not folder.is_dir():
@@ -267,7 +349,7 @@ def _placeholder(folder: Path, taken, why: str) -> None:
     )
 
 
-def render_listed(index: dict, store=None, echo=print) -> dict:
+def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
     """Build (or find kept) the site of every snapshot a catalog's index lists, and say on each entry whether it was built.
 
     Called before the catalog's pages are written, so that a page links to
@@ -276,6 +358,11 @@ def render_listed(index: dict, store=None, echo=print) -> dict:
     snapshot that has left the store since the index was made (a ``gc``
     elsewhere) is dropped from its record, so that nothing links to it. A
     version that could not be built is said in one line.
+
+    *into* are the folders the catalog's site is laid out in. A version
+    whose site would be too deep for Windows in one of them (with long
+    paths off) is not linked as built: its page says why, and the catalog
+    is built all the same.
 
     :returns: Each version built or found, by ``(pipeline, commit,
         made_at)``: the snapshot and its :class:`Rendered`, for
@@ -301,6 +388,15 @@ def render_listed(index: dict, store=None, echo=print) -> dict:
                 rendered = render(taken, store)
             except ValueError:
                 continue
+            if rendered.built:
+                name = name_of(taken)
+                targets = [Path(os.path.abspath(folder)) / site_path(record["id"], name) for folder in into]
+                why = _too_deep(rendered, targets)
+                if why:
+                    stand_in = rendered.folder.parent / ".too-deep" / "site"
+                    shutil.rmtree(stand_in, ignore_errors=True)
+                    _placeholder(stand_in, taken, why)
+                    rendered = Rendered(stand_in, built=False, why=why, now=True)
             entry["rendered"] = rendered.built
             kept.append(entry)
             done[moment] = (taken, rendered)
@@ -342,24 +438,62 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by
             continue
         for entry in record["snapshots"]:
             taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
-            try:
-                name = version_name(entry.get("commit"), entry.get("made_at"))
-            except ValueError:
-                continue
             if taken is None:
                 continue
+            try:
+                name = name_of(taken)
+            except ValueError:
+                continue
             rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
-            if rendered is None or not rendered.folder.is_dir():
+            # What render_listed built has been said there: only what is built here now is said here
+            said = rendered is not None and rendered.folder.is_dir()
+            if not said:
                 rendered = render(taken, store)  # not built yet, or cleared since: build it now
             target = html_dir / site_path(record["id"], name)
             shutil.rmtree(target, ignore_errors=True)
-            shutil.copytree(rendered.folder, target)
+            not_copied = _copy_site(rendered, target)
+            if not_copied:
+                # One version's pages that cannot be laid out here do not stop the catalog: its page says why
+                shutil.rmtree(target, ignore_errors=True)
+                _placeholder(target, taken, not_copied)
+                echo(f"warning: {record['id']} at {taken.commit[:7]}: {not_copied}")
             wanted.setdefault(folder, set()).add(name)
-            if not rendered.built and rendered.now:
+            if not rendered.built and rendered.now and not said:
                 echo(f"warning: {record['id']} at {taken.commit[:7]}: {rendered.why}")
             done.append(rendered)
     _prune(html_dir / VERSIONS_DIR, wanted)
     return done
+
+
+def _too_deep(rendered: Rendered, targets) -> str:
+    """Why a version's site cannot be copied to one of *targets* on this machine, in one line, or nothing."""
+    from chartbook.store import too_long
+
+    # The deepest of its files as built (a page named for a pipeline and a dataframe may be deeper than Sphinx's own)
+    deepest = max((file for file in rendered.folder.rglob("*") if file.is_file()), key=lambda f: len(str(f)), default=None)
+    if deepest is None:
+        return ""
+    for target in targets:
+        longest = target / deepest.relative_to(rendered.folder)
+        if too_long(longest) is not None:
+            return (
+                f"its pages, under {target}, would be {len(str(longest))} characters long, and Windows refuses 260 or "
+                f"more where long paths are not turned on: turn them on (LongPathsEnabled), or build the catalog in a "
+                f"shorter folder"
+            )
+    return ""
+
+
+def _copy_site(rendered: Rendered, target: Path) -> str:
+    """Copy a version's site into the catalog's; why it could not be, in one line, or nothing."""
+    why = _too_deep(rendered, [target])
+    if why:
+        return why
+    try:
+        shutil.copytree(rendered.folder, target)
+    except (shutil.Error, OSError) as error:
+        return f"its pages could not be copied into the catalog's site: {_one_line(error)}"
+    return ""
 
 
 def _prune(root: Path, wanted: dict[str, set[str]]) -> None:

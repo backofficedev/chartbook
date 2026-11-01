@@ -1307,9 +1307,13 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
         from chartbook.identity import read_version_file
         project["repo_url"] = remote_to_web_url(read_version_file(base_dir).get("repository") or get_git_remote_url(base_dir))
 
-    if not project["site_url"]:
-        webpage_path = Path(base_dir) / "docs" / "index.html"
-        project["site_url"] = f"file://{webpage_path.as_posix()}"
+    from chartbook.config import untrusted_source
+
+    if not project["site_url"] and not untrusted_source():
+        # Not for a version built from the store: its folder is a temporary one, which its pages would link
+        webpage_path = Path(os.path.abspath(Path(base_dir) / "docs" / "index.html"))
+        # file:///C:/x on Windows, where file://C:/x would name a host "C:"; a space is %20
+        project["site_url"] = webpage_path.as_uri()
 
     return project
 
