@@ -239,7 +239,11 @@ holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
 - Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
-  resolves to the other pipeline's working directory, and is read-only.
+  resolves to the other pipeline's working directory, and is read-only. An asset of
+  several files (a Hive folder, a glob, a model that is a folder) has no one path there,
+  since the store keeps each file once: `data.files(...)`, `assets.files(...)` and
+  `chartbook path REF --files` list the files where they are kept, `data.load`/`data.sql`
+  read them, and `assets.gathered(...)` lays them out in a temporary folder for a loader.
 - A `git` dependency (`{ git = "https://…", rev = "v1.2" }`; `rev` optional) is
   cloned by `chartbook pin` into `~/.chartbook/git/` and pinned like a directory.
   It has ONLY what its repository commits: git-ignored, built data is "not built".

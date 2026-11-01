@@ -309,14 +309,12 @@ def test_glob_pandas_reads_it_as_polars_does(catalog_project_glob):
     assert len(df) == lazy.height and sorted(df["category"]) == sorted(lazy["category"])
 
 
-def test_get_data_path_returns_path_for_glob(catalog_project_glob):
-    """get_data_path returns a Path for glob patterns."""
-    path = data.get_data_path(
-        pipeline="pipeline_glob",
-        dataframe="dataframe_0",
-        catalog_path=catalog_project_glob,
-    )
-    assert isinstance(path, Path)
-    assert path.is_absolute()
-    assert "**" in str(path)
-    assert "*.parquet" in str(path)
+def test_get_data_path_has_no_one_path_for_a_glob(catalog_project_glob):
+    """A glob read from the store is several files kept once, so it has files and no one path; load reads them."""
+    from chartbook.errors import NoSinglePathError
+
+    with pytest.raises(NoSinglePathError, match="'pipeline_glob:dataframe_0' is a dataset of") as e:
+        data.get_data_path(pipeline="pipeline_glob", dataframe="dataframe_0", catalog_path=catalog_project_glob)
+    assert "data.load('pipeline_glob:dataframe_0')" in str(e.value)
+    frame = data.load(pipeline="pipeline_glob", dataframe="dataframe_0", catalog_path=catalog_project_glob).collect()
+    assert frame.height > 0
