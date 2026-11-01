@@ -1409,6 +1409,35 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
             )
 
 
+def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path) -> None:
+    """Refuse a ``[project] scratch`` at or inside a declared dataset, files asset or model.
+
+    Its throwaway files would join the asset: hashed with it and copied to
+    the store with every snapshot. A glob's matches are its own to choose,
+    as ``data.scratch()`` says; a path is a file or a folder, and the
+    scratch folder is not to be in it.
+
+    :raises ValueError: Naming the asset.
+    """
+    from chartbook.snapshot import safe_relative
+
+    declared = (manifest.get("project") or {}).get("scratch")
+    scratch = safe_relative(declared) if isinstance(declared, str) and declared else None
+    if not scratch:
+        return
+    inside = scratch.split("/")
+    for table in ("dataframes", "files", "models"):
+        for name, entry in (manifest.get(table) or {}).items():
+            path = entry.get("path") if isinstance(entry, dict) else None
+            plain = safe_relative(path) if isinstance(path, str) and path and not is_glob_pattern(path) else None
+            if plain and inside[: len(plain.split("/"))] == plain.split("/"):
+                raise ValueError(
+                    f"{base_dir / 'chartbook.toml'}: [project] scratch = {declared!r} is inside [{table}.{name}] "
+                    f"path = {path!r}, so its throwaway files would be part of {name} and go to the store with it. "
+                    f'Put it beside the data, e.g. scratch = "./_data/_scratch".'
+                )
+
+
 #: Each entity table and what one of its entries is.
 _ENTITY_KINDS = (
     ("dataframes", "dataframe"),
@@ -1547,6 +1576,7 @@ def _load_pipeline_manifest(raw_manifest):
 
     # Every field as its type, before anything below reads one
     _check_entity_fields(manifest, str(Path(base_dir) / "chartbook.toml"))
+    _refuse_scratch_in_an_asset(manifest, Path(base_dir))
 
     # A key becomes part of an address, so the index can name the asset.
     # Models are checked in validate_models; the other kinds here, so that

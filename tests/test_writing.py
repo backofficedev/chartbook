@@ -136,3 +136,24 @@ class TestScratch:
             data.scratch(project_dir=folder)
         with pytest.raises(ValueError, match="scratch = .* is not a plain path inside the pipeline"):
             load_manifest(folder)  # and the manifest refuses it, so `chartbook check` says so too
+
+    @pytest.mark.parametrize("declared, asset", [
+        ("./_data/articles/_tmp", "dataframes.articles"),
+        ("./_data/articles", "dataframes.articles"),
+        ("./_data/merged.parquet/x", "dataframes.merged"),
+        ("./_models/ar1/scratch", "models.ar1"),
+    ])
+    def test_one_inside_a_declared_asset_is_refused(self, tmp_path, declared, asset):
+        """Its files would be hashed with the asset and go to the store with it (found reviewing 0.5.0)."""
+        from chartbook.manifest import load_manifest
+
+        folder = _pipeline(tmp_path.resolve(), {"scratch": declared})
+        with pytest.raises(ValueError, match=rf"is inside \[{asset}\] path"):
+            data.scratch(project_dir=folder)
+        with pytest.raises(ValueError, match=rf"is inside \[{asset}\] path"):
+            load_manifest(folder)
+        assert not (folder / "_data").exists()
+
+    def test_one_beside_the_data_or_under_a_globs_folder_is_taken(self, tmp_path):
+        folder = _pipeline(tmp_path.resolve(), {"scratch": "./_data/_tmp"})
+        assert data.scratch(project_dir=folder) == folder / "_data" / "_tmp"

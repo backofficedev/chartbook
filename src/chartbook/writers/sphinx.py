@@ -43,11 +43,13 @@ _DATAFRAME_PAGE = (
     """{{ write_up }}"""
     """\n\n
 ## DataFrame Glimpse
-
-{{glimpse_fence}}
+{% if glimpse_note %}
+{{glimpse_note}}
+{% else %}
+{{glimpse_fence}}text
 {{dataframe_glimpse}}
 {{glimpse_fence}}
-{% if parts %}
+{% endif %}{% if parts %}
 ## Parts
 
 {{ parts.summary }}
@@ -556,6 +558,8 @@ class SphinxWriter:
         return template.render(
             dataframe_manifest,
             glimpse_fence="`" * max(3, longest + 1),
+            # Our own sentence is a paragraph; anything else is the data's text, shown as code
+            glimpse_note=glimpse if glimpse == NO_GLIMPSE_RECORDED else "",
             write_up=self._write_up(record, base_dir, environment),
             provenance=self._panel(record_id, self.page_path(record)),
             dataframe_manifest=dataframe_manifest,

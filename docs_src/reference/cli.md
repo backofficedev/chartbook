@@ -445,7 +445,7 @@ Catalog site generated: /Users/x/.chartbook/docs/index.html
 `chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
 ```
 
-`chartbook run --snapshot` says the same after its snapshot.
+`chartbook run --snapshot` says the same after its snapshot, and takes `--no-gc-reminder` too. With several stores in the catalog, each that gc could clear is named, with the `--store NAME` that gc takes there.
 
 ### catalog open
 
@@ -872,7 +872,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [OPTIONS] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--upstream] [--no-gc-reminder] [OPTIONS] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -963,7 +963,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 `run` stays at the commit in `chartbook.lock`. A `git` dependency that commits its data and has no `build` script is not built and not mentioned.
 
-**Build, and declare it ready.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command.
+**Build, and declare it ready.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command, and says what `chartbook store gc` would clear as `chartbook snapshot` does (`--no-gc-reminder` silences it).
 
 **Another script.** `chartbook run test` runs `test` in this pipeline, and that is all it does. Only `build` pins, and only `build` reaches what the pipeline depends on.
 

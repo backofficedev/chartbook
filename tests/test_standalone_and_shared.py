@@ -124,3 +124,45 @@ class TestTheGcReminder:
         result = CliRunner().invoke(main, ["store", "info"])
         assert result.exit_code == 0, result.output
         assert "`chartbook store gc` would clear 1 snapshot(s), freeing" in result.output
+
+
+class TestWithACatalogOfStores:
+    """Found reviewing 0.5.0 (2026-11-01): with a catalog, the usual setup, the reminder never came, and an unreachable store listed as empty."""
+
+    @pytest.fixture
+    def catalog(self, work, monkeypatch):
+        monkeypatch.delenv(config.STORE_ENV_VAR, raising=False)
+        home = config.get_global_config_dir()
+        home.mkdir(parents=True, exist_ok=True)
+        stores = {"mine": {"url": str(work / "store")}, "drive": {"url": str(work / "not-mounted")}}
+        (home / "catalog.toml").write_text(
+            tomli_w.dumps({"project": {"name": "Catalog"}, "stores": stores}), encoding="utf-8", newline="\n"
+        )
+        return home / "catalog.toml"
+
+    def test_the_reminder_names_the_store_gc_would_clear(self, news, store, catalog, capsys):
+        snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")
+        _write_year(news, 2024, [3])
+        snapshot.make(news, store=store)
+        _write_year(news, 2025, [4])
+        snapshot.make(news, store=store)
+        result = CliRunner().invoke(main, ["run", "--help"])
+        assert "--no-gc-reminder" in result.output
+        from chartbook.cli import _remind_of_gc
+
+        capsys.readouterr()
+        _remind_of_gc(False)
+        said = capsys.readouterr().err
+        assert "Store mine: `chartbook store gc --store mine` would clear 1 snapshot(s)" in said, said
+        assert "drive" not in said  # not mounted: nothing to say of it
+        _remind_of_gc(True)
+        assert capsys.readouterr().err == ""
+
+    def test_store_ls_says_a_store_it_cannot_reach_is_unreachable(self, news, store, catalog):
+        snapshot.make(news, store=store)
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0, result.output
+        assert "Store drive:" in result.output and "unreachable" in result.output and "news (1 snapshot(s))" in result.output
+        result = CliRunner().invoke(main, ["store", "ls", "--store", "drive"])
+        assert result.exit_code == 1 and "unreachable" in result.output
+        assert "No snapshots in the stores that could be read." in result.output

@@ -145,16 +145,18 @@ def files(
 
     >>> from chartbook import data
     >>> file_dep = data.files("news_headlines:articles")  # doctest: +SKIP
-    >>> lf = pl.scan_parquet(data.files("news_headlines:articles"), hive_partitioning=True)  # doctest: +SKIP
 
     This is :func:`chartbook.assets.files` with ``kind="dataframe"``. Of
     your own pipeline's dataframe, the files at its declared path. Of
     another pipeline's, the files of the pinned copy in the store, each
     where the store keeps it: the store keeps each file once, so a dataset
     that grew over several snapshots has files in several snapshot folders,
-    and no one folder (:func:`path` says so). Polars and DuckDB take the
-    list, Hive keys included; :func:`load` and :func:`sql` do that for
-    you. A ``dodo.py`` names them as ``file_dep``.
+    and no one folder (:func:`path` says so). Where a file is kept need
+    not say its Hive keys: the store keeps each file once, so a partition's
+    file may sit at another partition's path, and an S3 store names its
+    copies by their hashes. Read the dataset with :func:`load` or
+    :func:`sql`, which take each file's keys from its path inside the
+    dataset. A ``dodo.py`` names the files as ``file_dep``.
 
     :param ref: The dataframe's name, or ``"pipeline:name"`` for another
         pipeline's, as for :func:`path`.
@@ -206,6 +208,9 @@ def _scratch_declared(root: Path) -> Path:
             f"{root / 'chartbook.toml'}: [project] scratch = {declared!r} is not a plain path inside the pipeline. "
             f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
         )
+    from chartbook.manifest import _refuse_scratch_in_an_asset
+
+    _refuse_scratch_in_an_asset(raw, root)
     return Path(*plain.split("/"))
 
 
@@ -235,7 +240,7 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
     :raises ValueError: If ``[project] scratch`` is not a plain path inside
-        the pipeline.
+        the pipeline, or is inside a declared dataset, files asset or model.
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     root = find_manifest_dir(*start_dirs)
