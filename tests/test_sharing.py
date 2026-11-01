@@ -1,5 +1,6 @@
 """`chartbook store export` and `store import`: one pipeline's snapshots, sent to someone else and taken in."""
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -179,6 +180,48 @@ class TestImport:
 
 
 class TestTheCommands:
+    def test_export_works_in_the_store_that_holds_the_pipeline(self, two_snapshots, tmp_path, monkeypatch):
+        """With several stores in the catalog, export needs no --store while one store holds the pipeline."""
+        from chartbook import config
+
+        store, first, second, rates = two_snapshots
+        monkeypatch.delenv("CHARTBOOK_STORE", raising=False)
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setattr(config, "get_global_config_dir", lambda: home)
+        other = tmp_path / "other"
+        other.mkdir()
+        (home / "catalog.toml").write_text(tomli_w.dumps({"project": {"name": "Catalog"}, "stores": {
+            "other": {"url": str(other)}, "mine": {"url": str(store.root)},
+        }}), encoding="utf-8")
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--latest", "--to", str(tmp_path / "out")])
+        assert said.exit_code == 0, said.output
+        assert "Store mine:" in said.output and "Exported 1 snapshot(s)" in said.output
+        # Nobody holds it: the old advice, with where it looked
+        said = CliRunner().invoke(main, ["store", "export", "acme/none", "--to", str(tmp_path / "out2")])
+        assert said.exit_code != 0 and "No store holds a snapshot of acme/none (looked in other, mine)" in said.output, said.output
+        assert "--store NAME" in said.output
+        # A copy a pin made from a clone is not one the owner made, and export writes only those: it does not count
+        shutil.copytree(store.root, other, dirs_exist_ok=True)
+        records = list(other.glob("pipelines/*/*/_chartbook/snapshot.json"))
+        assert len(records) == 2
+        for record in records:
+            record.chmod(0o644)
+            document = json.loads(record.read_text(encoding="utf-8"))
+            document["made_by"] = "pin"
+            record.write_text(json.dumps(document), encoding="utf-8")
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--latest", "--to", str(tmp_path / "out-pins")])
+        assert said.exit_code == 0 and "Store mine:" in said.output, said.output
+        # Both hold it: say which, and ask
+        for record in records:
+            document = json.loads(record.read_text(encoding="utf-8"))
+            document["made_by"] = "snapshot"
+            record.write_text(json.dumps(document), encoding="utf-8")
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--to", str(tmp_path / "out3")])
+        assert said.exit_code != 0 and "acme/rates has snapshots in stores other, mine" in said.output, said.output
+        said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--latest", "--store", "mine", "--to", str(tmp_path / "out3")])
+        assert said.exit_code == 0, said.output
+
     def test_export_then_import(self, two_snapshots, tmp_path, monkeypatch):
         store, first, second, rates = two_snapshots
         said = CliRunner().invoke(main, ["store", "export", "acme/rates", "--latest", "--to", str(tmp_path / "out")])

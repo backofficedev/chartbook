@@ -353,9 +353,9 @@ $ chartbook path fed_yield_curve:chart/curve_today
 /Users/x/.chartbook/store/pipelines/fed_yield_curve/2026-10-12T091500Z_4f2a91c0e1b2/_output/curve_today.html
 ```
 
-The path is into the store, where the snapshot that first had the file keeps it, under its own
+The path is into the store, in the folder of the snapshot that keeps the file, under its own
 name. An asset of several files, a folder or a glob, has no one path: the store keeps each file
-once, so a later snapshot's files may sit in earlier snapshots' folders. Asking exits `1` and says
+once, so a snapshot's files may sit in other snapshots' folders. Asking exits `1` and says
 so, whatever the folders happen to hold today; `--files` prints the files, each where the store
 keeps it, and `data.load` reads them. Nothing is gathered into this machine's cache.
 
@@ -1068,12 +1068,12 @@ List the snapshots in the store, one line each, newest last within its pipeline:
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in earlier folders
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in earlier folders
-A shared snapshot's folder holds only what changed; the rest of its files are in earlier folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders
+A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.
 ```
 
-Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, in the first snapshot that had it, so a later snapshot's folder holds only what is new or changed (shared) unless everything changed (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since a later snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
+Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, usually in the first snapshot that had it, so a snapshot's folder may hold only what is new or changed (shared) rather than every file of its version (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since another snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
 
 `PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
@@ -1193,7 +1193,7 @@ file it needs in its own folder and readable without ChartBook; with `--snapshot
 by its commit (or its start) and, where one commit has several, `@` and when it was made. Only what
 a snapshot's record names goes: its data, its documents and its index, never anything that runs.
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+With several stores in the catalog, the one that holds the pipeline is used, and `--store NAME` chooses when more than one does.
 
 ### store import
 
@@ -1216,7 +1216,7 @@ acme/rates at 9b1e22d, made 2026-10-02T10:00:00.000000Z
 Imported 2 snapshot(s), 2.1 GB copied.
 ```
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+`--store NAME` selects one catalog store; with several stores in the catalog it is required.
 
 ### store migrate
 
@@ -1251,7 +1251,7 @@ Would move 14 snapshot(s) of 14 into their pipelines' folders, from 61 object(s)
 Nothing was moved (--dry-run).
 ```
 
-`--store NAME` selects one catalog store. Verification and garbage collection visit every store by default, each using its own retention notes.
+`--store NAME` selects one catalog store; with several stores in the catalog it is required.
 
 ### store add
 

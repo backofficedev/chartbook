@@ -18,8 +18,8 @@ pin``. The store's layout is made to be read by a person as well::
       roots/                                    the lockfiles that pin what is here
       tmp/                                      what is being written
 
-**Each file is kept once in its pipeline's folder**, in the first snapshot
-that had it. A later snapshot's folder holds only what is new or changed,
+**Each file is kept once in its pipeline's folder**, usually in the first
+snapshot that had it. A snapshot's folder may hold only what is new or changed,
 and its record says, for every file of every asset, its hash, its size and
 the snapshot that keeps it (``kept_in``). The record is written last, so
 a folder without one is never taken for a snapshot, and nothing in the
@@ -32,7 +32,7 @@ An asset is still named by its content hash (:mod:`chartbook.hashing`):
 one file's, or the hash of the listing of its files. A reader asks for it
 by that hash (:meth:`Store.files`) and is handed its files, each by its
 path inside the asset (``year=2024/part-0.parquet``) and where the store
-keeps it, which for a later snapshot may be an earlier snapshot's folder.
+keeps it, which may be another snapshot's folder.
 Readers take the list: polars and DuckDB read a list of files, Hive keys
 included. Nothing gathers a version into one folder on each machine; the
 one folder a version is laid out in is one a command was asked for
@@ -172,12 +172,12 @@ Each snapshot is a folder named by when it was made and the commit it was made a
 complete record of that version: _chartbook/snapshot.json lists every file of every asset,
 with its hash and the folder that keeps it.
 
-A file is kept once, in the first snapshot that had it. So a later snapshot's folder holds
-only what is new or changed since (a "shared" snapshot), and the rest of its files sit in
-earlier snapshots' folders. A snapshot whose folder holds every file of its version is
+A file is kept once, usually in the first snapshot that had it. So a snapshot's folder may hold
+only what is new or changed (a "shared" snapshot), and the rest of its files sit in other
+snapshots' folders of this pipeline. A snapshot whose folder holds every file of its version is
 "standalone". `chartbook store ls` says which each is.
 
-Do not delete a snapshot's folder by hand: a later snapshot may keep files in it, and would
+Do not delete a snapshot's folder by hand: another snapshot may keep files in it, and would
 lose them. `chartbook store gc` removes snapshots safely, keeping every file a remaining
 snapshot uses. `chartbook store export PIPELINE --latest --to FOLDER` writes one complete,
 standalone copy of the newest version wherever you say.

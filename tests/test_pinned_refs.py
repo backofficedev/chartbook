@@ -137,7 +137,7 @@ class TestResolving:
         assert assets.path("rates:curve", kind="chart", project_dir=pinned) == chart
 
     def test_a_partitioned_dataframe_is_its_files_and_has_no_one_path(self, pinned, store):
-        """The store keeps each file once, so a later snapshot's files may sit in earlier folders: a list, by declaration."""
+        """The store keeps each file once, so a snapshot's files may sit in other snapshots' folders: a list, by declaration."""
         with pytest.raises(NoSinglePathError, match="is a dataset of 2 files, kept in one place in the store today") as e:
             data.path("rates:by_year", project_dir=pinned)
         assert "data.load('rates:by_year')" in str(e.value) and "data.files('rates:by_year')" in str(e.value)

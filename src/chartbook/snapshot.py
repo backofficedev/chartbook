@@ -40,7 +40,7 @@ Where they are kept::
 A record is JSON in the index's format, like a lockfile: an envelope and
 one record for each asset, each with its content hash, and, for each of
 its files, where the store keeps it (``stored``): each file is kept once in
-the pipeline's folder, in the first snapshot that had it
+the pipeline's folder, usually in the first snapshot that had it
 (:class:`chartbook.store.PendingSnapshot`). A snapshot keeps what it names
 from being cleared (:func:`chartbook.lock.plan_gc`).
 

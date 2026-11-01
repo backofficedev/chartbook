@@ -95,7 +95,7 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/version
 | **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.files` for files assets, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is: a file, or a table or query in a source |
 | **record** | One entry in the index, a lockfile or a snapshot. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A folder of snapshots, one folder per pipeline: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Each file is kept once, in the first snapshot that had it, and read where it is |
+| **store** | A folder of snapshots, one folder per pipeline: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Each file is kept once, usually in the first snapshot that had it, and read where it is |
 | **object** | An asset as the store holds it, named by its content hash: its files, each where the store keeps it, under their own names inside the asset |
 | **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: its ID, and where to find it: the store alone (`"acme/rates" = {}`), a folder (`path`) or a repository (`git`) |
 | **pin** | To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
@@ -104,7 +104,7 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/version
 | **writer** | What turns the index into pages for one site tool |
 | **scratch** | `_data/_scratch/` inside a pipeline (or what `[project] scratch` names): throwaway files that are not assets |
 | **standalone snapshot** | A snapshot whose folder in the store holds every file of its version |
-| **shared snapshot** | A snapshot whose folder holds only what changed since earlier snapshots, which keep the rest of its files; the store keeps each file once. `chartbook store ls` says which each is, and `chartbook store gc` is the only safe way to remove one |
+| **shared snapshot** | A snapshot whose folder holds only what changed, while other snapshots' folders keep the rest of its files; the store keeps each file once. `chartbook store ls` says which each is, and `chartbook store gc` is the only safe way to remove one |
 
 Three different things are called "kind", and they do not mix: an **asset kind**, lowercase, in
 a reference (`chart`); a **record kind**, capitalized, in the index (`Chart`, plus the non-asset

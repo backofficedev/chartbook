@@ -1,6 +1,6 @@
 """A version of a dataset whose files the store keeps in several snapshot folders is read where they are.
 
-The store keeps each file once, in the first snapshot that had it, so a
+The store keeps each file once, usually in the first snapshot that had it, so a
 dataset that grew by a year between two snapshots has its files in two
 folders. Nothing gathers them into one folder on this machine: readers
 take the list of files (``docs_src/design/plan-data-reads.md``).

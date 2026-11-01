@@ -101,7 +101,7 @@ joined = data.sql("""
 
 ## Another pipeline's folder has files and no path
 
-The store keeps each file once, in the first snapshot that had it. A dataset that grew by a year
+The store keeps each file once, usually in the first snapshot that had it. A dataset that grew by a year
 between two snapshots has its files in two snapshot folders. There is no one folder to hand out,
 so `data.path` of another pipeline's folder or glob dataset raises, whatever the folders happen to
 hold today, and says what to call instead:

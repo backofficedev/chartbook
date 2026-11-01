@@ -549,7 +549,7 @@ class NoSinglePathError(ValueError):
     """Raised when one path is asked for an asset of several files that is read from the store.
 
     Another pipeline's folder or glob of files is read from the store, where
-    a later snapshot keeps only what changed and the rest sit in earlier
+    a snapshot's folder may keep only what changed and the rest sit in other
     snapshots' folders: there is no one folder to hand out. By declaration,
     such an asset has files, not a path, so that a call that works does not
     stop working when the upstream takes another snapshot. ``data.files()``
@@ -573,7 +573,7 @@ class NoSinglePathError(ValueError):
         if places == 1:
             where = (
                 f"kept in one place in the store today; a folder or a glob read from the store has no one path, so "
-                f"that it reads the same when a later snapshot keeps some of its files in earlier snapshots' folders"
+                f"that it reads the same when its files come to sit in several snapshots' folders"
             )
         else:
             where = f"kept in {places} places in the store, so there is no one folder"

@@ -133,7 +133,7 @@ class FileLocation(Location):
             (:func:`nothing_to_read`).
         inside: For an asset read from the store, where each of its files
             is, by its path inside the asset: the store keeps each file
-            once, so a later snapshot's files may sit in earlier snapshots'
+            once, so a snapshot's files may sit in other snapshots'
             folders, and none need be under *path*. Readers take the files
             from here; *path* is then the folder the asset is listed from
             in the snapshot that recorded it, which need not exist, and
@@ -2214,7 +2214,7 @@ def require_single_path(location: Location, what: str, ref: str, kind: str) -> P
 
     :func:`require_file` first. Then, for an asset read from the store as
     several files (:attr:`FileLocation.listed`), raise: the store keeps each
-    file once, so a later snapshot's files may sit in earlier snapshots'
+    file once, so a snapshot's files may sit in other snapshots'
     folders, and there is no one folder to hand out. By declaration, so that
     a call that works does not stop working when the upstream takes another
     snapshot.
