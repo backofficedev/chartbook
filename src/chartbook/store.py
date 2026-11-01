@@ -2148,6 +2148,8 @@ class FolderStore(Store):
                     f"removed. Nothing is written to it. Wait for the sync; if store.json is gone, run `chartbook "
                     f"store migrate` once every machine that uses it has ChartBook 0.3."
                 )
+            # A store in too long a folder is said as such, where Windows would say only that the path is not there
+            _check_length(marker)
             self.root.mkdir(parents=True, exist_ok=True)
             # Written whole or not at all, for another process reading it
             temporary = marker.with_name(f"{MARKER_FILE}.{uuid.uuid4().hex[:12]}.tmp")

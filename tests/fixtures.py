@@ -5,11 +5,30 @@ This module provides utilities to create complete pipeline and catalog
 projects for integration testing.
 """
 
+import functools
+import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 import polars as pl
+import pytest
 import tomli_w
+
+
+@functools.lru_cache(maxsize=None)
+def symlinks_work() -> bool:
+    """Whether this user may make a symlink: on Windows only with Developer Mode on, or as an administrator."""
+    with tempfile.TemporaryDirectory() as folder:
+        try:
+            os.symlink(os.path.join(folder, "target"), os.path.join(folder, "link"))
+        except (OSError, NotImplementedError):
+            return False
+    return True
+
+
+#: For a test that makes a symlink: skipped where this user may not make one, as on Windows by default
+needs_symlinks = pytest.mark.skipif(not symlinks_work(), reason="this user may not make a symlink here (Windows without Developer Mode)")
 
 
 def remove_tree(path) -> None:

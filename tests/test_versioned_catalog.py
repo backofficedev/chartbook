@@ -19,7 +19,7 @@ from chartbook.config import get_cache_path
 from chartbook.store import default_store
 from tests.fixtures import create_catalog_project
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 
 def _commit(repository: Path, message: str = "Work") -> None:
@@ -263,6 +263,20 @@ class TestWhatTheReviewFound:
         assert len(rendered.folder.parent.name) == 12
         assert versions.version_name(second.commit, second.made_at).endswith(second.made_at[17:19] + "Z")
 
+    def test_two_snapshots_of_a_commit_in_one_second_have_two_names(self):
+        from types import SimpleNamespace
+
+        commit, made_at = "b6ea3aa" + "0" * 33, "2026-10-31T14:54:10.668357Z"
+        folders = Path("store") / "pipelines" / "acme+x"
+
+        def taken(folder):
+            return SimpleNamespace(commit=commit, made_at=made_at, path=folders / folder / "_chartbook" / "snapshot.json")
+
+        # The store names the second a second later, and the version is named as its folder is
+        first, second = taken("2026-10-31T145410Z_b6ea3aa00000"), taken("2026-10-31T145411Z_b6ea3aa00000")
+        assert (versions.name_of(first), versions.name_of(second)) == ("b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145411Z")
+        assert versions.name_of(SimpleNamespace(commit=commit, made_at=made_at, path=None)) == "b6ea3aa-20261031T145410Z"
+
     def test_what_0_4_kept_of_a_version_goes_once_this_one_builds_it(self, catalog):
         root, first, second = catalog
         old = versions._kept_by_04(second)
@@ -414,7 +428,8 @@ class TestLinksFollowPins:
         assert page.count(link) == 2, page  # under Trained On, and in the provenance panel
         assert (site / pinned).is_file()  # the link leads somewhere
         newer = versions.version_name(second.commit, second.made_at)
-        assert newer not in page  # the version it was not trained on is not where it leads
+        # pipeline_a's: pipeline_b, of the same repository, may have a version of the same commit and second
+        assert versions.site_path("pipeline_a", newer) not in page
         assert "as pinned: the snapshot at " + first.commit[:7] in page
 
     def test_without_the_pinned_version_the_working_version_is_linked(self, trained, monkeypatch):
@@ -479,7 +494,7 @@ class TestWhatTheLinksReviewFound:
         snapshot.remove(default_store(), first)
         _build(root, monkeypatch, "--incremental")
         assert all(_resolves(page, h) for h in _links(page)), _links(page)
-        assert versions.version_name(first.commit, first.made_at) not in page.read_text(encoding="utf-8")
+        assert versions.site_path("pipeline_a", versions.version_name(first.commit, first.made_at)) not in page.read_text(encoding="utf-8")
 
     def test_a_version_that_could_not_be_built_is_linked_to_the_page_that_says_why(self, trained, monkeypatch):
         root, first, second = trained
@@ -980,6 +995,7 @@ class TestWhatTheStoreOnlyReviewFound:
         _build(root, monkeypatch)
         return next(r for r in json.loads((root / "docs" / "index.json").read_text(encoding="utf-8"))["records"] if r["id"] == "pipeline_c")
 
+    @needs_symlinks
     def test_a_stored_index_is_not_read_through_a_link(self, catalog, tmp_path, monkeypatch):
         root, first, second = catalog
         taken = _elsewhere_with(tmp_path)

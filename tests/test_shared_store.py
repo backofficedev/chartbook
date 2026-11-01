@@ -30,7 +30,7 @@ from chartbook.errors import AssetNotPinnedError
 from chartbook.store import FolderStore, ObjectNotFoundError, StoreError, default_store, is_record_name, unsynced_part
 from tests.test_dependencies_by_id import _commit, _forecast, _rates
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 LONG_AGO = "2020-01-01T00:00:00.000000Z"
 
@@ -231,6 +231,7 @@ class TestTheSizesOfAnObject:
         assert what.startswith("holds part-0 (1).parquet, which its record does not list") and not waiting
         assert unsynced_part(tmp_path, 10, {"part-0.parquet": 10}) is None  # one file's other names are other pins'
 
+    @needs_symlinks
     def test_a_link_is_not_judged(self, tmp_path):
         (tmp_path / "elsewhere.txt").write_bytes(b"x" * 3)
         (tmp_path / "object").mkdir()

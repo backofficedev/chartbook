@@ -17,7 +17,7 @@ from chartbook import hashing, index, lock, snapshot
 from chartbook.cli import main
 from chartbook.store import default_store
 from tests.test_model_versions import _git
-from tests.fixtures import remove_tree
+from tests.fixtures import needs_symlinks, remove_tree
 
 MANIFEST = {
     "project": {"id": "acme/rates", "name": "Rates"},
@@ -243,6 +243,7 @@ class TestWhatTheReviewFound:
         snapshot.make(pipeline)
         assert (pipeline.parent / "victim" / "target.txt").read_text(encoding="utf-8") == "ORIGINAL"
 
+    @needs_symlinks
     def test_a_tracked_link_is_never_followed(self, pipeline, tmp_path):
         outside = tmp_path / "outside-secret.md"
         outside.write_text("OUTSIDE BYTES\n", encoding="utf-8", newline="\n")
@@ -263,6 +264,7 @@ class TestWhatTheReviewFound:
             if file.is_file():
                 assert b"OUTSIDE BYTES" not in file.read_bytes(), file
 
+    @needs_symlinks
     def test_the_command_says_what_was_not_kept(self, pipeline, tmp_path, monkeypatch):
         (pipeline / "docs_src" / "site" / "linked.md").symlink_to(tmp_path)
         _git(pipeline, "add", "-A")
@@ -332,6 +334,7 @@ class TestWhatTheReviewFound:
         (laid.folder / VERSION_FILE).write_text(json.dumps({"pipeline": "x", "pad": "y" * 100000}), encoding="utf-8", newline="\n")
         assert read_version_file(laid.folder) == {}  # too large to be one
 
+    @needs_symlinks
     def test_a_link_planted_in_the_store_is_not_followed(self, pipeline, tmp_path):
         """A store a team shares may hold whatever someone put there: a link beside a directory
         asset's files, and a link in place of a one-file asset's file and of a document."""
@@ -361,6 +364,7 @@ class TestWhatTheReviewFound:
             snapshot.materialize(taken, tmp_path / "again")
         assert not any("LOCAL SECRET" in p.read_text(errors="replace", encoding="utf-8") for p in (tmp_path / "again").rglob("*") if p.is_file())
 
+    @needs_symlinks
     def test_a_folder_in_the_store_that_is_a_link_is_refused(self, pipeline, tmp_path):
         from chartbook.store import StoreError
 
@@ -410,6 +414,7 @@ class TestWhatTheReviewFound:
         paths, _ = snapshot.document_paths(pipeline)
         assert "docs_src/method.md" not in paths  # a glob would have listed it
 
+    @needs_symlinks
     def test_a_copy_reads_the_file_it_looked_at(self, pipeline, tmp_path, monkeypatch):
         outside = tmp_path / "outside.md"
         outside.write_text("OUTSIDE SECRET", encoding="utf-8", newline="\n")
@@ -511,6 +516,7 @@ class TestTheLaidOutVersion:
         result = CliRunner().invoke(main, ["docs", "build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
+    @needs_symlinks
     def test_a_named_site_dir_with_nothing_kept_is_made(self, pipeline, tmp_path, monkeypatch):
         (pipeline / "pages").mkdir()
         (pipeline / "pages" / "linked.md").symlink_to(tmp_path)

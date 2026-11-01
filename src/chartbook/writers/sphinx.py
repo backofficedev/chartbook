@@ -1416,7 +1416,7 @@ class SphinxWriter:
 
     def _version_site(self, owner: str, commit: Optional[str], made_at: Optional[str]) -> Optional[tuple]:
         """Where one snapshot of a pipeline is in a catalog's site, and its entry in the pipeline's `snapshots`; None if the catalog does not show it."""
-        from chartbook.versions import site_path, version_name
+        from chartbook.versions import site_path
 
         if self.theme != "catalog" or not commit or not made_at:
             return None
@@ -1430,8 +1430,8 @@ class SphinxWriter:
         if entry is None:
             return None
         try:
-            return site_path(owner, version_name(commit, made_at)), entry
-        except ValueError:
+            return site_path(owner, entry.get("name")), entry  # named by the snapshot's folder (versions.name_of)
+        except (ValueError, TypeError):
             return None
 
     def _dependencies(self, pipeline: dict, from_path: str) -> list:

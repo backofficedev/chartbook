@@ -85,6 +85,26 @@ def version_name(commit: str, made_at: str) -> str:
     return name
 
 
+def name_of(taken) -> str:
+    """The name of a snapshot's version: its commit's start and the time its folder in the store is named by.
+
+    The store names a snapshot's folder by when it was made, to the second,
+    a second later for each other snapshot of the commit made in that
+    second (:func:`chartbook.store.snapshot_folder_name`); so no two
+    versions of a pipeline have one name. A snapshot with no such folder is
+    named by when it was made (:func:`version_name`).
+
+    :raises ValueError: As :func:`version_name`.
+    """
+    from chartbook.store import is_snapshot_folder
+
+    name = version_name(taken.commit, taken.made_at)
+    folder = Path(str(taken.path)).parent.parent.name if taken.path else ""
+    if is_snapshot_folder(folder) and taken.commit.startswith(folder.partition("_")[2]):
+        name = f"{taken.commit[:7]}-{folder.partition('_')[0].replace('-', '')}"
+    return name
+
+
 def slug(pipeline_id: str) -> str:
     """A pipeline's ID as one folder name, as the writers write it.
 
@@ -180,7 +200,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
     from chartbook import snapshot as snapshots
     from chartbook.config import UNTRUSTED_ENV_VAR
 
-    name = version_name(taken.commit, taken.made_at)
+    name = name_of(taken)
     kept = _kept(taken.pipeline, name)
     why = _why_done(kept)
     if why is not None:
@@ -244,9 +264,18 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             # The placeholder of a build that is to be tried again, or what another ChartBook built: this replaces it
             shutil.rmtree(kept, ignore_errors=True)
         try:
-            os.replace(staging, kept)
-        except OSError:
-            pass  # another build kept it first; theirs is as good as this one
+            # A virus scanner reading the files just built may hold one for a moment, and Windows refuses the rename
+            from chartbook.gitcache import _rename_when_let
+
+            _rename_when_let(staging, kept)
+        except OSError as error:
+            done = _why_done(kept)
+            if done is None:
+                # Not kept, by this build or another: said, and built again next time
+                why = f"its site was built and could not be kept: {_one_line(error)}"
+                _placeholder(kept / "site", taken, why)
+                return Rendered(kept / "site", built=False, why=why, now=True)
+            why = done  # another build kept it first; theirs is as good as this one
     finally:
         shutil.rmtree(staging, ignore_errors=True)
     _forget_04s(taken)
@@ -260,7 +289,7 @@ def forget(taken) -> bool:
     no site of a version no catalog will show again.
     """
     try:
-        folder = _kept(taken.pipeline, version_name(taken.commit, taken.made_at))
+        folder = _kept(taken.pipeline, name_of(taken))
     except ValueError:
         return False
     old = _forget_04s(taken)
@@ -360,7 +389,7 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
             except ValueError:
                 continue
             if rendered.built:
-                name = version_name(taken.commit, taken.made_at)
+                name = name_of(taken)
                 targets = [Path(os.path.abspath(folder)) / site_path(record["id"], name) for folder in into]
                 why = _too_deep(rendered, targets)
                 if why:
@@ -409,11 +438,11 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by
             continue
         for entry in record["snapshots"]:
             taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
-            try:
-                name = version_name(entry.get("commit"), entry.get("made_at"))
-            except ValueError:
-                continue
             if taken is None:
+                continue
+            try:
+                name = name_of(taken)
+            except ValueError:
                 continue
             rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
             # What render_listed built has been said there: only what is built here now is said here

@@ -1173,7 +1173,7 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
         return
     from chartbook import snapshot as snapshots
     from chartbook.store import StoreError, default_store
-    from chartbook.versions import version_name
+    from chartbook.versions import name_of
 
     try:
         store = store if store is not None else default_store()
@@ -1195,7 +1195,7 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
         from chartbook.hubs import selected_snapshots
         own = selected_snapshots(found, record["id"], (notes or {}).get(record["id"], {}).get("repository")) if notes is not None else by_pipeline.get(record["id"], [])
         for taken in sorted(own, key=lambda t: t.made_at, reverse=True):
-            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": version_name(taken.commit, taken.made_at)}
+            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": name_of(taken)}
             if hasattr(store, "name_of"):
                 entry["store"] = store.name_of(taken.path)
             if taken.built_by_run:
