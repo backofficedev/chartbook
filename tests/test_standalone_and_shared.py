@@ -80,10 +80,10 @@ class TestStoreLs:
         assert result.exit_code == 0, result.output
         lines = [line for line in result.output.splitlines() if line.startswith("  20")]
         assert len(lines) == 2
-        assert Path(first.path).parent.parent.name in lines[0] and "standalone" in lines[0] and "earlier folders" not in lines[0]
+        assert Path(first.path).parent.parent.name in lines[0] and "standalone" in lines[0] and "other folders" not in lines[0]
         # The first year's part and the unchanged documents are kept in the first snapshot's folder
         assert Path(second.path).parent.parent.name in lines[1] and "shared" in lines[1]
-        assert re.search(r"[1-9]\d* file\(s\) in earlier folders", lines[1]), lines[1]
+        assert re.search(r"[1-9]\d* file\(s\) in other folders", lines[1]), lines[1]
         assert "news (2 snapshot(s))" in result.output and "never by hand" in result.output
         # One pipeline, and none
         one = CliRunner().invoke(main, ["store", "ls", "news"]).output

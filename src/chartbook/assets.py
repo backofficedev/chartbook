@@ -175,8 +175,8 @@ def path(
     (``chartbook pin``), and is for reading: never write to it.
 
     **Another pipeline's folder or glob of files has no one path.** The
-    store keeps each file once, so a later snapshot's files may sit in
-    earlier snapshots' folders. Asking raises
+    store keeps each file once, so a snapshot's files may sit in other
+    snapshots' folders. Asking raises
     :class:`~chartbook.errors.NoSinglePathError`, whatever the folders
     happen to hold today, so that a call that works does not stop working
     when the upstream takes another snapshot. :func:`files` lists the

@@ -5,7 +5,7 @@ A plan, written 2026-10-31, the day after 0.4.0 was released, from a conversatio
 maintainer that day. It says what is wrong with how ChartBook reads data today, what replaces it,
 and what the end user sees. What the maintainer decided on 2026-10-31 is marked *decided*. The
 version is **0.5.0** (*decided 2026-10-31*): `data.path` on another pipeline's folder dataset
-and the Store plugin contract both change, so it is more than a patch. Status: **being built**;
+and the Store plugin contract both change, so it is more than a patch. Status: **built** (#150–#153, merged 2026-10-31, then tried on a real store);
 what lands goes under "Unreleased" in the changelog until it is published.
 ```
 
@@ -51,11 +51,11 @@ every file of every asset with its hash, its size, and the folder that keeps it.
 always complete. The folder is not.
 
 - A snapshot's folder is **standalone** when it holds every file of its version.
-- It is **shared** when it holds only what is new or changed, and the rest sit in earlier folders
+- It is **shared** when it holds only what is new or changed, and the rest sit in other snapshots' folders
   of the same pipeline.
 
 A snapshot is not a diff: no snapshot has to be "applied" to another. But a shared snapshot's
-folder cannot be read alone, and deleting an earlier folder by hand can take files from it. Only
+folder cannot be read alone, and deleting another snapshot's folder by hand can take files from it. Only
 `chartbook store gc` removes safely: it clears a snapshot's record, leaves any file a later
 snapshot uses, writes `_chartbook/CLEARED.txt` saying why, and removes the folder once nothing
 points into it. *Decided 2026-10-31:* shared folders stay the default, and ChartBook says so where

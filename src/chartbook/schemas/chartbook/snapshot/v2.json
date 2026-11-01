@@ -112,7 +112,7 @@
         },
         "stored": {
           "type": "object",
-          "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
+          "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, usually in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
           "required": [
             "at",
             "files"
@@ -188,7 +188,7 @@
         },
         "stored": {
           "type": "object",
-          "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
+          "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, usually in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
           "required": [
             "at",
             "files"
@@ -280,7 +280,7 @@
           },
           "stored": {
             "type": "object",
-            "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
+            "description": "Where the store keeps the asset's files: each file is kept once in its pipeline's folder, usually in the first snapshot that had it. `at` is where the asset is in the pipeline's folder (a file's folder, or the folder its files are listed from; empty for the top); `single` is true for an asset that is one file.",
             "required": [
               "at",
               "files"

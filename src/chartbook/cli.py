@@ -1275,8 +1275,8 @@ def path_command(ref, kind, project_dir, list_files):
     of the copy that chartbook.lock pins, in the store: not the other
     pipeline's own directory. Run `chartbook pin` first. That copy stays as
     it is until `chartbook update`. Another pipeline's folder or glob of
-    files has no one path, since the store keeps each file once and a later
-    snapshot's files may sit in earlier snapshot folders: print them with
+    files has no one path, since the store keeps each file once and a
+    snapshot's files may sit in other snapshots' folders: print them with
     --files.
 
     With --files, the asset's files are printed instead, one per line: the
@@ -2954,12 +2954,12 @@ def store_ls(pipeline, store_name):
     One line per snapshot, newest last within its pipeline: when it was
     made, its commit, whether its folder is standalone (it holds every
     file of its version) or shared (it holds only what changed, and the
-    rest of its files sit in earlier snapshots' folders), and how much
+    rest of its files sit in other snapshots' folders), and how much
     its own folder holds. The store keeps each file once, which is what
     keeps a large dataset from costing its size again on every snapshot.
 
-    Because of that, a snapshot's folder is not to be deleted by hand: a
-    later snapshot may keep files in it. `chartbook store gc` removes
+    Because of that, a snapshot's folder is not to be deleted by hand:
+    another snapshot may keep files in it. `chartbook store gc` removes
     snapshots safely. `chartbook store export PIPELINE --latest --to
     FOLDER` writes one complete copy of the newest version wherever you
     say.
@@ -3003,7 +3003,7 @@ def store_ls(pipeline, store_name):
                     else:
                         elsewhere += 1
             kind = "standalone" if elsewhere == 0 else "shared"
-            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in earlier folders"
+            note = "" if elsewhere == 0 else f", {elsewhere} file(s) in other folders"
             if record.made_by != "snapshot":
                 note += ", pinned from a clone of its repository"  # not one its owner made
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
@@ -3013,7 +3013,7 @@ def store_ls(pipeline, store_name):
         click.echo("No snapshots." if pipeline is None else f"No snapshot of {pipeline}.")
         return
     click.echo(
-        "A shared snapshot's folder holds only what changed; the rest of its files are in earlier folders, "
+        "A shared snapshot's folder holds only what changed; the rest of its files are in other snapshots' folders, "
         "which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand."
     )
 
@@ -3345,7 +3345,9 @@ def store_export(pipeline, to, latest, snapshots):
     Every snapshot its owner made is written, or with --latest the newest
     alone (one complete snapshot, readable without ChartBook), or each
     --snapshot named. Only what a snapshot's record names is written: its
-    data, its documents and its index, never anything that runs.
+    data, its documents and its index, never anything that runs. With
+    several stores in the catalog, the one that holds the pipeline is
+    used; --store NAME chooses when more than one does.
 
     \b
     Examples:
@@ -4346,6 +4348,32 @@ def store_remove(name, catalog_path):
     click.echo(f"Removed {name}; its files are untouched.")
 
 
+def _entries_holding(entries, pipeline):
+    """The reachable stores among *entries* holding a snapshot its owner made of *pipeline*, and the stores that could not be read, as (name, error).
+
+    Both empty when no pipeline is named. A record a pin made from a clone
+    does not count: `store export` writes what the owner made, as
+    :func:`chartbook.sharing.export` does.
+    """
+    if not pipeline:
+        return [], []
+    found, unreadable = [], []
+    for entry in entries:
+        the_store = entry.store
+        if not entry.reachable or getattr(the_store, "records", None) is None:
+            continue
+        try:
+            if getattr(the_store, "records_in", None) is not None and hasattr(the_store, "pipeline_path"):
+                records = the_store.records_in(the_store.pipeline_path(pipeline))  # one pipeline's folder, not every record
+            else:
+                records = the_store.records()
+            if any(r.readable and r.made_by == "snapshot" and r.pipeline == pipeline for r in records):
+                found.append(entry)
+        except Exception as error:  # noqa: BLE001 - said below when no store holds the pipeline; the command says the whole of it when the store is chosen
+            unreadable.append((entry.name, error))
+    return found, unreadable
+
+
 def _store_selection(command, all_stores=False):
     """Keep maintenance local to each store and its own retention notes."""
     original = command.callback
@@ -4363,7 +4391,22 @@ def _store_selection(command, all_stores=False):
         elif all_stores:
             entries = configured.entries
         elif len(configured.entries) > 1:
-            raise click.ClickException("Select a store with --store NAME")
+            # A command about one pipeline (export) works in the store that holds it
+            pipeline = kwargs.get("pipeline")
+            holding, unreadable = _entries_holding(configured.entries, pipeline)
+            if len(holding) == 1:
+                entries = holding
+            elif len(holding) > 1:
+                names = ", ".join(entry.name for entry in holding)
+                raise click.ClickException(f"{pipeline} has snapshots in stores {names}: select one with --store NAME")
+            elif pipeline:
+                looked = ", ".join(entry.name for entry in configured.entries)
+                said = f"No store holds a snapshot of {pipeline} (looked in {looked}"
+                for name, error in unreadable:
+                    said += f"; {name} could not be read: {_said(error)}"
+                raise click.ClickException(said + "). Select a store with --store NAME to work in it all the same.")
+            else:
+                raise click.ClickException("Select a store with --store NAME")
         else:
             entries = configured.entries
         failures = []

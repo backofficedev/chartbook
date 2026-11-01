@@ -76,19 +76,19 @@ snapshot`; the catalog runs no pipeline's code.
 
 ## Keeping the store small
 
-The store keeps each file once, in the first snapshot that had it. A later snapshot's folder holds
-only what changed (a **shared** snapshot); one whose folder holds every file of its version is
-**standalone**. `chartbook store ls` says which each is and what its folder holds:
+The store keeps each file once, usually in the first snapshot that had it. A snapshot whose folder
+holds only what changed, the rest sitting in other snapshots' folders, is **shared**; one whose
+folder holds every file of its version is **standalone**. `chartbook store ls` says which each is and what its folder holds:
 
 ```console
 $ chartbook store ls acme/news_headlines
 acme/news_headlines (3 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
-  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in earlier folders
-  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in earlier folders
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in other folders
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in other folders
 ```
 
-A snapshot's folder is never deleted by hand, since a later snapshot may keep files in it.
+A snapshot's folder is never deleted by hand, since another snapshot may keep files in it.
 `chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
 lockfile pins, a snapshot a model's label points into, anything made in the last seven days, and
 every file a remaining snapshot uses, lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
