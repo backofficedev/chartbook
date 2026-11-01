@@ -96,9 +96,9 @@ class TestTheSite:
     def test_a_version_is_built_once_on_this_machine(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)
-        kept = get_cache_path() / "versions" / "pipeline_a"
+        kept = get_cache_path() / "versions"
         stamps = {p: p.stat().st_mtime_ns for p in kept.rglob(".chartbook-version-site")}
-        assert len(stamps) == 2
+        assert {versions._kept("pipeline_a", versions.version_name(t.commit, t.made_at)) for t in (first, second)} <= {p.parent for p in stamps}
         calls = []
         real = versions.subprocess.run
 
@@ -240,10 +240,35 @@ class TestWhatTheReviewFound:
 
     def test_a_change_to_chartbook_builds_a_version_again(self, catalog, monkeypatch):
         root, first, second = catalog
-        versions.fingerprint.cache_clear()
-        one = versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z")
+        assert versions.render(second).built
+        calls = []
+        real = versions.subprocess.run
+
+        def counted(command, *args, **kwargs):
+            if "chartbook.cli" in command:
+                calls.append(command)
+            return real(command, *args, **kwargs)
+
+        monkeypatch.setattr(versions.subprocess, "run", counted)
         monkeypatch.setattr(versions, "fingerprint", lambda: "0.0.0-changed")
-        assert versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z") != one
+        again = versions.render(second)
+        assert again.built and again.now and len(calls) == 1
+        assert (again.folder.parent / ".chartbook-version-site").read_text(encoding="utf-8").startswith("0.0.0-changed\n")
+        assert versions.render(second).now is False  # and kept, once built by this one
+
+    def test_a_kept_site_is_one_short_folder_in_the_cache(self, catalog):
+        root, first, second = catalog
+        rendered = versions.render(second)
+        assert rendered.folder.parent.parent == get_cache_path() / "versions"
+        assert len(rendered.folder.parent.name) == 12
+        assert versions.version_name(second.commit, second.made_at).endswith(second.made_at[17:19] + "Z")
+
+    def test_what_0_4_kept_of_a_version_goes_once_this_one_builds_it(self, catalog):
+        root, first, second = catalog
+        old = versions._kept_by_04(second)
+        (old / "0.4.0-c7a9789677a1" / "site").mkdir(parents=True)
+        assert versions.render(second).built
+        assert not old.exists() and not old.parent.exists()
 
 
 class TestWhoseFilesTheseAre:
@@ -419,9 +444,9 @@ class TestGcClearsTheKeptSites:
     def test_a_removed_snapshot_takes_its_kept_site_with_it(self, catalog, monkeypatch):
         root, first, second = catalog
         _build(root, monkeypatch)
-        kept = get_cache_path() / "versions" / "pipeline_a"
+        kept = get_cache_path() / "versions"
         names = {p.name for p in kept.iterdir()}
-        assert versions.version_name(first.commit, first.made_at) in names
+        assert versions._kept("pipeline_a", versions.version_name(first.commit, first.made_at)).name in names
         store = default_store()
         # Nothing pins the first any more: pipeline_b's lockfile is forgotten
         store.remove_root(root / "pipelines" / "pipeline_b" / "chartbook.lock")
@@ -431,8 +456,8 @@ class TestGcClearsTheKeptSites:
         lock.run_gc(plan, store)
         left = {p.name for p in kept.iterdir()}
         for taken in doomed:
-            assert versions.version_name(taken.commit, taken.made_at) not in left
-        assert versions.version_name(second.commit, second.made_at) in left  # what gc kept, its site too
+            assert versions._kept("pipeline_a", versions.version_name(taken.commit, taken.made_at)).name not in left
+        assert versions._kept("pipeline_a", versions.version_name(second.commit, second.made_at)).name in left  # what gc kept, its site too
 
 
 def _links(page: Path) -> list[str]:
