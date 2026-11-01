@@ -274,6 +274,30 @@ def setup(app):
 """
 
 
+def _not_shown_from_the_index(missing_files: list, project_dir) -> list:
+    """The missing files of a version laid out from the store, less the data its snapshot's index describes.
+
+    A version is laid out without its dataframes, files assets and models
+    (``chartbook.snapshot.materialize``, ``data=False``): the site shows each
+    from the snapshot's own index, which recorded them when it had the files
+    (``chartbook.index.stored_index_records``), so they are not missing.
+    """
+    from chartbook import index
+
+    stored = index.stored_index_records(Path(project_dir))
+    if not stored:
+        return missing_files
+    prefixes = {"dataframe": "", "file": "file/", "model": "model/"}
+    kept = []
+    for missing in missing_files:
+        prefix = prefixes.get(missing.file_type)
+        record = stored.get(f"{missing.pipeline_id}:{prefix}{missing.item_id}") if prefix is not None else None
+        if isinstance(record, dict) and isinstance(record.get("content_hash"), str):
+            continue
+        kept.append(missing)
+    return kept
+
+
 def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) -> list[str] | None:
     """What to do about missing files, a line each, for the error that lists them.
 
@@ -448,6 +472,8 @@ def generate_docs(
     from chartbook.config import untrusted_source
 
     missing_files = validate_source_files(manifest, project_dir)
+    if untrusted_source():
+        missing_files = _not_shown_from_the_index(missing_files, project_dir)
     skip_pipelines: set[str] = set()
     if (
         missing_files
@@ -543,7 +569,7 @@ def generate_docs(
         code_times = apply_code_change_times(manifest)
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines, size_threshold=size_threshold)
         _refuse_unreadable(built)
         rendered = _write_sphinx_project(
             manifest=manifest,
@@ -676,7 +702,7 @@ def _generate_docs_mkdocs(
         pages_dir = _docs_dir / mkdocs_writer.PAGES_DIR
         pages_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines, size_threshold=size_threshold)
         _refuse_unreadable(built)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))

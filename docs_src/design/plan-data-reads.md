@@ -285,6 +285,28 @@ Each step is a pull request, reviewed by an adversarial sub-agent and merged by 
 the standing arrangement. The whole plan ships as 0.5.0 (*decided 2026-10-31*). Step 1 and step 2 are the ones that end the disk growth; if the version
 ships before the rest, they are enough.
 
+## As built
+
+*Step 1, PR #150 (2026-10-31).* `Store.files(content_hash, pipeline, name)` returns a `KeptFiles`:
+the asset's files sorted by their path inside it, each where the store keeps it, and `home`, the
+folder the asset is listed from in the snapshot that recorded it. `FileLocation` gains `inside`,
+that mapping, and the reader (`chartbook.formats`) derives Hive keys from each file's path inside
+the asset, so a dataset spread over snapshots reads as one in a folder; a TSV a bucket's cache keeps
+under its hash is told by its name inside the asset. `data.path`, `assets.path`, `models.path` and
+`data.get_data_path` raise `NoSinglePathError` for a folder or glob read from the store, by
+declaration (`resolve.require_single_path`). `data.files` is the dataframe front door to
+`assets.files`. `assets.gathered(ref)` was added: a folder model's loader needs a directory, and
+the context manager lays the files out in a temporary one. The first command finds a leftover
+`views/` folder, removes it, says so, and leaves a marker so it is done once. The glimpses report
+reads a store pipeline's dataframe as its files.
+
+*Step 2, PR #151 (2026-10-31).* The index records `glimpse` and `last_dates` for a dataframe and
+`preview` for a files asset when it describes the files. `snapshot.materialize(..., data=False)`
+lays out documents, charts, notebooks, notes and the stored index, and `versions.render` uses it;
+`index.stored_index_records` gives a laid-out version's build the facts the snapshot recorded of
+each data asset, and the build counts those files as not missing. A version builds even when its
+data is not in the store. A 0.4 snapshot's version page says the first rows were not recorded.
+
 ## Decisions, dated
 
 | Date | Decision |

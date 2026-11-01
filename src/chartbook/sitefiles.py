@@ -126,7 +126,8 @@ def downloadable(record: dict) -> bool:
         return False
     from chartbook import hashing
 
-    return not hashing.is_pattern(source) and not Path(source).is_dir()
+    # The file itself: a version laid out from the store without its data has the record and no file to copy
+    return not hashing.is_pattern(source) and Path(source).is_file()
 
 
 def download_link(record: dict) -> dict:

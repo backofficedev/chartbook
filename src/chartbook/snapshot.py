@@ -2784,15 +2784,23 @@ class Materialized:
         documents: The documents written, by path in the folder.
         assets: The assets written, by reference.
         left_out: The assets and documents not written, each with why.
+        from_index: The data assets not laid out on purpose (``data=False``),
+            by reference: the site built there shows them from the
+            snapshot's index.
     """
 
     folder: Path
     documents: list[str] = field(default_factory=list)
     assets: list[str] = field(default_factory=list)
     left_out: list[tuple[str, str]] = field(default_factory=list)
+    from_index: list[str] = field(default_factory=list)
 
 
-def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None) -> Materialized:
+#: The kinds of asset whose files are data, which a version rendered for a catalog does without.
+DATA_KINDS = frozenset({"Dataframe", "File", "Model"})
+
+
+def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None, data: bool = True) -> Materialized:
     """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
 
     The folder is then the pipeline at that version, as far as a site is
@@ -2816,6 +2824,14 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     its record has it (:func:`not_whole`).
 
     :param into: A folder that does not exist yet or is empty.
+    :param data: Whether to lay out the data too: dataframes, files assets
+        and models (:data:`DATA_KINDS`), and tables written out as parquet.
+        A version rendered for a catalog is laid out without (``False``):
+        its site shows each from the snapshot's own index, which recorded
+        their columns, rows, dates and glimpse when it had the files
+        (``chartbook.index``), so no data is copied or read, and the data
+        need not be in the store for the pages to be built. They are listed
+        in :attr:`Materialized.from_index`.
     :raises StoreNotReadyError: If an object it names is not in the store,
         or not whole: a sync that has not finished, perhaps.
     :raises SnapshotError: If the snapshot carries no documents (it was made
@@ -2837,7 +2853,10 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     if folder.exists() and any(folder.iterdir()):
         raise SnapshotError(f"{folder} has something in it; a snapshot is laid out in an empty folder.")
     named = [taken.documents.get("content_hash")]
-    named += [r["content_hash"] for r in taken.assets.values() if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file"]
+    named += [
+        r["content_hash"] for r in taken.assets.values()
+        if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file" and (data or r.get("kind") not in DATA_KINDS)
+    ]
     try:
         missing = [h for h in named if not isinstance(h, str) or not store.has(h)]
     except ValueError as error:  # a hash that is not one: a record written to mislead
@@ -2888,6 +2907,10 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
 
     for name in sorted(taken.assets):
         record = taken.assets[name]
+        if not data and record.get("kind") in DATA_KINDS:
+            if (record.get("location") or {}).get("kind") == "file":
+                report.from_index.append(record["id"])
+            continue  # shown from the index; a table or query is dealt with below
         why = _place_asset(record, store, folder)
         if why is not None:
             report.left_out.append((record["id"], why))
@@ -2906,17 +2929,23 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         if not isinstance(name, str) or plain_name(materialized_name(record)) is None:
             continue
         relative = f"_chartbook/tables/{materialized_name(record)}"
-        written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record)).one.location
-        if _copy_regular_file(written, folder / relative):
-            entry = raw.get("dataframes", {}).get(name)
-            if isinstance(entry, dict):
-                for key in ("source", "table", "query", "format", "read_options"):
-                    entry.pop(key, None)
-                entry["path"] = relative
-                entry["format"] = "parquet"
-                changed = True
+        if data:
+            written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record)).one.location
+            if not _copy_regular_file(written, folder / relative):
+                continue
+        # The manifest names the database; here the table is a parquet file (laid out, or shown from the index)
+        entry = raw.get("dataframes", {}).get(name)
+        if isinstance(entry, dict):
+            for key in ("source", "table", "query", "format", "read_options"):
+                entry.pop(key, None)
+            entry["path"] = relative
+            entry["format"] = "parquet"
+            changed = True
+            if data:
                 report.assets.append(record["id"])
                 report.left_out = [(key, why) for key, why in report.left_out if key != record["id"]]
+            else:
+                report.from_index.append(record["id"])
     if changed:
         import tomli_w
         manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")

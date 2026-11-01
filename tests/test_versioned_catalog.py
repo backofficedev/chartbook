@@ -3,6 +3,7 @@
 
 import html
 import json
+import os
 import re
 from pathlib import Path
 
@@ -122,14 +123,19 @@ class TestTheSite:
     def test_a_version_that_cannot_be_built_says_why(self, catalog, monkeypatch):
         root, first, second = catalog
         store = default_store()
-        data = next(r for r in first.assets.values() if r.get("content_hash") and r["kind"] == "Dataframe")
-        if data["content_hash"] not in second.hashes():
-            store.delete(data["content_hash"])
-        else:  # the same bytes in both: take the documents instead
-            store.delete(first.documents["content_hash"])
+        # A version is built from its documents, charts and index, not its data (which may be
+        # missing from the store): a third snapshot whose README is its own, not all synced yet
+        a = root / "pipelines" / "pipeline_a"
+        (a / "README.md").write_text("# A\n\nA README of the third version alone.\n", encoding="utf-8", newline="\n")
+        _commit(root.parent, "README")
+        third = snapshot.make(a).snapshot
+        readme = store.files(third.documents["content_hash"]).by_relative()["README.md"]
+        assert readme.is_relative_to(Path(third.path).parent.parent)  # new in this snapshot, kept here
+        os.chmod(readme, 0o600)
+        readme.write_bytes(readme.read_bytes()[:-1])
         result = _build(root, monkeypatch)
-        assert f"warning: pipeline_a at {first.commit[:7]}: it is not all in the store yet" in result.output
-        name = versions.version_name(first.commit, first.made_at)
+        assert f"warning: pipeline_a at {third.commit[:7]}: it is not all in the store yet" in result.output
+        name = versions.version_name(third.commit, third.made_at)
         placeholder = (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").read_text(encoding="utf-8")
         assert "not all in the store yet" in placeholder
         # The other version is unharmed
@@ -454,9 +460,10 @@ class TestWhatTheLinksReviewFound:
         root, first, second = trained
         from tests.fixtures import publish_catalog
         publish_catalog(root)
-        data = next(r for r in first.assets.values() if r.get("content_hash") and r["kind"] == "Dataframe")
-        assert data["content_hash"] not in second.hashes()
-        default_store().delete(data["content_hash"])
+        # A version is built without its data; its documents it cannot do without
+        readme = default_store().files(first.documents["content_hash"]).by_relative()["README.md"]
+        os.chmod(readme, 0o600)
+        readme.write_bytes(readme.read_bytes()[:-1])
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         name = versions.version_name(first.commit, first.made_at)

@@ -259,6 +259,43 @@ def get_dataframe_glimpse(filepath, format=None, read_options=None):
         return f"Error reading file: {said}"
 
 
+def most_recent_valid_datapoints(
+    path,
+    date_col: str = "date",
+    size_threshold_mb: float = 50,
+    format=None,
+    read_options=None,
+) -> tuple:
+    """The least and greatest of each column's last non-null date, as text, for a dataframe page.
+
+    "N/A" without a date column or for a folder of parts; "N/A (large file)"
+    over the size threshold, so a big file is not read for two dates. The
+    file is read as ``data.load()`` reads it (:mod:`chartbook.formats`).
+    The index records what this gives as ``last_dates`` when it describes
+    the file, so a version rendered from the store shows it without the
+    data (:mod:`chartbook.index`).
+    """
+    from chartbook import formats
+    from chartbook.utils import is_glob_pattern as _is_glob
+
+    if date_col in ("", "NA", "N/A"):
+        return "N/A", "N/A"
+    if _is_glob(str(path)):
+        return "N/A", "N/A"
+    if os.path.getsize(path) / (1024 * 1024) > size_threshold_mb:
+        return "N/A (large file)", "N/A (large file)"
+    frame = formats.scan(path, format, read_options).collect()
+    if frame[date_col].dtype != pl.Datetime:
+        frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
+    latest = frame.select(
+        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in frame.columns if col != date_col]
+    )
+    dates = [date for date in latest.row(0) if date is not None]
+    if not dates:
+        return "N/A", "N/A"
+    return min(dates).strftime("%Y-%m-%d %H:%M:%S"), max(dates).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def glimpse_text(sample: pl.DataFrame) -> str:
     """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
 

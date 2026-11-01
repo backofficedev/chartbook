@@ -34,8 +34,11 @@ from typing import Union
 
 from chartbook.index import INDEX_FILE, published
 
-#: Fields whose change means the asset's data moved.
-DATA_FIELDS = ("content_hash", "definition_hash", "size_bytes", "row_count", "columns", "files", "file_count", "extensions")
+#: Fields whose change means the asset's data moved: what is read from it, the glimpse, dates and preview a page shows included.
+DATA_FIELDS = (
+    "content_hash", "definition_hash", "size_bytes", "row_count", "columns", "files", "file_count", "extensions",
+    "glimpse", "last_dates", "preview",
+)
 
 #: Kinds whose file is a rendering, which a renderer may write differently each time.
 RENDERED_KINDS = ("Chart", "Notebook")
