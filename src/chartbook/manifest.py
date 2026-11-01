@@ -68,6 +68,8 @@ PROJECT_DEFAULTS = {
     "os_compatibility": [],
     "build": "",
     "site_dir": "",
+    # Where data.scratch() puts throwaway files: _data/_scratch by default
+    "scratch": "",
     "enable_data_download": False,
     "writer": "sphinx",
     # Which ChartBook the project needs, as a requirement: ">=0.2.0"

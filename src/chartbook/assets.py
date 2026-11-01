@@ -94,7 +94,34 @@ def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> P
     asset = parse(ref, kind=kind)
     location = resolve(asset, start_dirs=start_dirs)
     # Several files read from the store have no one path (require_single_path)
-    return require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
+    path = require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
+    if not getattr(location, "content_hash", None):
+        _make_room(path)  # this pipeline's own, where its build writes: the folder is there for the first write
+    return path
+
+
+def _make_room(path: Path) -> None:
+    """Make the folder a file of this pipeline's own is written into, so that the first write does not fail for want of it.
+
+    A path with an ending is a file, and its parent folder is made. One
+    without is a folder dataset, which polars writes with ``partition_by``,
+    and the folder itself is made. A glob's is the folder its pattern starts
+    in. Nothing else is made, and nothing for another pipeline's asset,
+    which is read where the store keeps it. A folder that cannot be made is
+    left to the write to say so.
+    """
+    from chartbook import hashing
+
+    if hashing.is_pattern(str(path)):
+        folder = hashing.glob_root(path)
+    elif path.suffix:
+        folder = path.parent
+    else:
+        folder = path
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 
 def path(
@@ -113,7 +140,10 @@ def path(
     and a build definition can use the same call for what it reads and what
     it writes. The path is whatever ``path`` the entry declares, made
     absolute; nothing checks that the file exists, so a target can be named
-    before it is built.
+    before it is built. The folder it is written into is made if it is not
+    there yet (a file's parent; a folder dataset or a glob's root itself),
+    so the first write of a new pipeline does not fail for want of
+    ``_data/``.
 
     Each kind of asset has its own names: ``[dataframes.gdp]`` and
     ``[charts.gdp]`` are two assets, ``gdp`` and ``chart/gdp``. Asking for a

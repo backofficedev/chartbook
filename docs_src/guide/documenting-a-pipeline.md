@@ -276,7 +276,7 @@ For files that are *not* assets — a partial download, a cache between two step
 tmp = data.scratch() / "raw_download.csv"     # <pipeline>/_data/_scratch/raw_download.csv
 ```
 
-It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. (Avoid declaring a dataframe whose `path` is a glob over all of `_data/`, such as `./_data/**/*.parquet`; it would sweep scratch files in.)
+It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. To put it elsewhere in the pipeline, name the folder: `scratch = "./_tmp"` under `[project]`. (Avoid declaring a dataframe whose `path` is a glob over all of `_data/`, such as `./_data/**/*.parquet`; it would sweep scratch files in.)
 
 A name with a pipeline in front, `data.path("fed_yield_curve:treasury_rates")`, is another pipeline's asset: the pinned copy of it, as described under "Depending on another pipeline" above. That path is for reading only. To find a dataframe through a catalog instead, from a notebook that belongs to no pipeline, use `data.get_data_path()` ({doc}`catalogs-and-data`).
 

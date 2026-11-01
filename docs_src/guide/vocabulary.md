@@ -101,7 +101,7 @@ can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/version
 | **version** | A model's bytes as a snapshot first held them, named by the first twelve digits of their hash (more, if two would otherwise share a name); `[models.x.aliases]` gives labels such as `champion` |
 | **source / backend** | A named database connection in a manifest / the engine behind it. DuckDB is the engine that is built |
 | **writer** | What turns the index into pages for one site tool |
-| **scratch** | `_data/_scratch/` inside a pipeline: throwaway files that are not assets |
+| **scratch** | `_data/_scratch/` inside a pipeline (or what `[project] scratch` names): throwaway files that are not assets |
 
 Three different things are called "kind", and they do not mix: an **asset kind**, lowercase, in
 a reference (`chart`); a **record kind**, capitalized, in the index (`Chart`, plus the non-asset
