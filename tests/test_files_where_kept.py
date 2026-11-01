@@ -43,6 +43,10 @@ def _write_year(folder: Path, year: int, values: list) -> None:
     part = folder / "_data" / "articles" / f"year={year}"
     part.mkdir(parents=True, exist_ok=True)
     pl.DataFrame({"n": values}).write_parquet(part / "part-0.parquet")
+    # And a folder of TSV files, one a year, told apart from CSV by their names
+    log = folder / "_data" / "log"
+    log.mkdir(parents=True, exist_ok=True)
+    (log / f"part-{year}.tsv").write_text("n\tm\n" + "".join(f"{n}\t{n * 10}\n" for n in values), encoding="utf-8", newline="\n")
 
 
 @pytest.fixture
@@ -51,7 +55,13 @@ def grown(work, store, cache):
     news = work / "news"
     news.mkdir()
     (news / "chartbook.toml").write_text(
-        tomli_w.dumps({"project": {"id": "news"}, "dataframes": {"articles": {"path": "./_data/articles", "docs": "d"}}}),
+        tomli_w.dumps({
+            "project": {"id": "news"},
+            "dataframes": {
+                "articles": {"path": "./_data/articles", "docs": "d"},
+                "log": {"path": "./_data/log", "format": "csv", "docs": "d"},
+            },
+        }),
         encoding="utf-8", newline="\n",
     )
     _write_year(news, 2023, [1, 2])
@@ -100,6 +110,31 @@ class TestADatasetSpreadOverTwoSnapshots:
         ).collect()
         assert counted["year"].to_list() == [2023, 2024] and counted["n"].to_list() == [2, 1]
         assert data.ref("news:articles", project_dir=forecast).startswith("read_parquet([")
+
+    def test_a_folder_of_tsv_files_is_read_as_tsv_wherever_each_is_kept(self, grown, store):
+        news, forecast, first, second = grown
+        kept = store.files(second.assets["log"]["content_hash"])
+        assert [f.relative for f in kept.files] == ["part-2023.tsv", "part-2024.tsv"] and not kept.in_place()
+        frame = data.load("news:log", project_dir=forecast).collect()
+        assert frame.columns == ["n", "m"] and sorted(frame["m"].to_list()) == [10, 20, 30]
+        counted = data.sql("select count(*) as n from {news:log}", project_dir=forecast).collect()
+        assert counted["n"].to_list() == [3]
+
+    def test_get_data_path_has_no_one_folder_to_give_either(self, grown):
+        news, forecast, first, second = grown
+        with pytest.raises(NoSinglePathError, match="'news:articles' is a dataset of 2 files, kept in 2 places"):
+            data.get_data_path("news", "articles", project_dir=forecast)
+
+    def test_the_glimpses_report_reads_every_file(self, grown):
+        from chartbook.create_data_glimpses import get_dataset_report
+        from chartbook.resolve import resolve
+
+        news, forecast, first, second = grown
+        location = resolve("news:articles", start_dirs=[forecast])
+        report = get_dataset_report(location.path, files=location.files, listed=location.listed, inside=location.inside)
+        assert "error" not in report, report
+        assert report["n_rows"] == 3 and report["file_type"] == "PARQUET"
+        assert report["file_size_bytes"] == sum(Path(where).stat().st_size for where in location.inside.values())
 
     def test_files_lists_each_where_it_is_kept(self, grown, store):
         news, forecast, first, second = grown
@@ -166,6 +201,25 @@ class TestADatasetSpreadOverTwoSnapshots:
         assert target.verify() == []
 
 
+class TestAFileKeptUnderItsHash:
+    """A bucket's cache keeps a file under its hash, with no ending: what its name tells is told by its path inside the asset."""
+
+    def test_a_tsv_is_read_with_tabs(self, tmp_path):
+        from chartbook import formats
+        from chartbook.resolve import FileLocation
+
+        kept = tmp_path / "files" / "ab" / "cdef0123"
+        kept.parent.mkdir(parents=True)
+        kept.write_text("n\tm\n1\t10\n", encoding="utf-8", newline="\n")
+        location = FileLocation(kept, format="csv", inside={"log.tsv": kept})
+        assert formats.scan_location(location).collect().columns == ["n", "m"]
+        assert "delim = '\t'" in formats.sql(location)
+        # Under its own name, as before
+        plain = tmp_path / "log.tsv"
+        plain.write_text("n\tm\n1\t10\n", encoding="utf-8", newline="\n")
+        assert formats.scan(plain).collect().columns == ["n", "m"]
+
+
 class TestTheOldViewsFolderGoes:
     def test_the_first_command_removes_what_0_4_gathered_and_says_so(self, work, cache, monkeypatch):
         view = cache / "views" / ("0" * 64) / "year=2023"
@@ -181,6 +235,10 @@ class TestTheOldViewsFolderGoes:
         assert result.exit_code == 0, result.output
         assert not (cache / "views").exists() and (cache / "hashes" / "x.json").is_file()
         assert "Removed" in result.output and "views" in result.output and "reads files where the store keeps them" in result.output
-        # Once: the next command has nothing to say
+        # Once: the next command has nothing to say, and a views folder a 0.4 install
+        # beside this one gathers again is left to it
+        assert (cache / ".views-removed").is_file()
+        view.mkdir(parents=True)
+        (view / "part-0.parquet").write_bytes(b"gathered again")
         result = CliRunner().invoke(main, ["path", "x", "--project-dir", str(folder)])
-        assert "Removed" not in result.output
+        assert "Removed" not in result.output and (view / "part-0.parquet").is_file()

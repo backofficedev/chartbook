@@ -56,7 +56,7 @@ from chartbook.resolve import (
     caller_start_dirs,
     find_manifest_dir,
     locate_in_catalog,
-    require_file,
+    require_single_path,
     resolve,
 )
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
@@ -325,6 +325,9 @@ def get_data_path(
     :type project_dir: Optional[Union[str, Path]]
     :returns: The resolved path to the file (may contain glob characters).
     :rtype: Path
+    :raises NoSinglePathError: If the dataframe is several files read from
+        the store, a Hive folder or a glob, which have no one path: read it
+        with :func:`load`, or list the files with :func:`files`.
     :raises CatalogNotConfiguredError: If no catalog is configured, and the
         store has no snapshot of the pipeline.
     :raises AssetNotPinnedError: If the dataframe has no copy to read: no
@@ -335,7 +338,8 @@ def get_data_path(
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
-    return require_file(location, f"Dataframe {dataframe!r}")
+    # A dataset of several files read from the store has no one path (as data.path says)
+    return require_single_path(location, f"Dataframe {dataframe!r}", f"{pipeline}:{dataframe}", "dataframe")
 
 
 def get_docs_path(

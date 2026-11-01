@@ -195,7 +195,9 @@ joblib.dump(model, models.path("my_model"))
 # the start of its content hash, and labelled in chartbook.toml:
 #   [models.my_model.aliases]
 #   champion = "7f3a9c2e41b0"
-# models.path("my_model@champion") is that version in the store (read-only);
+# models.path("my_model@champion") is that version in the store (read-only) when the model is
+# one file; a model that is a folder has files, not a path: assets.files("model/my_model@champion"),
+# or `with assets.gathered("model/my_model@champion") as folder:` for a loader that takes a directory.
 # models.versions("my_model") lists them with their scores and commits.
 
 # Files that are not tables (an archive of .jsonl.gz, a corpus of HTML, PDFs, images,

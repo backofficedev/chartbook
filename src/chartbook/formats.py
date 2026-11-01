@@ -766,6 +766,15 @@ def _overrides(read: Reading) -> dict:
     return {column: getattr(pl, _type(name)) for column, name in (read.options.get("schema_overrides") or {}).items()}
 
 
+def _named(sources, by_file: Optional[dict]):
+    """The names the files are read by, for what a name tells (a TSV's tab): each file's path inside its asset when the store keeps it under another name (a bucket's cache keeps a file under its hash), else the files themselves."""
+    if not by_file:
+        return sources
+    if isinstance(sources, list):
+        return [by_file.get(str(source), source) for source in sources]
+    return by_file.get(str(sources), sources)
+
+
 def _tab_separated(sources) -> bool:
     """Whether every file a CSV read opens is named as a TSV is."""
     names = [sources] if isinstance(sources, str) else list(sources)
@@ -804,7 +813,7 @@ def _scan(read: Reading, sources, folder: Optional[Path], by_file: Optional[dict
             return _scan_files(pl.scan_ipc, sources, hive_partitioning=False)
         return pl.scan_ipc(sources, hive_partitioning=False)
     if read.format == "csv":
-        frame, (polars_names, names) = _csv(read, sources)
+        frame, (polars_names, names) = _csv(read, sources, _named(sources, by_file))
         return frame.rename(dict(zip(polars_names, names))) if polars_names != names else frame
     # Each file's types inferred from its own lines, and the files read as
     # one under all of their columns, as DuckDB's union_by_name reads them:
@@ -820,15 +829,18 @@ def _scan(read: Reading, sources, folder: Optional[Path], by_file: Optional[dict
     return pl.scan_ndjson(files, schema=merged)
 
 
-def _csv(read: Reading, sources) -> tuple:
+def _csv(read: Reading, sources, named=None) -> tuple:
     """A CSV file's scan, and its columns' names: as polars gives them, and as both engines are to give them.
 
     A file with no header has its columns named ``column_1``, ``column_2``
     and so on, which polars names otherwise by version and DuckDB names
     otherwise again; an empty name in a header is named so too, which
     DuckDB will not take. ``schema_overrides`` name the columns so.
+
+    :param named: The names the files are read by (:func:`_named`), when
+        they are not the files' own; a TSV is told by its name.
     """
-    options = _csv_options(read, sources)
+    options = _csv_options(read, sources if named is None else named)
     overrides = options.pop("schema_overrides", None) or {}
     if isinstance(sources, str) and is_glob_pattern(sources) and not os.path.exists(sources):
         sources = _pattern(sources)
@@ -1229,12 +1241,13 @@ def sql(location) -> str:
     # As polars reads it, which says now what it cannot read: a glob whose
     # files have other columns, say, which DuckDB would read as the first's
     scan(path, read.format, read.options, files=location.files, listed=location.listed, inside=inside)
-    _, (polars_names, names) = _csv(read, sources)
+    named = _named(sources, _by_location(inside))
+    _, (polars_names, names) = _csv(read, sources, named)
     quote = options.get("quote_char", '"')
     nulls = options.get("null_values", [])
     nulls = [""] + [n for n in ([nulls] if isinstance(nulls, str) else nulls) if n != ""]
     given = [
-        f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(sources) else ','))}",
+        f"delim = {quote_literal(options.get('separator', chr(9) if _tab_separated(named) else ','))}",
         f"header = {'true' if options.get('has_header', True) else 'false'}",
         f"quote = {quote_literal(quote)}",
         f"escape = {quote_literal(quote)}",

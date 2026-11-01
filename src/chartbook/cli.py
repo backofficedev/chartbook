@@ -128,19 +128,24 @@ def _remove_old_views() -> None:
     together under ``cache/views/<hash>/``, and nothing removed the folder.
     The cache is disposable by definition, so the folder goes the first time
     a command finds it, and one line on stderr says so. A read-only file in
-    it (Windows) goes too.
+    it (Windows) goes too. A marker then says it was done, so that a 0.4
+    install beside this one, which gathers again, is not undone under its
+    feet on every command.
     """
     import os
 
     from chartbook.config import get_cache_path
-    from chartbook.store import OLD_VIEWS_DIR, _remove_tree
+    from chartbook.store import OLD_VIEWS_DIR, OLD_VIEWS_REMOVED, _remove_tree
 
     try:
         cache = get_cache_path()
     except (ValueError, OSError):
         return
+    marker = cache / OLD_VIEWS_REMOVED
+    if not cache.is_dir() or marker.is_file():
+        return  # nothing of 0.4's here, or seen to once already: a 0.4 install beside this one keeps its own
     leftovers = [cache / OLD_VIEWS_DIR]
-    for depth in ("*", "*/*", "*/*/*"):
+    for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
         leftovers.extend(cache.glob(f"s3/{depth}/{OLD_VIEWS_DIR}"))  # a bucket's cache, laid out as a folder store
     for folder in leftovers:
         if not folder.is_dir() or folder.is_symlink():
@@ -155,6 +160,10 @@ def _remove_old_views() -> None:
                 f"reads files where the store keeps them.",
                 err=True,
             )
+    try:
+        marker.write_text("ChartBook 0.5 removed what 0.4 gathered under views/ here, once.\n", encoding="utf-8", newline="\n")
+    except OSError:
+        pass
 
 
 def _stderr_is_a_terminal() -> bool:

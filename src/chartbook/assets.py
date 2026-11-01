@@ -68,7 +68,7 @@ from chartbook.refs import (
     KindMismatchError,
 )
 from chartbook.refs import parse_asset_ref as parse
-from chartbook.resolve import FileLocation, caller_start_dirs, require_file, resolve
+from chartbook.resolve import FileLocation, caller_start_dirs, require_single_path, resolve
 
 __all__ = [
     "DEFAULT_KIND",
@@ -93,18 +93,8 @@ def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> P
     """
     asset = parse(ref, kind=kind)
     location = resolve(asset, start_dirs=start_dirs)
-    path = require_file(location, f"The {asset.kind} {asset.name!r}")
-    if getattr(location, "listed", ()):
-        # Several files read from the store, which keeps each once: a later
-        # snapshot's may sit in earlier snapshots' folders, so there is no one
-        # folder to hand out; by declaration, so that this does not start
-        # failing when the upstream takes another snapshot
-        from chartbook.errors import NoSinglePathError
-
-        inside = location.inside
-        places = {Path(where).parents[len(relative.split("/")) - 1] for relative, where in inside.items()}
-        raise NoSinglePathError(ref if isinstance(ref, str) else str(asset), asset.kind, len(inside), len(places))
-    return path
+    # Several files read from the store have no one path (require_single_path)
+    return require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
 
 
 def path(

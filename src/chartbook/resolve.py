@@ -2209,6 +2209,32 @@ def caller_start_dirs(
     return start_dirs
 
 
+def require_single_path(location: Location, what: str, ref: str, kind: str) -> Path:
+    """Return a file location's one path; a folder or a glob read from the store has none.
+
+    :func:`require_file` first. Then, for an asset read from the store as
+    several files (:attr:`FileLocation.listed`), raise: the store keeps each
+    file once, so a later snapshot's files may sit in earlier snapshots'
+    folders, and there is no one folder to hand out. By declaration, so that
+    a call that works does not stop working when the upstream takes another
+    snapshot.
+
+    :param what: What it is the location of, to begin the error message.
+    :param ref: The reference as it was asked for, for the message.
+    :param kind: The kind of asset, for the message.
+    :raises TypeError: If the location is not a file.
+    :raises NoSinglePathError: If it is several files read from the store.
+    """
+    path = require_file(location, what)
+    if getattr(location, "listed", ()):
+        from chartbook.errors import NoSinglePathError
+
+        inside = location.inside
+        places = {Path(where).parents[len(relative.split("/")) - 1] for relative, where in inside.items()}
+        raise NoSinglePathError(ref, kind, len(inside), len(places))
+    return path
+
+
 def require_file(location: Location, what: str) -> Path:
     """Return a file location's path; no other kind of location has one.
 

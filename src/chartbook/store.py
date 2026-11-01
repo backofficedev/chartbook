@@ -159,6 +159,9 @@ ROOTS_DIR = "roots"
 #: are kept; the folder is removed when it is found (``chartbook.cli``).
 OLD_VIEWS_DIR = "views"
 
+#: The marker ``chartbook.cli`` leaves in the cache once the folder above has been removed.
+OLD_VIEWS_REMOVED = ".views-removed"
+
 #: How long a note of a snapshot being made keeps the files it uses from
 #: ``store gc``, in seconds; a snapshot's folder with no record is left as
 #: long, as one being made.
@@ -1925,10 +1928,11 @@ class FolderStore(Store):
             ]
         missing = None
         pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
+        checked: dict = {}
         for asset in held:
             # A link first, there or not: what it leads to is never read, nor taken for a sync to wait for
             for file in asset.files:
-                if _is_or_under_a_link(file.location, self.root / PIPELINES_DIR) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+                if _is_or_under_a_link(file.location, self.root / PIPELINES_DIR, checked) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
                     raise StoreError(
                         f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of the "
                         f"store, or is under a link; it is not read. `chartbook store verify` checks a store."
@@ -2718,31 +2722,42 @@ def unowned_files(content_hash: str, folder: Path, name: Optional[str] = None) -
     found = []
     for file in hashing.directory_files(folder):
         relative = file.relative_to(folder).as_posix()
-        if name and relative != name:
-            continue
         try:
             size = os.stat(file).st_size
         except OSError:
             continue
         found.append(KeptFile(relative, relative, size, "", file))
     found.sort(key=lambda file: file.relative)
-    if name and not found:
-        raise StoreError(f"The object {content_hash} holds no file named {name!r}.")
-    return KeptFiles(content_hash, bool(name) or len(found) == 1, tuple(found), folder)
+    if name:
+        # By the name asked for, in either of Unicode's forms (a sync between
+        # systems may hand a name over in the other); the files as they are if none is
+        wanted = unicodedata.normalize("NFC", name)
+        named = [file for file in found if unicodedata.normalize("NFC", file.relative) == wanted]
+        if named:
+            return KeptFiles(content_hash, True, (dataclasses.replace(named[0], relative=name),), folder)
+    return KeptFiles(content_hash, len(found) == 1, tuple(found), folder)
 
 
-def _is_or_under_a_link(location: Path, pipelines: Path) -> bool:
-    """Whether a file of the store is a link, or a folder between ``pipelines/`` and it is one."""
+def _is_or_under_a_link(location: Path, pipelines: Path, checked: Optional[dict] = None) -> bool:
+    """Whether a file of the store is a link, or a folder between ``pipelines/`` and it is one.
+
+    :param checked: Folders already judged, by path, so that a dataset of
+        many files in one folder costs one look at the folder.
+    """
     try:
         parts = Path(os.path.abspath(location)).relative_to(Path(os.path.abspath(pipelines))).parts
     except ValueError:
         return True
+    checked = checked if checked is not None else {}
     current = pipelines
-    for part in parts:
+    for part in parts[:-1]:
         current = current / part
-        if os.path.islink(current):
+        known = checked.get(current)
+        if known is None:
+            known = checked[current] = os.path.islink(current)
+        if known:
             return True
-    return False
+    return os.path.islink(location)
 
 
 #: The end of a note, under ``tmp/``, of a snapshot being made: its own folder, and the files of earlier ones it uses.
