@@ -314,6 +314,23 @@ from a stored index is checked for shape (`index._well_formed`), since anyone ca
 a glimpse is capped (`utils.GLIMPSE_MAX_CHARS`); a folder of parts gets `N/A` for its last dates
 rather than being read whole; a CSV's text dates parse under polars 2.
 
+*Step 3, PR #152 (2026-10-31, with step 4).* `data.path`, `assets.path` and `models.path` of a pipeline's own asset
+make the folder the file is written into (`assets._make_room`): the file's parent, or a glob's
+root, inside the pipeline's folder only; polars makes a folder dataset's own folder when it writes
+with `partition_by`, and a path with no ending may be a file. `[project] scratch` names the scratch
+folder (`data._scratch_declared` reads the manifest's text alone; the manifest refuses a value
+that is not a plain path inside the pipeline). The reference says a dataset of many files is
+declared as a folder, not a glob.
+
+*Step 4, PR #152 (2026-10-31, with step 3).* `chartbook store ls [PIPELINE]` lists snapshots as standalone or
+shared with the size each folder holds; the first snapshot of a pipeline writes `README.txt` in the
+pipeline's store folder (`store.write_readme`, never rewritten, removed by `gc` with the last
+snapshot); after
+`chartbook snapshot` and `chartbook catalog build` one line says what gc would clear
+(`cli._remind_of_gc`, from the gc plan, read-only), `--no-gc-reminder` silences it, and
+`catalog build --gc` runs gc as `store gc --yes` would. `store export --latest` already writes a
+standalone copy, so nothing was added for that.
+
 ## Decisions, dated
 
 | Date | Decision |

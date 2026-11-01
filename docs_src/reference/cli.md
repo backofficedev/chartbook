@@ -392,6 +392,7 @@ It copies the files the manifest names, so in a folder you have not trusted it r
 `publish` copies files into a directory and does nothing else — no network, no registry. Sending a pipeline to a registry is a different act and will get a different verb, **`chartbook push`**. That name is reserved: the command exists only to say it is not yet supported, and `publish` will not grow a second meaning.
 ```
 
+(chartbook-catalog)=
 ## chartbook catalog
 
 Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` (`chartbook config` can point these commands at a different catalog). Concepts and the auto-discovery alternative: {doc}`../guide/catalogs-and-data`.
@@ -426,14 +427,25 @@ chartbook catalog enable ftsfr/sovereign_bonds [OPTIONS] [--catalog PATH]
 Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]]
+chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [OPTIONS] [--watch-interval SECONDS]] [--gc] [--no-gc-reminder]
 ```
 
 A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-docs).
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
-The catalog reads snapshots from its stores. It runs no member code and needs no member trust.
+The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version's site is built from its snapshot's documents, charts, notebooks, notes and index, which recorded each dataframe's columns, rows, dates and first rows when the snapshot was made ({doc}`../design/plan-data-reads`).
+
+After the build, one line on stderr says what `chartbook store gc` would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: `--gc` runs gc then, as `chartbook store gc --yes` would, and `--no-gc-reminder` silences the line. With `--gc`, something gc could not remove (another user's, in a store users share) exits `1` after the site was built, as `store gc` itself does.
+
+```console
+$ chartbook catalog build
+...
+Catalog site generated: /Users/x/.chartbook/docs/index.html
+`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
+```
+
+`chartbook run --snapshot` says the same after its snapshot.
 
 ### catalog open
 
@@ -511,7 +523,7 @@ The report reads the files the manifest names, so in a folder you have not trust
 ## chartbook snapshot
 
 ```console
-chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep]
+chartbook snapshot [OPTIONS] [--project-dir PATH] [--deep] [--store NAME] [--no-gc-reminder]
 ```
 
 Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
@@ -535,6 +547,8 @@ Error: acme/forecast cannot have a snapshot: its pins do not account for every d
 ```
 
 Or both in one command, which is the better habit: `chartbook run --snapshot`. See {ref}`below <run-then-snapshot>`.
+
+After a snapshot, one line on stderr says what `chartbook store gc` would clear, if anything, as {ref}`catalog build <chartbook-catalog>` says it; `--no-gc-reminder` silences it. Nothing is removed unless you ask. The first snapshot of a pipeline leaves a `README.txt` in the pipeline's folder of the store, for whoever finds the folder: a later snapshot's folder holds only what changed, so folders are removed with `chartbook store gc` and never by hand ({ref}`store ls <chartbook-store>`).
 
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
@@ -1041,6 +1055,27 @@ Cache: /Users/x/.chartbook/cache
 What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
 
 `--store NAME` shows just that catalog store. Without it, every store is shown, including read-only and unreachable stores.
+
+### store ls
+
+```console
+chartbook store ls [PIPELINE] [--store NAME]
+```
+
+List the snapshots in the store, one line each, newest last within its pipeline: the folder's name (when it was made and the commit), whether it is **standalone** or **shared**, and how much its own folder holds.
+
+```console
+$ chartbook store ls acme/news_headlines
+acme/news_headlines (3 snapshot(s))
+  2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
+  2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in earlier folders
+  2026-07-01T120000Z_c9d0e1f2a3b4  2026-07-01 12:00 UTC  c9d0e1f  shared     290 MB here, 27 file(s) in earlier folders
+A shared snapshot's folder holds only what changed; the rest of its files are in earlier folders, which `chartbook store gc` keeps while a snapshot uses them. Remove snapshots with gc, never by hand.
+```
+
+Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, in the first snapshot that had it, so a later snapshot's folder holds only what is new or changed (shared) unless everything changed (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since a later snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
+
+`PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
 ### store verify
 

@@ -162,6 +162,39 @@ OLD_VIEWS_DIR = "views"
 #: The marker ``chartbook.cli`` leaves in the cache once the folder above has been removed.
 OLD_VIEWS_REMOVED = ".views-removed"
 
+#: The note left in each pipeline's folder of a folder store, for a person who finds the folder: what a
+#: snapshot's folder holds, and that ``store gc`` is how to remove snapshots. Written once, never rewritten.
+README_FILE = "README.txt"
+
+README_TEXT = """This folder holds the snapshots of one pipeline, kept by ChartBook.
+
+Each snapshot is a folder named by when it was made and the commit it was made at, and a
+complete record of that version: _chartbook/snapshot.json lists every file of every asset,
+with its hash and the folder that keeps it.
+
+A file is kept once, in the first snapshot that had it. So a later snapshot's folder holds
+only what is new or changed since (a "shared" snapshot), and the rest of its files sit in
+earlier snapshots' folders. A snapshot whose folder holds every file of its version is
+"standalone". `chartbook store ls` says which each is.
+
+Do not delete a snapshot's folder by hand: a later snapshot may keep files in it, and would
+lose them. `chartbook store gc` removes snapshots safely, keeping every file a remaining
+snapshot uses. `chartbook store export PIPELINE --latest --to FOLDER` writes one complete,
+standalone copy of the newest version wherever you say.
+"""
+
+
+def write_readme(pipeline_path: Path) -> None:
+    """Leave :data:`README_FILE` in a pipeline's folder if there is none; nothing in the store is ever rewritten."""
+    note = pipeline_path / README_FILE
+    if note.exists() or os.path.lexists(note):
+        return
+    try:
+        with open(note, "x", encoding="utf-8", newline="\n") as f:
+            f.write(README_TEXT)
+    except OSError:
+        pass  # a store read-only for this user, or a race with another writer: the note is a courtesy
+
 #: How long a note of a snapshot being made keeps the files it uses from
 #: ``store gc``, in seconds; a snapshot's folder with no record is left as
 #: long, as one being made.
@@ -1847,6 +1880,17 @@ class FolderStore(Store):
                     emptied.add(os.path.dirname(directory))
                 except OSError:
                     pass
+        if not dry_run and not any(
+            is_snapshot_folder(name) and (pipeline_path / name / OWN_DIR / RECORD_FILE).is_file()
+            for name in (os.listdir(pipeline_path) if pipeline_path.is_dir() else [])
+        ):
+            # The last snapshot gone, the note for a person who finds the folder goes with it
+            note = pipeline_path / README_FILE
+            try:
+                if note.is_file() and not note.is_symlink():
+                    _remove_file(note)
+            except OSError:
+                pass
         try:
             if not older_than or now - os.stat(pipeline_path).st_mtime >= older_than:
                 pipeline_path.rmdir()
@@ -3170,6 +3214,7 @@ class _FolderPending(PendingSnapshot):
         self.store._forget()
         self._refill()  # a `store gc` between the check and the record
         self._drop_note()
+        write_readme(self.pipeline_path)  # for a person who finds the folder: what shared snapshots are, and gc
         return record
 
     def discard(self) -> None:

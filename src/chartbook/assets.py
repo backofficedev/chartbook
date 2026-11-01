@@ -94,7 +94,43 @@ def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> P
     asset = parse(ref, kind=kind)
     location = resolve(asset, start_dirs=start_dirs)
     # Several files read from the store have no one path (require_single_path)
-    return require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
+    path = require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
+    if asset.is_local and not getattr(location, "content_hash", None):
+        _make_room(path, start_dirs)  # this pipeline's own, where its build writes: the folder is there for the first write
+    return path
+
+
+def _make_room(path: Path, start_dirs: list) -> None:
+    """Make the folder a file of this pipeline's own is written into, so that the first write does not fail for want of it.
+
+    The file's parent folder: a folder dataset's own folder is made by
+    polars when it writes with ``partition_by``, and a path with no ending
+    may be a file. A glob's is the folder its pattern starts in, judged by
+    the path inside the pipeline, so a pipeline whose own folder is named
+    with a ``[`` is not taken for a glob. Only inside the pipeline's folder:
+    a declared path that climbs out of it makes nothing. Nothing is made for
+    another pipeline's asset, read where the store keeps it or, linked,
+    in its own folder. A folder that cannot be made is left to the write
+    to say so.
+    """
+    from chartbook import hashing
+    from chartbook.resolve import find_manifest_dir
+
+    try:
+        root = Path(os.path.abspath(find_manifest_dir(*start_dirs)))
+        inside = Path(os.path.abspath(path)).relative_to(root)
+    except (ValueError, OSError, Exception):  # noqa: BLE001 - no manifest, or a path outside it: nothing is made
+        return
+    if hashing.is_pattern(inside.as_posix()):
+        folder = root / hashing.glob_root(inside)
+    else:
+        folder = (root / inside).parent
+    if not Path(os.path.abspath(folder)).is_relative_to(root):
+        return
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 
 def path(
@@ -113,7 +149,10 @@ def path(
     and a build definition can use the same call for what it reads and what
     it writes. The path is whatever ``path`` the entry declares, made
     absolute; nothing checks that the file exists, so a target can be named
-    before it is built.
+    before it is built. For this pipeline's own asset the folder it is
+    written into is made if it is not there yet, so the first write of a
+    new pipeline does not fail for want of ``_data/``; polars makes a
+    folder dataset's own folder when it writes with ``partition_by``.
 
     Each kind of asset has its own names: ``[dataframes.gdp]`` and
     ``[charts.gdp]`` are two assets, ``gdp`` and ``chart/gdp``. Asking for a

@@ -177,8 +177,36 @@ def files(
     return [file for _, file in _assets._found(asset, location)]
 
 
-#: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
+#: Where :func:`scratch` puts throwaway files, relative to the pipeline root, unless ``[project] scratch`` says otherwise.
 SCRATCH_DIR = Path("_data") / "_scratch"
+
+
+def _scratch_declared(root: Path) -> Path:
+    """Where ``[project] scratch`` puts the scratch folder, relative to the pipeline's root; :data:`SCRATCH_DIR` by default.
+
+    Read from the manifest's text alone, so that a call at the top of a
+    ``dodo.py`` costs one small file. A value that is not a plain relative
+    path inside the pipeline (``../tmp``, an absolute path, the root itself)
+    is refused by name.
+    """
+    import tomli
+
+    from chartbook.snapshot import safe_relative
+
+    try:
+        raw = tomli.loads((root / "chartbook.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return SCRATCH_DIR
+    declared = (raw.get("project") or {}).get("scratch") if isinstance(raw.get("project"), dict) else None
+    if declared in (None, ""):
+        return SCRATCH_DIR
+    plain = safe_relative(declared) if isinstance(declared, str) else None
+    if not plain:
+        raise ValueError(
+            f"{root / 'chartbook.toml'}: [project] scratch = {declared!r} is not a plain path inside the pipeline. "
+            f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
+        )
+    return Path(*plain.split("/"))
 
 
 def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
@@ -190,7 +218,8 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     >>> from chartbook import data
     >>> tmp = data.scratch() / "raw_download.csv"  # doctest: +SKIP
 
-    The directory is ``_data/_scratch/`` inside the pipeline, created on
+    The directory is ``_data/_scratch/`` inside the pipeline, or what
+    ``[project] scratch`` names (a path inside the pipeline), created on
     first use. What goes in it is not an asset: it is not declared in the
     manifest, not documented, not published, and it ignores itself in git.
     It is safe to delete at any time. Because it lives inside the project,
@@ -205,9 +234,12 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     :rtype: Path
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
+    :raises ValueError: If ``[project] scratch`` is not a plain path inside
+        the pipeline.
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
-    directory = find_manifest_dir(*start_dirs) / SCRATCH_DIR
+    root = find_manifest_dir(*start_dirs)
+    directory = root / _scratch_declared(root)
     directory.mkdir(parents=True, exist_ok=True)
     gitignore = directory / ".gitignore"
     if not gitignore.exists():
