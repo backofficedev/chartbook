@@ -163,8 +163,8 @@ cross-references.
 
 ## Checking your work
 
-`chartbook check` compares the manifest and the files it names against the catalog's policy, and
-warns about a dependency declared and not pinned. `chartbook docs build` fails when a `path` or
+`chartbook check` compares the manifest and the files it names against its `[policy]` (a catalog's
+with `--policy`, or the default list), and warns about a dependency declared and not pinned. `chartbook docs build` fails when a `path` or
 `docs_path` points at nothing, naming the entry; a new project that has built nothing yet is
 rendered with each output shown as not built, and the build warns. While writing,
 `chartbook docs build -f --watch` rebuilds on every save.

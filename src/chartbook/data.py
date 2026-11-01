@@ -335,9 +335,8 @@ def get_data_path(
     dataframe through a catalog, from a notebook that belongs to no
     pipeline, say. It gives the file by the rules of :func:`load`: in a
     pipeline that declares the other one, its pin; otherwise the file in
-    the pipeline's newest snapshot in the store; with no snapshot, the file
-    in the folder the catalog lists, with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`. Which pipeline the
+    the pipeline's newest snapshot in the store; with no snapshot, an
+    error, since a catalog reads no working folder. Which pipeline the
     call is in is found as for :func:`path`: from the calling file first,
     then the working directory, so a script in a pipeline's folder gets
     that pipeline's pin wherever it is run from.
@@ -468,17 +467,15 @@ def load(
     is pinned then, to its newest snapshot, and stderr says so. One not
     declared is read from its newest snapshot with an
     :class:`~chartbook.resolve.UnrecordedReadWarning`, and one with no
-    snapshot from its folder with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`. Under
-    ``chartbook run``'s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is
-    read. Outside any pipeline, the newest snapshot is read and nothing is
+    snapshot is an error that names ``chartbook snapshot`` in its folder,
+    or ``chartbook link``. Under ``chartbook run``'s ``build``
+    (``CHARTBOOK_BATCH=1``) only a pin is read. Outside any pipeline, the newest snapshot is read and nothing is
     said; in a batch run there, nothing is read, since nothing records it.
 
     **Through a catalog**, with a pipeline and a dataframe. This reads by
     the same rules: its pin, in a pipeline that declares it; otherwise its
-    newest snapshot in the store; with no snapshot, the file in the folder
-    the catalog lists, as it is now, with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`:
+    newest snapshot in the store; with no snapshot, an error, since a
+    catalog reads no working folder:
 
     >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP

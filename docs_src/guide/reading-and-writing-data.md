@@ -4,7 +4,7 @@ Your code names a dataset, and ChartBook knows where it is. This page is the who
 you write your own outputs, how you read any pipeline's data, and the one case that has files and
 no path.
 
-Every example runs in a pipeline made by `chartbook init`, whose `chartbook.toml` declares each
+Every example runs in a pipeline made by `chartbook init`, once its `chartbook.toml` declares the
 dataframe with a `path`:
 
 ```toml
@@ -25,8 +25,9 @@ df.write_parquet(data.path("repo_public"))    # <pipeline>/_data/repo_public.par
 ```
 
 `data.path` finds `chartbook.toml` by walking up from the file that called it, so a script three
-folders deep in `src/` gets the same answer wherever it is run from, and so does a notebook. It
-reads the entry's `path`, joins it to the pipeline's folder, and returns the absolute path. The
+folders deep in `src/` gets the same answer wherever it is run from; a notebook, which has no file,
+is resolved from its working directory, usually its own folder. It reads the entry's `path`, joins
+it to the pipeline's folder, and returns the absolute path. The
 file need not exist yet. The folder it goes in is made if it is not there, so the first run of a
 new pipeline does not fail for want of `_data/`.
 
@@ -62,9 +63,9 @@ A glob, `./_data/articles/**/*.parquet`, reads the same, for a layout that needs
 place to write.
 
 Charts, models and files assets are written the same way, with their kind in front:
-`assets.path("chart/repo_rates")`, `models.path("rate_forecaster")`. The declaration decides the
-format, as it does for reading: a `.parquet` ending is parquet, `.csv` is CSV, and `format` in the
-entry says otherwise.
+`assets.path("chart/repo_rates")`, `models.path("rate_forecaster")`. Write the format the
+declaration names, since that is how it is read back: a `.parquet` ending is parquet, `.csv` is
+CSV, and `format` in the entry says otherwise.
 
 ## Read any pipeline's data
 

@@ -66,8 +66,9 @@ how one person shares different projects with different people.
 Every pipeline with a snapshot in any store, and every version of each. A version's page is built
 from its snapshot's documents, charts, notebooks and index: the data is not laid out and not read.
 The index recorded each dataframe's columns, rows, dates and first rows when the snapshot was made,
-so the catalog shows them without touching a data file, and a catalog build never grows anything on
-your disk but the site itself. A pipeline enters the catalog when its owner runs `chartbook
+so the catalog shows them without touching a data file. What a catalog build keeps on your disk is
+the site, its `_docs/` build tree beside the catalog, and each version's built site under
+`~/.chartbook/cache/versions`; no data file is copied or read. A pipeline enters the catalog when its owner runs `chartbook
 snapshot`; the catalog runs no pipeline's code.
 
 `chartbook ls` lists what the catalog shows on the command line; `chartbook ls stores` and
@@ -89,8 +90,8 @@ acme/news_headlines (3 snapshot(s))
 
 A snapshot's folder is never deleted by hand, since a later snapshot may keep files in it.
 `chartbook store gc` removes snapshots safely: it keeps the newest of each pipeline, everything a
-lockfile pins, anything made in the last seven days, and every file a remaining snapshot uses, lists
-what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
+lockfile pins, a snapshot a model's label points into, anything made in the last seven days, and
+every file a remaining snapshot uses, lists what it would remove, and asks. After `chartbook snapshot` and `chartbook catalog build`, one line
 says what gc would clear and how much it would free, so a store nobody clears is at least a store
 whose owner was told; `--no-gc-reminder` silences it, and `chartbook catalog build --gc` runs gc
 after the build. Nothing is removed unless you ask.

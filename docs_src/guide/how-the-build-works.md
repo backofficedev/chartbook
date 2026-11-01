@@ -84,7 +84,8 @@ into `_static/`, a notebook into `cb/notebooks/`, a dataframe's file for downloa
 
 Each page is rendered from Jinja2 templates. To change one, put a file of the same name in the
 pipeline's root: `freshness.md` (the "Data updated …" line), `chart_entry_top.md` and
-`chart_entry_bottom.md`, `dataframe_manifest.md`, `provenance.md`, `pipeline_dependencies.md`,
+`chart_entry_bottom.md`, the manifest tables (`dataframe_manifest.md`, `pipeline_manifest.md`,
+`model_manifest.md`, `file_manifest.md`), `provenance.md`, `pipeline_dependencies.md` and
 `index.md`. The defaults are in `_docs_src/_templates/` after a build with `--keep-build-dirs`.
 
 ## 3. Build: Sphinx

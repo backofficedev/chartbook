@@ -139,7 +139,7 @@ chartbook.plotting.line(
 python src/build_chart.py
 ```
 
-This writes `_data/walks.parquet` plus five chart files in `_output/` — interactive HTML and static PNG/PDF in two sizes (see {doc}`guide/plotting`). It runs the same from any folder, since `data.path` finds `chartbook.toml` by walking up from the script ({doc}`guide/reading-and-writing-data`).
+This writes `_data/walks.parquet` plus five chart files in `_output/` — interactive HTML and static PNG/PDF in two sizes (see {doc}`guide/plotting`). The parquet lands in the same place from any folder, since `data.path` finds `chartbook.toml` by walking up from the script ({doc}`guide/reading-and-writing-data`); the chart's `output_dir` is relative to where you run, so run from the project root.
 
 **4. Build and view.**
 

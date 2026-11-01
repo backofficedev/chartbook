@@ -96,7 +96,7 @@ In a notebook, a read does what you most likely meant and says what it did. In a
 | A dependency that is pinned | The pinned copy | The pinned copy |
 | A dependency declared and not pinned | Pins its newest snapshot now, and says so | `run` pinned it before the build |
 | A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error |
-| One with no snapshot, whose folder is here | Its working version, with a loud warning | An error |
+| One with no snapshot, whose folder is here | An error naming `chartbook snapshot` in that folder, or `chartbook link` | The same error |
 
 ```python
 >>> data.load("acme/rates:treasury")
@@ -117,10 +117,11 @@ build = "doit"
 $ chartbook run                 # pins what has no pin yet, then runs the build script
 ```
 
-`chartbook run` never builds a dependency and never reads its folder: its owner makes the snapshot.
-When the folder is yours, `chartbook run --upstream` builds and snapshots a `path` dependency that
-has no snapshot yet. It never moves a pin; `chartbook update` does that. A dependency can also be a
-git repository, `{ git = "https://…", rev = "v1.2" }`, pinned to what that repository commits.
+`chartbook run` never builds in a `path` dependency's folder and never reads it: its owner makes the
+snapshot. When the folder is yours, `chartbook run --upstream` builds and snapshots one that has no
+snapshot yet. It never moves a pin; `chartbook update` does that. A dependency can also be a git
+repository, `{ git = "https://…", rev = "v1.2" }`: `chartbook pin` pins the files it commits, and
+`chartbook run` builds the rest once, in ChartBook's own clean copy of that commit.
 
 ## What a snapshot is in the store
 
@@ -131,7 +132,7 @@ holds only what changed **shared**:
 
 ```console
 $ chartbook store ls acme/news_headlines
-acme/news_headlines (3 snapshot(s))
+acme/news_headlines (2 snapshot(s))
   2026-05-01T120000Z_a1b2c3d4e5f6  2026-05-01 12:00 UTC  a1b2c3d  standalone 2.1 GB here
   2026-06-01T120000Z_e5f6a7b8c9d0  2026-06-01 12:00 UTC  e5f6a7b  shared     310 MB here, 14 file(s) in earlier folders
 ```
