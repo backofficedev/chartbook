@@ -125,8 +125,9 @@ class TestMaking:
         rates = taken.assets["rates"]
         assert rates["id"] == "acme/maker:rates"
         assert (folder / "_data" / "rates.parquet").read_bytes() == b"rates-1"
-        assert store.get(rates["content_hash"]) == folder / "_data"  # read where it is kept
-        assert (store.get(rates["content_hash"]) / "rates.parquet").read_bytes() == b"rates-1"
+        held = store.files(rates["content_hash"])
+        assert held.home == folder / "_data" and held.one.location == folder / "_data" / "rates.parquet"  # read where it is kept
+        assert held.one.location.read_bytes() == b"rates-1"
         assert taken.asset_hashes() == {record["content_hash"] for record in taken.assets.values()}
         # The store keeps the version's index and documents too
         assert taken.hashes() == taken.asset_hashes() | {taken.index["content_hash"], taken.documents["content_hash"]}
@@ -193,8 +194,8 @@ class TestMaking:
         taken = snapshot.make(maker).snapshot
         with open(maker / "_data" / "rates.parquet", "r+b") as f:
             f.write(b"RATES-9")
-        held = default_store().get(taken.assets["rates"]["content_hash"])
-        assert (held / "rates.parquet").read_bytes() == b"rates-1"
+        held = default_store().files(taken.assets["rates"]["content_hash"]).one.location
+        assert held.read_bytes() == b"rates-1"
 
     def test_a_pipeline_at_the_top_of_its_repository(self, work):
         directory = _manifest(work, {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
@@ -252,8 +253,8 @@ class TestMaking:
         taken = snapshot.make(directory).snapshot
         assert [f["path"] for f in taken.assets["model/m"]["files"]] == ["weights.bin"]
         assert "files" not in taken.assets["parts"]  # a glob says which files by itself
-        held = default_store().get(taken.assets["parts"]["content_hash"])
-        assert sorted(p.name for p in held.iterdir()) == ["a.parquet", "b.parquet"]
+        held = default_store().files(taken.assets["parts"]["content_hash"])
+        assert [f.relative for f in held.files] == ["a.parquet", "b.parquet"]
 
 
 class TestEverythingMustBeCommitted:

@@ -831,8 +831,8 @@ class TestWhatTheSecondReviewFound:
             store._forget()
         assert store.incomplete(glob.content_hash, glob.size_bytes, None, False) is not None
         with pytest.raises(StoreError):
-            store.get(glob.content_hash)  # never the SHA256SUMS in its place
-        assert (Path(store.get(one.content_hash, name="SHA256SUMS")) / "SHA256SUMS").read_text(encoding="utf-8") == sums
+            store.files(glob.content_hash)  # never the SHA256SUMS in its place
+        assert store.files(one.content_hash, name="SHA256SUMS").one.location.read_text(encoding="utf-8") == sums
         if kind == "s3":
             context.__exit__(None, None, None)
 
@@ -854,7 +854,8 @@ class TestWhatTheSecondReviewFound:
             "made_at": pending.made_at,
             "records": [{"id": "acme/rates:parts", "content_hash": put.content_hash, "size_bytes": put.size_bytes, "stored": put.stored}],
         })
-        kept = Path(store.get(put.content_hash))
-        kept.chmod(0o755)
-        os.mkfifo(kept / "x.parquet")
-        assert not (Path(store.get(put.content_hash)) / "x.parquet").exists()  # gathered from what its record lists
+        kept = store.files(put.content_hash)
+        assert kept.in_place()
+        kept.home.chmod(0o755)
+        os.mkfifo(kept.home / "x.parquet")
+        assert [f.relative for f in store.files(put.content_hash).files] == ["a.parquet"]  # what its record lists, and nothing else

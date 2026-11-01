@@ -98,7 +98,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import KIND_TABLES, AssetRef
 from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
-from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store
+from chartbook.store import OWN_DIR, TABLES_DIR, PendingSnapshot, Store, StoreError, declared_name, default_store, plain_parts
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -2873,16 +2873,15 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         marker["code_changed_at"] = code_changed_at
     (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    held = Path(store.get(taken.documents["content_hash"]))
+    # Each document where the store keeps it; a file that is a link, or under one, the store never hands out
+    kept = store.files(taken.documents["content_hash"]).by_relative()
     for relative in taken.documents.get("files", []):
         plain = plain_name(relative) if isinstance(relative, str) else None
         if plain is None or plain.split("/")[0] == VERSION_FILE:
             report.left_out.append((str(relative), NOT_A_PLAIN_PATH))
             continue
-        if _through_a_link(held, plain):
-            report.left_out.append((plain, A_LINK))
-            continue
-        if os.path.lexists(folder / plain) or not _copy_regular_file(held / plain, folder / plain):
+        source = kept.get(plain)
+        if source is None or os.path.lexists(folder / plain) or not _copy_regular_file(source, folder / plain):
             report.left_out.append((plain, NOT_A_FILE))
             continue
         report.documents.append(plain)
@@ -2907,8 +2906,8 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         if not isinstance(name, str) or plain_name(materialized_name(record)) is None:
             continue
         relative = f"_chartbook/tables/{materialized_name(record)}"
-        held = Path(store.get(record["content_hash"], taken.pipeline, name=materialized_name(record)))
-        if _copy_regular_file(held / materialized_name(record), folder / relative):
+        written = store.files(record["content_hash"], taken.pipeline, name=materialized_name(record)).one.location
+        if _copy_regular_file(written, folder / relative):
             entry = raw.get("dataframes", {}).get(name)
             if isinstance(entry, dict):
                 for key in ("source", "table", "query", "format", "read_options"):
@@ -2922,8 +2921,8 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
         import tomli_w
         manifest_path.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
     if taken.index and taken.index.get("content_hash"):
-        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE))
-        _copy_regular_file(held / INDEX_FILE, folder / "_chartbook" / INDEX_FILE)
+        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
+        _copy_regular_file(held, folder / "_chartbook" / INDEX_FILE)
     _write_back(taken, folder, report)
     # Whatever the filesystem made of the names written, there is no repository here
     if os.path.lexists(folder / ".git"):
@@ -2969,24 +2968,20 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
         )
     single = not is_glob_pattern(plain) and not record.get("files")
     try:
-        held = Path(store.get(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None))
+        kept = store.files(record["content_hash"], record.get("pipeline"), name=Path(plain).name if single else None)
     except StoreError as error:
         # A file of it is a link, or not synced yet: the rest of the version is laid out
         return f"the store does not give it: {str(error).rstrip('.')}"
     if is_glob_pattern(plain):
-        _copy_tree(held, folder / glob_root(plain))
-    elif record.get("files"):
-        _copy_tree(held, folder / plain)
+        _copy_kept(kept, folder / glob_root(plain))
+    elif record.get("files") or not kept.single:
+        _copy_kept(kept, folder / plain)
     else:
-        # The same bytes may be held under several names: the declared one, else the first
-        files = sorted(p for p in held.iterdir() if p.is_file() and not p.is_symlink())
-        source = held / Path(plain).name
-        if source.is_symlink() or not source.is_file():
-            source = files[0] if files else None
-        if source is None:
+        if not kept.files:
             return "its object holds no file"
+        # The same bytes may be held under several names: the one asked for by its name, else the first
         target = folder / plain
-        if os.path.lexists(target) or not _copy_regular_file(source, target):
+        if os.path.lexists(target) or not _copy_regular_file(kept.files[0].location, target):
             return "its file could not be written where its path says"
     return None
 
@@ -3156,7 +3151,7 @@ def _stored_records(taken: Snapshot, store: Store) -> list:
     if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
         return []
     try:
-        held = Path(store.get(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE)) / INDEX_FILE
+        held = store.files(taken.index["content_hash"], taken.pipeline, name=INDEX_FILE).one.location
         recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
     except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
         return []
@@ -3221,12 +3216,12 @@ def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
     return changed if isinstance(changed, str) else None
 
 
-def _copy_tree(source: Path, target: Path) -> None:
-    """Copy an object's files to a folder, writable, under the same relative paths; never through a link."""
-    for file in hashing.directory_files(source):
-        relative = file.relative_to(source).as_posix()
-        if plain_name(relative) is None or _through_a_link(source, relative):
+def _copy_kept(kept, target: Path) -> None:
+    """Copy an asset's files from where the store keeps them to a folder, under their paths inside the asset, writable; nothing on disk is written over."""
+    for file in kept.files:
+        parts = plain_parts(file.relative)
+        if parts is None:
             continue
-        destination = target / relative
+        destination = target.joinpath(*parts)
         if not os.path.lexists(destination):
-            _copy_regular_file(file, destination)
+            _copy_regular_file(file.location, destination)

@@ -59,6 +59,10 @@ class DeclaredDataframe:
         format: Its ``format``, if the manifest gives one; else its path's
             ending says it (:mod:`chartbook.formats`).
         read_options: Its ``read_options``, if the manifest gives them.
+        files, listed, inside: For one read from the store, its files as
+            :class:`chartbook.resolve.FileLocation` has them: the store keeps
+            each file once, so they may sit in several snapshot folders, and
+            *path* is then no folder to read.
     """
 
     pipeline_id: str
@@ -67,6 +71,9 @@ class DeclaredDataframe:
     path: Path
     format: Optional[str] = field(default=None, compare=False)
     read_options: Optional[dict] = field(default=None, compare=False)
+    files: tuple = field(default=(), compare=False)
+    listed: tuple = field(default=(), compare=False)
+    inside: Optional[dict] = field(default=None, compare=False)
 
     @property
     def is_glob(self) -> bool:
@@ -75,6 +82,8 @@ class DeclaredDataframe:
 
     def data_files(self) -> list[str]:
         """The files on disk behind this dataframe; empty if not built yet."""
+        if self.inside:
+            return [str(where) for _, where in sorted(self.inside.items())]
         if self.is_glob:
             from chartbook.hashing import split_glob
 
@@ -116,7 +125,8 @@ def find_declared_dataframes(manifest):
                     raise ValueError(f"{pipeline_id}:{name}: {why}")
                 declared.append(DeclaredDataframe(pipeline_id=pipeline_id, dataframe_id=name,
                     name=names.get(record["id"]) or name, path=location.path,
-                    format=location.format, read_options=location.read_options))
+                    format=location.format, read_options=location.read_options,
+                    files=tuple(location.files), listed=tuple(location.listed), inside=dict(location.inside)))
         return sorted(declared, key=lambda r: (r.pipeline_id, r.dataframe_id))
     for pipeline_id in _working_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
@@ -143,6 +153,9 @@ def get_dataset_report(
     size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB,
     format=None,
     read_options=None,
+    files=(),
+    listed=(),
+    inside=None,
 ):
     """Return a dict with file metadata, shape, columns, sample values, numeric stats, and glimpse.
 
@@ -161,6 +174,10 @@ def get_dataset_report(
     :type format: str, optional
     :param read_options: The dataframe's ``read_options``, if its manifest gives them.
     :type read_options: dict, optional
+    :param files: For a dataframe read from the store, its files, where the
+        store keeps them, as :class:`chartbook.resolve.FileLocation` has them.
+    :param listed: And every file of it, by its path inside the asset.
+    :param inside: And where each is, by that path.
     :returns: A dict containing file metadata, shape, columns, sample values, numeric stats, and glimpse.
     :rtype: dict
     """
@@ -169,8 +186,9 @@ def get_dataset_report(
     try:
         # File info; a glob or a folder is one dataset spread over many files
         reading = formats.reading(filepath, format, read_options)
-        if is_glob_pattern(filepath) or os.path.isdir(filepath):
-            part_files = formats.files_of(filepath, reading)
+        if inside or is_glob_pattern(filepath) or os.path.isdir(filepath):
+            # From the store, the files where they are kept; a glob or a folder is one dataset spread over many files
+            part_files = formats.files_of(filepath, reading, files, listed, inside)
             report["file_size_bytes"] = sum(os.path.getsize(f) for f in part_files)
         else:
             report["file_size_bytes"] = os.path.getsize(filepath)
@@ -181,7 +199,7 @@ def get_dataset_report(
         is_large_file = report["file_size_mb"] > size_threshold_mb
 
         # Load data lazily, as data.load() does
-        lf = formats.scan(filepath, format, read_options)
+        lf = formats.scan(filepath, format, read_options, files=files, listed=listed, inside=inside)
 
         # Get schema without loading data
         schema = lf.collect_schema()
@@ -397,6 +415,9 @@ def create_txt_report(
             size_threshold_mb=size_threshold_mb,
             format=dataframe.format,
             read_options=dataframe.read_options,
+            files=dataframe.files,
+            listed=dataframe.listed,
+            inside=dataframe.inside,
         )
 
         output_lines.append("")

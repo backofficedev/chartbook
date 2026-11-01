@@ -544,3 +544,44 @@ class VersionNotFoundError(LookupError):
         self.reason = reason
         super().__init__(message)
 
+
+class NoSinglePathError(ValueError):
+    """Raised when one path is asked for an asset of several files that is read from the store.
+
+    Another pipeline's folder or glob of files is read from the store, where
+    a later snapshot keeps only what changed and the rest sit in earlier
+    snapshots' folders: there is no one folder to hand out. By declaration,
+    such an asset has files, not a path, so that a call that works does not
+    stop working when the upstream takes another snapshot. ``data.files()``
+    and ``assets.files()`` list them; ``data.load()`` and ``data.sql()``
+    read them where they are; ``assets.gathered()`` lays them out in a
+    temporary folder for a loader that needs one.
+
+    Attributes:
+        ref: The reference, as it was asked for.
+        kind: The kind of asset.
+        count: How many files it is.
+        places: How many folders the store keeps them in.
+    """
+
+    def __init__(self, ref: str, kind: str, count: int, places: int):
+        self.ref = ref
+        self.kind = kind
+        self.count = count
+        self.places = places
+        what = "a dataset" if kind == "dataframe" else f"a {kind}"
+        if places == 1:
+            where = (
+                f"kept in one place in the store today; a folder or a glob read from the store has no one path, so "
+                f"that it reads the same when a later snapshot keeps some of its files in earlier snapshots' folders"
+            )
+        else:
+            where = f"kept in {places} places in the store, so there is no one folder"
+        if kind == "dataframe":
+            how = f"Read it with data.load({ref!r}), or hand data.files({ref!r}) to your own reader."
+        else:
+            how = (
+                f"assets.files({ref!r}) lists them; `with assets.gathered({ref!r}) as folder:` lays them out "
+                f"in a temporary folder for a loader that needs one."
+            )
+        super().__init__(f"{ref!r} is {what} of {count} file{'s' if count != 1 else ''}, {where}. {how}")

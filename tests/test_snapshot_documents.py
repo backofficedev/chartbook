@@ -66,8 +66,8 @@ def pipeline(tmp_path):
 class TestTheIndexOfTheVersion:
     def test_the_snapshot_carries_its_index_published(self, pipeline):
         taken = snapshot.make(pipeline).snapshot
-        held = Path(default_store().get(taken.index["content_hash"]))
-        text = (held / snapshot.INDEX_FILE).read_text(encoding="utf-8")
+        held = default_store().files(taken.index["content_hash"], name=snapshot.INDEX_FILE).one.location
+        text = held.read_text(encoding="utf-8")
         built = json.loads(text)
         jsonschema.validate(built, json.loads(index.schema_path("index").read_text(encoding="utf-8")))
         assert "resolved_path" not in text and str(pipeline) not in text  # nothing of this machine
@@ -375,7 +375,7 @@ class TestWhatTheReviewFound:
         remove_tree(held)
         held.symlink_to(mine, target_is_directory=True)
         with pytest.raises(StoreError, match="is a link, or leads out of the store"):
-            store.get(taken.documents["content_hash"])
+            store.files(taken.documents["content_hash"])
         with pytest.raises(StoreError):
             snapshot.materialize(taken, tmp_path / "laid")
         assert not any("MY PRIVATE NOTES" in p.read_text(errors="replace", encoding="utf-8") for p in (tmp_path / "laid").rglob("*") if p.is_file())

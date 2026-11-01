@@ -504,7 +504,7 @@ class TestPinning:
     def test_its_assets_are_read_like_any_others(self, downstream, cache):
         lock.pin(downstream, git_cache=cache)
         path = data.path("upstream:committed", project_dir=downstream)
-        assert path == default_store().get(HELLO) / "committed.parquet"
+        assert path == default_store().files(HELLO, name="committed.parquet").one.location
         assert path.read_bytes() == b"hello"
 
     def test_the_lockfile_has_no_absolute_path_and_no_token(self, downstream, cache, work):
@@ -659,7 +659,7 @@ class TestPinning:
         assert _statuses(report) == {"committed": "restored", "ignored": "not_built", "twin": "restored"}
         assert report.problems == [] and (downstream / LOCK_FILE).read_bytes() == before
         for name in ("committed.parquet", "twin.parquet"):
-            assert (Path(default_store().get(HELLO, name=name)) / name).read_bytes() == b"hello"
+            assert default_store().files(HELLO, name=name).one.location.read_bytes() == b"hello"
         assert lock.read_lock(downstream).dependencies[0]["pinned_from"] == "upstream"
 
     def test_a_directory_still_arriving_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
@@ -673,7 +673,7 @@ class TestPinning:
         _commit(upstream, "Parts")
         lock.pin(downstream, git_cache=cache)
         (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
-        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        short = default_store().files(record["content_hash"]).by_relative()["b.parquet"]
         os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
         short.write_bytes(b"pa")
         store_module._found_whole.clear()
@@ -686,7 +686,7 @@ class TestPinning:
     def test_a_file_still_arriving_is_still_said_to_be(self, downstream, cache):
         """Putting the bytes in again adds a missing name; it never changes a file the object has."""
         lock.pin(downstream, git_cache=cache)
-        held = Path(default_store().get(HELLO)) / "committed.parquet"
+        held = default_store().files(HELLO, name="committed.parquet").one.location
         os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
         held.write_bytes(b"he")  # as a sync in progress leaves it
         store_module._found_whole.clear()  # this process may have found it whole before
@@ -714,10 +714,10 @@ class TestPinning:
         monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
         working = upstream / "data" / "committed.parquet"
         default_store().put(working, links=("hardlink",))  # stored more cheaply by something else
-        assert (default_store().get(HELLO) / "committed.parquet").samefile(working)
+        assert default_store().files(HELLO).one.location.samefile(working)
 
         lock.pin(downstream, git_cache=cache)
-        held = default_store().get(HELLO) / "committed.parquet"
+        held = default_store().files(HELLO, name="committed.parquet").one.location
         (checkout,) = (work / "cache" / "checkouts").rglob("committed.parquet")
         assert not held.is_symlink() and os.stat(held).st_nlink == 1
         assert not held.samefile(checkout) and not held.samefile(working)
@@ -895,7 +895,7 @@ class TestCommands:
         self._run("pin")
         result = self._run("path", "upstream:committed")
         assert result.exit_code == 0, result.output
-        assert result.stdout.strip() == str(default_store().get(HELLO) / "committed.parquet")
+        assert result.stdout.strip() == str(default_store().files(HELLO, name="committed.parquet").one.location)
 
 
 def _twin(upstream: Path) -> None:
@@ -925,7 +925,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         _commit(upstream, "Parts")
         lock.pin(downstream, git_cache=cache)
         (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
-        held = Path(default_store().get(record["content_hash"]))
+        held = default_store().files(record["content_hash"]).home
         os.chmod(held / "a.parquet", stat.S_IRUSR | stat.S_IWUSR)
         (held / "a.parquet").unlink()
         store_module._found_whole.clear()
@@ -951,7 +951,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
                 record.pop("files", None)
         (downstream / LOCK_FILE).write_text(json.dumps(document, indent=2), encoding="utf-8", newline="\n")
         (record,) = [r for r in lock.read_lock(downstream).assets.values() if r["id"].endswith(":parts")]
-        short = Path(default_store().get(record["content_hash"])) / "b.parquet"
+        short = default_store().files(record["content_hash"]).by_relative()["b.parquet"]
         os.chmod(short, stat.S_IRUSR | stat.S_IWUSR)
         short.write_bytes(b"pa")
         store_module._found_whole.clear()
@@ -980,7 +980,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
             report = lock.pin(downstream, git_cache=cache, before_writing=guard)
             assert report.problems == [] and {"committed", "same"} <= set(_statuses(report))
         for name in ("committed.parquet", "same.parquet"):
-            assert (Path(default_store().get(HELLO, name=name)) / name).read_bytes() == b"hello"
+            assert default_store().files(HELLO, name=name).one.location.read_bytes() == b"hello"
         # Each read from its own pipeline's copy, which is the one kept while it is pinned
         from chartbook import data
 
@@ -1023,7 +1023,7 @@ class TestPuttingBackInAnS3Store:
         assert report.problems == [] and _statuses(report)["twin"] == "restored" and _statuses(report)["committed"] == "restored"
         assert client.get_object(Bucket=BUCKET, Key=key)["Body"].read() == b"hello"
         for name in ("committed.parquet", "twin.parquet"):
-            assert (Path(store.get(HELLO, name=name)) / name).read_bytes() == b"hello"
+            assert store.files(HELLO, name=name).one.location.read_bytes() == b"hello"
 
     @pytest.mark.parametrize("guarded", [False, True], ids=["pin", "guarded"])
     def test_a_bucket_this_user_cannot_write_says_so(self, work, upstream, downstream, cache, client, guarded):

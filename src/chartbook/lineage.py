@@ -331,10 +331,11 @@ class _Walker:
                 "so whether its inputs are complete cannot be checked"
             )
         try:
-            folder = Path(self.store.get(documents["content_hash"]))
-            raw = tomli.loads(
-                snapshot._read_regular_file(folder / "chartbook.toml", MANIFEST_LIMIT).decode("utf-8")
-            )
+            kept = self.store.files(documents["content_hash"]).by_relative()
+            manifest = kept.get("chartbook.toml")
+            if manifest is None:
+                raise StoreError("its documents keep no chartbook.toml")
+            raw = tomli.loads(snapshot._read_regular_file(Path(manifest), MANIFEST_LIMIT).decode("utf-8"))
         except (OSError, ValueError, StoreError, UnicodeDecodeError, RecursionError) as error:
             return None, f"its manifest kept with it cannot be read ({error}), so whether its inputs are complete cannot be checked"
         dependencies = raw.get("dependencies")

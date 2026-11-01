@@ -100,7 +100,14 @@ from chartbook import data
 
 rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
 path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
+files = data.files("news_headlines:articles")           # a folder of files: each where the store keeps it
 ```
+
+A dataframe of one file has a path. One of many files, a Hive folder or a glob, has files and no
+one path: the store keeps each file once, so a dataset that grew over several snapshots has its
+files in several snapshot folders. `data.load` and `data.sql` read them where they are, and
+`data.files` lists them, for a `dodo.py`'s `file_dep` or a reader of your own. `data.path` of such a
+dataset says so, whatever the folders happen to hold today.
 
 What you get is the build they declared ready, not whatever is in their `_data/` folder this
 minute. They can rebuild, or be half-way through a change, and your results do not move.

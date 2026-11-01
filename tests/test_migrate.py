@@ -151,8 +151,8 @@ class TestMigrate:
         # Every asset is read as it was, by its hash
         for name in ("parts", "years", "documents", "parts_2"):
             assert store.has(hashes[name])
-        assert (Path(store.get(hashes["rates"], name="rates.parquet")) / "rates.parquet").read_bytes() == b"rates-1"
-        assert sorted(p.name for p in Path(store.get(hashes["parts_2"])).iterdir()) == ["a.txt", "b.txt", "c.txt"]
+        assert store.files(hashes["rates"], name="rates.parquet").one.location.read_bytes() == b"rates-1"
+        assert [f.relative for f in store.files(hashes["parts_2"]).files] == ["a.txt", "b.txt", "c.txt"]
         assert store.verify() == []
         # Every record reads as a snapshot of this version
         found, unreadable = snapshot.readable_snapshots(store)
@@ -170,7 +170,7 @@ class TestMigrate:
         migrate.run(root)
         store = FolderStore(root)
         assert store.unowned_hashes() == [hashes["pinned"]]
-        assert (Path(store.get(hashes["pinned"])) / "pinned.parquet").read_bytes() == b"pinned"
+        assert store.files(hashes["pinned"]).one.location.read_bytes() == b"pinned"
         assert [root.hashes for root in store.roots()] == [(hashes["pinned"],)]  # its lockfile's note stays
 
     def test_the_old_folders_go_and_0_2_is_left_a_record_it_cannot_read(self, old_store):
@@ -266,7 +266,7 @@ class TestWhatTheReviewFound:
         (root / "objects" / "sha256" / digest[:2] / digest[2:] / "t_2026 (1).txt").write_bytes(b"2026")
         migrate.run(root)
         store = FolderStore(root)
-        assert sorted(p.name for p in Path(store.get(hashes["years"])).iterdir()) == ["t_2025.txt", "t_2026.txt"]
+        assert [f.relative for f in store.files(hashes["years"]).files] == ["t_2025.txt", "t_2026.txt"]
         assert store.verify() == []
 
     def test_a_record_written_to_climb_out_moves_nothing(self, old_store, tmp_path):

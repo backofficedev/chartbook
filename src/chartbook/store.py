@@ -30,11 +30,13 @@ copied by hand into another store safe. The design is
 
 An asset is still named by its content hash (:mod:`chartbook.hashing`):
 one file's, or the hash of the listing of its files. A reader asks for it
-by that hash (:meth:`Store.get`) and is handed a folder with its files
-under their own names, so a path into the store still ends in
-``.parquet`` and a partitioned dataset keeps folders like ``year=2024/``:
-the snapshot's own folder where it holds the asset whole, else a view in
-this machine's cache that gathers the files from where they are kept.
+by that hash (:meth:`Store.files`) and is handed its files, each by its
+path inside the asset (``year=2024/part-0.parquet``) and where the store
+keeps it, which for a later snapshot may be an earlier snapshot's folder.
+Readers take the list: polars and DuckDB read a list of files, Hive keys
+included. Nothing gathers a version into one folder on each machine; the
+one folder a version is laid out in is one a command was asked for
+(``store export``, ``restore``, a catalog's rendering).
 
 What a store is, whatever holds it, is :class:`Store`. The folder store,
 :class:`FolderStore`, is the one every install has::
@@ -45,7 +47,7 @@ What a store is, whatever holds it, is :class:`Store`. The folder store,
     pending = store.begin("ftsfr/fed_yield_curve", commit, made_at, base=pipeline_folder)
     stored = pending.put(pipeline_folder / "_data/treasury_rates.parquet")
     pending.write(record)                                  # the snapshot, last
-    store.get(stored.content_hash)                         # a folder holding the file
+    store.files(stored.content_hash)                       # its files, where they are kept
 
 Another kind, an object store or a database, is a plugin: a class that
 provides the same methods, found by the scheme of the store's URL in the
@@ -55,9 +57,7 @@ is a setting of the machine, never of a pipeline; see
 
 **The declared file never moves.** A snapshot's file is the store's own
 bytes: a copy-on-write clone where the disk allows (``reflink``: APFS,
-btrfs, XFS), else a copy, so nothing outside the store can change it. The
-other two kinds of :data:`LINKS`, a hard link and a symlink, are for
-reading: a view in the cache is made of links into the store.
+btrfs, XFS), else a copy, so nothing outside the store can change it.
 :meth:`Store.verify` hashes every file again and reports each that is no
 longer what its record says.
 
@@ -154,9 +154,13 @@ MIGRATE_JOURNAL = "migrate.jsonl"
 #: removing what nothing needs never removes another project's pins.
 ROOTS_DIR = "roots"
 
-#: Where, in this machine's cache, assets are gathered whose files are kept
-#: in more than one snapshot's folder (:func:`gather`).
-VIEWS_DIR = "views"
+#: Where ChartBook 0.4 gathered, in this machine's cache, assets whose files
+#: are kept in more than one snapshot's folder. 0.5 reads files where they
+#: are kept; the folder is removed when it is found (``chartbook.cli``).
+OLD_VIEWS_DIR = "views"
+
+#: The marker ``chartbook.cli`` leaves in the cache once the folder above has been removed.
+OLD_VIEWS_REMOVED = ".views-removed"
 
 #: How long a note of a snapshot being made keeps the files it uses from
 #: ``store gc``, in seconds; a snapshot's folder with no record is left as
@@ -990,11 +994,19 @@ class Store(abc.ABC):
         """Whether the store holds an asset with this hash."""
 
     @abc.abstractmethod
-    def get(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> Path:
-        """Where a reader opens the asset with this hash: a folder of its files under their own names.
+    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> "KeptFiles":
+        """The files of the asset with this hash, each by its path inside the asset and where the store keeps it.
+
+        A reader reads the files where they are: a list of files to polars
+        or DuckDB, Hive keys included. Nothing is copied or gathered.
 
         :param pipeline: The pipeline it is of, whose snapshots are looked in first.
-        :param name: For an asset that is one file, the name it is read by.
+        :param name: For an asset that is one file, the name it is read by:
+            the same bytes may be two assets', each under its own name, and
+            kept once.
+        :raises ObjectNotFoundError: If the store has no such asset.
+        :raises StoreError: If a file of it is missing, not synced yet, or
+            leads out of the store.
         """
 
     @abc.abstractmethod
@@ -1234,6 +1246,46 @@ class KeptAsset:
     at: str
     single: bool
     files: tuple[KeptFile, ...]
+
+
+@dataclass(frozen=True)
+class KeptFiles:
+    """An asset's files, as a store hands them to a reader (:meth:`Store.files`).
+
+    Attributes:
+        content_hash: The asset's hash.
+        single: Whether the asset is one file, read by its name.
+        files: Its files, sorted by their path inside the asset. Each is
+            where the store keeps it, which in a shared snapshot may be an
+            earlier snapshot's folder than the asset's own (``kept_in``).
+        home: The folder the asset is listed from, in the snapshot that
+            recorded it: where it is whole when every file of it sits in
+            that snapshot. It need not exist, and a reader reads *files*,
+            never the folder.
+    """
+
+    content_hash: str
+    single: bool
+    files: tuple[KeptFile, ...]
+    home: Path
+
+    @property
+    def one(self) -> KeptFile:
+        """The file of an asset that is one file.
+
+        :raises StoreError: If the asset is several files.
+        """
+        if len(self.files) != 1:
+            raise StoreError(f"{self.content_hash} is {len(self.files)} files, not one.")
+        return self.files[0]
+
+    def by_relative(self) -> dict[str, Path]:
+        """Where each file is, by its path inside the asset."""
+        return {file.relative: file.location for file in self.files}
+
+    def in_place(self) -> bool:
+        """Whether every file sits under *home* at its path inside the asset: the asset is whole in one folder."""
+        return all(file.location == self.home.joinpath(*file.relative.split("/")) for file in self.files)
 
 
 @dataclass(frozen=True)
@@ -1847,13 +1899,12 @@ class FolderStore(Store):
             self.unowned_path(content_hash).is_dir()
         )
 
-    def get(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> Path:
-        """A folder holding the asset with this hash, its files under their own names.
+    def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> KeptFiles:
+        """The asset with this hash as its files, each where the store keeps it (:meth:`Store.files`).
 
-        Where the store keeps the files, when one snapshot's folder holds
-        exactly them (or the one file, for an asset that is a file). Else
-        they are gathered into this machine's cache, by link where the disk
-        allows (:func:`gather`). They are there to be read, not written.
+        A file of a later snapshot that an earlier one keeps is read in the
+        earlier one's folder: nothing is copied or gathered. They are there
+        to be read, not written.
 
         :param pipeline: The pipeline the asset is of, whose snapshots are
             looked in first.
@@ -1877,20 +1928,21 @@ class FolderStore(Store):
             ]
         missing = None
         pipelines = Path(os.path.realpath(self.root / PIPELINES_DIR))
+        checked: dict = {}
         for asset in held:
             # A link first, there or not: what it leads to is never read, nor taken for a sync to wait for
             for file in asset.files:
-                if os.path.islink(file.location) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
+                if _is_or_under_a_link(file.location, self.root / PIPELINES_DIR, checked) or not Path(os.path.realpath(file.location)).is_relative_to(pipelines):
                     raise StoreError(
-                        f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of "
-                        f"the store; it is not read. `chartbook store verify` checks a store."
+                        f"The file {file.path} of {content_hash} in the store at {self} is a link, or leads out of the "
+                        f"store, or is under a link; it is not read. `chartbook store verify` checks a store."
                     )
             for file in asset.files:
                 _check_length(file.location)  # written by a machine that takes longer paths than this one
             missing = _unsynced_file(asset)
             if missing is not None:
                 continue  # the one `incomplete` judges whole is the one read
-            return in_place(asset) or gather(asset, self.views)
+            return handed(asset)
         if missing is not None and not self.unowned_path(content_hash).is_dir():
             raise StoreError(
                 f"The store at {self} {missing} of {content_hash}, though a snapshot's record names it: it is not "
@@ -1906,14 +1958,7 @@ class FolderStore(Store):
                 f"The object {content_hash} in the store at {self} is a link, or leads out of "
                 f"the store; it is not read. `chartbook store verify` checks a store."
             )
-        return path
-
-    @property
-    def views(self) -> Path:
-        """Where assets are gathered whose files are kept in more than one snapshot's folder: ``views/`` in this machine's cache."""
-        from chartbook.config import get_cache_path
-
-        return get_cache_path() / VIEWS_DIR
+        return unowned_files(content_hash, path, name)
 
     def put(self, path: Union[str, Path], links: Iterable[str] = LINKS) -> StoredObject:
         """Store what a declared ``path`` names as an object no pipeline owns, and return its hash.
@@ -2646,100 +2691,73 @@ def what_is_wrong_with(asset: KeptAsset) -> Optional[str]:
     return None
 
 
-def in_place(asset: KeptAsset) -> Optional[Path]:
-    """The folder in the store a reader can open an asset in, its files under their own names; None if there is none.
+def handed(asset: KeptAsset) -> KeptFiles:
+    """An asset as one snapshot's record holds it, as a reader is handed it: its files, sorted, and its home.
 
-    A file, under its own name in its folder (other files beside it are
-    other assets'). Or a folder of the asset's files and nothing else: a
-    glob or a directory read from its folder must find no file of another.
+    Each file's location is as the disk names it (:func:`on_disk`): a sync
+    between systems may hand a name over in the other of Unicode's forms.
     """
-    if asset.single:
-        (file,) = asset.files
-        return file.location.parent if file.location.name == file.relative else None
-    first = asset.files[0]
-    base = first.location.parents[len(first.relative.split("/")) - 1]
-    for file in asset.files:
-        if file.location != base.joinpath(*file.relative.split("/")):
-            return None
-    try:
-        # Every name in it, whatever it is (a named pipe planted there too): a reader of the folder meets them all
-        there = {
-            unicodedata.normalize("NFC", (Path(folder) / name).relative_to(base).as_posix())
-            for folder, _, names in os.walk(base) for name in names if not hashing.is_ignored(name)
-        }
-    except OSError:
-        return None
-    return base if there == {unicodedata.normalize("NFC", file.relative) for file in asset.files} else None
-
-
-#: How an asset is gathered into the cache, cheapest first: no symlink on
-#: Windows, where making one needs a right a user may not have.
-VIEW_LINKS = ("reflink", "hardlink", "copy") if os.name == "nt" else ("reflink", "hardlink", "symlink", "copy")
-
-
-def _whole_in(view: Path, asset: KeptAsset) -> bool:
-    for file in asset.files:
+    pipeline_folder = asset.record.folder.parent
+    files = []
+    for file in sorted(asset.files, key=lambda file: file.relative):
         try:
-            if os.stat(view.joinpath(*file.relative.split("/"))).st_size != file.size_bytes:
-                return False
+            parts = file.location.relative_to(pipeline_folder).parts
+        except ValueError:
+            parts = ()
+        location = on_disk(pipeline_folder, list(parts)) if parts else file.location
+        files.append(file if location == file.location else dataclasses.replace(file, location=location))
+    at = plain_parts(asset.at) if asset.at else []
+    home = asset.record.folder.joinpath(*at) if at else asset.record.folder
+    return KeptFiles(asset.content_hash, asset.single, tuple(files), home)
+
+
+def unowned_files(content_hash: str, folder: Path, name: Optional[str] = None) -> KeptFiles:
+    """The files of an object no pipeline owns, as its folder holds them, under their own names.
+
+    Such an object's record lists no files, so each is read from the disk,
+    and its hash is not known without reading it (``content_hash`` is
+    empty). With *name*, the one file read by that name; without, every
+    file, and the object is one file when the folder holds one.
+    """
+    found = []
+    for file in hashing.directory_files(folder):
+        relative = file.relative_to(folder).as_posix()
+        try:
+            size = os.stat(file).st_size
         except OSError:
-            return False  # not there, or a link whose file has gone
-    return True
+            continue
+        found.append(KeptFile(relative, relative, size, "", file))
+    found.sort(key=lambda file: file.relative)
+    if name:
+        # By the name asked for, in either of Unicode's forms (a sync between
+        # systems may hand a name over in the other); the files as they are if none is
+        wanted = unicodedata.normalize("NFC", name)
+        named = [file for file in found if unicodedata.normalize("NFC", file.relative) == wanted]
+        if named:
+            return KeptFiles(content_hash, True, (dataclasses.replace(named[0], relative=name),), folder)
+    return KeptFiles(content_hash, len(found) == 1, tuple(found), folder)
 
 
-def gather(asset: KeptAsset, views: Path) -> Path:
-    """Lay an asset's files out together under *views*, by its hash, and return the folder.
+def _is_or_under_a_link(location: Path, pipelines: Path, checked: Optional[dict] = None) -> bool:
+    """Whether a file of the store is a link, or a folder between ``pipelines/`` and it is one.
 
-    Built in a temporary folder and renamed into place, so a reader never
-    meets half of one. A view of a file under another name keeps that name
-    as well: the same bytes may be two assets', each read by its own.
+    :param checked: Folders already judged, by path, so that a dataset of
+        many files in one folder costs one look at the folder.
     """
-    view = views / asset.content_hash.split(":", 1)[1]
-    if _whole_in(view, asset):
-        return view
-    for file in asset.files:
-        _check_length(view.joinpath(*file.relative.split("/")))
-        _check_length(views / f".{view.name}.{'0' * 12}.tmp" / file.relative)
-    views.mkdir(parents=True, exist_ok=True)
-    if asset.single and view.is_dir() and not view.is_symlink():
-        (file,) = asset.files
-        temporary = view / f".{uuid.uuid4().hex[:12]}.tmp"
-        try:
-            _link(str(file.location), str(temporary), VIEW_LINKS)
-            os.replace(temporary, view / file.relative)
-        finally:
-            if os.path.lexists(temporary):
-                os.remove(temporary)
-        return view
-    temporary = views / f".{view.name}.{uuid.uuid4().hex[:12]}.tmp"
     try:
-        for file in asset.files:
-            destination = temporary.joinpath(*file.relative.split("/"))
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            _link(str(file.location), str(destination), VIEW_LINKS)
-        if os.path.lexists(view) and _whole_in(view, asset):
-            return view  # another reader made it meanwhile, and may be reading it
-        if os.path.lexists(view) and asset.single and view.is_dir() and not view.is_symlink():
-            (file,) = asset.files
-            os.replace(temporary / file.relative, view / file.relative)  # another name of the same bytes, beside it
-            return view
-        if os.path.lexists(view):
-            aside = views / f".{view.name}.{uuid.uuid4().hex[:12]}.old"
-            os.rename(view, aside)
-            try:
-                os.rename(temporary, view)
-            finally:
-                _remove_tree(aside, own=True) if not os.path.islink(aside) else os.remove(aside)
-        else:
-            try:
-                os.rename(temporary, view)
-            except OSError:
-                if not _whole_in(view, asset):
-                    raise  # another process made it at the same moment, or this one could not
-    finally:
-        if os.path.lexists(temporary):
-            _remove_tree(temporary, own=True)
-    return view
+        parts = Path(os.path.abspath(location)).relative_to(Path(os.path.abspath(pipelines))).parts
+    except ValueError:
+        return True
+    checked = checked if checked is not None else {}
+    current = pipelines
+    for part in parts[:-1]:
+        current = current / part
+        known = checked.get(current)
+        if known is None:
+            known = checked[current] = os.path.islink(current)
+        if known:
+            return True
+    return os.path.islink(location)
 
 
 #: The end of a note, under ``tmp/``, of a snapshot being made: its own folder, and the files of earlier ones it uses.

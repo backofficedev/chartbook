@@ -68,7 +68,7 @@ from chartbook.refs import (
     KindMismatchError,
 )
 from chartbook.refs import parse_asset_ref as parse
-from chartbook.resolve import FileLocation, caller_start_dirs, require_file, resolve
+from chartbook.resolve import FileLocation, caller_start_dirs, require_single_path, resolve
 
 __all__ = [
     "DEFAULT_KIND",
@@ -93,7 +93,8 @@ def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> P
     """
     asset = parse(ref, kind=kind)
     location = resolve(asset, start_dirs=start_dirs)
-    return require_file(location, f"The {asset.kind} {asset.name!r}")
+    # Several files read from the store have no one path (require_single_path)
+    return require_single_path(location, f"The {asset.kind} {asset.name!r}", ref if isinstance(ref, str) else str(asset), asset.kind)
 
 
 def path(
@@ -134,6 +135,17 @@ def path(
     moves only when you run ``chartbook update``. It must have been pinned
     (``chartbook pin``), and is for reading: never write to it.
 
+    **Another pipeline's folder or glob of files has no one path.** The
+    store keeps each file once, so a later snapshot's files may sit in
+    earlier snapshots' folders. Asking raises
+    :class:`~chartbook.errors.NoSinglePathError`, whatever the folders
+    happen to hold today, so that a call that works does not stop working
+    when the upstream takes another snapshot. :func:`files` lists the
+    files, :func:`chartbook.data.load` reads a dataframe's where they are,
+    and :func:`gathered` lays them out in a temporary folder for a loader
+    that needs one. Your own pipeline's folder asset is the declared folder,
+    as before.
+
     :param ref: A reference to the asset: ``"name"`` for a dataframe,
         ``"kind/name"`` for anything else, ``"pipeline:name"`` for another
         pipeline's, or an :class:`AssetRef`.
@@ -158,6 +170,8 @@ def path(
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
     :raises KindMismatchError: If the reference names a kind other than *kind*.
+    :raises NoSinglePathError: If the asset is another pipeline's folder or
+        glob of files, which has no one path (above).
     :raises ValueError: If the reference does not follow the grammar, uses
         syntax that is reserved and not yet supported, or the entry has no
         ``path``.
@@ -187,12 +201,11 @@ def _not_there(asset: AssetRef, location: FileLocation) -> FileNotFoundError:
 def _found(asset: AssetRef, location: FileLocation) -> list[tuple[str, Path]]:
     """Each file of an asset, by its path in the asset, sorted as a hash lists them."""
     from chartbook import hashing
-    from chartbook.store import on_disk, plain_parts
 
-    if location.listed:
-        # A folder from the store: the files its record lists, and nothing else the folder may hold
-        listed = [(relative, plain_parts(relative)) for relative in location.listed]
-        return sorted((relative, on_disk(Path(location.path), parts)) for relative, parts in listed if parts)
+    inside = getattr(location, "inside", None)
+    if inside:
+        # From the store: the files its record lists, each where the store keeps it, and nothing else
+        return sorted((relative, Path(where)) for relative, where in inside.items())
     found = hashing.find_files(location.path)
     if found is None or not found.files:
         raise _not_there(asset, location)
@@ -216,9 +229,12 @@ def files(
     ones its content hash is made of (:mod:`chartbook.hashing`): every file
     under a folder or matched by a glob, but ``.DS_Store`` and the few
     others operating systems write by themselves. Of another pipeline's
-    asset they are the files of the pinned copy, as its record lists them.
-    They are sorted by their path inside the asset, so a dataset of a file
-    a year is read in order of the years.
+    asset they are the files of the pinned copy, as its record lists them,
+    each where the store keeps it: the store keeps each file once, so they
+    may sit in several snapshots' folders, and this is the call to read
+    them by (polars and DuckDB take a list of files; so does a ``dodo.py``
+    for its ``file_dep``). They are sorted by their path inside the asset,
+    so a dataset of a file a year is read in order of the years.
 
     It works for every asset with files: a files asset, a dataframe of
     many parts (to read one at a time), a model that is a folder.
@@ -233,6 +249,66 @@ def files(
     """
     asset, location = _located(ref, kind, caller_start_dirs(project_dir, sys._getframe(1)))
     return [file for _, file in _found(asset, location)]
+
+
+class _Gathered:
+    """A temporary folder an asset's files are laid out in (:func:`gathered`)."""
+
+    def __init__(self, found: list):
+        self._found = found
+        self._temporary = None
+
+    def __enter__(self) -> Path:
+        import shutil
+        import tempfile
+
+        self._temporary = tempfile.TemporaryDirectory(prefix="chartbook-gathered-")
+        root = Path(self._temporary.name)
+        try:
+            for relative, file in self._found:
+                target = root.joinpath(*relative.split("/"))
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(file, target)
+        except BaseException:
+            self._temporary.cleanup()
+            self._temporary = None
+            raise
+        return root
+
+    def __exit__(self, *exc) -> bool:
+        if self._temporary is not None:
+            self._temporary.cleanup()
+            self._temporary = None
+        return False
+
+
+def gathered(
+    ref: Union[str, AssetRef],
+    kind: Optional[str] = None,
+    project_dir: Optional[Union[str, Path]] = None,
+) -> _Gathered:
+    """Lay an asset's files out together in a temporary folder, for a loader that needs one; the folder goes when the block ends.
+
+    >>> from chartbook import assets
+    >>> with assets.gathered("forecasting:model/rate_forecaster") as folder:  # doctest: +SKIP
+    ...     model = AutoModel.from_pretrained(folder)
+
+    For a model or a files asset whose loader takes a directory. The files
+    are copied, so a loader may write beside them; nothing is kept once the
+    block ends, and nothing is kept between runs. A dataframe needs none of
+    this: :func:`chartbook.data.load` reads its files where they are, and
+    :func:`files` lists them for any other reader.
+
+    :param ref: A reference to the asset, as for :func:`path`.
+    :param kind: The kind of asset expected, as for :func:`path`.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :returns: A context manager whose value is the folder.
+    :raises FileNotFoundError: If nothing is there: the asset is not built.
+    :raises TypeError: If the asset is a table or a query in a source.
+    :raises AssetNotDeclaredError: As for :func:`path`, and the rest of its errors.
+    """
+    asset, location = _located(ref, kind, caller_start_dirs(project_dir, sys._getframe(1)))
+    return _Gathered(_found(asset, location))
 
 
 def _hash_cache(declared: Path):
@@ -257,11 +333,18 @@ def _rows(asset: AssetRef, location: FileLocation) -> list[tuple[Path, str, int,
     from chartbook.utils import is_glob_pattern
 
     declared = Path(location.path)
-    single = not is_glob_pattern(str(declared)) and declared.is_file()
+    inside = getattr(location, "inside", None)
+    single = not location.listed if inside else not is_glob_pattern(str(declared)) and declared.is_file()
     listed = default_store().listing(location.content_hash, single) if location.content_hash else None
-    if listed is not None:
+    if listed is not None and inside:
         if single:
             # One file, read by the name its asset gives it: the same bytes may be two assets'
+            ((relative, where),) = inside.items()
+            return [(Path(where), relative, listed[0].size_bytes, listed[0].content_hash)]
+        # Each where the store keeps it, which may be another snapshot's folder
+        return [(Path(inside[entry.path]), entry.path, entry.size_bytes, entry.content_hash) for entry in listed if entry.path in inside]
+    if listed is not None:
+        if single:
             return [(declared, declared.name, listed[0].size_bytes, listed[0].content_hash)]
         root = listing_root(declared)
         return [

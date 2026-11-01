@@ -56,7 +56,7 @@ from chartbook.resolve import (
     caller_start_dirs,
     find_manifest_dir,
     locate_in_catalog,
-    require_file,
+    require_single_path,
     resolve,
 )
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
@@ -95,6 +95,11 @@ def path(
     declared in ``[dependencies]``, and the path is the copy that
     ``chartbook.lock`` pins, in the store, not the other pipeline's working
     directory; see :func:`chartbook.assets.path`. Read it; never write to it.
+    Another pipeline's dataframe of several files, a Hive folder or a glob,
+    has no one path: the store keeps each file once, so its files may sit
+    in several snapshot folders. Asking raises
+    :class:`~chartbook.errors.NoSinglePathError`; :func:`load` and
+    :func:`sql` read it where it is, and :func:`files` lists the files.
 
     The rest of the reference grammar, ``asset#part`` and ``@rev``, is
     reserved and raises "not yet supported".
@@ -130,6 +135,46 @@ def path(
                 f"chartbook.assets.path({str(ref)!r}) for a {e.found}."
             )
         ) from None
+
+
+def files(
+    ref: Union[str, AssetRef],
+    project_dir: Optional[Union[str, Path]] = None,
+) -> list[Path]:
+    """Get the files of a dataframe, sorted: the file, a folder's files, or a glob's matches, wherever each is kept.
+
+    >>> from chartbook import data
+    >>> file_dep = data.files("news_headlines:articles")  # doctest: +SKIP
+    >>> lf = pl.scan_parquet(data.files("news_headlines:articles"), hive_partitioning=True)  # doctest: +SKIP
+
+    This is :func:`chartbook.assets.files` with ``kind="dataframe"``. Of
+    your own pipeline's dataframe, the files at its declared path. Of
+    another pipeline's, the files of the pinned copy in the store, each
+    where the store keeps it: the store keeps each file once, so a dataset
+    that grew over several snapshots has files in several snapshot folders,
+    and no one folder (:func:`path` says so). Polars and DuckDB take the
+    list, Hive keys included; :func:`load` and :func:`sql` do that for
+    you. A ``dodo.py`` names them as ``file_dep``.
+
+    :param ref: The dataframe's name, or ``"pipeline:name"`` for another
+        pipeline's, as for :func:`path`.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :returns: The absolute path of each file.
+    :raises FileNotFoundError: If nothing is there: the dataframe is not built.
+    :raises TypeError: If the dataframe is a table or a query in a source.
+    :raises AssetNotDeclaredError: As for :func:`path`, and the rest of its errors.
+    """
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    try:
+        asset, location = _assets._located(ref, "dataframe", start_dirs)
+    except KindMismatchError as e:
+        raise KindMismatchError(
+            str(ref), e.found, e.expected, hint=(
+                f"data.files() answers for dataframes only; use "
+                f"chartbook.assets.files({str(ref)!r}) for a {e.found}."
+            )
+        ) from None
+    return [file for _, file in _assets._found(asset, location)]
 
 
 #: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
@@ -185,9 +230,10 @@ def _get_dataframe_docs_info_from_catalog(
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
-    :returns: Tuple of (doc_mode, doc_value, pipeline_base_dir) where doc_mode
-        is ``"path"`` or ``"str"``, doc_value is the path string or inline
-        content, and pipeline_base_dir is the base directory of the pipeline.
+    :returns: Tuple of (doc_mode, doc_value, docs_file): ``"path"`` with the
+        path as declared, or ``"str"`` with the inline text; and the file
+        that holds the docs, the ``.md`` file or the ``chartbook.toml``,
+        where it is: in the pipeline's folder, or where the store keeps it.
     :rtype: tuple[str, str, Path]
     :raises KeyError: If the pipeline or dataframe is not found.
     """
@@ -208,17 +254,20 @@ def _get_dataframe_docs_info_from_catalog(
         taken = max(chosen, key=lambda t: t.made_at)
         if not taken.documents:
             raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
-        held = Path(stores.get(taken.documents["content_hash"], pipeline_key))
-        raw = tomli.loads((held / "chartbook.toml").read_text(encoding="utf-8"))
+        kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
+        manifest_file = kept.get("chartbook.toml")
+        if manifest_file is None:
+            raise KeyError(f"The newest snapshot of {pipeline_key} keeps no chartbook.toml among its documents")
+        raw = tomli.loads(Path(manifest_file).read_text(encoding="utf-8"))
         entry = raw.get("dataframes", {}).get(dataframe)
         if not isinstance(entry, dict):
             raise KeyError(f"{pipeline_key} declares no dataframe {dataframe!r} in its newest snapshot")
         if entry.get("docs_path"):
             plain = snapshot.safe_relative(entry["docs_path"])
-            if plain is None or snapshot._through_a_link(held, plain):
+            if plain is None or plain not in kept:
                 raise ValueError("The documentation path is not inside the snapshot's documents")
-            return "path", plain, held
-        return "str", entry.get("docs", ""), held
+            return "path", plain, Path(kept[plain])
+        return "str", entry.get("docs", ""), Path(manifest_file)
 
     pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
@@ -232,8 +281,8 @@ def _get_dataframe_docs_info_from_catalog(
     doc_mode = df_manifest["_doc_mode"]
     doc_value = df_manifest["_doc_value"]
     pipeline_base_dir = Path(pipeline_manifest["base_dir"])
-
-    return doc_mode, doc_value, pipeline_base_dir
+    docs_file = (pipeline_base_dir / doc_value) if doc_mode == "path" else pipeline_base_dir / "chartbook.toml"
+    return doc_mode, doc_value, docs_file.resolve()
 
 
 def get_data_path(
@@ -276,6 +325,9 @@ def get_data_path(
     :type project_dir: Optional[Union[str, Path]]
     :returns: The resolved path to the file (may contain glob characters).
     :rtype: Path
+    :raises NoSinglePathError: If the dataframe is several files read from
+        the store, a Hive folder or a glob, which have no one path: read it
+        with :func:`load`, or list the files with :func:`files`.
     :raises CatalogNotConfiguredError: If no catalog is configured, and the
         store has no snapshot of the pipeline.
     :raises AssetNotPinnedError: If the dataframe has no copy to read: no
@@ -286,7 +338,8 @@ def get_data_path(
     """
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
-    return require_file(location, f"Dataframe {dataframe!r}")
+    # A dataset of several files read from the store has no one path (as data.path says)
+    return require_single_path(location, f"Dataframe {dataframe!r}", f"{pipeline}:{dataframe}", "dataframe")
 
 
 def get_docs_path(
@@ -316,13 +369,8 @@ def get_docs_path(
     :raises KeyError: If the pipeline or dataframe is not found.
     """
     resolved_catalog = _resolve_catalog_path(catalog_path)
-    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
-        resolved_catalog, pipeline, dataframe
-    )
-    if doc_mode == "path":
-        return (pipeline_base_dir / doc_value).resolve()
-    else:  # doc_mode == "str"
-        return (pipeline_base_dir / "chartbook.toml").resolve()
+    _, _, docs_file = _get_dataframe_docs_info_from_catalog(resolved_catalog, pipeline, dataframe)
+    return docs_file
 
 
 def get_docs(
@@ -354,14 +402,10 @@ def get_docs(
     :raises KeyError: If the pipeline or dataframe is not found.
     """
     resolved_catalog = _resolve_catalog_path(catalog_path)
-    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
-        resolved_catalog, pipeline, dataframe
-    )
+    doc_mode, doc_value, docs_file = _get_dataframe_docs_info_from_catalog(resolved_catalog, pipeline, dataframe)
     if doc_mode == "path":
-        doc_path = (pipeline_base_dir / doc_value).resolve()
-        return doc_path.read_text(encoding="utf-8")
-    else:  # doc_mode == "str"
-        return doc_value
+        return docs_file.read_text(encoding="utf-8")
+    return doc_value
 
 
 def load(

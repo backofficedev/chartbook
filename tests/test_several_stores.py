@@ -43,7 +43,7 @@ def test_reads_every_store_and_newest_wins(tmp_path, monkeypatch):
     assert [t.made_at for t in found] == [first.made_at, second.made_at]
     assert stores.name_of(second.path) == "two"
     assert stores.has(next(iter(second.hashes())))
-    assert stores.get(next(iter(second.hashes()))).exists()
+    assert all(f.location.exists() for f in stores.files(next(iter(second.hashes()))).files)
 
 
 def test_override_is_the_only_store(tmp_path, monkeypatch):
@@ -381,7 +381,7 @@ def test_an_unavailable_remote_does_not_hide_a_second_copy(tmp_path):
     stores = Stores([NamedStore("offline", "plugin://offline", Offline()), NamedStore("good", str(good), good)])
     with pytest.warns(UserWarning, match="offline.*unreachable") as messages:
         assert stores.snapshots()[0].commit == taken.commit
-        assert stores.get(next(iter(taken.hashes()))).exists()
+        assert all(f.location.exists() for f in stores.files(next(iter(taken.hashes()))).files)
         stores.snapshots()
     assert len(messages) == 1
 

@@ -293,11 +293,10 @@ def _forged_version(taken, store, manifest_text: str, tmp_path: Path):
     """A snapshot like *taken*, made at another moment, whose manifest says what someone wrote into the store."""
     import dataclasses
 
-    held = Path(store.get(taken.documents["content_hash"]))
     forged = tmp_path / "forged-documents"
-    for file in held.rglob("*"):
+    for relative, file in store.files(taken.documents["content_hash"]).by_relative().items():
         if file.is_file():
-            target = forged / file.relative_to(held)
+            target = forged / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(file.read_bytes())
     (forged / "chartbook.toml").write_text(manifest_text, encoding="utf-8", newline="\n")
@@ -926,7 +925,7 @@ class TestWhatTheStoreOnlyReviewFound:
 
         root, first, second = catalog
         taken = _elsewhere_with(tmp_path)
-        held = Path(default_store().get(taken.index["content_hash"]))
+        held = default_store().files(taken.index["content_hash"], name="index.json").one.location.parent
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
         (held / "index.json").write_text(content, encoding="utf-8", newline="\n")
@@ -939,7 +938,7 @@ class TestWhatTheStoreOnlyReviewFound:
         import os
         import stat
 
-        held = Path(default_store().get(taken.index["content_hash"]))
+        held = default_store().files(taken.index["content_hash"], name="index.json").one.location.parent
         os.chmod(held, stat.S_IRWXU)
         os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
         return held

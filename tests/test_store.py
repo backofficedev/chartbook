@@ -142,7 +142,7 @@ class TestLayout:
         ],
     )
     def test_nothing_but_a_content_hash_becomes_a_path(self, store, not_a_hash):
-        for operation in (store.object_path, store.has, store.get, store.delete):
+        for operation in (store.object_path, store.has, store.files, store.delete):
             with pytest.raises(ValueError, match="is not a content hash"):
                 operation(not_a_hash)
 
@@ -172,7 +172,7 @@ class TestLayout:
         newer = FolderStore(store.root)
         for operation in (
             lambda: newer.put(rates),
-            lambda: newer.get(HELLO),
+            lambda: newer.files(HELLO),
             lambda: list(newer.hashes()),
             lambda: newer.verify(),
         ):
@@ -441,12 +441,13 @@ class TestGetHasDelete:
         assert store.has(HELLO) is False
         store.put(rates)
         assert store.has(HELLO) is True
-        assert store.get(HELLO) == store.object_path(HELLO)
-        assert (store.get(HELLO) / "rates.parquet").read_bytes() == b"hello"
+        held = store.files(HELLO)
+        assert held.home == store.object_path(HELLO) and held.one.location == store.object_path(HELLO) / "rates.parquet"
+        assert held.one.location.read_bytes() == b"hello"
 
     def test_getting_what_is_not_there(self, store, rates):
         with pytest.raises(ObjectNotFoundError, match="has no object sha256:2cf2") as e:
-            store.get(HELLO)
+            store.files(HELLO)
         assert isinstance(e.value, (LookupError, StoreError))
 
     def test_delete_removes_the_object_and_nothing_else(self, store, rates, kind):
