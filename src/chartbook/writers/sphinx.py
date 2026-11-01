@@ -30,6 +30,12 @@ from chartbook.provenance import panel, reverse
 from chartbook.utils import get_dataframe_glimpse, is_glob_pattern
 from chartbook.writers import ASSISTANT_FILE
 
+#: What a version's dataframe page shows where the first rows would be, when its snapshot's index recorded none.
+NO_GLIMPSE_RECORDED = (
+    "The first rows were not recorded when this snapshot was made (a snapshot made by ChartBook 0.4 or earlier). "
+    "A version's page shows its data from the snapshot's index, and the data is not laid out for it."
+)
+
 #: The sections of a dataframe page, as the generator orders them.
 _DATAFRAME_PAGE = (
     """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}\n\n"""
@@ -38,9 +44,9 @@ _DATAFRAME_PAGE = (
     """\n\n
 ## DataFrame Glimpse
 
-```
+{{glimpse_fence}}
 {{dataframe_glimpse}}
-```
+{{glimpse_fence}}
 {% if parts %}
 ## Parts
 
@@ -503,7 +509,8 @@ class SphinxWriter:
         dataframe_manifest = self._dataframe_manifest(record, base_dir)
         unbuilt = not_built(record)
         if location.get("kind") in ("table", "query"):
-            glimpse = _source_glimpse(record, base_dir)
+            recorded = record.get("glimpse")
+            glimpse = recorded if isinstance(recorded, str) else _source_glimpse(record, base_dir)
             span = record.get("date_range") or {}
             first, last = span.get("first"), span.get("last")
             freshness = [_freshness("Data updated", location.get("modified_at"))]
@@ -516,22 +523,39 @@ class SphinxWriter:
             freshness = []
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
-            # Read as data.load() reads it: its format and the reader's options are the record's
-            glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))
-            try:
-                first, last = _most_recent_valid_datapoints(
-                    Path(resolved),
-                    record.get("date_col", ""),
-                    size_threshold_mb=self.size_threshold,
-                    format=record.get("format"),
-                    read_options=record.get("read_options"),
-                )
-            except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - as the generator does: a page, not a crash
-                first, last = None, None
+            # What the index recorded when it described the file (chartbook.index): a
+            # version rendered from the store has the record and not the data. A record
+            # that says nothing is read as data.load() reads it: its format and the
+            # reader's options are the record's
+            recorded = record.get("glimpse")
+            if isinstance(recorded, str):
+                glimpse = recorded
+            elif record.get("content_hash") and not Path(resolved).exists():
+                # A version laid out without its data, from a snapshot whose index recorded no glimpse (ChartBook 0.4)
+                glimpse = NO_GLIMPSE_RECORDED
+            else:
+                glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))
+            dates = record.get("last_dates")
+            if isinstance(dates, dict) and isinstance(dates.get("min"), str) and isinstance(dates.get("max"), str):
+                first, last = dates["min"], dates["max"]
+            else:
+                try:
+                    first, last = _most_recent_valid_datapoints(
+                        Path(resolved),
+                        record.get("date_col", ""),
+                        size_threshold_mb=self.size_threshold,
+                        format=record.get("format"),
+                        read_options=record.get("read_options"),
+                    )
+                except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - as the generator does: a page, not a crash
+                    first, last = None, None
             freshness = [_freshness("Data updated", location.get("modified_at"))]
+        # The glimpse is shown as code; a record from the store is anyone's text, so the fence outruns any run of backticks in it
+        longest = max((len(run) for run in re.findall(r"`+", str(glimpse))), default=0)
         template = environment.from_string(_DATAFRAME_PAGE)
         return template.render(
             dataframe_manifest,
+            glimpse_fence="`" * max(3, longest + 1),
             write_up=self._write_up(record, base_dir, environment),
             provenance=self._panel(record_id, self.page_path(record)),
             dataframe_manifest=dataframe_manifest,
@@ -723,7 +747,19 @@ class SphinxWriter:
         resolved = (record.get("location") or {}).get("resolved_path")
         if not resolved or not record.get("content_hash"):
             return None
-        return preview_of(record.get("files") or [], listing_root(resolved))
+        # Only where the files are: an absent folder's listing root would be its parent, another asset's files
+        found = preview_of(record.get("files") or [], listing_root(resolved)) if Path(resolved).exists() else None
+        if found is not None:
+            return found
+        # The files are not here (a version laid out from the store without
+        # its data): the text the index recorded when it had them, if any
+        recorded = record.get("preview")
+        if (
+            isinstance(recorded, dict) and recorded.get("kind") == "text"
+            and isinstance(recorded.get("text"), str) and isinstance(recorded.get("path"), str)
+        ):
+            return {"path": recorded["path"], "kind": "text", "text": recorded["text"]}
+        return None
 
     def _files_manifest(self, record: dict) -> dict:
         """The files asset as the templates read it: its declared fields and its path."""
@@ -1938,70 +1974,14 @@ def _most_recent_valid_datapoints(
     format=None,
     read_options=None,
 ):
-    """The least and greatest of each column's last non-null date, as text, for the dataframe table.
+    """The least and greatest of each column's last non-null date (:func:`chartbook.utils.most_recent_valid_datapoints`)."""
+    from chartbook.utils import most_recent_valid_datapoints
 
-    "N/A" without a date column or for a folder of parts; "N/A (large file)"
-    over the size threshold, so a big file is not read for two dates. The
-    file is read as ``data.load()`` reads it (:mod:`chartbook.formats`).
-    """
-    from chartbook import formats
-
-    if date_col in ("", "NA", "N/A"):
-        return "N/A", "N/A"
-    if is_glob_pattern(str(parquet_path)):
-        return "N/A", "N/A"
-    if os.path.getsize(parquet_path) / (1024 * 1024) > size_threshold_mb:
-        return "N/A (large file)", "N/A (large file)"
-    frame = formats.scan(parquet_path, format, read_options).collect()
-    if frame[date_col].dtype != pl.Datetime:
-        frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
-    latest = frame.select(
-        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in frame.columns if col != date_col]
-    )
-    dates = [date for date in latest.row(0) if date is not None]
-    if not dates:
-        return "N/A", "N/A"
-    return min(dates).strftime("%Y-%m-%d %H:%M:%S"), max(dates).strftime("%Y-%m-%d %H:%M:%S")
+    return most_recent_valid_datapoints(parquet_path, date_col, size_threshold_mb, format, read_options)
 
 
 def _source_glimpse(record: dict, base_dir: Path) -> str:
-    """A table or query's glimpse, from the engine the record's location names.
+    """A table or query's glimpse, from its engine (:func:`chartbook.utils.source_glimpse`)."""
+    from chartbook.utils import source_glimpse
 
-    The location's url is the manifest's, relative to the pipeline's folder
-    for a DuckDB file; the machine's url comes through ``source_url()``, and
-    a relative file is made absolute against the pipeline's folder, never
-    against where the build happens to run.
-    """
-    from chartbook.backends import MEMORY_URL, duckdb_path, open_backend, source_url
-    from chartbook.resolve import QueryLocation, TableLocation
-
-    location = record["location"]
-    where = (
-        f"table {location['identifier']}" if location["kind"] == "table" else "query"
-    ) + f" in source {location.get('source')!r} ({location.get('backend')})"
-    if not location.get("url"):
-        return f"A {where}."
-    try:
-        # A DuckDB file is found through the machine's url, relative to the
-        # pipeline's folder; another engine finds its own from the public one
-        url = location["url"]
-        if location.get("backend") == "duckdb":
-            url = source_url(location["source"], url)
-            path = duckdb_path(url, base_dir)
-            url = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
-    except Exception as error:  # noqa: BLE001 - a page, not a crash
-        return f"A {where}. It could not be read when the site was built: {error}"
-    if location["kind"] == "table":
-        typed = TableLocation(location["source"], location["backend"], url, location["identifier"])
-    else:
-        typed = QueryLocation(location["source"], location["backend"], url, location["sql"])
-    try:
-        backend = open_backend(location["backend"], url, location["source"])
-        columns, rows = backend.describe(typed)
-        sample = backend.scan(typed).head(5).collect()
-    except Exception as error:  # noqa: BLE001 - a page, not a crash
-        return f"A {where}. It could not be read when the site was built: {error}"
-    lines = [f"A {where}: {rows} rows, {len(columns)} columns.", ""]
-    lines += [f"  {column['name']}: {column['dtype']}" for column in columns]
-    lines += ["", "First rows:", str(sample)]
-    return "\n".join(lines)
+    return source_glimpse(record, base_dir)

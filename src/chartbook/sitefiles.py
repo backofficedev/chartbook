@@ -99,7 +99,8 @@ def copy_plan(
         elif kind == "File":
             from chartbook.files import listing_root, preview_of
 
-            preview = preview_of(record.get("files") or [], listing_root(source))
+            # Only where the files are: an absent folder's listing root would be its parent
+            preview = preview_of(record.get("files") or [], listing_root(source)) if Path(source).exists() else None
             if preview is not None and preview["kind"] == "image":
                 plan.append((preview["file"], root / thumbnail_path(record, preview)))
         elif enable_data_download and downloadable(record):
@@ -126,7 +127,8 @@ def downloadable(record: dict) -> bool:
         return False
     from chartbook import hashing
 
-    return not hashing.is_pattern(source) and not Path(source).is_dir()
+    # The file itself: a version laid out from the store without its data has the record and no file to copy
+    return not hashing.is_pattern(source) and Path(source).is_file()
 
 
 def download_link(record: dict) -> dict:
@@ -180,7 +182,8 @@ def not_built(record: dict) -> bool:
     from chartbook import hashing
 
     location = record.get("location") or {}
-    if location.get("kind") != "file" or "content_hash" in record or not location.get("resolved_path"):
+    # A table or query a version shows from its index has a definition_hash and no file laid out
+    if location.get("kind") != "file" or "content_hash" in record or "definition_hash" in record or not location.get("resolved_path"):
         return False
     found = hashing.find_files(location["resolved_path"])
     return found is None or not found.files

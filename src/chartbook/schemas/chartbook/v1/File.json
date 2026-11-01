@@ -195,6 +195,25 @@
     "snapshots": {
       "type": "array",
       "description": "Catalog hub versions, newest first, with presence and consecutive-index changes."
+    },
+    "preview": {
+      "type": "object",
+      "description": "What the asset's page previews: the first file listed that a preview can show, by its path inside the asset, and its kind (`text` or `image`); for text, its first lines. Recorded when the index had the files, so a version rendered from the store shows it.",
+      "required": [
+        "path",
+        "kind"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
     }
   },
   "additionalProperties": true

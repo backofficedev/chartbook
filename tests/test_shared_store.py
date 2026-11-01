@@ -715,11 +715,14 @@ class TestAVersionsSite:
         work, machine, rates = drive
         taken = snapshot.make(rates).snapshot
         store = default_store()
-        ((place, _),) = store.files_of(taken.assets["treasury"]["content_hash"])
-        assert store.delete(taken.assets["treasury"]["content_hash"])  # not synced here yet
+        # A version is built without its data; its documents it needs, and they have not synced here yet
+        places = [place for place, _ in store.files_of(taken.documents["content_hash"])]
+        assert places and store.delete(taken.documents["content_hash"])
         first = versions.render(taken, store)
         assert not first.built
-        shutil.copy(rates / "_data" / "treasury.parquet", store.root / place)  # the sync finishes
+        for place in places:  # the sync finishes
+            (store.root / place).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(rates.joinpath(*Path(place).parts[3:]), store.root / place)
         second = versions.render(taken, store)
         # Laid out from the store this time; whatever its build said is kept now
         assert second.now and "not all in the store yet" not in second.why

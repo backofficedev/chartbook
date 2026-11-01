@@ -170,7 +170,8 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             # folder; the version file says it all the same
             folder = Path(scratch) / slug(taken.pipeline).split("--")[-1]
             try:
-                laid = snapshots.materialize(taken, folder, store)
+                # Its documents, charts, notebooks and notes; the data is shown from the snapshot's index
+                laid = snapshots.materialize(taken, folder, store, data=False)
             except snapshots.StoreNotReadyError as error:
                 # Not all in the store yet, a sync not finished perhaps: tried again next time
                 why = f"it is not all in the store yet: {_one_line(error)}"

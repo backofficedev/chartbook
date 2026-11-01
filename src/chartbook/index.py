@@ -36,6 +36,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import warnings
 from datetime import date, datetime, time, timezone
 from pathlib import Path
@@ -729,6 +730,134 @@ def _pinned_inputs(
     return pinned
 
 
+#: Files over this many megabytes get no ``last_dates``: two dates are not worth reading the whole file for.
+DEFAULT_SIZE_THRESHOLD_MB = 50.0
+
+#: What a snapshot's own index recorded of an asset that a version laid out
+#: from the store has no file of: taken as it is, so no data is read.
+RECORDED_FACTS = (
+    "content_hash", "size_bytes", "files", "file_count", "extensions", "columns", "row_count",
+    "date_range", "glimpse", "last_dates", "preview", "definition_hash",
+)
+
+
+def _from_the_stored_index(stored: Optional[Mapping[str, dict]], asset_id: str, facts: dict) -> Optional[dict]:
+    """The snapshot's own record of an asset whose file is not in a laid-out version; None when there is a file, or no such record.
+
+    A built asset has a ``content_hash``; a table or a query in a source has
+    a ``definition_hash`` instead, and in a laid-out version its manifest
+    names a parquet file that is not laid out either.
+    """
+    if not stored or "content_hash" in facts:
+        return None
+    was = stored.get(asset_id)
+    if not isinstance(was, dict) or not (isinstance(was.get("content_hash"), str) or isinstance(was.get("definition_hash"), str)):
+        return None
+    return was
+
+
+#: How the last dates a page shows are written: a date and time, or N/A.
+_LAST_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}:\d{2}(\.\d+)?)?|N/A( \(large file\))?)$")
+
+
+def _well_formed(key: str, value: object) -> bool:
+    """Whether a value a stored index gives for *key* has the shape the writers read: anyone can write a store, so each is checked, and one that is not is left out."""
+    from chartbook.files import _inside
+    from chartbook.utils import GLIMPSE_MAX_CHARS
+
+    def text(v, longest=1000):
+        return isinstance(v, str) and len(v) <= longest
+
+    def path_inside(v):  # a path inside the asset, and nothing else: no `..`, no root, no drive
+        return text(v, 4096) and _inside(v)
+
+    def count(v):
+        return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+    if key in ("content_hash", "definition_hash"):
+        return text(value, 200)
+    if key in ("size_bytes", "row_count", "file_count"):
+        return count(value)
+    if key == "columns":
+        return isinstance(value, list) and all(
+            isinstance(c, dict) and text(c.get("name")) and text(c.get("dtype")) for c in value
+        )
+    if key == "files":
+        return isinstance(value, list) and all(
+            isinstance(f, dict) and path_inside(f.get("path")) and count(f.get("size_bytes"))
+            and ("content_hash" not in f or text(f.get("content_hash"), 200))
+            and ("row_count" not in f or count(f.get("row_count")))
+            and ("partitions" not in f or (isinstance(f["partitions"], dict) and all(text(k) and text(v) for k, v in f["partitions"].items())))
+            for f in value
+        )
+    if key == "extensions":
+        return isinstance(value, dict) and all(text(k) and count(v) for k, v in value.items())
+    if key == "date_range":
+        return isinstance(value, dict) and text(value.get("first"), 64) and text(value.get("last"), 64)
+    if key == "glimpse":
+        return text(value, GLIMPSE_MAX_CHARS + 100)
+    if key == "last_dates":
+        return isinstance(value, dict) and all(isinstance(value.get(k), str) and _LAST_DATE.match(value[k]) for k in ("min", "max"))
+    if key == "preview":
+        return (
+            isinstance(value, dict) and path_inside(value.get("path")) and value.get("kind") in ("text", "image")
+            and ("text" not in value or text(value["text"], 64_000))
+        )
+    return False
+
+
+def _recorded_facts(was: dict) -> dict:
+    """What is taken from a snapshot's own record of an asset (:data:`RECORDED_FACTS`), each of the shape the writers read (:func:`_well_formed`); anyone's text, shown as text."""
+    return {key: copy.deepcopy(was[key]) for key in RECORDED_FACTS if key in was and _well_formed(key, was[key])}
+
+
+def _record_what_a_page_shows(record: dict, resolved: str, entry: dict, size_threshold: float) -> None:
+    """Record a dataframe's glimpse and the last dates its page shows, read here once, so that no page reads the file.
+
+    The glimpse is the first rows as text (:func:`chartbook.utils.get_dataframe_glimpse`);
+    ``last_dates`` the least and greatest of each column's last non-null
+    date (:func:`chartbook.utils.most_recent_valid_datapoints`), left out
+    when they cannot be read. A version rendered from the store shows these
+    from its snapshot's index, with the data not laid out.
+    """
+    import polars as pl
+
+    from chartbook.utils import cap_glimpse, get_dataframe_glimpse, most_recent_valid_datapoints
+
+    record["glimpse"] = cap_glimpse(get_dataframe_glimpse(Path(resolved), entry.get("format"), entry.get("read_options")))
+    try:
+        first, last = most_recent_valid_datapoints(
+            Path(resolved), entry.get("date_col", "") or "", size_threshold, entry.get("format"), entry.get("read_options")
+        )
+    except (Exception, pl.exceptions.PanicException):  # noqa: BLE001 - a page shows no dates then, as before
+        return
+    record["last_dates"] = {"min": str(first), "max": str(last)}
+
+
+def stored_index_records(base_dir: Path) -> dict:
+    """The records of the index a laid-out version carries, by ID; empty unless the folder is one (:func:`chartbook.identity.read_version_file`).
+
+    ``chartbook.snapshot.materialize`` lays the snapshot's own ``index.json``
+    at ``_chartbook/index.json``. A version rendered for a catalog has its
+    documents, charts and notebooks and not its data, and the build of its
+    site takes what this index recorded of each dataframe, files asset and
+    model (:data:`RECORDED_FACTS`).
+    """
+    from chartbook.identity import read_version_file
+
+    if not read_version_file(base_dir):
+        return {}
+    saved = Path(base_dir) / "_chartbook" / INDEX_FILE
+    try:
+        stored = json.loads(saved.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
+    records = stored.get("records") if isinstance(stored, dict) else None
+    if not isinstance(records, list):
+        return {}
+    return {r["id"]: r for r in records if isinstance(r, dict) and isinstance(r.get("id"), str)}
+
+
 def _asset_records(
     kind: str,
     name: str,
@@ -739,14 +868,34 @@ def _asset_records(
     dependencies: Mapping[str, dict],
     known_pipelines: Mapping[str, Path],
     locked=None,
+    stored: Optional[Mapping[str, dict]] = None,
+    size_threshold: float = DEFAULT_SIZE_THRESHOLD_MB,
 ) -> list[dict]:
-    """The record for one asset, followed by its series if it is a dataframe."""
+    """The record for one asset, followed by its series if it is a dataframe.
+
+    :param stored: The records of the snapshot's own index, by ID, when the
+        folder is a version laid out from the store without its data files
+        (:func:`stored_index_records`): an asset whose file is not here
+        takes what that index recorded of it, and no data is read.
+    :param size_threshold: Files over this many megabytes get no
+        ``last_dates`` (:func:`chartbook.utils.most_recent_valid_datapoints`).
+    """
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
     record = _head(kind, ref, pipeline_id, entry)
     facts, content = _located_facts(
         base_dir, entry.get("path"), cache, list_files=(kind == "model")
     )
     record.update(facts)
+    was = _from_the_stored_index(stored, str(ref), facts)
+    if was is not None:
+        # A version laid out from the store without its data: the snapshot's
+        # own index described the files when it had them, and that is shown
+        record.update(_recorded_facts(was))
+        if isinstance(was.get("content_hash"), str):
+            facts["content_hash"] = was["content_hash"]  # a table or query has a definition_hash instead
+        modified = (was.get("location") or {}).get("modified_at")
+        if isinstance(modified, str) and "location" in record:
+            record["location"]["modified_at"] = modified
     series: list[dict] = []
     skip: tuple = ()
     resolved = (facts.get("location") or {}).get("resolved_path")
@@ -764,12 +913,19 @@ def _asset_records(
         record["location"].pop("modified_at", None)
     elif kind == "file" and content is not None:
         # What the page lists and counts: the files, and how many of each type
-        from chartbook.files import count_by_extension
+        from chartbook.files import count_by_extension, listing_root, preview_of
 
         listed = _listed_files(content, resolved)
         record["file_count"] = listed["file_count"]
         record["extensions"] = count_by_extension([entry.path for entry in content.files] or [Path(resolved).name])
         record["files"] = listed["files"]
+        # And what its page previews, the first lines of the first text file,
+        # recorded here so that a version rendered from the store shows it
+        shown = preview_of(record["files"], listing_root(resolved))
+        if shown is not None:
+            record["preview"] = {"path": shown["path"], "kind": shown["kind"]}
+            if shown["kind"] == "text":
+                record["preview"]["text"] = shown["text"]
     elif kind == "dataframe" and content is not None and content.files:
         # A dataframe of many parts: each, with its rows, for its page
         record.update(_listed_files(content, resolved, rows=True))
@@ -786,8 +942,19 @@ def _asset_records(
                 record["definition_hash"] = _definition_hash(
                     record["location"], described[0], (entry.get("_source") or {}).get("url")
                 )
+                # What its page shows, recorded as a file's is: a version rendered from the store opens no engine
+                from chartbook.utils import source_glimpse
+
+                record["glimpse"] = source_glimpse(record, base_dir)
+        elif was is not None:
+            # What the snapshot's index recorded, with its glimpse and dates (_recorded_facts)
+            columns_were, rows_were = was.get("columns"), was.get("row_count")
+            if isinstance(columns_were, list) and isinstance(rows_were, int):
+                described = (columns_were, rows_were)
         elif "content_hash" in facts:
             described = _describe_file(facts["location"]["resolved_path"], entry)
+            if described is not None:
+                _record_what_a_page_shows(record, facts["location"]["resolved_path"], entry, size_threshold)
         columns = None
         where = f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]"
         if described is not None:
@@ -804,7 +971,9 @@ def _asset_records(
                 )
         series = _series_records(ref, entry, columns, where)
         date_col = entry.get("date_col")
-        if date_col and "content_hash" in facts and columns and date_col in {c["name"] for c in columns}:
+        if was is not None:
+            pass  # date_range came with the recorded facts, or there was none
+        elif date_col and "content_hash" in facts and columns and date_col in {c["name"] for c in columns}:
             span = _date_range(facts["location"]["resolved_path"], date_col, entry)
             if span:
                 record["date_range"] = span
@@ -812,6 +981,7 @@ def _asset_records(
             span = _describe_span_in_source(entry, date_col)
             if span:
                 record["date_range"] = span
+                record["last_dates"] = {"min": span["first"], "max": span["last"]}  # as a table's page shows them
     elif kind == "chart" and entry.get("dataframe"):
         source = parse_asset_ref(entry["dataframe"], kind="dataframe")
         if source.is_local:
@@ -892,6 +1062,8 @@ def pipeline_records(
     pipeline_manifest: dict,
     cache: Optional[hashing.HashCache] = None,
     known_pipelines: Optional[Mapping[str, Path]] = None,
+    stored: Optional[Mapping[str, dict]] = None,
+    size_threshold: float = DEFAULT_SIZE_THRESHOLD_MB,
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
@@ -904,8 +1076,14 @@ def pipeline_records(
     :param known_pipelines: Every pipeline in this build, each ID and its
         directory (:func:`chartbook.manifest.get_pipeline_dirs`), so that
         another one of them is written by the ID it has here.
+    :param stored: For a version laid out from the store, the records of its
+        snapshot's own index, by ID (:func:`stored_index_records`); by
+        default read from the folder when it is one.
+    :param size_threshold: As for :func:`build_index`.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+    if stored is None:
+        stored = stored_index_records(base_dir)
     known_pipelines = dict(known_pipelines or {})
     dependencies = pipeline_manifest.get("dependencies") or {}
     locked = _read_lock(base_dir) if dependencies else None
@@ -927,6 +1105,8 @@ def pipeline_records(
                     dependencies,
                     known_pipelines,
                     locked,
+                    stored,
+                    size_threshold,
                 )
             except ValueError as error:
                 # A key that cannot be written as an address has no ID
@@ -1195,6 +1375,7 @@ def build_index(
     cache: Optional[hashing.HashCache] = None,
     skip_pipelines: Iterable[str] = (),
     generated_at: Optional[datetime] = None,
+    size_threshold: float = DEFAULT_SIZE_THRESHOLD_MB,
 ) -> dict:
     """Build the index for a loaded manifest, pipeline or catalog.
 
@@ -1211,6 +1392,8 @@ def build_index(
     :param cache: A hash cache, so unchanged files are not read again.
     :param skip_pipelines: Pipelines left out of this build altogether.
     :param generated_at: The time to record; defaults to now.
+    :param size_threshold: Files over this many megabytes get no
+        ``last_dates``: the same threshold the writer takes.
     :returns: The full index, with ``resolved_path`` in each location. Pass
         it through :func:`published` before it leaves this machine.
     """
@@ -1247,6 +1430,7 @@ def build_index(
             get_pipeline_manifest(manifest, pipeline_id),
             cache,
             known_pipelines=known_pipelines,
+            size_threshold=size_threshold,
         )
     if project["type"] == "catalog":
         # A pipeline the catalog names with no folder here is shown from the store
@@ -1268,18 +1452,13 @@ def build_index(
         _describe_from_the_store(records, manifest.get("stores"))
 
     if project["type"] == "pipeline":
-        from chartbook.identity import read_version_file
-        if read_version_file(manifest["base_dir"]):
-            saved = Path(manifest["base_dir"]) / "_chartbook" / INDEX_FILE
-            try:
-                stored = json.loads(saved.read_text(encoding="utf-8"))
-                by_id = {r["id"]: r for r in stored.get("records", []) if isinstance(r, dict) and isinstance(r.get("id"), str)}
-                for record in records:
-                    was = by_id.get(record["id"], {})
-                    if was.get("location", {}).get("modified_at"):
-                        record.setdefault("location", {})["modified_at"] = was["location"]["modified_at"]
-            except (OSError, ValueError, TypeError):
-                pass
+        # A version laid out from the store: each asset keeps the time its
+        # file was written, which this folder's copies do not have
+        by_id = stored_index_records(Path(manifest["base_dir"]))
+        for record in records:
+            was = by_id.get(record["id"], {})
+            if isinstance((was.get("location") or {}).get("modified_at"), str):
+                record.setdefault("location", {})["modified_at"] = was["location"]["modified_at"]
         from chartbook.links import provenance
         linked = provenance(manifest["base_dir"])
         if linked:
