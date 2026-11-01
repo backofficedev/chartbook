@@ -226,3 +226,15 @@ class TestStableChartFiles:
         from chartbook.plotting import _output
 
         assert 'div_id=f"chartbook-{chart_id}"' in Path(_output.__file__).read_text(encoding="utf-8")
+
+
+def test_a_glimpse_recorded_of_the_same_bytes_is_no_change():
+    """A 0.4 snapshot recorded no glimpse; one of the same bytes since does (found reviewing 0.5.0)."""
+    old = {"kind": "Dataframe", "id": "p:a", "content_hash": "sha256:1", "row_count": 2}
+    new = {**old, "glimpse": "Rows: 2", "last_dates": {"min": "2024-01-01", "max": "2024-06-30"}}
+    assert not indexdiff.diff({"records": [old]}, {"records": [new]}).changed
+    moved = {**new, "content_hash": "sha256:2"}
+    assert "data changed" in indexdiff.format_diff(indexdiff.diff({"records": [old]}, {"records": [moved]}))
+    table = {"kind": "Dataframe", "id": "p:t", "definition_hash": "sha256:9", "glimpse": "Rows: 2"}
+    said = indexdiff.format_diff(indexdiff.diff({"records": [table]}, {"records": [{**table, "glimpse": "Rows: 3"}]}))
+    assert "data changed" in said  # a table has no content hash: what it shows is what says it moved

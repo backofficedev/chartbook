@@ -156,6 +156,8 @@ CLAIMED_FILE = "CLAIMED.txt"
 #: Where the cache keeps each file of a snapshot it downloaded, named by its
 #: hash and checked against it: ``files/<2 hex>/<62 hex>``.
 CHECKED_DIR = "files"
+#: Where the cache names a checked file of an asset of one file by that file's name, a hard link to it (:meth:`S3Store._named`).
+NAMED_DIR = "named"
 
 #: How long, in seconds, one listing answers what is asked of the store
 #: outside a :meth:`S3Store.reading` block: the few questions of one read.
@@ -843,6 +845,38 @@ class S3Store(Store):
         else:
             self._settle(temporary, checked)
 
+    def _named(self, file) -> Optional[Path]:
+        """A checked file of an asset of one file, by its name: ``data.path()`` hands it out, and readers go by its ending.
+
+        A hard link beside the checked copy, which takes no more room; None,
+        and the checked copy is read, where no link can be made.
+        """
+        _, digest = _split_hash(file.content_hash)
+        leaf = _plain_parts(file.relative)
+        if not leaf:
+            return None
+        named = self._root / NAMED_DIR / digest[:2] / digest[2:] / leaf[-1]
+        try:
+            if _is_there(named, file.size_bytes) and os.path.samefile(named, file.location):
+                return named
+            _remove_file(named)  # a link to an old copy, read-only as the cache's files are: Windows replaces none
+            named.parent.mkdir(parents=True, exist_ok=True)
+            temporary = named.with_name(f".{leaf[-1]}.{uuid.uuid4().hex[:12]}.part")
+            os.link(file.location, temporary)
+            os.replace(temporary, named)
+            return named
+        except OSError:
+            return None
+
+    def _forget_named(self, content_hash: str) -> None:
+        """Remove the names a checked file goes by (:meth:`_named`), as it goes."""
+        _, digest = _split_hash(content_hash)
+        folder = self._root / NAMED_DIR / digest[:2] / digest[2:]
+        for name in os.listdir(folder) if folder.is_dir() else ():
+            _remove_file(folder / name)
+        with contextlib.suppress(OSError):
+            folder.rmdir()
+
     def _as_checked(self, asset: KeptAsset) -> KeptAsset:
         """An asset with its files where the cache keeps them checked."""
         return dataclasses.replace(
@@ -1383,6 +1417,10 @@ class S3Store(Store):
         from chartbook.store import plain_parts
 
         asset = _read_as(asset, name)
+        if asset.single:
+            named = self._named(asset.files[0])
+            if named is not None:
+                asset = dataclasses.replace(asset, files=(dataclasses.replace(asset.files[0], location=named),))
         at = plain_parts(asset.at) if asset.at else []
         home = asset.record.folder.joinpath(*at) if at else asset.record.folder
         return KeptFiles(asset.content_hash, asset.single, tuple(sorted(asset.files, key=lambda file: file.relative)), home)
@@ -1536,6 +1574,7 @@ class S3Store(Store):
         for asset in held:
             for file in asset.files:
                 _remove_file(self._checked(file.content_hash))
+                self._forget_named(file.content_hash)
         self._forget_cached(content_hash)
         return bool(keys)
 

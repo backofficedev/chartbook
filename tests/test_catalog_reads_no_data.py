@@ -140,7 +140,19 @@ class TestAVersionIsBuiltWithoutItsData:
         writer = SphinxWriter(built, theme="pipeline", docs_src_dir=work / "laid" / "_docs_src")
         page = writer.dataframe_page("rates:rates")
         assert NO_GLIMPSE_RECORDED in page and "Error reading file" not in page
-        assert "## DataFrame Glimpse\n\n```\n" in page  # the plain fence, when no run of backticks is in the text
+        # A sentence of ours, so a paragraph: in a code block it was set in type and coloured as Python
+        assert f"## DataFrame Glimpse\n\n{NO_GLIMPSE_RECORDED}\n" in page and "```" not in page.split("## DataFrame Glimpse")[1].split("##")[0]
+
+    def test_a_recorded_glimpse_is_plain_text_in_its_fence(self, described, store, work):
+        """The glimpse is the data's text: its fence says ``text`` so Sphinx does not colour it as Python."""
+        from chartbook.writers.sphinx import SphinxWriter
+
+        folder, taken = described
+        snapshot.materialize(taken, work / "laid", store, data=False)
+        built = index.build_index(load_manifest(base_dir=work / "laid"))
+        writer = SphinxWriter(built, theme="pipeline", docs_src_dir=work / "laid" / "_docs_src")
+        page = writer.dataframe_page("rates:rates")
+        assert "## DataFrame Glimpse\n\n```text\n" in page and "DGS10" in page
 
 
 def _laid_out_index(work: Path, taken, store, edit=None) -> Path:
@@ -228,6 +240,20 @@ class TestWhatTheReviewFound:
         assert "columns" not in rates and "row_count" not in rates and "last_dates" not in rates and "glimpse" not in rates
         notes = records["rates:file/notes"]
         assert "preview" not in notes and "files" not in notes and notes["file_count"] == 1
+
+    @pytest.mark.parametrize("columns", [[1], [{"name": ["x"], "dtype": "Int64"}], [{"name": "date"}]])
+    def test_stored_columns_of_the_wrong_shape_are_passed_over_with_a_good_row_count(self, described, store, work, columns):
+        """The fallback to the stored facts checks their shape as every other read of them does (found reviewing 0.5.0)."""
+        folder, taken = described
+
+        def spoil(stored):
+            for record in stored["records"]:
+                if record["id"] == "rates:rates":
+                    record["columns"] = columns
+                    record["row_count"] = 3
+
+        records = _records(_laid_out_index(work, taken, store, spoil))
+        assert "columns" not in records["rates:rates"]  # and the build did not stop on them
 
     def test_a_folder_of_parts_has_no_last_dates_and_a_csvs_text_dates_are_read(self, work, store):
         from chartbook.utils import GLIMPSE_MAX_CHARS
