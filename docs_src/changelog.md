@@ -17,7 +17,7 @@ The store keeps each file once, so a later snapshot's folder holds only what cha
 
 ### Added — `data.path` makes the folder it writes into, and `[project] scratch`
 
-`data.path("merged_rates")`, and `assets.path` and `models.path` of this pipeline's own assets, make the folder the file is written into if it is not there yet: a file's parent, a folder dataset's or a glob's folder itself. A new pipeline's first `df.write_parquet(data.path("x"))` no longer fails for want of `_data/`. Nothing is made for another pipeline's asset, which is read where the store keeps it. `[project] scratch = "./_tmp"` names where `data.scratch()` puts throwaway files, a path inside the pipeline; the default stays `_data/_scratch`. A dataset of many files is declared as a folder, which `data.path` hands to `write_parquet(..., partition_by=...)`; a glob reads the same but is not a place to write.
+`data.path("merged_rates")`, and `assets.path` and `models.path` of this pipeline's own assets, make the folder the file is written into if it is not there yet, inside the pipeline's folder only. A new pipeline's first `df.write_parquet(data.path("x"))` no longer fails for want of `_data/`; polars makes a folder dataset's own folder when it writes with `partition_by`. Nothing is made for another pipeline's asset, read where the store keeps it or, linked, in its own folder. `[project] scratch = "./_tmp"` names where `data.scratch()` puts throwaway files, a path inside the pipeline; the default stays `_data/_scratch`. A dataset of many files is declared as a folder, which `data.path` hands to `write_parquet(..., partition_by=...)`; a glob reads the same but is not a place to write.
 
 ### Changed — the catalog reads no data
 

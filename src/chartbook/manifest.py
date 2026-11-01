@@ -1278,6 +1278,14 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     project = dict(PROJECT_DEFAULTS)
     project.update({k: v for k, v in project_raw.items() if k in PROJECT_DEFAULTS})
     project["type"] = project_type
+    if project["scratch"]:
+        from chartbook.snapshot import safe_relative
+
+        if not safe_relative(project["scratch"]):
+            raise ValueError(
+                f"{source}: [project] scratch = {project['scratch']!r} is not a plain path inside the pipeline. "
+                f'Write one relative to the pipeline\'s folder, e.g. scratch = "./_data/_scratch".'
+            )
     if project["writer"] not in WRITERS:
         raise ValueError(
             f"{source}: [project] writer = {project['writer']!r} names a site tool ChartBook does not write "
@@ -1320,6 +1328,7 @@ _PROJECT_EXAMPLES = {
     "copyright": "2026",
     "logo": "./docs_src/logo.png",
     "favicon": "./docs_src/favicon.ico",
+    "scratch": "./_data/_scratch",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
     "requires_chartbook": ">=0.4.0",

@@ -166,7 +166,7 @@ OLD_VIEWS_REMOVED = ".views-removed"
 #: snapshot's folder holds, and that ``store gc`` is how to remove snapshots. Written once, never rewritten.
 README_FILE = "README.txt"
 
-README_TEXT = """This folder holds the snapshots of one pipeline, made by ChartBook (chartbook snapshot).
+README_TEXT = """This folder holds the snapshots of one pipeline, kept by ChartBook.
 
 Each snapshot is a folder named by when it was made and the commit it was made at, and a
 complete record of that version: _chartbook/snapshot.json lists every file of every asset,

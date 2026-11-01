@@ -2855,7 +2855,7 @@ def _run_script(
             on_pin=show_pins,
             force=force,
             snapshot=snapshot,
-            on_snapshot=lambda step, made: _echo_snapshot(made, upstream=step.snapshot_first),
+            on_snapshot=lambda step, made: (_echo_snapshot(made, upstream=step.snapshot_first), None if step.snapshot_first else _remind_of_gc(False)),
             frozen=frozen,
             on_verify=_echo_frozen_report,
             remake=remake,
@@ -3004,6 +3004,8 @@ def store_ls(pipeline, store_name):
                         elsewhere += 1
             kind = "standalone" if elsewhere == 0 else "shared"
             note = "" if elsewhere == 0 else f", {elsewhere} file(s) in earlier folders"
+            if record.made_by != "snapshot":
+                note += ", pinned from a clone of its repository"  # not one its owner made
             made = f"{record.made_at[:10]} {record.made_at[11:16]} UTC"
             click.echo(f"  {record.folder.name}  {made}  {record.commit[:7]}  {kind:<10} {_format_bytes(here)} here{note}")
             shown += 1
@@ -3027,12 +3029,15 @@ def _stores_to_list(store_name):
     if store_name or (not os.environ.get("CHARTBOOK_STORE") and get_default_catalog_path() is not None):
         configured = Stores.configured()
         if configured is not None and (configured.catalog is not None or store_name is not None):
+            # An unreachable store is listed too, and said to be unreachable
             entries = [configured.named(store_name)] if store_name else configured.entries
-            return [(entry.name, entry.store) for entry in entries if entry.reachable]
+            return [(entry.name, entry.store) for entry in entries]
+        if store_name:
+            raise ValueError(f"--store {store_name}: no catalog names stores on this machine (`chartbook store info` says what it uses).")
     the_store = default_store()
     entries = getattr(the_store, "entries", None)
     if entries is not None:  # several stores read as one: each listed by its name
-        return [(entry.name, entry.store) for entry in entries if entry.reachable]
+        return [(entry.name, entry.store) for entry in entries]
     return [("", the_store)]
 
 
@@ -3055,11 +3060,7 @@ def _remind_of_gc(silenced: bool) -> None:
         return
     if not clearable:
         return
-    click.echo(
-        clearable.rstrip(".") + ": older than a week, and neither pinned nor the newest of their pipeline. "
-        "Nothing is removed unless you ask (`--no-gc-reminder` silences this line).",
-        err=True,
-    )
+    click.echo(clearable + " Nothing is removed unless you ask (`--no-gc-reminder` silences this line).", err=True)
 
 
 @store.command("info")
@@ -3182,8 +3183,12 @@ def _what_gc_would_clear(the_store) -> "str | None":
     cleared = len(plan.snapshots_delete) + len(plan.pinned_delete)
     if not cleared and not plan.delete:
         return None
-    what = f"{cleared} snapshot(s)" if cleared else f"{len(plan.delete)} object(s) nothing names"
-    return f"`chartbook store gc` would clear {what}, freeing {_format_bytes(plan.size_bytes)}."
+    if cleared:
+        return (
+            f"`chartbook store gc` would clear {cleared} snapshot(s), freeing {_format_bytes(plan.size_bytes)}: "
+            f"older than {plan.keep_days:g} days, and neither pinned nor the newest of their pipeline."
+        )
+    return f"`chartbook store gc` would clear {len(plan.delete)} object(s) nothing names, freeing {_format_bytes(plan.size_bytes)}."
 
 
 def _say_how_long_paths_are(folder) -> None:

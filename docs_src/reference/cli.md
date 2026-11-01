@@ -436,7 +436,7 @@ A catalog build is **incremental by default**. Its working files are kept beside
 
 The catalog reads snapshots from its stores. It runs no member code and needs no member trust. It lays out no data: a version's site is built from its snapshot's documents, charts, notebooks, notes and index, which recorded each dataframe's columns, rows, dates and first rows when the snapshot was made ({doc}`../design/plan-data-reads`).
 
-After the build, one line on stderr says what `chartbook store gc` would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: `--gc` runs gc then, as `chartbook store gc --yes` would, and `--no-gc-reminder` silences the line.
+After the build, one line on stderr says what `chartbook store gc` would clear, if anything: snapshots older than seven days that are neither pinned nor the newest of their pipeline, and how much their removal would free. Nothing is removed unless you ask: `--gc` runs gc then, as `chartbook store gc --yes` would, and `--no-gc-reminder` silences the line. With `--gc`, something gc could not remove (another user's, in a store users share) exits `1` after the site was built, as `store gc` itself does.
 
 ```console
 $ chartbook catalog build
@@ -444,6 +444,8 @@ $ chartbook catalog build
 Catalog site generated: /Users/x/.chartbook/docs/index.html
 `chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
 ```
+
+`chartbook run --snapshot` says the same after its snapshot.
 
 ### catalog open
 
@@ -1073,7 +1075,7 @@ A shared snapshot's folder holds only what changed; the rest of its files are in
 
 Every snapshot is a complete version: its record, `_chartbook/snapshot.json`, lists every file of every asset and says which folder keeps each. The store keeps each file once, in the first snapshot that had it, so a later snapshot's folder holds only what is new or changed (shared) unless everything changed (standalone). That is what keeps a dataset that grows by a file a year from costing its whole size again on every snapshot. It also means a snapshot's folder is not to be deleted by hand, since a later snapshot may keep files in it: `chartbook store gc` removes snapshots and keeps every file a remaining one uses. A `README.txt` in each pipeline's folder of the store says the same, for whoever finds the folder. For one complete copy of a version, `chartbook store export PIPELINE --latest --to FOLDER`.
 
-`PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store. A store of a kind that keeps no folders (a plugin's) is passed over.
+`PIPELINE` lists one pipeline's snapshots; `--store NAME` one named catalog store, said to be unreachable when it is. A snapshot a pin made from a clone of a `git` dependency, which is not one its owner made, is marked as such. A store of a kind that keeps no folders (a plugin's) is passed over.
 
 ### store verify
 
