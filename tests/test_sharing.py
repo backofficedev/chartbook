@@ -58,7 +58,7 @@ class TestExport:
     def test_the_newest_alone_is_a_complete_snapshot(self, two_snapshots, tmp_path):
         store, first, second, rates = two_snapshots
         sharing.export(store, "acme/rates", tmp_path / "out", "latest")
-        (folder,) = (tmp_path / "out" / "pipelines" / "acme+rates").iterdir()
+        (folder,) = (p for p in (tmp_path / "out" / "pipelines" / "acme+rates").iterdir() if p.is_dir())  # beside its README.txt
         assert folder.name == "2026-10-02T100000Z_" + second.commit[:12]
         assert {"_data/years/2025.txt", "_data/years/2026.txt", "_data/latest.txt"} <= set(_files(folder))
 

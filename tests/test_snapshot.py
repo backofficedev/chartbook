@@ -369,7 +369,7 @@ class TestSeveral:
         first = snapshot.make(maker)
         again = snapshot.make(maker)
         assert not again.made and again.snapshot == first.snapshot
-        assert len(list(default_store().pipeline_path("acme/maker").iterdir())) == 1
+        assert len([p for p in default_store().pipeline_path("acme/maker").iterdir() if p.is_dir()]) == 1
 
     def test_new_data_at_the_same_commit_is_a_new_one(self, maker, work):
         """A pipeline that pulls from outside: other bytes, and no file changed."""

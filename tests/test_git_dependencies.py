@@ -934,7 +934,7 @@ class TestWhatTheSecondReviewOfPuttingBackFound:
         report = lock.pin(downstream, git_cache=cache)
         assert report.problems == [] and _statuses(report)["parts"] == "restored"
         assert (held / "a.parquet").read_bytes() == b"part a"
-        assert len(list(default_store().pipeline_path("upstream").iterdir())) == 1
+        assert len([p for p in default_store().pipeline_path("upstream").iterdir() if p.is_dir()]) == 1
 
     def test_a_directory_pinned_before_records_listed_its_files_is_not_copied_again(self, downstream, upstream, cache, monkeypatch):
         manifest = tomli.loads((upstream / "chartbook.toml").read_text(encoding="utf-8"))

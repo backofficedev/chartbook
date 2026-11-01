@@ -1880,6 +1880,17 @@ class FolderStore(Store):
                     emptied.add(os.path.dirname(directory))
                 except OSError:
                     pass
+        if not dry_run and not any(
+            is_snapshot_folder(name) and (pipeline_path / name / OWN_DIR / RECORD_FILE).is_file()
+            for name in (os.listdir(pipeline_path) if pipeline_path.is_dir() else [])
+        ):
+            # The last snapshot gone, the note for a person who finds the folder goes with it
+            note = pipeline_path / README_FILE
+            try:
+                if note.is_file() and not note.is_symlink():
+                    _remove_file(note)
+            except OSError:
+                pass
         try:
             if not older_than or now - os.stat(pipeline_path).st_mtime >= older_than:
                 pipeline_path.rmdir()

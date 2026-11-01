@@ -138,7 +138,7 @@ class TestMigrate:
         store = FolderStore(root)
         rates = root / "pipelines" / "acme+rates"
         first, second = rates / "2026-10-01T100000Z_aaaaaaaaaaaa", rates / "2026-10-02T100000Z_bbbbbbbbbbbb"
-        assert sorted(p.name for p in rates.iterdir()) == [first.name, second.name]
+        assert sorted(p.name for p in rates.iterdir() if p.is_dir()) == [first.name, second.name]  # and a README.txt beside them
         # The first holds everything it had, at its place in the pipeline
         assert (first / "_data" / "rates.parquet").read_bytes() == b"rates-1"
         assert sorted(p.name for p in (first / "_data" / "parts").iterdir()) == ["a.txt", "b.txt"]

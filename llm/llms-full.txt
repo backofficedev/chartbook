@@ -59,6 +59,7 @@ uv run doit      # everything: docs, examples, package, test matrix
 | `update` | Move pins forward to each dependency's newest snapshot |
 | `run` | Run a named script in this pipeline (default `build`, after pinning what has no pin). Never builds in a folder it depends on. Refuses in a folder not trusted to run |
 | `trust` | Say a pipeline's folder is yours to build (`--render` to render only; `--repository` its origin repository, every clone; `--list`; `--forget`). Until then `docs` renders the folder as a build of files from a store (no query run, nothing read from outside the folder, a warning) and `run` refuses to run its script, naming the command. The record is `~/.chartbook/trust.toml`; `chartbook init` records the project it makes; under `CI` the checkout is trusted; `CHARTBOOK_TRUST=all` trusts every folder |
+| `store ls [ID]` | List every snapshot in the store as standalone (its folder holds every file of its version) or shared (it holds only what changed, and the rest of its files sit in earlier snapshots' folders, since the store keeps each file once), with what its folder holds. Snapshots are removed with `store gc`, never by hand: a later snapshot may keep files in an earlier folder |
 | `store info` | Say which store this machine uses, what set it (`CHARTBOOK_STORE`, the user's settings, the organization's, or the default), and the cache folder |
 | `store verify` | Hash every object in the store again; exit nonzero if one has changed |
 | `store gc` | Remove old snapshots and what nothing names; lists and asks first |
