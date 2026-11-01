@@ -7,6 +7,7 @@ system is not Windows.
 import builtins
 import os
 from pathlib import Path
+from stat import S_ISREG
 
 import pytest
 import tomli_w
@@ -31,7 +32,7 @@ def _windows_reads_short_paths(monkeypatch, limit):
     monkeypatch.setattr(store_module, "long_paths_enabled", lambda: False)
     monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", limit)
     monkeypatch.setattr(store_module, "WINDOWS_FOLDER_LIMIT", limit - 12)
-    real_stat, real_isfile, real_open = os.stat, os.path.isfile, builtins.open
+    real_stat, real_open = os.stat, builtins.open
 
     def plain(path):
         """The path Windows would be asked for, and whether it is past what it takes."""
@@ -50,7 +51,13 @@ def _windows_reads_short_paths(monkeypatch, limit):
 
     def isfile(path):
         text, refused = plain(path)
-        return False if refused else real_isfile(text)
+        if refused:
+            return False
+        # Not the real isfile, which on a POSIX system asks os.stat, replaced here
+        try:
+            return S_ISREG(real_stat(text).st_mode)
+        except (OSError, ValueError):
+            return False
 
     def opened(path, *arguments, **keywords):
         text, refused = plain(path)
