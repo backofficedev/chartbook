@@ -8,6 +8,7 @@ take the list of files (``docs_src/design/plan-data-reads.md``).
 
 import os
 import stat
+import sys
 from pathlib import Path
 
 import polars as pl
@@ -247,6 +248,7 @@ class TestTheOldViewsFolderGoes:
 class TestWhatTheFinalReviewFound:
     """Found reviewing 0.5.0 before its release."""
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Windows takes no `*` in a folder's name")
     def test_sql_of_a_spread_dataset_with_a_star_in_a_key(self, work, store, cache):
         """Polars takes `tag=a*` for no key; the check of it read each file's place in the store, which leads elsewhere."""
         news = work / "news"
