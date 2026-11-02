@@ -2776,6 +2776,95 @@ def update(dependencies, project_dir):
     _run_pin(project_dir, dependencies=list(dependencies))
 
 
+class _StoredIds:
+    """The IDs of the pipelines a pipeline's stores hold snapshots of, read once, when first asked for."""
+
+    def __init__(self, project_dir):
+        self.project_dir = project_dir
+        self._store = self._ids = None
+
+    def _stores(self):
+        if self._store is None:
+            from chartbook.multi_store import with_dependencies
+            self._store = with_dependencies(self.project_dir)
+        return self._store
+
+    @property
+    def where(self) -> str:
+        return str(self._stores())
+
+    @property
+    def unreachable(self) -> list:
+        """The names of the stores that cannot be read now, whose pipelines are not among :attr:`ids`."""
+        return [entry.name for entry in getattr(self._stores(), "entries", None) or [] if not entry.reachable]
+
+    @property
+    def ids(self) -> list:
+        if self._ids is None:
+            from chartbook.snapshot import readable_snapshots
+            self._ids = sorted({taken.pipeline for taken in readable_snapshots(self._stores())[0]})
+        return self._ids
+
+
+def _bare_name_in_stores(name, stored, itself):
+    """The ID of the one pipeline in the stores that a bare name names; ValueError if none does, or several.
+
+    As `chartbook get-docs` and `data.load(pipeline=...)` read a bare name:
+    the ID itself if the stores hold a bare one, else the one whose name
+    part it is. A bare ID is never cloned from a host, so one the stores
+    do not hold could never be pinned.
+    """
+    from chartbook.identity import in_another_case, match_pipeline_ref
+
+    if stored.unreachable:
+        # The one it names among those read may not be the only one
+        raise ValueError(
+            f"Which pipeline {name} names cannot be told while {', '.join(stored.unreachable)} cannot be "
+            f"read: add it by its ID (`chartbook add SCOPE/{name}`), or once every store can be read. "
+            f"Nothing was written."
+        )
+    others = [i for i in stored.ids if i != itself]  # never itself, when another has the name too
+    try:
+        found = match_pipeline_ref(others, name, where=f"the store at {stored.where}")
+    except KeyError:
+        matching = [i for i in others if i.rsplit("/", 1)[-1] == name]
+        raise ValueError(
+            f"{name} names more than one pipeline in the store at {stored.where}: "
+            f"{', '.join(matching)}. Add one by its ID, as `chartbook add {matching[0]}`. "
+            f"Nothing was written."
+        ) from None
+    if found is not None:
+        return found
+    if itself is not None and name == itself.rsplit("/", 1)[-1]:
+        return itself
+    if not stored.ids:
+        held = "it holds no snapshots"
+    else:
+        other = in_another_case(stored.ids, name)
+        hint = f" Did you mean {other}?" if other else ""
+        held = f"it holds snapshots of {', '.join(stored.ids)}.{hint} Add one by its ID"
+    raise ValueError(
+        f"No pipeline in the store at {stored.where} is named {name}: {held}. A pipeline is in "
+        f"the store once its owner runs `chartbook snapshot`. Nothing was written."
+    )
+
+
+def _unpinnable_bare_name(declared, name, stored):
+    """How a [dependencies] entry under a bare name that no store holds is described; None if it is not one.
+
+    An older `chartbook add NAME` wrote such an entry and left it: it can
+    never be pinned, and code naming NAME reads it rather than the pipeline
+    meant.
+    """
+    entry = declared.get(name)
+    if not isinstance(entry, dict) or "path" in entry or "git" in entry:
+        return None
+    named = entry.get("id", name)
+    if not isinstance(named, str) or "/" in named or named in stored.ids:
+        return None
+    return f"a bare ID the store at {stored.where} has no snapshot of, so it cannot be pinned"
+
+
 @main.command("add")
 @click.argument("pipeline")
 @click.option("--as", "key", metavar="NAME", help="The name to know it by in code, PIPELINE by default (`NAME:dataframe`)")
@@ -2790,14 +2879,20 @@ def add_command(pipeline, key, commit, project_dir):
     alone: no folder of it here, and no clone. `chartbook update` moves the
     pin to a newer snapshot.
 
+    A bare name (`rates`) is the one pipeline in the stores whose ID ends in
+    it, and that ID is written. If several do, or none, nothing is written
+    and the IDs the stores hold are listed.
+
     \b
     Examples:
         chartbook add acme/rates
+        chartbook add rates
         chartbook add acme/rates --as rates
         chartbook add acme/rates --commit 3f2a9c1
     """
     from chartbook.identity import validate_pipeline_id
     from chartbook.manifest import dependency_line, validate_dependencies, with_dependency
+    from chartbook.store import StoreError
 
     project_dir = resolve_project_dir(project_dir)
     manifest_file = project_dir / "chartbook.toml"
@@ -2821,6 +2916,24 @@ def add_command(pipeline, key, commit, project_dir):
             itself = pipeline_in(project_dir)
         except (SnapshotError, ValueError):
             itself = None
+        with open(manifest_file, encoding="utf-8", newline="") as f:  # as it is, line endings included
+            text = f.read()
+        import tomli
+
+        declared = tomli.loads(text).get("dependencies")
+        declared = declared if isinstance(declared, dict) else {}
+        stored = _StoredIds(project_dir)
+        if not repository and "/" not in pipeline:
+            if pipeline in declared and not key:
+                stale = _unpinnable_bare_name(declared, pipeline, stored)
+                if stale:
+                    raise ValueError(
+                        f"[dependencies] has {pipeline!r} already, as {stale}. Delete its line in "
+                        f"{manifest_file}, then run `chartbook add {pipeline}` again."
+                    )
+            else:
+                # A bare name is the one pipeline in the stores whose ID ends in it
+                pipeline = _bare_name_in_stores(pipeline, stored, itself)
         if pipeline == itself:
             raise ValueError(f"{pipeline} is this pipeline itself: a pipeline cannot depend on itself.")
         key = key or pipeline
@@ -2829,18 +2942,23 @@ def add_command(pipeline, key, commit, project_dir):
             entry["id"] = pipeline
         if commit:
             entry["commit"] = commit
-        with open(manifest_file, encoding="utf-8", newline="") as f:  # as it is, line endings included
-            text = f.read()
         changed = with_dependency(text, key, entry)
-        import tomli
-
         validate_dependencies(tomli.loads(changed).get("dependencies") or {}, project_dir)
-    except (ValueError, OSError) as e:
+        # A bare name left by an older `chartbook add`, which code naming the bare name reads instead
+        bare = pipeline.rsplit("/", 1)[-1]
+        stale = _unpinnable_bare_name(declared, bare, stored) if bare != pipeline and bare != key else None
+    except (ValueError, OSError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
     with open(manifest_file, "w", encoding="utf-8", newline="") as f:
         f.write(changed)
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
+    if stale:
+        click.echo(
+            f"[dependencies] also has {bare!r}, as {stale}: `{bare}:NAME` reads that entry, not "
+            f"{pipeline}. Delete its line in {manifest_file}.",
+            err=True,
+        )
 
     def put_back():
         # A dependency whose pin would close a cycle, or lead into one, is not added either

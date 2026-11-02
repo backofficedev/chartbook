@@ -689,6 +689,8 @@ chartbook add PIPELINE [--as NAME] [--commit COMMIT] [OPTIONS] [--project-dir PA
 
 Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
 
+A bare name is the one pipeline in the stores whose ID ends in it, as `chartbook get-docs` and `data.load(pipeline=...)` read one, and that full ID is written: with the store holding `tutorial/treasury_curve`, `chartbook add treasury_curve` writes `"tutorial/treasury_curve" = {}`. A bare ID the stores hold is written as it is. When several pipelines end in the name, the command lists them and writes nothing; when none does, it says which IDs the stores hold, or that they hold none, and writes nothing. Either way `chartbook.toml` and `chartbook.lock` are as they were.
+
 ```console
 $ chartbook add acme/rates --as rates
 Added to [dependencies] in /work/forecast/chartbook.toml: "rates" = { id = "acme/rates" }
@@ -702,7 +704,7 @@ Wrote chartbook.lock.
 | `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 
-A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. An entry under a bare name that no store has a snapshot of, as `chartbook add` before 0.5.0 wrote and left when it could not pin it, can never be pinned, and code that names the bare name reads it rather than the full ID: `chartbook add` says so, of the name you give or of the full ID's last part, and that the way out is to delete its line in `chartbook.toml`. Nor does a dependency whose pin would make this pipeline depend, through what it depends on, on itself: the pin is refused as `chartbook pin` refuses it, `chartbook.toml` is put back as it was, and the command says the dependency was not added. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
 
 ## chartbook pin
 
