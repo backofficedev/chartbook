@@ -237,6 +237,18 @@ blog_post_pattern = [
     "cb/charts/*.md",
 ]
 
+
+def _no_feed_link(app, pagename, templatename, context, doctree):
+    # ablog writes atom.xml only with a blog_baseurl, but links its chart
+    # listings to one whether or not it does: without one, the link leads nowhere
+    if not app.config.blog_baseurl:
+        context.pop("feed_path", None)
+
+
+def setup(app):
+    app.connect("html-page-context", _no_feed_link)
+
+
 # html_sidebars = {
 #     "**": [
 #         # sphinx book theme default html sidebar elements: https://sphinx-book-theme.readthedocs.io/en/stable/sections/sidebar-primary.html

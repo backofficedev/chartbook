@@ -134,20 +134,44 @@ def _remove_old_views() -> None:
     nothing is left, a marker says it was done, so that a 0.4 install beside
     this one, which gathers again, is not undone under its feet on every
     command.
+
+    Where ``[cache] path`` in the settings has moved the cache, 0.4 may
+    have gathered into ``~/.chartbook/cache`` before it did, and nothing
+    reads there now: its ``views/`` goes too. A cache that
+    ``CHARTBOOK_CACHE`` moves for one process (a test, CI) leaves the
+    default one alone.
     """
     import os
 
-    from chartbook.config import get_cache_path
-    from chartbook.store import OLD_VIEWS_DIR, OLD_VIEWS_REMOVED, _remove_tree
+    from chartbook.config import CACHE_ENV_VAR, get_cache_path, get_global_config_dir
 
     try:
         cache = get_cache_path()
     except (ValueError, OSError):
         return
+    _remove_old_views_in(cache)
+    if os.environ.get(CACHE_ENV_VAR, "").strip():
+        return
+    former = get_global_config_dir() / "cache"
+    if os.path.normcase(os.path.abspath(former)) != os.path.normcase(os.path.abspath(cache)):
+        _remove_old_views_in(former, former=True)
+
+
+def _remove_old_views_in(cache, former: bool = False) -> None:
+    """Remove what ChartBook 0.4 gathered under one cache folder, as :func:`_remove_old_views` says.
+
+    :param former: The default cache, which the settings have moved away
+        from: its ``views/`` goes only when it holds nothing but what 0.4
+        gathered, as a bucket's does.
+    """
+    import os
+
+    from chartbook.store import OLD_VIEWS_DIR, OLD_VIEWS_REMOVED, _remove_tree
+
     marker = cache / OLD_VIEWS_REMOVED
     if not cache.is_dir() or marker.is_file():
         return  # nothing of 0.4's here, or seen to once already: a 0.4 install beside this one keeps its own
-    leftovers = [cache / OLD_VIEWS_DIR]
+    leftovers = [cache / OLD_VIEWS_DIR] if not former or _only_gathered(cache / OLD_VIEWS_DIR) else []
     for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
         # A bucket's cache, laid out as a folder store: its views/ beside pipelines/, and holding only
         # what 0.4 gathered, never a pipeline or an asset of that name, or a bucket's prefix

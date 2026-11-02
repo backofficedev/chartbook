@@ -270,7 +270,13 @@ def _chartbook_keep_inside(app, doctree):
                 break
 
 
+# The template's own setup, which this one would otherwise replace
+_chartbook_template_setup = globals().get("setup")
+
+
 def setup(app):
+    if _chartbook_template_setup is not None:
+        _chartbook_template_setup(app)
     app.connect("doctree-read", _chartbook_keep_inside, priority=100)
 """
 
@@ -927,8 +933,11 @@ class IncrementalBuildSummary:
             sphinx = "Sphinx ran"
         else:
             sphinx = f"Sphinx re-read {self.pages_read} page(s)"
+        # A catalog's pipelines are its stores' snapshots, whose pages are written again on every
+        # build and kept only where they differ: there is no working pipeline to count
+        pipelines = f"regenerated {len(self.regenerated)} of {total} pipeline(s); " if total else ""
         return (
-            f"{lead}: regenerated {len(self.regenerated)} of {total} pipeline(s); "
+            f"{lead}: {pipelines}"
             f"{self.sources_written} source file(s) changed, "
             f"{self.sources_deleted} removed; {sphinx}."
         )
