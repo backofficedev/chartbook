@@ -384,7 +384,7 @@ def task_test_all():
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit-all.xml"
     return {
-        "actions": [_run_tests(f"{sys.executable} -m hatch test --all -v", junit_path)],
+        "actions": [_run_tests(f"{sys.executable} -m hatch test --all --parallel -v", junit_path)],
         "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,

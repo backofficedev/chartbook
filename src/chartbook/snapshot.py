@@ -3227,13 +3227,14 @@ _ASSET_KINDS = {
 
 
 def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
-    """The assets the index a snapshot holds lists, each as ``{"kind", "id", "name"}``, by ID; empty when it has none.
+    """The assets the index a snapshot holds lists, each as ``{"kind", "id", "name", "description"}``, by ID; empty when it has none.
 
     For a pipeline known from the store alone, whose folder is not here to
     say what it declares. Only a record whose ID reads as a reference to
     an asset of the snapshot's own pipeline, of the kind the record says,
     is listed; its name is one line of plain text
-    (:func:`chartbook.identity.plain_line`), empty when it has none.
+    (:func:`chartbook.identity.plain_line`), empty when it has none, and
+    so is its description.
     Anyone who can write to the store wrote these.
     """
     from chartbook.identity import plain_line
@@ -3252,7 +3253,10 @@ def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
             continue
         if ref.pipeline_id != taken.pipeline or ref.registry or ref.kind != _ASSET_KINDS[record["kind"]] or ref.part or ref.rev:
             continue
-        listed.setdefault(str(ref), {"kind": record["kind"], "id": str(ref), "name": plain_line(record.get("name"), 200)})
+        listed.setdefault(str(ref), {
+            "kind": record["kind"], "id": str(ref), "name": plain_line(record.get("name"), 200),
+            "description": plain_line(record.get("description"), 2000),
+        })
     return [listed[asset_id] for asset_id in sorted(listed)]
 
 

@@ -77,6 +77,8 @@ __all__ = [
     "KindMismatchError",
     "files",
     "gathered",
+    "get_docs",
+    "get_docs_path",
     "index",
     "parse",
     "path",
@@ -465,3 +467,198 @@ def index(
         columns[key] = [partitions(relative).get(key) for _, relative, _, _ in rows]
     schema = {"path": pl.String, "size_bytes": pl.Int64, "sha256": pl.String, **{key: pl.String for key in keys}}
     return pl.DataFrame(columns, schema=schema).lazy()
+
+
+#: The kinds whose entry carries a write-up, ``docs`` or ``docs_path``. A
+#: note is a write-up itself, and a notebook's page is the notebook.
+WRITE_UP_KINDS = ("dataframe", "chart", "model", "file")
+
+#: The most of a write-up, a README or a stored ``chartbook.toml`` that is
+#: read: anyone who can write to a shared store wrote these.
+WRITE_UP_LIMIT = 8 * 1024 * 1024
+
+
+def _docs_info(catalog_path: Path, pipeline: str, asset: Optional[Union[str, AssetRef]]) -> tuple[str, str, Path]:
+    """Where a cataloged pipeline's write-up of an asset is, or its README with no asset.
+
+    :returns: ``("path", declared, file)`` for a write-up in a file, the
+        file where it is: in the pipeline's folder, or where the store keeps
+        it; ``("str", text, manifest)`` for an inline ``docs``, with the
+        ``chartbook.toml`` that holds it.
+    :raises KeyError: If the pipeline, the asset or its write-up is not there.
+    :raises ValueError: If the asset is a notebook, which has no write-up,
+        or the stored ``chartbook.toml`` is not one ChartBook can read.
+    :raises chartbook.store.StoreError: If the store does not have a file
+        of the snapshot yet, as a synced folder still downloading.
+    """
+    from chartbook.manifest import load_manifest
+    from chartbook.refs import KIND_TABLES
+    from chartbook.resolve import locate_in_catalog
+
+    ref = parse(asset) if asset is not None else None
+    if ref is not None and (ref.pipeline is not None or ref.part or ref.rev):
+        raise ValueError(
+            f"Reference {str(ref)!r} is more than kind/name: give the pipeline on its own, and the asset as kind/name"
+        )
+    if ref is not None and ref.kind not in (*WRITE_UP_KINDS, "note"):
+        raise ValueError(
+            f"{ref} is a {ref.kind}, which has no write-up of its own: its page on the catalog's site is the {ref.kind}"
+        )
+    shown = f"{ref.kind} {ref.name!r}" if ref is not None else "README"
+
+    manifest = load_manifest(base_dir=catalog_path.parent)
+    pipeline_key = locate_in_catalog(manifest, pipeline)
+
+    if manifest.get("stores") is not None:
+        import tomli
+
+        from chartbook import snapshot
+        from chartbook.hubs import selected_snapshots
+
+        stores = manifest["stores"]
+        found, _ = snapshot.readable_snapshots(stores)
+        chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
+        if not chosen:
+            raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
+        taken = max(chosen, key=lambda t: t.made_at)
+        if not taken.documents:
+            raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
+        kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
+        manifest_file = kept.get("chartbook.toml")
+        if manifest_file is None:
+            raise KeyError(f"The newest snapshot of {pipeline_key} keeps no chartbook.toml among its documents")
+        try:
+            raw = tomli.loads(snapshot._read_regular_file(Path(manifest_file), WRITE_UP_LIMIT).decode("utf-8"))
+        except (OSError, UnicodeDecodeError, tomli.TOMLDecodeError) as error:
+            raise ValueError(f"The newest snapshot of {pipeline_key} keeps a chartbook.toml that cannot be read: {error}") from None
+
+        def table(key):
+            # A shared store's manifest was written by anyone who can write to it
+            value = raw.get(key)
+            if value is not None and not isinstance(value, dict):
+                raise ValueError(f"The newest snapshot of {pipeline_key} keeps a chartbook.toml whose [{key}] is not a table")
+            return value or {}
+
+        if ref is None:
+            readme = table("project").get("readme")
+            declared = readme.strip() if isinstance(readme, str) and readme.strip() else "README.md"
+            plain = snapshot.safe_relative(declared)
+            if plain is None or plain not in kept:
+                raise KeyError(f"The newest snapshot of {pipeline_key} keeps no {declared}")
+            return "path", plain, Path(kept[plain])
+        entry = table(KIND_TABLES[ref.kind]).get(ref.name)
+        if not isinstance(entry, dict):
+            raise KeyError(f"{pipeline_key} declares no {shown} in its newest snapshot")
+        if ref.kind == "note":
+            # A note is an asset, and a page of the documents: by its own path there, as declared
+            declared = entry.get("path") if isinstance(entry.get("path"), str) else ""
+            plain = snapshot.safe_relative(declared) if declared else None
+            if plain is not None and plain in kept:
+                return "path", plain, Path(kept[plain])
+            # Else as the store keeps the asset, its one file
+            record = taken.assets.get(str(ref)) or {}
+            if not record.get("content_hash"):
+                raise KeyError(f"The newest snapshot of {pipeline_key} keeps no file of {shown}")
+            files = stores.files(record["content_hash"], pipeline_key).files
+            if len(files) != 1:
+                raise KeyError(f"{pipeline_key}'s {shown} is {len(files)} files, not one page")
+            return "path", declared, Path(files[0].location)
+        for key in ("docs_path", "docs"):
+            if entry.get(key) and not isinstance(entry[key], str):
+                raise ValueError(f"{pipeline_key}'s {shown} has a {key} that is not text in its newest snapshot")
+        if entry.get("docs_path"):
+            plain = snapshot.safe_relative(entry["docs_path"])
+            if plain is None or plain not in kept:
+                raise ValueError("The documentation path is not inside the snapshot's documents")
+            return "path", plain, Path(kept[plain])
+        if not entry.get("docs"):
+            raise KeyError(f"{pipeline_key}'s {shown} has no write-up: neither docs nor docs_path")
+        return "str", entry["docs"], Path(manifest_file)
+
+    pipeline_manifest = manifest["pipelines"][pipeline_key]
+    pipeline_base_dir = Path(pipeline_manifest["base_dir"])
+    if ref is None:
+        readme = (pipeline_manifest.get("project") or {}).get("readme") or "README.md"
+        return "path", readme, (pipeline_base_dir / readme).resolve()
+    declared = pipeline_manifest.get(KIND_TABLES[ref.kind]) or {}
+    if ref.name not in declared:
+        raise KeyError(f"{shown} not found in pipeline {pipeline_key!r}. Declared: {sorted(declared)}")
+    entry = declared[ref.name]
+    if ref.kind == "note":
+        return "path", entry["path"], (pipeline_base_dir / entry["path"]).resolve()
+    if entry.get("docs_path"):
+        return "path", entry["docs_path"], (pipeline_base_dir / entry["docs_path"]).resolve()
+    if not entry.get("docs"):
+        raise KeyError(f"{pipeline_key}'s {shown} has no write-up: neither docs nor docs_path")
+    return "str", entry["docs"], (pipeline_base_dir / "chartbook.toml").resolve()
+
+
+def get_docs_path(
+    pipeline: str,
+    asset: Optional[Union[str, AssetRef]] = None,
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> Path:
+    """Get the path to the write-up of a cataloged pipeline's asset, or to its README.
+
+    The file is the asset's ``docs_path``, or the ``chartbook.toml`` that
+    holds its inline ``docs``; a note's own file; with no asset, the
+    pipeline's README. It is where the store keeps it, from the pipeline's
+    newest snapshot; the store keeps the same bytes once, so the file may
+    be named for another of the same bytes. :func:`chartbook.data.get_docs_path` is this for a
+    dataframe.
+
+    :param pipeline: The pipeline reference: a bare name, a scoped ID or a
+        repository URL.
+    :param asset: The asset within the pipeline, as ``kind/name``
+        (``"chart/gdp"``, ``"model/forecaster"``, ``"file/filings"``,
+        ``"note/methodology"``) or a bare name for a dataframe; None for the
+        pipeline's README.
+    :param catalog_path: The catalog to look in; the default one if None.
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline, the asset or its write-up is not there.
+    :raises ValueError: If the asset is a notebook, which has no write-up.
+    """
+    from chartbook.resolve import resolve_catalog_path
+
+    _, _, docs_file = _docs_info(resolve_catalog_path(catalog_path), pipeline, asset)
+    return docs_file
+
+
+def get_docs(
+    pipeline: str,
+    asset: Optional[Union[str, AssetRef]] = None,
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> str:
+    """Get the write-up of a cataloged pipeline's asset as text, or its README.
+
+    What a person reads on the asset's page, for a program or an agent that
+    reads no site: the content of its ``docs_path`` or its inline ``docs``;
+    a note's own text; with no asset, the pipeline's README::
+
+        assets.get_docs("yield_curve")                     # its README
+        assets.get_docs("yield_curve", "chart/repo_rates") # a chart's write-up
+        assets.get_docs("rate_forecast", "model/forecaster")
+
+    Read from the pipeline's newest snapshot in the catalog's stores.
+    :func:`chartbook.data.get_docs` is this for a dataframe.
+
+    :param pipeline: The pipeline reference, as for :func:`get_docs_path`.
+    :param asset: The asset, as for :func:`get_docs_path`.
+    :param catalog_path: The catalog to look in; the default one if None.
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline, the asset or its write-up is not there.
+    :raises ValueError: If the asset is a notebook, which has no write-up.
+    """
+    from chartbook.resolve import resolve_catalog_path
+    from chartbook.snapshot import _read_regular_file
+
+    mode, value, docs_file = _docs_info(resolve_catalog_path(catalog_path), pipeline, asset)
+    if mode == "path":
+        # Not a link, a device or a pipe, which a shared store's writer could leave there
+        try:
+            return _read_regular_file(docs_file, WRITE_UP_LIMIT).decode("utf-8")
+        except FileNotFoundError:
+            raise
+        except (OSError, UnicodeDecodeError) as error:
+            raise ValueError(f"The write-up {docs_file} cannot be read as text: {error}") from None
+    return value

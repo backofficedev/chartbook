@@ -8,7 +8,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 - [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook run`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs build`, `chartbook run`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook get-docs`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
 
 ## Guides
 
@@ -86,6 +86,8 @@ chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls dataframes      # List dataframes only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
+chartbook ls --json                       # Every pipeline and asset of every kind, as JSON
+chartbook get-docs <pipeline>:chart/<name>  # Any asset's write-up, by its id; a bare <pipeline> is its README
 ```
 
 ## Python API
@@ -102,6 +104,7 @@ from chartbook import assets
 paths = assets.files("file/filings")             # a [files] asset's files, sorted (works for a dataframe of many parts too)
 table = assets.index("dep:file/filings")         # LazyFrame: path, size_bytes, sha256, a column per key=value folder; a dependency's from the store's record
 docs = data.get_docs(pipeline="markets", dataframe="market_data")       # the write-up, as text
+docs = assets.get_docs("markets", "chart/volume")                       # any asset's write-up; assets.get_docs("markets") is the README
 ```
 
 ## Minimal Configuration Example
