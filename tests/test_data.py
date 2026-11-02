@@ -398,6 +398,122 @@ def test_cli_get_docs_takes_a_scoped_id_and_a_repository_url(tmp_path):
     assert _split_docs_id("git@github.com:acme/rates.git:model/m") == ("git@github.com:acme/rates.git", "model/m")
 
 
+
+def _writable(stored):
+    """A file the store keeps, made writable to change it as someone else writing to a shared store could."""
+    import os
+
+    os.chmod(stored.parent, 0o755)
+    os.chmod(stored, 0o644)
+    return stored
+
+
+def test_cli_get_docs_options_hold_their_kind(catalog_with_write_ups):
+    """`--dataframe chart/x` is not a chart's write-up read by another name, and an option takes a name alone."""
+    from click.testing import CliRunner
+
+    from chartbook.cli import _split_docs_id, main
+
+    catalog = ["--catalog", str(catalog_with_write_ups)]
+    for arguments, said in (
+        (["--dataframe", "chart/chart_0_0"], "--dataframe chart/chart_0_0"),
+        (["--chart", "other:chart_0_0"], "give its pipeline with --pipeline"),
+        (["--model", "forecaster@v1"], "give its pipeline with --pipeline"),
+    ):
+        refused = CliRunner().invoke(main, ["get-docs", "--pipeline", "pipeline_w", *arguments, *catalog])
+        assert refused.exit_code == 2 and said in refused.output, refused.output
+    # An owner named like a kind, in git's form of a URL, is the URL's
+    assert _split_docs_id("git@github.com:model/pipeline_s") == ("git@github.com:model/pipeline_s", None)
+    assert _split_docs_id("git@github.com:yield_curve") == ("git@github.com:yield_curve", None)
+    # A reference that is more than kind/name is said as written
+    rev = CliRunner().invoke(main, ["data", "get-docs", "--pipeline", "pipeline_w", "--dataframe", "dataframe_0@v1", *catalog])
+    assert rev.exit_code == 1 and "'dataframe_0@v1'" in rev.output and "AssetRef(" not in rev.output, rev.output
+
+
+def test_get_docs_says_what_the_store_does_not_have_yet(catalog_with_write_ups):
+    """A write-up a synced store has not downloaded is said in the store's words, not as a traceback."""
+    from click.testing import CliRunner
+
+    from chartbook import assets
+    from chartbook.cli import main
+
+    _writable(assets.get_docs_path("pipeline_w", "chart/chart_0_0", catalog_path=catalog_with_write_ups)).unlink()
+    for arguments in (
+        ["get-docs", "pipeline_w:chart/chart_0_0"],
+        ["data", "get-docs", "--pipeline", "pipeline_w", "--dataframe", "dataframe_0"],
+    ):
+        said = CliRunner().invoke(main, [*arguments, "--catalog", str(catalog_with_write_ups)])
+        assert said.exit_code == 1 and said.output.startswith("Error:"), said.output
+        assert isinstance(said.exception, SystemExit)
+
+
+def test_get_docs_refuses_a_stored_manifest_of_the_wrong_shape(catalog_with_write_ups):
+    """Anyone who can write to a shared store wrote its chartbook.toml: tables that are not tables are said so."""
+    from click.testing import CliRunner
+
+    from chartbook import assets
+    from chartbook.cli import main
+
+    stored = assets.get_docs_path("pipeline_w", "file/filings", catalog_path=catalog_with_write_ups)
+    assert stored.name == "chartbook.toml"
+    size = stored.stat().st_size
+    bad = 'charts = "no"\nproject = "x"\n'
+    _writable(stored).write_bytes((bad + "#" * (size - len(bad) - 1) + "\n").encode("utf-8"))  # its recorded size
+    for asset_id in ("pipeline_w", "pipeline_w:chart/chart_0_0"):
+        said = CliRunner().invoke(main, ["get-docs", asset_id, "--catalog", str(catalog_with_write_ups)])
+        assert said.exit_code == 1 and "is not a table" in said.output, said.output
+
+
+@pytest.mark.skipif(not hasattr(__import__("os"), "mkfifo"), reason="Windows has no named pipes in the file system")
+def test_get_docs_does_not_wait_on_a_pipe_in_the_store(tmp_path):
+    """A pipe where a write-up is kept is not read, which would wait until something wrote to it."""
+    import os
+    import threading
+
+    from chartbook import assets
+    from tests.fixtures import create_catalog_project, publish_catalog
+
+    root = create_catalog_project(tmp_path / "catalog_pipe", pipeline_ids=["pipeline_f"])
+    (root / "pipelines" / "pipeline_f" / "README.md").write_text("", encoding="utf-8", newline="\n")  # recorded as 0 bytes
+    catalog = publish_catalog(root)
+    stored = _writable(assets.get_docs_path("pipeline_f", None, catalog_path=catalog))
+    stored.unlink()
+    os.mkfifo(stored)
+    result = {}
+
+    def read():
+        try:
+            result["text"] = assets.get_docs("pipeline_f", None, catalog_path=catalog)
+        except Exception as error:  # noqa: BLE001 - what it raised is the result
+            result["error"] = error
+
+    reader = threading.Thread(target=read, daemon=True)
+    reader.start()
+    reader.join(10)
+    if reader.is_alive():
+        os.close(os.open(stored, os.O_WRONLY | os.O_NONBLOCK))  # let it go before failing
+        reader.join(5)
+        pytest.fail("get_docs waited on a pipe")
+    assert isinstance(result.get("error"), ValueError), result
+
+
+def test_get_docs_of_two_notes_of_the_same_bytes(tmp_path):
+    """The store keeps the same bytes once, so either note's file may be the other's: each reads its own text."""
+    from chartbook import assets
+    from tests.fixtures import create_catalog_project, publish_catalog
+
+    root = create_catalog_project(tmp_path / "catalog_notes", pipeline_ids=["pipeline_n"])
+    folder = root / "pipelines" / "pipeline_n"
+    for name in ("one", "two"):
+        (folder / "docs_src" / f"{name}.md").write_text("Same\n", encoding="utf-8", newline="\n")
+    with open(folder / "chartbook.toml", "a", encoding="utf-8", newline="\n") as manifest:
+        manifest.write('\n[notes.one]\npath = "docs_src/one.md"\n\n[notes.two]\npath = "docs_src/two.md"\n')
+    catalog = publish_catalog(root)
+    for name in ("one", "two"):
+        assert assets.get_docs_path("pipeline_n", f"note/{name}", catalog_path=catalog).read_bytes() == b"Same\n"
+        assert assets.get_docs("pipeline_n", f"note/{name}", catalog_path=catalog) == "Same\n"
+
+
 # --- Glob pattern / hive-partitioned support ---
 
 

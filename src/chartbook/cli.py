@@ -2254,6 +2254,7 @@ def data_get_docs(pipeline, dataframe, catalog):
     """
     from chartbook.data import get_docs
     from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.store import StoreError
 
     try:
         docs = get_docs(pipeline, dataframe, catalog_path=catalog)
@@ -2263,7 +2264,7 @@ def data_get_docs(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except (KeyError, ValueError) as e:
+    except (KeyError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     except FileNotFoundError as e:
@@ -2283,6 +2284,7 @@ def data_get_docs_path(pipeline, dataframe, catalog):
     """
     from chartbook.data import get_docs_path
     from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.store import StoreError
 
     try:
         path = get_docs_path(pipeline, dataframe, catalog_path=catalog)
@@ -2292,7 +2294,7 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except (KeyError, ValueError) as e:
+    except (KeyError, ValueError, StoreError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -2302,14 +2304,22 @@ _KIND_OPTIONS = ("dataframe", "chart", "model", "file", "note")
 
 
 def _named_by_options(options):
-    """The asset the kind options name, ``kind/name``; None for none, the pipeline's README."""
+    """The asset the kind options name, of the option's kind; None for none, the pipeline's README."""
+    from chartbook.refs import parse_asset_ref
+
     given = [(kind, options[kind]) for kind in _KIND_OPTIONS if options[kind]]
     if len(given) > 1:
         raise click.UsageError(f"Name one asset, not {len(given)}: {', '.join('--' + kind for kind, _ in given)}.")
     if not given:
         return None
     kind, name = given[0]
-    return name if kind == "dataframe" else f"{kind}/{name}"
+    try:
+        ref = parse_asset_ref(name, kind=kind)
+    except ValueError as error:  # KindMismatchError too: --dataframe chart/x is not a dataframe
+        raise click.UsageError(f"--{kind} {name}: {error}") from None
+    if ref.pipeline is not None or ref.part or ref.rev:
+        raise click.UsageError(f"--{kind} takes the {kind}'s name alone: give its pipeline with --pipeline.")
+    return ref
 
 
 def _kind_options(command):
@@ -2330,6 +2340,8 @@ def _split_docs_id(text):
     alone (``https://github.com/acme/yield_curve``, ``git@github.com:acme/yield_curve.git``,
     a host with a port) is a pipeline.
     """
+    import re
+
     from chartbook.refs import parse_asset_ref
 
     head, colon, tail = text.rpartition(":")
@@ -2337,6 +2349,12 @@ def _split_docs_id(text):
         return text, None
     try:
         parse_asset_ref(tail)
+        # And what comes before is a pipeline: a URL (git's form has a path,
+        # git@github.com:acme/rates), or an ID, which holds no "@"
+        if "://" not in head and not re.fullmatch(r"[^\s/@:]+@[^\s/:]+:\S*/\S*", head):
+            probe = parse_asset_ref(f"{head}:name")
+            if probe.pipeline is None or probe.part or probe.rev:
+                return text, None
     except ValueError:
         return text, None
     return head, tail
@@ -2369,6 +2387,7 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
     """
     from chartbook.assets import get_docs, get_docs_path
     from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.store import StoreError
 
     keyword = _named_by_options({"dataframe": dataframe, "chart": chart, "model": model, "file": file, "note": note})
     if asset_id and pipeline:
@@ -2387,6 +2406,10 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
             click.echo(str(get_docs_path(pipeline, asset, catalog_path=catalog)))
         else:
             click.echo(get_docs(pipeline, asset, catalog_path=catalog))
+    except StoreError as e:
+        # The store's own words, as a synced folder still downloading the snapshot
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
     except CatalogNotConfiguredError as e:
         click.echo(f"Error: {e}", err=True)
         click.echo("", err=True)
