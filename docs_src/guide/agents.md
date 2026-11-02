@@ -32,6 +32,18 @@ write-up. The same text a person reads on the page.
 
 ## Can it be trusted?
 
+```{image} ../_static/diagrams/provenance-light.svg
+:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_forecast trained on it through a pin
+:class: only-light
+:align: center
+```
+
+```{image} ../_static/diagrams/provenance-dark.svg
+:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_forecast trained on it through a pin
+:class: only-dark
+:align: center
+```
+
 `chartbook lineage --json`, the content hashes, and `chartbook.lock` in git: what the agent should
 check before it builds on a number.
 

@@ -24,6 +24,18 @@ a pipeline, the Versions page.
 
 ## 3. Follow a number to its source
 
+```{image} ../_static/diagrams/provenance-light.svg
+:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_forecast trained on it through a pin
+:class: only-light
+:align: center
+```
+
+```{image} ../_static/diagrams/provenance-dark.svg
+:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_forecast trained on it through a pin
+:class: only-dark
+:align: center
+```
+
 From the model in `rate_forecast`, to the `yield_curve` dataframe it was trained on, at the hash
 it was trained on, to the Fed's series that one was pulled from. The same walk from the command
 line: `chartbook lineage`.

@@ -1,26 +1,32 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 820 300' width='820' height='300' font-family='-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' font-size='14'>
-<defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#2b4c7e'/></marker></defs>
-<rect x='20' y='40' width='200' height='110' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='120.0' y='66' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>fed_yield_curve</text>
-<text x='120.0' y='86' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>their folder</text>
-<text x='120.0' y='104' text-anchor='middle' fill='#4b5563' font-size='12.5'>they build it;</text>
-<text x='120.0' y='122' text-anchor='middle' fill='#4b5563' font-size='12.5'>it may be mid-change</text>
-<rect x='310' y='40' width='200' height='110' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='410.0' y='66' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>snapshot</text>
-<text x='410.0' y='86' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>snapshots/4f2a91c…/…</text>
-<text x='410.0' y='104' text-anchor='middle' fill='#4b5563' font-size='12.5'>what they built at that</text>
-<text x='410.0' y='122' text-anchor='middle' fill='#4b5563' font-size='12.5'>commit, declared ready</text>
-<rect x='600' y='40' width='200' height='110' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='700.0' y='66' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>rate_forecast</text>
-<text x='700.0' y='86' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>your folder</text>
-<text x='700.0' y='104' text-anchor='middle' fill='#4b5563' font-size='12.5'>chartbook.lock pins it;</text>
-<text x='700.0' y='122' text-anchor='middle' fill='#4b5563' font-size='12.5'>data.load() reads the copy</text>
-<line x1='224' y1='95.0' x2='306' y2='95.0' stroke='#2b4c7e' stroke-width='1.5' marker-end='url(#a)'/>
-<text x='265.0' y='113.0' text-anchor='middle' fill='#4b5563' font-size='12.5' font-style='italic'>chartbook run</text>
-<text x='265.0' y='128.0' text-anchor='middle' fill='#4b5563' font-size='12.5' font-style='italic'>--snapshot</text>
-<line x1='514' y1='95.0' x2='596' y2='95.0' stroke='#2b4c7e' stroke-width='1.5' marker-end='url(#a)'/>
-<text x='555.0' y='113.0' text-anchor='middle' fill='#4b5563' font-size='12.5' font-style='italic'>chartbook pin</text>
-<path d='M 120 154 C 120 232, 700 232, 700 154' fill='none' stroke='#b45309' stroke-width='1.5' stroke-dasharray='6 4' marker-end='url(#a)'/>
-<text x='410' y='252' text-anchor='middle' fill='#b45309' font-size='12.5' font-style='italic'>never: a pipeline does not read another's folder</text>
-<text x='410.0' y='278' text-anchor='middle' fill='#4b5563' font-size='13'>a newer snapshot moves nothing until you say <tspan font-family='SFMono-Regular, Menlo, Consolas, monospace' fill='#2b6cb0'>chartbook update</tspan>; a <tspan font-family='SFMono-Regular, Menlo, Consolas, monospace' fill='#2b6cb0'>git diff</tspan> of the lockfile shows the move</text>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 280' width='900' height='280' font-family='Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' font-size='14'>
+<defs><marker id='a' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#1f6feb'/></marker><marker id='w' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#c2410c'/></marker><filter id='s' x='-10%' y='-10%' width='120%' height='140%'><feDropShadow dx='0' dy='2' stdDeviation='3' flood-color='#0f172a' flood-opacity='0.10'/></filter></defs>
+<rect x='20' y='30' width='200' height='133' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='67.8' y='42' width='104.4' height='20' rx='10' fill='#e8f0fe'/>
+<text x='120.0' y='56' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>THEIR FOLDER</text>
+<text x='120.0' y='84' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>fed_yield_curve</text>
+<text x='120.0' y='103' text-anchor='middle' fill='#526077' font-size='12.5'>they build it;</text>
+<text x='120.0' y='122' text-anchor='middle' fill='#526077' font-size='12.5'>it may be mid-change</text>
+<rect x='350' y='30' width='200' height='133' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='397.8' y='42' width='104.4' height='20' rx='10' fill='#ecfdf3'/>
+<text x='450.0' y='56' text-anchor='middle' fill='#067647' font-size='11' font-weight='600' letter-spacing='0.04em'>IN THE STORE</text>
+<text x='450.0' y='84' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>snapshot</text>
+<text x='450.0' y='105' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>4f2a91c · sha256 each</text>
+<text x='450.0' y='124' text-anchor='middle' fill='#526077' font-size='12.5'>what they built at that</text>
+<text x='450.0' y='143' text-anchor='middle' fill='#526077' font-size='12.5'>commit, declared ready</text>
+<rect x='680' y='30' width='200' height='133' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='731.4' y='42' width='97.2' height='20' rx='10' fill='#e8f0fe'/>
+<text x='780.0' y='56' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>YOUR FOLDER</text>
+<text x='780.0' y='84' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>rate_forecast</text>
+<text x='780.0' y='103' text-anchor='middle' fill='#526077' font-size='12.5'>chartbook.lock pins it;</text>
+<text x='780.0' y='122' text-anchor='middle' fill='#526077' font-size='12.5'>data.load() reads the copy</text>
+<line x1='224' y1='96.5' x2='344' y2='96.5' stroke='#1f6feb' stroke-width='1.6' marker-end='url(#a)'/>
+<rect x='224.2' y='85.5' width='119.60000000000001' height='22' rx='11' fill='#e8f0fe'/>
+<text x='284.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>run --snapshot</text>
+<line x1='554' y1='96.5' x2='674' y2='96.5' stroke='#1f6feb' stroke-width='1.6' marker-end='url(#a)'/>
+<rect x='557.9' y='85.5' width='112.2' height='22' rx='11' fill='#e8f0fe'/>
+<text x='614.0' y='100.5' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook pin</text>
+<path d='M 120 169 Q 450 262 780 169' fill='none' stroke='#c2410c' stroke-width='1.6' stroke-dasharray='6 5' marker-end='url(#w)'/>
+<rect x='286.6' y='204.5' width='326.8' height='22' rx='11' fill='#fff1e6'/>
+<text x='450.0' y='219.5' text-anchor='middle' fill='#c2410c' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>never: one pipeline reads another's folder</text>
+<text x='450.0' y='268' text-anchor='middle' fill='#526077' font-size='13'>A newer snapshot moves nothing until you run <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>chartbook update</tspan>; a <tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#1f6feb'>git diff</tspan> of the lockfile shows the move.</text>
 </svg>

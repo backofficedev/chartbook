@@ -1,0 +1,38 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 940 330' width='940' height='330' font-family='Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' font-size='14'>
+<defs><marker id='a' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#58a6ff'/></marker><marker id='w' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#f0883e'/></marker><filter id='s' x='-10%' y='-10%' width='120%' height='140%'><feDropShadow dx='0' dy='2' stdDeviation='3' flood-color='#000000' flood-opacity='0.45'/></filter></defs>
+<rect x='20' y='110' width='170' height='114' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
+<rect x='74.4' y='122' width='61.2' height='20' rx='10' fill='#21262d'/>
+<text x='105.0' y='136' text-anchor='middle' fill='#c9d1d9' font-size='11' font-weight='600' letter-spacing='0.04em'>SOURCE</text>
+<text x='105.0' y='164' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650'>Fed yield curve</text>
+<text x='105.0' y='185' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>feds200628.csv</text>
+<text x='105.0' y='204' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>the Board's fitted curve</text>
+<rect x='240' y='28' width='470' height='246' rx='16' fill='none' stroke='#6e7681' stroke-width='1.2' stroke-dasharray='5 5'/>
+<text x='254' y='20' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>yield_curve</text>
+<rect x='262' y='110' width='200' height='114' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
+<rect x='320.6' y='122' width='82.8' height='20' rx='10' fill='#2d2213'/>
+<text x='362.0' y='136' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>DATAFRAME</text>
+<text x='362.0' y='164' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650'>fed_yield_curve</text>
+<text x='362.0' y='185' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>sha256:1b8e…</text>
+<text x='362.0' y='204' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>17,053 rows, 31 columns</text>
+<rect x='492' y='48' width='200' height='96' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
+<rect x='565.0' y='60' width='54.0' height='20' rx='10' fill='#2d2213'/>
+<text x='592.0' y='74' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>CHART</text>
+<text x='592.0' y='102' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chart/treasury_yields</text>
+<text x='592.0' y='121' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>made from 1b8e…</text>
+<rect x='740' y='166' width='186' height='132' rx='16' fill='none' stroke='#6e7681' stroke-width='1.2' stroke-dasharray='5 5'/>
+<text x='754' y='158' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>rate_forecast</text>
+<rect x='752' y='180' width='162' height='112' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
+<rect x='806.0' y='192' width='54.0' height='20' rx='10' fill='#2d2213'/>
+<text x='833.0' y='206' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>MODEL</text>
+<text x='833.0' y='234' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>model/forecast</text>
+<text x='833.0' y='253' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>trained on 1b8e…</text>
+<text x='833.0' y='272' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>pinned in chartbook.lock</text>
+<line x1='194' y1='162' x2='258' y2='162' stroke='#58a6ff' stroke-width='1.6' marker-end='url(#a)'/>
+<rect x='203.2' y='151.0' width='45.6' height='22' rx='11' fill='#1c2a3d'/>
+<text x='226.0' y='166.0' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>pull</text>
+<line x1='466' y1='150' x2='488' y2='104' stroke='#58a6ff' stroke-width='1.6' marker-end='url(#a)'/>
+<path d='M 466 178 Q 600 240 748 230' fill='none' stroke='#58a6ff' stroke-width='1.6' marker-end='url(#a)'/>
+<rect x='584.4' y='211.0' width='38.2' height='22' rx='11' fill='#1c2a3d'/>
+<text x='603.5' y='226.0' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>pin</text>
+<text x='470.0' y='326' text-anchor='middle' fill='#9aa7b4' font-size='13'><tspan font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace' fill='#58a6ff'>chartbook lineage</tspan> walks every number back to its source, through every pin, and checks each hash on the way.</text>
+</svg>

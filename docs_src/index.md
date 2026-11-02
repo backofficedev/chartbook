@@ -72,6 +72,18 @@ Many pipelines become one catalog: a searchable website for your team, and an in
 
 ::::
 
+```{image} _static/diagrams/ecosystem-light.svg
+:alt: Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it
+:class: only-light
+:align: center
+```
+
+```{image} _static/diagrams/ecosystem-dark.svg
+:alt: Pipelines in Python, R and Stata each publish snapshots to one store; the catalog site, your agents and a pipeline of yours read from it
+:class: only-dark
+:align: center
+```
+
 **In any language.** A pipeline's build is whatever command you name: a Python script, R, Stata,
 SQL, a Makefile. ChartBook runs it, records what it made, and lets the next pipeline read it,
 from Python with `data.load()` or from anything else with `chartbook path`.
