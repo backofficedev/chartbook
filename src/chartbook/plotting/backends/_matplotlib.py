@@ -120,15 +120,22 @@ class MatplotlibBackend(BaseBackend):
             annotations.append(f"Source: {config.source}")
 
         if annotations:
+            from matplotlib.transforms import offset_copy
+
             annotation_text = "\n".join(annotations)
+            # Below all that is under the axes, the tick labels and the x-axis
+            # title, wherever their size put them: a fixed place overlapped the title
+            fig.canvas.draw()
+            under = ax.get_tightbbox(fig.canvas.get_renderer())
+            top = ax.transAxes.inverted().transform((0, under.y0))[1]
             fig.text(
                 0.5,
-                -0.05,
+                top,
                 annotation_text,
                 ha="center",
                 va="top",
                 fontsize=9,
-                transform=ax.transAxes,
+                transform=offset_copy(ax.transAxes, fig=fig, y=-6, units="points"),
                 wrap=True,
             )
 
@@ -436,6 +443,8 @@ class MatplotlibBackend(BaseBackend):
         from chartbook.plotting._overlays import apply_overlays_matplotlib
 
         apply_overlays_matplotlib(ax1, overlay, df, config.x)
+        # Its caption, note and source, which were not drawn
+        self._add_annotations(fig, ax1, config)
 
         return fig, ax1
 
