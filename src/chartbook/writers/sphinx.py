@@ -532,8 +532,9 @@ class SphinxWriter:
             recorded = record.get("glimpse")
             if isinstance(recorded, str):
                 glimpse = recorded
-            elif record.get("content_hash") and not Path(resolved).exists():
-                # A version laid out without its data, from a snapshot whose index recorded no glimpse (ChartBook 0.4)
+            elif (record.get("content_hash") or record.get("definition_hash")) and not Path(resolved).exists():
+                # A version laid out without its data, from a snapshot whose index recorded no glimpse (ChartBook 0.4);
+                # a table or query has a definition hash, and its parquet is not laid out either
                 glimpse = NO_GLIMPSE_RECORDED
             else:
                 glimpse = get_dataframe_glimpse(Path(resolved), record.get("format"), record.get("read_options"))

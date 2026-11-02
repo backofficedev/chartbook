@@ -208,6 +208,44 @@ class TestWhatTheReviewFound:
         page = (rendered.folder / "cb" / "dataframes" / "rates" / "curve.html").read_text(encoding="utf-8")
         assert "y02" in page and "2024-01-02" in page and "Not built" not in page and "not built" not in page
 
+    def test_a_query_in_a_snapshot_made_before_glimpses_were_recorded_says_so(self, work, store):
+        """A 0.4 snapshot of a query: a definition hash and no glimpse, and its parquet not laid out. The page says so, and reads no file."""
+        import duckdb
+
+        from chartbook.writers.sphinx import NO_GLIMPSE_RECORDED, SphinxWriter
+
+        folder = work / "rates"
+        (folder / "_data").mkdir(parents=True)
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({
+                "project": {"id": "rates"},
+                "sources": {"local": {"backend": "duckdb", "url": "duckdb:///./_data/local.duckdb"}},
+                "dataframes": {"slopes": {"source": "local", "query": "select d, y10 - y02 as slope from curve", "docs": "A query.", "date_col": "d"}},
+            }),
+            encoding="utf-8", newline="\n",
+        )
+        con = duckdb.connect(str(folder / "_data" / "local.duckdb"))
+        con.sql("create table curve as select * from (values (date '2024-01-01', 1.0, 4.0), (date '2024-01-02', 1.1, 4.3)) t(d, y02, y10)")
+        con.close()
+        (folder / "README.md").write_text("# Rates\n", encoding="utf-8", newline="\n")
+        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n!/README.md\n", encoding="utf-8", newline="\n")
+        _git(folder, "init", "--quiet", "-b", "main")
+        commit_pipeline(folder)
+        taken = snapshot.make(folder, store=store).snapshot
+
+        def as_04_wrote_it(stored):
+            for record in stored["records"]:
+                record.pop("glimpse", None)
+                record.pop("last_dates", None)
+
+        laid = _laid_out_index(work, taken, store, as_04_wrote_it)
+        built = index.build_index(load_manifest(base_dir=laid))
+        slopes = next(r for r in built["records"] if r["id"] == "rates:slopes")
+        assert "glimpse" not in slopes and "definition_hash" in slopes and "content_hash" not in slopes
+        writer = SphinxWriter(built, theme="pipeline", docs_src_dir=laid / "_docs_src")
+        page = writer.dataframe_page("rates:slopes")
+        assert NO_GLIMPSE_RECORDED in page and "Error reading file" not in page
+
     def test_an_index_not_whole_in_the_store_is_tried_again_later(self, described, store, work):
         folder, taken = described
         held = store.files(taken.index["content_hash"], name="index.json").one.location
