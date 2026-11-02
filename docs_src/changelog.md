@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - unreleased
+
+### Fixed — a pipeline pinned from one store, on a machine that writes to another
+
+- **`chartbook snapshot` and `chartbook run --snapshot` of a pipeline pinned from a read-only store write the snapshot to the writable one.** With a catalog of two stores, a class's read-only store holding the upstream snapshots and the student's own first, a consumer pinned from the class store was refused with "the store at mine does not have it": the pins were checked in every store, and then checked again in the store the snapshot goes to alone. The lineage, its cycles and `--deep`'s walk are now checked once, in every store of the catalog, and the snapshot is written to its own store; a pin that no store holds is refused as before. `chartbook lineage` of a pipeline downstream walks from the snapshot in one store to the one it was pinned from in the other. The workaround, `chartbook store import` of the class store into your own, is no longer needed.
+
 ## [0.5.0] - 2026-11-01
 
 ### Read this first: upgrading from 0.4.0
