@@ -1,0 +1,54 @@
+[project]
+id = "tutorial/macro_basics"
+name = "Macro Basics"
+description = "Unemployment, inflation, payrolls and GDP growth, monthly, from FRED."
+maintainer = "The ChartBook tutorial"
+requires_chartbook = ">=0.5.0"
+
+[scripts]
+build = "doit"
+
+[dataframes.macro_series]
+name = "Macro Series"
+description = "The unemployment rate, CPI inflation, payroll growth and real GDP growth, monthly."
+sources = ["Bureau of Labor Statistics", "Bureau of Economic Analysis"]
+providers = ["Federal Reserve Bank of St. Louis (FRED)"]
+provider_links = ["https://fred.stlouisfed.org/"]
+tags = ["Macro"]
+license = "Public domain: works of the U.S. government (FRED: citation requested)"
+pull_method = "FRED via Python (pandas-datareader)"
+path = "./_data/macro_series.parquet"
+date_col = "date"
+docs = """
+One row a month. `unemployment` is the civilian unemployment rate (BLS, `UNRATE`), `inflation` the
+change in the CPI from a year before (BLS, `CPIAUCSL`), both in percent; `payrolls` the month's change
+in nonfarm payrolls, in thousands of jobs (BLS, `PAYEMS`); `gdp_growth` is real GDP's change from a year
+before (BEA, `GDPC1`), quarterly, on the quarter's first month and empty between. Pulled by
+`src/pull_macro.py`.
+"""
+
+[charts.unemployment_and_inflation]
+name = "Unemployment and Inflation"
+description = "The unemployment rate and CPI inflation, monthly"
+dataframe = "macro_series"
+tags = ["Macro"]
+frequency = "Monthly"
+observation_period = "Month"
+release_lag = "About two weeks"
+release_timing = "BLS release days"
+units = "Percent"
+path = "./_output/unemployment_and_inflation.html"
+docs = "Two of the Fed's mandates on one chart: maximum employment and stable prices."
+
+[charts.payrolls]
+name = "Jobs Added Each Month"
+description = "The monthly change in nonfarm payrolls"
+dataframe = "macro_series"
+tags = ["Macro", "Labor"]
+frequency = "Monthly"
+observation_period = "Month"
+release_lag = "About one week"
+release_timing = "The first Friday of the month, usually"
+units = "Thousands of jobs"
+path = "./_output/payrolls.html"
+docs = "The jobs report's headline number. April 2020 is off the chart's scale on purpose: it is in the data."

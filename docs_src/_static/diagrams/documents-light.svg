@@ -1,41 +1,52 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 820 250' width='820' height='250' font-family='-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' font-size='14'>
-<defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='8' markerHeight='8' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#2b4c7e'/></marker></defs>
-<rect x='20' y='24' width='180' height='122' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='110.0' y='50' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>manifest</text>
-<text x='110.0' y='70' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>chartbook.toml</text>
-<text x='110.0' y='88' text-anchor='middle' fill='#4b5563' font-size='12.5'>asks:</text>
-<text x='110.0' y='106' text-anchor='middle' fill='#4b5563' font-size='12.5'>which assets, where,</text>
-<text x='110.0' y='124' text-anchor='middle' fill='#4b5563' font-size='12.5'>what it depends on</text>
-<text x='110.0' y='168' text-anchor='middle' fill='#4b5563' font-size='11.5'>written by</text>
-<text x='110.0' y='186' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>people</text>
-<text x='110.0' y='240' text-anchor='middle' fill='#4b5563' font-size='12.5'>in git</text>
-<rect x='220' y='24' width='180' height='122' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='310.0' y='50' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>lockfile</text>
-<text x='310.0' y='70' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>chartbook.lock</text>
-<text x='310.0' y='88' text-anchor='middle' fill='#4b5563' font-size='12.5'>records what was got:</text>
-<text x='310.0' y='106' text-anchor='middle' fill='#4b5563' font-size='12.5'>which snapshot each</text>
-<text x='310.0' y='124' text-anchor='middle' fill='#4b5563' font-size='12.5'>dependency is pinned to</text>
-<text x='310.0' y='168' text-anchor='middle' fill='#4b5563' font-size='11.5'>written by</text>
-<text x='310.0' y='186' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>chartbook pin, update</text>
-<text x='310.0' y='203' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>(run, for a first pin)</text>
-<text x='310.0' y='240' text-anchor='middle' fill='#4b5563' font-size='12.5'>in git, no timestamp</text>
-<rect x='420' y='24' width='180' height='122' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='510.0' y='50' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>snapshot</text>
-<text x='510.0' y='70' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>store/snapshots/…</text>
-<text x='510.0' y='88' text-anchor='middle' fill='#4b5563' font-size='12.5'>records what was made:</text>
-<text x='510.0' y='106' text-anchor='middle' fill='#4b5563' font-size='12.5'>every asset built at one</text>
-<text x='510.0' y='124' text-anchor='middle' fill='#4b5563' font-size='12.5'>commit, with its hash</text>
-<text x='510.0' y='168' text-anchor='middle' fill='#4b5563' font-size='11.5'>written by</text>
-<text x='510.0' y='186' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>chartbook snapshot</text>
-<text x='510.0' y='203' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>or run --snapshot</text>
-<text x='510.0' y='240' text-anchor='middle' fill='#4b5563' font-size='12.5'>in the store, not in git</text>
-<rect x='620' y='24' width='180' height='122' rx='8' fill='#f4f7fb' stroke='#2b4c7e' stroke-width='1.5'/>
-<text x='710.0' y='50' text-anchor='middle' fill='#1f2937' font-size='15' font-weight='600'>index</text>
-<text x='710.0' y='70' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>index.json</text>
-<text x='710.0' y='88' text-anchor='middle' fill='#4b5563' font-size='12.5'>records what a site shows:</text>
-<text x='710.0' y='106' text-anchor='middle' fill='#4b5563' font-size='12.5'>every record of every</text>
-<text x='710.0' y='124' text-anchor='middle' fill='#4b5563' font-size='12.5'>pipeline, pins reported</text>
-<text x='710.0' y='168' text-anchor='middle' fill='#4b5563' font-size='11.5'>written by</text>
-<text x='710.0' y='186' text-anchor='middle' fill='#2b6cb0' font-size='12.5' font-family='SFMono-Regular, Menlo, Consolas, monospace'>docs generate, build</text>
-<text x='710.0' y='240' text-anchor='middle' fill='#4b5563' font-size='12.5'>beside the site</text>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 310' width='900' height='310' font-family='Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif' font-size='14'>
+<defs><marker id='a' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#1f6feb'/></marker><marker id='w' viewBox='0 0 10 10' refX='8.5' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M 0 0 L 10 5 L 0 10 z' fill='#c2410c'/></marker><filter id='s' x='-10%' y='-10%' width='120%' height='140%'><feDropShadow dx='0' dy='2' stdDeviation='3' flood-color='#0f172a' flood-opacity='0.10'/></filter></defs>
+<rect x='20' y='16' width='185' height='152' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='74.7' y='28' width='75.6' height='20' rx='10' fill='#e8f0fe'/>
+<text x='112.5' y='42' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>DOCUMENT</text>
+<text x='112.5' y='70' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>manifest</text>
+<text x='112.5' y='91' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook.toml</text>
+<text x='112.5' y='110' text-anchor='middle' fill='#526077' font-size='12.5'>asks: which assets,</text>
+<text x='112.5' y='129' text-anchor='middle' fill='#526077' font-size='12.5'>where, and what it</text>
+<text x='112.5' y='148' text-anchor='middle' fill='#526077' font-size='12.5'>depends on</text>
+<text x='112.5' y='194' text-anchor='middle' fill='#526077' font-size='11.5'>written by</text>
+<rect x='82.3' y='203' width='60.400000000000006' height='22' rx='11' fill='#e8f0fe'/>
+<text x='112.5' y='218' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>people</text>
+<text x='112.5' y='252' text-anchor='middle' fill='#526077' font-size='12.5'>in git</text>
+<rect x='245' y='16' width='185' height='152' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='299.7' y='28' width='75.6' height='20' rx='10' fill='#e8f0fe'/>
+<text x='337.5' y='42' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>DOCUMENT</text>
+<text x='337.5' y='70' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>lockfile</text>
+<text x='337.5' y='91' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook.lock</text>
+<text x='337.5' y='110' text-anchor='middle' fill='#526077' font-size='12.5'>records what was got:</text>
+<text x='337.5' y='129' text-anchor='middle' fill='#526077' font-size='12.5'>the snapshot each</text>
+<text x='337.5' y='148' text-anchor='middle' fill='#526077' font-size='12.5'>dependency is pinned to</text>
+<text x='337.5' y='194' text-anchor='middle' fill='#526077' font-size='11.5'>written by</text>
+<rect x='251.8' y='203' width='171.4' height='22' rx='11' fill='#e8f0fe'/>
+<text x='337.5' y='218' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook pin, update</text>
+<text x='337.5' y='252' text-anchor='middle' fill='#526077' font-size='12.5'>in git, no timestamp</text>
+<rect x='470' y='16' width='185' height='152' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='524.7' y='28' width='75.6' height='20' rx='10' fill='#e8f0fe'/>
+<text x='562.5' y='42' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>DOCUMENT</text>
+<text x='562.5' y='70' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>snapshot</text>
+<text x='562.5' y='91' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>_chartbook/snapshot.json</text>
+<text x='562.5' y='110' text-anchor='middle' fill='#526077' font-size='12.5'>records what was made:</text>
+<text x='562.5' y='129' text-anchor='middle' fill='#526077' font-size='12.5'>every asset built at</text>
+<text x='562.5' y='148' text-anchor='middle' fill='#526077' font-size='12.5'>one commit, by hash</text>
+<text x='562.5' y='194' text-anchor='middle' fill='#526077' font-size='11.5'>written by</text>
+<rect x='487.9' y='203' width='149.20000000000002' height='22' rx='11' fill='#e8f0fe'/>
+<text x='562.5' y='218' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook snapshot</text>
+<text x='562.5' y='252' text-anchor='middle' fill='#526077' font-size='12.5'>in the store, not git</text>
+<rect x='695' y='16' width='185' height='152' rx='12' fill='#ffffff' stroke='#d5dce6' filter='url(#s)'/>
+<rect x='749.7' y='28' width='75.6' height='20' rx='10' fill='#e8f0fe'/>
+<text x='787.5' y='42' text-anchor='middle' fill='#1f4fb3' font-size='11' font-weight='600' letter-spacing='0.04em'>DOCUMENT</text>
+<text x='787.5' y='70' text-anchor='middle' fill='#0f172a' font-size='15.5' font-weight='650'>index</text>
+<text x='787.5' y='91' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>index.json</text>
+<text x='787.5' y='110' text-anchor='middle' fill='#526077' font-size='12.5'>records what a site</text>
+<text x='787.5' y='129' text-anchor='middle' fill='#526077' font-size='12.5'>shows: every record,</text>
+<text x='787.5' y='148' text-anchor='middle' fill='#526077' font-size='12.5'>pins reported</text>
+<text x='787.5' y='194' text-anchor='middle' fill='#526077' font-size='11.5'>written by</text>
+<rect x='705.5' y='203' width='164.0' height='22' rx='11' fill='#e8f0fe'/>
+<text x='787.5' y='218' text-anchor='middle' fill='#1f6feb' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chartbook docs build</text>
+<text x='787.5' y='252' text-anchor='middle' fill='#526077' font-size='12.5'>beside the site</text>
+<text x='450.0' y='298' text-anchor='middle' fill='#526077' font-size='13'>A manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows.</text>
 </svg>

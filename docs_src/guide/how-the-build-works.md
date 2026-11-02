@@ -55,7 +55,7 @@ file was last written, and whatever the manifest declares. A dataframe's record 
 row count, the span of its date column, and what its page shows of the data, the glimpse and the
 last dates, read once here so that no page reads the file again and a version rendered from the
 store shows them without the data. A chart's record names the dataframe that feeds it, a model's
-the data it was trained on and whether that has moved since. {doc}`../design/index-schema`
+the data it was trained on and whether that has moved since. {design}`index-schema`
 specifies every record.
 
 Two copies are written. `docs/index.json` beside the site is **published**, with no path from the
@@ -116,4 +116,4 @@ and refresh.
 - **Sphinx errors** name paths inside `_docs/`; `--keep-build-dirs` lets you open them.
 
 {doc}`vocabulary` defines the words; {doc}`../reference/cli` has every option of `chartbook docs
-build`; {doc}`../design/writer` the design of the writer.
+build`; {design}`writer` the design of the writer.

@@ -38,6 +38,18 @@ Two roles, named by what each does and not by what it produces:
 Four files, one record format. Each answers a different question, and none is another in
 disguise.
 
+```{image} ../_static/diagrams/documents-light.svg
+:alt: The manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives
+:class: only-light
+:align: center
+```
+
+```{image} ../_static/diagrams/documents-dark.svg
+:alt: The manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives
+:class: only-dark
+:align: center
+```
+
 | Document | File | Records | Written by | Where it lives |
 |---|---|---|---|---|
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
@@ -75,7 +87,7 @@ version of every pipeline this way: each snapshot's site is built from its docum
 index, with no data laid out or read, under `versions/`, and the catalog's Versions page lists
 them. The catalog's own index describes the
 working versions, each pipeline's record listing its snapshots, with the comparisons only a site
-can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/versioned-catalog`.
+can make ({doc}`catalogs-and-data`). The reasoning is in {design}`versioned-catalog`.
 
 ## The rest of the words
 

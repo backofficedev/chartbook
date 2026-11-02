@@ -1,0 +1,52 @@
+[project]
+id = "tutorial/treasury_curve"
+name = "Treasury Curve"
+description = "The Federal Reserve Board's zero-coupon Treasury yield curve, daily since 1961."
+maintainer = "The ChartBook tutorial"
+requires_chartbook = ">=0.5.0"
+
+[scripts]
+build = "doit"
+
+[dataframes.zero_coupon_yields]
+name = "Zero-Coupon Treasury Yields"
+description = "Continuously compounded zero-coupon yields at maturities of 1 to 30 years, daily."
+sources = ["Federal Reserve Board"]
+providers = ["Federal Reserve Board"]
+provider_links = ["https://www.federalreserve.gov/data/nominal-yield-curve.htm"]
+tags = ["Treasuries", "Yield Curve"]
+license = "Public domain: a work of the U.S. government"
+pull_method = "Web download via Python"
+path = "./_data/zero_coupon_yields.parquet"
+date_col = "date"
+docs = """
+The Board's fitted nominal yield curve (Gurkaynak, Sack and Wright, 2007), from `feds200628.csv`.
+Column `SVENYnn` is the zero-coupon yield at `nn` years, in percent. Pulled by
+`src/pull_yields.py`; the dates are a column, `date`.
+"""
+
+[charts.yields]
+name = "Treasury Yields Since 1961"
+description = "The 2-, 10- and 30-year zero-coupon yields"
+dataframe = "zero_coupon_yields"
+tags = ["Treasuries"]
+frequency = "Daily"
+observation_period = "Weekday"
+release_lag = "Days to weeks"
+release_timing = "When the Board updates the file"
+units = "Percent"
+path = "./_output/yields.html"
+docs = "When the 2-year is above the 10-year, the curve is inverted."
+
+[charts.curve_today]
+name = "The Curve, Latest Day"
+description = "Yield by maturity on the latest day in the file"
+dataframe = "zero_coupon_yields"
+tags = ["Treasuries", "Yield Curve"]
+frequency = "Daily"
+observation_period = "Weekday"
+release_lag = "Days to weeks"
+release_timing = "When the Board updates the file"
+units = "Percent"
+path = "./_output/curve_today.html"
+docs = "One point per maturity, 1 to 30 years, on the last date the Board published."

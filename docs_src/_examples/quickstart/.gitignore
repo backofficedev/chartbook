@@ -1,0 +1,5 @@
+# What the pipeline makes, and its environment: git keeps the code, the store keeps the data
+.venv/
+_data/
+_output/
+docs/
