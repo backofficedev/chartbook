@@ -222,6 +222,119 @@ class TestAdd:
         assert (forecast / "chartbook.toml").read_text(encoding="utf-8") == before
 
 
+def _stored(work: Path, pipeline_id: str) -> None:
+    """A pipeline of that ID in a repository of its own, snapshotted, its folder then gone."""
+    repository = work / pipeline_id.replace("/", "-")
+    (repository / "_data").mkdir(parents=True)
+    manifest = {"project": {"id": pipeline_id}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."}}}
+    (repository / "chartbook.toml").write_text(tomli_w.dumps(manifest), encoding="utf-8", newline="\n")
+    (repository / ".gitignore").write_text("_data/\nchartbook.lock\n", encoding="utf-8", newline="\n")
+    pl.DataFrame({"d": ["2024-01-01"], "r": [9.0]}).write_parquet(repository / "_data" / "treasury.parquet")
+    _git(repository, "init", "--quiet", "-b", "main")
+    _commit(repository)
+    snapshot.make(repository)
+    remove_tree(repository)
+
+
+class TestAddByABareName:
+    """`chartbook add NAME` is the one pipeline in the stores whose ID ends in NAME, or nothing is written (#165)."""
+
+    def _files(self, forecast: Path):
+        lockfile = forecast / lock.LOCK_FILE
+        return (forecast / "chartbook.toml").read_bytes(), lockfile.read_bytes() if lockfile.is_file() else None
+
+    def test_it_writes_the_one_id_that_ends_in_it(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {})
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "rates"])
+        assert result.exit_code == 0, result.output
+        assert '"acme/rates" = {}' in result.output
+        assert load_manifest(forecast)["dependencies"].keys() == {"acme/rates"}
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+        assert data.load("rates:treasury").collect()["r"].to_list() == [4.2]
+
+    def test_several_that_end_in_it_are_listed_and_nothing_is_written(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        _stored(work, "other/rates")
+        forecast = _forecast(work / "forecast", {})
+        before = self._files(forecast)
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "rates"])
+        assert result.exit_code == 1
+        assert "more than one pipeline" in result.output and "acme/rates, other/rates" in result.output
+        assert "Nothing was written" in result.output
+        assert self._files(forecast) == before
+
+    def test_none_that_ends_in_it_says_what_the_stores_hold_and_nothing_is_written(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {})
+        before = self._files(forecast)
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "treasury_curve"])
+        assert result.exit_code == 1
+        assert "No pipeline in the store" in result.output and "named treasury_curve" in result.output
+        assert "it holds snapshots of acme/rates" in result.output
+        assert self._files(forecast) == before
+
+    def test_an_empty_store_says_so_and_nothing_is_written(self, tmp_path, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        forecast = _forecast(tmp_path.resolve() / "forecast", {})
+        before = self._files(forecast)
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "rates"])
+        assert result.exit_code == 1 and "it holds no snapshots" in result.output
+        assert self._files(forecast) == before
+
+    def test_a_stale_bare_entry_is_named_with_how_to_remove_it(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        # What an older `chartbook add rates` left: an entry no store holds a snapshot of
+        forecast = _forecast(work / "forecast", {"rates": {}})
+        monkeypatch.chdir(forecast)
+        again = CliRunner().invoke(main, ["add", "rates"])
+        assert again.exit_code == 1 and "has 'rates' already" in again.output
+        assert "cannot be pinned" in again.output and "Delete its line" in again.output
+        result = CliRunner().invoke(main, ["add", "acme/rates"])
+        assert "acme/rates: 1 pinned" in result.output
+        assert "also has 'rates'" in result.output and "Delete its line" in result.output
+        assert result.exit_code == 1  # the entry left is still one that cannot be pinned
+
+    def test_the_pipeline_itself_is_never_the_one(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        _stored(work, "mine/rates")
+        forecast = work / "forecast"
+        _forecast(forecast, {})
+        manifest = tomli_w.dumps({"project": {"id": "mine/rates"}, "dataframes": {"outlook": {"path": "./_data/outlook.parquet", "docs": "Its output."}}})
+        (forecast / "chartbook.toml").write_text(manifest, encoding="utf-8", newline="\n")
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "rates"])
+        assert result.exit_code == 0, result.output
+        assert '"acme/rates" = {}' in result.output
+
+
 class TestAPathDependency:
     def test_in_another_repository_it_says_to_name_it_by_its_id(self, tmp_path):
         from chartbook.check import check_dependencies
