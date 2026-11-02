@@ -44,9 +44,9 @@ lockfile pins. Working folders leave the catalog; a `chartbook.links.toml` besid
 manifest is how two pipelines are worked on at once. `chartbook build` goes: `chartbook run` runs
 the build script, `chartbook docs build` renders the site.
 
-## Next: data reads
+## 0.5.0: data reads
 
-{doc}`design/plan-data-reads` (proposed 2026-10-31). A version of a dataset whose files are kept
+0.5.0 carries out {doc}`design/plan-data-reads` (proposed 2026-10-31, released 2026-11-01). A version of a dataset whose files are kept
 in several snapshot folders is read from where they sit: no gathered copy on each machine, so
 nothing under `~/.chartbook` grows with every catalog build. The catalog renders a version from
 its snapshot's index and documents alone, reading no data. `data.path` writes your own outputs

@@ -1337,7 +1337,7 @@ _PROJECT_EXAMPLES = {
     "scratch": "./_data/_scratch",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
-    "requires_chartbook": ">=0.4.0",
+    "requires_chartbook": ">=0.5.0",
     "site_dir": "./docs_src/site/",
     "writer": "sphinx",
 }
