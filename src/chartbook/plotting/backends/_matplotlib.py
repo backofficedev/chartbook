@@ -443,6 +443,8 @@ class MatplotlibBackend(BaseBackend):
         from chartbook.plotting._overlays import apply_overlays_matplotlib
 
         apply_overlays_matplotlib(ax1, overlay, df, config.x)
+        # Its caption, note and source, which were not drawn
+        self._add_annotations(fig, ax1, config)
 
         return fig, ax1
 

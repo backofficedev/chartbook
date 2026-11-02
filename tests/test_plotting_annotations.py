@@ -26,3 +26,26 @@ def test_the_source_is_below_the_x_axis_title(x_title):
         assert note.get_window_extent(renderer).y1 <= ax.xaxis.label.get_window_extent(renderer).y0
     finally:
         plt.close(fig)
+
+
+def test_a_dual_axis_chart_has_its_caption_note_and_source():
+    """They were taken and never drawn."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    from chartbook.plotting import DualAxisConfig
+    from chartbook.plotting.backends._matplotlib import MatplotlibBackend
+
+    df = pd.DataFrame({"date": pd.date_range("2024-01-01", periods=4, freq="MS"), "a": [1, 2, 3, 4], "b": [9, 8, 7, 6]})
+    config = DualAxisConfig(x="date", left_y=["a"], right_y=["b"], left_type="line", right_type="line", x_title="Month", caption="C", note="N", source="Fed")
+    fig, ax = MatplotlibBackend()._build_dual_axis_figure(df, config, OverlayConfig(), (8, 6))
+    try:
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        (said,) = [text for text in fig.texts if "Source: Fed" in text.get_text()]
+        assert "Note: N" in said.get_text() and said.get_text().startswith("C")
+        assert said.get_window_extent(renderer).y1 <= ax.xaxis.label.get_window_extent(renderer).y0
+    finally:
+        plt.close(fig)

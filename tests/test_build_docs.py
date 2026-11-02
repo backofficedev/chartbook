@@ -1009,7 +1009,8 @@ def test_no_page_links_to_a_feed_that_is_not_written(pipeline_project, monkeypat
     assert [p.relative_to(output_dir).as_posix() for p in pages if "atom.xml" in p.read_text(encoding="utf-8")] == []
 
 
-def test_a_site_with_no_maintainer_has_the_year_alone_in_its_footer(pipeline_project, monkeypatch):
+@pytest.mark.parametrize("maintainer", [None, "   "], ids=["none", "blank"])
+def test_a_site_with_no_maintainer_has_the_year_alone_in_its_footer(pipeline_project, monkeypatch, maintainer):
     """The footer was "© Copyright 2026, .", with no name and a stray period (#166)."""
     import re
 
@@ -1019,6 +1020,8 @@ def test_a_site_with_no_maintainer_has_the_year_alone_in_its_footer(pipeline_pro
     manifest = pipeline_project / "chartbook.toml"
     raw = tomli.loads(manifest.read_text(encoding="utf-8"))
     raw["project"].pop("maintainer", None)
+    if maintainer is not None:
+        raw["project"]["maintainer"] = maintainer
     raw["project"]["copyright"] = "2026"
     manifest.write_text(tomli_w.dumps(raw), encoding="utf-8", newline="\n")
     monkeypatch.chdir(pipeline_project)

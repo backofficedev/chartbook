@@ -68,7 +68,8 @@ A version's name is its commit and the time the snapshot was made, to the second
 
 - **A command's output read through a pipe on Windows no longer stops it.** Windows writes a pipe or a file in its ANSI code page (cp1252), which has no `├──`, `→`, `·` or `…`, so `chartbook lineage | head`, and any command an agent ran, since an agent reads every command through a pipe, raised `UnicodeEncodeError` at the first such character. ChartBook writes a pipe or a file in UTF-8; a console is as it was (#164).
 - **A static chart's caption, note and source are below the x-axis title.** They were drawn at a fixed place under the axes, on top of `x_title` in the PNG and PDF; they now go below whatever is under the axes (#166).
-- **A site whose `[project]` has no `maintainer` says "© Copyright 2026." in its footer**, where it said "© Copyright 2026, .", and so does a catalog's (#166).
+- **A dual-axis chart's caption, note and source are drawn** in its PNG and PDF. `DualAxisConfig` took them, and the static chart left them out.
+- **A site whose `[project]` has no `maintainer`, or a blank one, says "© Copyright 2026." in its footer**, where it said "© Copyright 2026, .", and so does a catalog's (#166).
 
 ### Fixed — after a last review before the release
 
