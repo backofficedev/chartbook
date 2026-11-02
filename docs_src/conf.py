@@ -130,10 +130,24 @@ html_theme_options = {
             "icon": "fa-solid fa-code-branch",
         },
     ],
+    # The logo cut to its edges, one for each theme (docs_src/_diagrams/make_brand.py)
+    "logo": {
+        "image_light": "_static/logo-light.png",
+        "image_dark": "_static/logo-dark.png",
+    },
+}
+
+# What a link to these pages shows on Slack, X or LinkedIn (_templates/layout.html)
+html_context = {
+    "social_card": "https://backofficedev.github.io/chartbook/_static/social-card.png",
+    "social_description": (
+        "Data pipelines with provenance: each builds on another's exact, versioned output, traced to "
+        "its sources and verified by hash, in one catalog for people and agents."
+    ),
 }
 
 html_title = "ChartBook Documentation"
-html_logo = "_static/logo.png"
+html_logo = "_static/logo-light.png"
 html_favicon = "_static/logo.png"
 
 # Custom CSS/JS
