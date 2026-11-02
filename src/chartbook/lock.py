@@ -87,6 +87,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.refs import AssetRef
+from chartbook.replacing import replace_when_let
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
 from chartbook.store import LINKS as STORE_LINKS
@@ -297,7 +298,7 @@ def write_lock(lock: Lock, path: Union[str, Path]) -> bool:
     temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         temporary.write_text(text, encoding="utf-8", newline="\n")
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()

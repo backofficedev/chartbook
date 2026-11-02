@@ -43,6 +43,8 @@ from typing import Optional
 import tomli
 import tomli_w
 
+from chartbook.replacing import replace_when_let
+
 #: The environment variable that says where the store is, when it is set.
 STORE_ENV_VAR = "CHARTBOOK_STORE"
 #: Names the organization's settings file, read where the user's is silent.
@@ -624,7 +626,7 @@ def _keep_machine(path: Path, identity: str, name: str) -> None:
     temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
     try:
         temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8", newline="\n")
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()
@@ -1051,7 +1053,7 @@ def _write_trust(raw: dict) -> Path:
         with open(temporary, "wb") as f:
             f.write(_TRUST_HEADER.encode("utf-8"))
             tomli_w.dump({key: value for key, value in raw.items() if value not in ([], None)}, f)
-        os.replace(temporary, path)
+        replace_when_let(temporary, path)
     finally:
         if temporary.exists():
             temporary.unlink()
