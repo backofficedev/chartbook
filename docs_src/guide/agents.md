@@ -91,13 +91,13 @@ reads the newest snapshot through the catalog.
 ## Can it be trusted?
 
 ```{image} ../_static/diagrams/provenance-light.svg
-:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_outlook trained on it through a pin
+:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
 :class: only-light
 :align: center
 ```
 
 ```{image} ../_static/diagrams/provenance-dark.svg
-:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_outlook trained on it through a pin
+:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
 :class: only-dark
 :align: center
 ```

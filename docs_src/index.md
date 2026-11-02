@@ -41,7 +41,7 @@ pip install chartbook
 ```
 
 <p class="cb-caption">Every chart gets a page: the chart, its write-up, and exactly what it was
-made from, down to the hash of the data. This one is the Quickstart's.</p>
+made from, with the hash of that data in this build. This one is the Quickstart's.</p>
 
 ## What ChartBook does
 

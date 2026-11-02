@@ -81,6 +81,14 @@ And a `README.md` beside it, which becomes the site's front page:
 :caption: README.md
 ```
 
+And a `.gitignore`, so that git keeps the code and leaves out what it makes: `chartbook snapshot`
+takes a pipeline only when everything in git is committed.
+
+```{literalinclude} _examples/quickstart/.gitignore
+:language: text
+:caption: .gitignore
+```
+
 ## 3. Write the code that makes it
 
 ChartBook does not run your analysis for you, and does not care how it is written. Here it is one
@@ -134,8 +142,8 @@ Click **Two Random Walks** under Pipeline Charts, then the dataframe it names.
   asked for `walks` by name, so the path is written once.
 - **The build recorded everything it found** in `docs/index.json`, beside the site: an ID for
   each asset (`my_pipeline:walks`, `my_pipeline:chart/random_walks`), where it is, and a content
-  hash of its bytes. The chart's page reads that record: **Made from** `my_pipeline:walks`, at
-  the hash it had.
+  hash of its bytes. The chart's page reads that record: **Made from** `my_pipeline:walks`, and
+  the hash that dataset has in this build.
 - **The dataframe got a page of its own**: its columns and first rows, its date range, and which
   charts use it.
 
@@ -185,7 +193,7 @@ at it.
 :::{grid-item-card} Depend on another pipeline
 :link: guide/depending-on-pipelines
 :link-type: doc
-Take a snapshot of this pipeline, and read `walks` from another one, pinned.
+Read another pipeline's data, pinned to one of its snapshots, and let others read yours.
 :::
 
 :::{grid-item-card} Start a real project

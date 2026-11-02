@@ -7,25 +7,25 @@
 <text x='105.0' y='185' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>feds200628.csv</text>
 <text x='105.0' y='204' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>the Board's fitted curve</text>
 <rect x='240' y='28' width='470' height='246' rx='16' fill='none' stroke='#6e7681' stroke-width='1.2' stroke-dasharray='5 5'/>
-<text x='254' y='20' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>yield_curve</text>
+<text x='254' y='20' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>treasury_curve</text>
 <rect x='262' y='110' width='200' height='114' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
 <rect x='320.6' y='122' width='82.8' height='20' rx='10' fill='#2d2213'/>
 <text x='362.0' y='136' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>DATAFRAME</text>
-<text x='362.0' y='164' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650'>fed_yield_curve</text>
-<text x='362.0' y='185' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>sha256:1b8e…</text>
-<text x='362.0' y='204' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>17,053 rows, 31 columns</text>
+<text x='362.0' y='164' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650'>zero_coupon_yields</text>
+<text x='362.0' y='185' text-anchor='middle' fill='#58a6ff' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>sha256:09e2…</text>
+<text x='362.0' y='204' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>16,304 rows, 31 columns</text>
 <rect x='492' y='48' width='200' height='96' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
 <rect x='565.0' y='60' width='54.0' height='20' rx='10' fill='#2d2213'/>
 <text x='592.0' y='74' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>CHART</text>
-<text x='592.0' y='102' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chart/treasury_yields</text>
-<text x='592.0' y='121' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>made from 1b8e…</text>
+<text x='592.0' y='102' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>chart/yields</text>
+<text x='592.0' y='121' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>made from zero_coupon_yields</text>
 <rect x='740' y='166' width='186' height='132' rx='16' fill='none' stroke='#6e7681' stroke-width='1.2' stroke-dasharray='5 5'/>
-<text x='754' y='158' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>rate_forecast</text>
+<text x='754' y='158' text-anchor='start' fill='#9aa7b4' font-size='12' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>rate_outlook</text>
 <rect x='752' y='180' width='162' height='112' rx='12' fill='#161b22' stroke='#30363d' filter='url(#s)'/>
 <rect x='806.0' y='192' width='54.0' height='20' rx='10' fill='#2d2213'/>
 <text x='833.0' y='206' text-anchor='middle' fill='#e3b341' font-size='11' font-weight='600' letter-spacing='0.04em'>MODEL</text>
-<text x='833.0' y='234' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>model/forecast</text>
-<text x='833.0' y='253' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>trained on 1b8e…</text>
+<text x='833.0' y='234' text-anchor='middle' fill='#e6edf3' font-size='15.5' font-weight='650' font-family='JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace'>model/spread_ar1</text>
+<text x='833.0' y='253' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>trained on 09e2…</text>
 <text x='833.0' y='272' text-anchor='middle' fill='#9aa7b4' font-size='12.5'>pinned in chartbook.lock</text>
 <line x1='194' y1='162' x2='258' y2='162' stroke='#58a6ff' stroke-width='1.6' marker-end='url(#a)'/>
 <rect x='203.2' y='151.0' width='45.6' height='22' rx='11' fill='#1c2a3d'/>

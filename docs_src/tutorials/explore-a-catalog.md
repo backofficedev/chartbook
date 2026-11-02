@@ -39,7 +39,7 @@ the store on your machine:
 :::{tab-item} macOS / Linux
 :sync: bash
 ```bash
-curl -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/latest/download/chartbook-tutorial-store.zip
+curl -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/download/v0.5.0/chartbook-tutorial-store.zip
 unzip chartbook-tutorial-store.zip
 chartbook store import chartbook-tutorial-store
 ```
@@ -48,7 +48,7 @@ chartbook store import chartbook-tutorial-store
 :::{tab-item} Windows PowerShell
 :sync: powershell
 ```powershell
-curl.exe -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/latest/download/chartbook-tutorial-store.zip
+curl.exe -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/download/v0.5.0/chartbook-tutorial-store.zip
 tar -xf chartbook-tutorial-store.zip
 chartbook store import chartbook-tutorial-store
 ```
@@ -58,7 +58,7 @@ In PowerShell, `curl` alone is another command: write `curl.exe`.
 :::{tab-item} Windows Command Prompt
 :sync: cmd
 ```bat
-curl -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/latest/download/chartbook-tutorial-store.zip
+curl -L -o chartbook-tutorial-store.zip https://github.com/backofficedev/chartbook/releases/download/v0.5.0/chartbook-tutorial-store.zip
 tar -xf chartbook-tutorial-store.zip
 chartbook store import chartbook-tutorial-store
 ```
@@ -87,7 +87,7 @@ chartbook catalog build
 chartbook catalog open
 ```
 
-(Already have a catalog? Skip `catalog init`: the import put the three pipelines in its store.)
+(Already have a catalog that lists your default store? Skip `catalog init`: the import put the three pipelines there. If your default store is one your team shares, they will see the three pipelines too.)
 
 ```{raw} html
 <video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the tutorial store unzipped and imported, a catalog made and built, and chartbook ls listing its three pipelines and their assets">
@@ -133,13 +133,13 @@ Follow the link to the dataframe, and from there to the pipeline that pulled it 
 Federal Reserve Board. Each step is a page, and each page names the hash of what it was made from:
 
 ```{image} ../_static/diagrams/provenance-light.svg
-:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_outlook trained on it through a pin
+:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
 :class: only-light
 :align: center
 ```
 
 ```{image} ../_static/diagrams/provenance-dark.svg
-:alt: A Fed yield curve file, pulled into the yield_curve pipeline's dataframe at a hash; a chart made from it, and a model in rate_outlook trained on it through a pin
+:alt: The Fed's yield curve file, pulled into treasury_curve's zero_coupon_yields at a hash; a chart made from it, and rate_outlook's model trained on it at that hash, through a pin
 :class: only-dark
 :align: center
 ```

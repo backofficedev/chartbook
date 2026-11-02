@@ -1,7 +1,8 @@
 """Build the tutorial's store: the three pipelines here, built and snapshotted, exported to a zip.
 
-The zip is what the tutorial downloads (docs_src/tutorials/explore-a-catalog.md), attached to each
-ChartBook release as ``chartbook-tutorial-store.zip``. It is made in two steps, because
+The zip is what the tutorial downloads (docs_src/tutorials/explore-a-catalog.md), attached to the
+0.5.0 release as ``chartbook-tutorial-store.zip``; the tutorial links that release's copy, so a later
+release need not carry it. A new store goes on a new release, and the tutorial's links with it. It is made in two steps, because
 ``rate_outlook`` pins the other two, and a snapshot needs its pins committed:
 
     python examples/tutorial/make_store.py upstream --store C:/tutstore

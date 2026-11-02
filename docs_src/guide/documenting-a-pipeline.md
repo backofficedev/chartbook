@@ -33,7 +33,7 @@ $ chartbook docs open
 ```
 
 Each declaration becomes a page. A chart's page shows the chart, its write-up, and what it was
-made from, down to the hash of the data; a dataframe's shows its columns and first rows, its date
+made from, with the hash of that data in this build; a dataframe's shows its columns and first rows, its date
 range, and which charts use it:
 
 ```{image} ../_static/screenshots/quickstart-chart-light.png
