@@ -13,7 +13,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
-| `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
+| `chartbook ls [pipelines\|dataframes\|charts] [--json]` | List cataloged objects |
+| `chartbook get-docs` | Print any cataloged asset's write-up, or a pipeline's README |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
@@ -477,13 +478,24 @@ Catalog: /data/my-catalog/chartbook.toml
 
 Each asset is written as its reference, `pipeline:name`. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.
 
+`--json` prints the listing as JSON, for a script or an agent: a list with one record per pipeline and per asset, of every kind (models, files assets, notes and notebooks too, which the tree leaves out), none cut off. Each record has `kind` (`pipeline`, `dataframe`, `chart`, `model`, `file`, `note`, `notebook`), `id`, `name` and `description`, and an asset's has its `pipeline`. The `id` is what {ref}`chartbook get-docs <chartbook-get-docs>` and `data.load` take. Each listing takes `--json` as well, and `chartbook ls --json charts` is `chartbook ls charts --json`.
+
+```console
+$ chartbook ls --json
+[
+  {"kind": "pipeline", "id": "acme/yield_curve", "name": "Yield Curve Analysis", "description": "..."},
+  {"kind": "dataframe", "id": "acme/yield_curve:repo_public", "pipeline": "acme/yield_curve", "name": "Repo Public Data", "description": "..."},
+  ...
+]
+```
+
 ### ls stores
 
 ```console
 chartbook ls stores
 ```
 
-List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog.
+List catalog stores in order, including read-only and unreachable stores. The group's `--catalog PATH` selects another catalog. With `--json`, each is `name`, `url`, `read_only` and `reachable`.
 
 ### ls versions
 
@@ -491,7 +503,22 @@ List catalog stores in order, including read-only and unreachable stores. The gr
 chartbook ls versions
 ```
 
-List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once.
+List every snapshot across the catalog's stores, newest first, showing the store name. Duplicate copies are listed once. With `--json`, each is `pipeline`, `commit`, `made_at` and `store`.
+
+(chartbook-get-docs)=
+## chartbook get-docs
+
+Print the write-up of a cataloged pipeline's asset: what a person reads on its page in the catalog, for a script or an agent. Name the asset by its ID, as `chartbook ls` prints it, or with keywords:
+
+```console
+chartbook get-docs yield_curve                                  # the pipeline's README
+chartbook get-docs yield_curve:chart/repo_rates                 # a chart's write-up
+chartbook get-docs --pipeline yield_curve --chart repo_rates    # the same, with keywords
+chartbook get-docs --pipeline rate_forecast --model forecaster  # a model's
+chartbook get-docs yield_curve:repo_public --path               # where the write-up's file is
+```
+
+The keywords are `--pipeline` and one of `--dataframe`, `--chart`, `--model`, `--file` (a files asset) or `--note`; with no asset, the pipeline's README. A bare name is a pipeline, since this reads the catalog. A write-up is the asset's `docs_path` or inline `docs`, and a note is its own text; a notebook has no write-up apart from itself, and is refused, saying so. `--path` prints where the file is instead of its text: the `docs_path`, the `chartbook.toml` that holds inline `docs`, or the note. Each is read from the pipeline's newest snapshot in the catalog's stores. `--catalog PATH` overrides the configured catalog. In Python, `assets.get_docs(pipeline, "chart/repo_rates")` and `assets.get_docs_path(...)`.
 
 ## chartbook data
 
@@ -503,7 +530,7 @@ chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # 
 chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file
 ```
 
-All three take `--catalog PATH` to override the configured catalog. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
+All three take `--catalog PATH` to override the configured catalog. {ref}`chartbook get-docs <chartbook-get-docs>` reads any asset's write-up, and a pipeline's README. The Python equivalents live in `chartbook.data` — see {doc}`../guide/catalogs-and-data`.
 
 ## chartbook create-data-glimpses
 

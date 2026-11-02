@@ -55,11 +55,9 @@ from chartbook.resolve import (
     FileLocation,
     caller_start_dirs,
     find_manifest_dir,
-    locate_in_catalog,
     require_single_path,
     resolve,
 )
-from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
 
 def path(
@@ -264,76 +262,6 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     return directory
 
 
-def _get_dataframe_docs_info_from_catalog(
-    catalog_path: Path,
-    pipeline: str,
-    dataframe: str,
-) -> tuple:
-    """Look up docs info for a dataframe inside a catalog manifest.
-
-    :param catalog_path: Path to the catalog's ``chartbook.toml``.
-    :type catalog_path: Path
-    :param pipeline: The pipeline reference — a bare name
-        (``"crsp_treasury"``, if unambiguous), a scoped ID
-        (``"ftsfr/crsp_treasury"``), or a repository URL.
-    :type pipeline: str
-    :param dataframe: The dataframe identifier within the pipeline.
-    :type dataframe: str
-    :returns: Tuple of (doc_mode, doc_value, docs_file): ``"path"`` with the
-        path as declared, or ``"str"`` with the inline text; and the file
-        that holds the docs, the ``.md`` file or the ``chartbook.toml``,
-        where it is: in the pipeline's folder, or where the store keeps it.
-    :rtype: tuple[str, str, Path]
-    :raises KeyError: If the pipeline or dataframe is not found.
-    """
-    from chartbook.manifest import load_manifest
-
-    manifest = load_manifest(base_dir=catalog_path.parent)
-
-    pipeline_key = locate_in_catalog(manifest, pipeline)
-    if manifest.get("stores") is not None:
-        from chartbook import snapshot
-        from chartbook.hubs import selected_snapshots
-        import tomli
-        stores = manifest["stores"]
-        found, _ = snapshot.readable_snapshots(stores)
-        chosen = selected_snapshots(found, pipeline_key, manifest.get("pipeline_notes", {}).get(pipeline_key, {}).get("repository"))
-        if not chosen:
-            raise KeyError(f"{pipeline_key} has no snapshot. Run `chartbook snapshot` in its pipeline.")
-        taken = max(chosen, key=lambda t: t.made_at)
-        if not taken.documents:
-            raise KeyError(f"The newest snapshot of {pipeline_key} has no stored documents")
-        kept = stores.files(taken.documents["content_hash"], pipeline_key).by_relative()
-        manifest_file = kept.get("chartbook.toml")
-        if manifest_file is None:
-            raise KeyError(f"The newest snapshot of {pipeline_key} keeps no chartbook.toml among its documents")
-        raw = tomli.loads(Path(manifest_file).read_text(encoding="utf-8"))
-        entry = raw.get("dataframes", {}).get(dataframe)
-        if not isinstance(entry, dict):
-            raise KeyError(f"{pipeline_key} declares no dataframe {dataframe!r} in its newest snapshot")
-        if entry.get("docs_path"):
-            plain = snapshot.safe_relative(entry["docs_path"])
-            if plain is None or plain not in kept:
-                raise ValueError("The documentation path is not inside the snapshot's documents")
-            return "path", plain, Path(kept[plain])
-        return "str", entry.get("docs", ""), Path(manifest_file)
-
-    pipeline_manifest = manifest["pipelines"][pipeline_key]
-    available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
-    if dataframe not in pipeline_manifest.get("dataframes", {}):
-        raise KeyError(
-            f"Dataframe {dataframe!r} not found in pipeline {pipeline_key!r}. "
-            f"Available dataframes: {available_dataframes}"
-        )
-
-    df_manifest = pipeline_manifest["dataframes"][dataframe]
-    doc_mode = df_manifest["_doc_mode"]
-    doc_value = df_manifest["_doc_value"]
-    pipeline_base_dir = Path(pipeline_manifest["base_dir"])
-    docs_file = (pipeline_base_dir / doc_value) if doc_mode == "path" else pipeline_base_dir / "chartbook.toml"
-    return doc_mode, doc_value, docs_file.resolve()
-
-
 def get_data_path(
     pipeline: str,
     dataframe: str,
@@ -416,9 +344,7 @@ def get_docs_path(
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
-    resolved_catalog = _resolve_catalog_path(catalog_path)
-    _, _, docs_file = _get_dataframe_docs_info_from_catalog(resolved_catalog, pipeline, dataframe)
-    return docs_file
+    return _assets.get_docs_path(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
 
 
 def get_docs(
@@ -449,11 +375,7 @@ def get_docs(
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
-    resolved_catalog = _resolve_catalog_path(catalog_path)
-    doc_mode, doc_value, docs_file = _get_dataframe_docs_info_from_catalog(resolved_catalog, pipeline, dataframe)
-    if doc_mode == "path":
-        return docs_file.read_text(encoding="utf-8")
-    return doc_value
+    return _assets.get_docs(pipeline, _assets.parse(dataframe, kind="dataframe"), catalog_path)
 
 
 def load(

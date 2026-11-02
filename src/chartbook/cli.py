@@ -1466,7 +1466,7 @@ def _load_catalog_for_cli(catalog_path=None):
     :rtype: tuple
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.data import _resolve_catalog_path
+    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
     from chartbook.errors import CatalogNotConfiguredError
     from chartbook.manifest import load_manifest
 
@@ -1547,6 +1547,31 @@ def index_diff(before, after, as_json, exit_code):
 STORE_ONLY = "(stored snapshots)"
 
 
+def _newest_stored(manifest):
+    """The newest snapshot of each pipeline a catalog names with no folder here, with the store it is read from.
+
+    :returns: The store, and by pipeline ID its newest snapshot, None for
+        one with none; a store that cannot be read gives None for each.
+    """
+    pipeline_ids = manifest.get("store_pipelines") or []
+    if not pipeline_ids:
+        return None, {}
+    from chartbook import snapshot
+    from chartbook.hubs import selected_snapshots
+    from chartbook.store import StoreError, default_store
+
+    try:
+        store = manifest.get("stores") or default_store()
+        found, _ = snapshot.readable_snapshots(store)
+    except (StoreError, OSError, ValueError):
+        return None, {pipeline_id: None for pipeline_id in pipeline_ids}
+    newest = {}
+    for pipeline_id in pipeline_ids:
+        selected = selected_snapshots(found, pipeline_id, manifest.get("pipeline_notes", {}).get(pipeline_id, {}).get("repository"))
+        newest[pipeline_id] = max(selected, key=lambda t: t.made_at, default=None)
+    return store, newest
+
+
 def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
     """The dataframes and charts of each pipeline a catalog names with no folder here, by pipeline ID.
 
@@ -1557,50 +1582,116 @@ def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
 
     :returns: By pipeline ID, the assets listed and how many are not.
     """
-    pipeline_ids = manifest.get("store_pipelines") or []
-    if not pipeline_ids:
-        return {}
     from chartbook import snapshot
-    from chartbook.store import StoreError, default_store
 
-    try:
-        store = manifest.get("stores") or default_store()
-        found, _ = snapshot.readable_snapshots(store)
-    except (StoreError, OSError, ValueError):
-        return {pipeline_id: ([], 0) for pipeline_id in pipeline_ids}
+    store, newest = _newest_stored(manifest)
     listed = {}
-    for pipeline_id in pipeline_ids:
-        from chartbook.hubs import selected_snapshots
-        selected = selected_snapshots(found, pipeline_id, manifest.get("pipeline_notes", {}).get(pipeline_id, {}).get("repository"))
-        newest = max(selected, key=lambda t: t.made_at, default=None)
-        assets = snapshot.stored_assets(newest, store) if newest is not None else []
+    for pipeline_id, taken in newest.items():
+        assets = snapshot.stored_assets(taken, store) if taken is not None else []
         shown = sorted((a for a in assets if a["kind"] in kinds), key=lambda a: (kinds.index(a["kind"]), a["id"]))
         rows = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
         listed[pipeline_id] = (rows[: snapshot.STORED_ASSETS_SHOWN], max(len(rows) - snapshot.STORED_ASSETS_SHOWN, 0))
     return listed
 
 
+def _ls_records(manifest, kinds=None):
+    """What `chartbook ls --json` prints: a record per pipeline and per asset, every kind, none left out.
+
+    Each is ``{"kind", "id", "name", "description"}``, and an asset's also
+    ``"pipeline"``; ``kind`` is ``pipeline`` or an asset's kind
+    (``dataframe``, ``chart``, ``model``, ...), and ``id`` is what
+    ``chartbook get-docs``, ``data.load`` and the index take. A pipeline
+    known from the store alone is described by its newest snapshot's index,
+    as its owner wrote it.
+
+    :param kinds: Only records of these kinds; every kind if None.
+    """
+    from chartbook import snapshot
+    from chartbook.identity import plain_line
+    from chartbook.refs import KIND_TABLES, KINDS, parse_asset_ref
+
+    records = []
+
+    def declared(pipeline_id, pipeline_manifest):
+        project = pipeline_manifest.get("project", {})
+        records.append({
+            "kind": "pipeline", "id": pipeline_id,
+            "name": project.get("name", ""), "description": project.get("description", ""),
+        })
+        for kind in KINDS:
+            for name in sorted(pipeline_manifest.get(KIND_TABLES[kind]) or {}):
+                entry = pipeline_manifest[KIND_TABLES[kind]][name]
+                local = name if kind == "dataframe" else f"{kind}/{name}"
+                records.append({
+                    "kind": kind, "id": f"{pipeline_id}:{local}", "pipeline": pipeline_id,
+                    "name": entry.get("name", ""), "description": entry.get("description", ""),
+                })
+
+    if manifest["project"]["type"] == "catalog":
+        store, newest = _newest_stored(manifest)
+        for pipeline_id in sorted([*manifest["pipelines"], *newest]):
+            if pipeline_id in manifest["pipelines"]:
+                declared(pipeline_id, manifest["pipelines"][pipeline_id])
+                continue
+            taken = newest[pipeline_id]
+            own = snapshot.stored_pipeline_record(taken, store) if taken is not None else {}
+            records.append({
+                "kind": "pipeline", "id": pipeline_id,
+                "name": plain_line(own.get("name"), 200), "description": plain_line(own.get("description"), 2000),
+            })
+            for asset in snapshot.stored_assets(taken, store) if taken is not None else []:
+                # stored_assets lists only IDs that parse, of the kind the record says
+                records.append({**asset, "kind": parse_asset_ref(asset["id"]).kind, "pipeline": pipeline_id})
+    else:
+        declared(manifest["project"]["id"], manifest)
+    return [record for record in records if kinds is None or record["kind"] in kinds]
+
+
+def _echo_json(value):
+    """Print a value as JSON, for a script or an agent."""
+    import json
+
+    click.echo(json.dumps(value, indent=2, ensure_ascii=False, default=str))
+
+
+def _json_option(command):
+    """`--json`, on `chartbook ls` and each of its listings."""
+    return click.option("--json", "as_json", is_flag=True, help="Print the listing as JSON, for a script or an agent")(command)
+
+
 @main.group(invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
+@_json_option
 @click.pass_context
-def ls(ctx, catalog):
+def ls(ctx, catalog, as_json):
     """List catalog objects (pipelines, dataframes, charts).
 
     Without a subcommand, lists all objects in a tree format.
     Use subcommands to list specific object types.
 
+    With --json, a list of records, one per pipeline and per asset of every
+    kind (models, files, notes and notebooks too): kind, id, name,
+    description, and an asset's pipeline. The id is what `chartbook
+    get-docs` and `data.load` take.
+
+    
     Examples:
         chartbook ls
         chartbook ls pipelines
         chartbook ls dataframes
         chartbook ls charts
+        chartbook ls --json
     """
     ctx.ensure_object(dict)
     ctx.obj["catalog"] = catalog
+    ctx.obj["json"] = as_json
 
     if ctx.invoked_subcommand is None:
-        # List everything in tree format
         manifest, catalog_path = _load_catalog_for_cli(catalog)
+        if as_json:
+            _echo_json(_ls_records(manifest))
+            return
+        # List everything in tree format
         click.echo(f"Catalog: {catalog_path}")
         click.echo("")
 
@@ -1653,11 +1744,15 @@ def ls(ctx, catalog):
 
 
 @ls.command("pipelines")
+@_json_option
 @click.pass_context
-def ls_pipelines(ctx):
+def ls_pipelines(ctx, as_json):
     """List all pipelines."""
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
+    if as_json or ctx.obj.get("json"):
+        _echo_json(_ls_records(manifest, ("pipeline",)))
+        return
 
     if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
@@ -1674,11 +1769,15 @@ def ls_pipelines(ctx):
 
 
 @ls.command("dataframes")
+@_json_option
 @click.pass_context
-def ls_dataframes(ctx):
+def ls_dataframes(ctx, as_json):
     """List all dataframes across pipelines."""
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
+    if as_json or ctx.obj.get("json"):
+        _echo_json(_ls_records(manifest, ("dataframe",)))
+        return
 
     if manifest["project"]["type"] == "catalog":
         stored = _from_the_store(manifest, ("Dataframe",))
@@ -1706,11 +1805,15 @@ def ls_dataframes(ctx):
 
 
 @ls.command("charts")
+@_json_option
 @click.pass_context
-def ls_charts(ctx):
+def ls_charts(ctx, as_json):
     """List all charts across pipelines."""
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
+    if as_json or ctx.obj.get("json"):
+        _echo_json(_ls_records(manifest, ("chart",)))
+        return
 
     if manifest["project"]["type"] == "catalog":
         stored = _from_the_store(manifest, ("Chart",))
@@ -1835,7 +1938,7 @@ def _resolve_catalog_toml_path(catalog_path):
     :rtype: Path
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.data import _resolve_catalog_path
+    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
     from chartbook.errors import CatalogNotConfiguredError
 
     try:
@@ -2143,6 +2246,8 @@ def data_get_path(pipeline, dataframe, catalog):
 def data_get_docs(pipeline, dataframe, catalog):
     """Print documentation content for a dataframe.
 
+    `chartbook get-docs` does this for any asset, and a pipeline's README.
+
     Examples:
         chartbook data get-docs --pipeline yield_curve --dataframe repo_public
     """
@@ -2188,6 +2293,86 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         raise SystemExit(1)
     except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+#: The options of `chartbook get-docs` that name one asset of a pipeline by its kind
+_KIND_OPTIONS = ("dataframe", "chart", "model", "file", "note")
+
+
+def _named_by_options(options):
+    """The asset the kind options name, ``kind/name``; None for none, the pipeline's README."""
+    given = [(kind, options[kind]) for kind in _KIND_OPTIONS if options[kind]]
+    if len(given) > 1:
+        raise click.UsageError(f"Name one asset, not {len(given)}: {', '.join('--' + kind for kind, _ in given)}.")
+    if not given:
+        return None
+    kind, name = given[0]
+    return name if kind == "dataframe" else f"{kind}/{name}"
+
+
+def _kind_options(command):
+    """`--dataframe`, `--chart`, `--model`, `--file` and `--note`, each a name."""
+    for kind in reversed(_KIND_OPTIONS):
+        shown = "files asset" if kind == "file" else kind
+        command = click.option(f"--{kind}", metavar="NAME", help=f"A {shown}'s name")(command)
+    return command
+
+
+@main.command("get-docs")
+@click.argument("asset_id", metavar="[ID]", required=False)
+@click.option("--pipeline", help="The pipeline: a bare name, a scoped ID or a repository URL")
+@_kind_options
+@click.option("--path", "as_path", is_flag=True, help="Print where the write-up's file is, not its text")
+@click.option("--catalog", type=click.Path(), help="Path to catalog.toml")
+def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as_path, catalog):
+    """Print the write-up of a cataloged pipeline's asset, or with no asset its README.
+
+    What a person reads on the asset's page in the catalog, for a script or
+    an agent: a dataframe's, chart's, model's or files asset's write-up (its
+    docs or docs_path), or a note's text. Name the asset by its ID, as
+    `chartbook ls` prints it, or with keywords. A bare name is a pipeline, so
+    `chartbook get-docs yield_curve` is its README. A notebook has no
+    write-up apart from itself. Read from the pipeline's newest snapshot in
+    the catalog's stores.
+
+    \b
+    Examples:
+        chartbook get-docs yield_curve
+        chartbook get-docs yield_curve:chart/repo_rates
+        chartbook get-docs --pipeline yield_curve --chart repo_rates
+        chartbook get-docs --pipeline rate_forecast --model forecaster
+        chartbook get-docs yield_curve:repo_public --path
+    """
+    from chartbook.assets import get_docs, get_docs_path
+    from chartbook.errors import CatalogNotConfiguredError
+
+    keyword = _named_by_options({"dataframe": dataframe, "chart": chart, "model": model, "file": file, "note": note})
+    if asset_id and pipeline:
+        raise click.UsageError("Give the pipeline once: in the ID (yield_curve:chart/repo_rates) or with --pipeline.")
+    if asset_id and ":" in asset_id:
+        if keyword is not None:
+            raise click.UsageError(f"{asset_id} names its asset already: leave out the asset option.")
+        pipeline, asset = asset_id.split(":", 1)
+    else:
+        pipeline, asset = asset_id or pipeline, keyword
+    if not pipeline:
+        raise click.UsageError("Name a pipeline: chartbook get-docs PIPELINE[:kind/name], or --pipeline PIPELINE.")
+    try:
+        if as_path:
+            click.echo(str(get_docs_path(pipeline, asset, catalog_path=catalog)))
+        else:
+            click.echo(get_docs(pipeline, asset, catalog_path=catalog))
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+    except (KeyError, ValueError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+    except FileNotFoundError as e:
+        click.echo(f"Error: Documentation file not found: {e}", err=True)
         raise SystemExit(1)
 
 
@@ -4363,11 +4548,18 @@ def catalog_migrate(catalog_path):
 
 
 @ls.command("stores")
+@_json_option
 @click.pass_context
-def ls_stores(ctx):
+def ls_stores(ctx, as_json):
     """List stores in catalog order."""
     from chartbook.multi_store import Stores
     stores = Stores.configured(ctx.obj.get("catalog"))
+    if as_json or ctx.obj.get("json"):
+        _echo_json([
+            {"name": entry.name, "url": str(entry.store), "read_only": bool(entry.read_only), "reachable": bool(entry.reachable)}
+            for entry in stores.entries
+        ])
+        return
     for entry in stores.entries:
         state = "read-only" if entry.read_only else "writable"
         if not entry.reachable:
@@ -4376,15 +4568,22 @@ def ls_stores(ctx):
 
 
 @ls.command("versions")
+@_json_option
 @click.pass_context
-def ls_versions(ctx):
+def ls_versions(ctx, as_json):
     """List every snapshot, newest first, with its store."""
     from chartbook.multi_store import Stores
     from chartbook.snapshot import readable_snapshots
     stores = Stores.configured(ctx.obj.get("catalog"))
     found, unreadable = readable_snapshots(stores)
-    for taken in reversed(found):
-        click.echo(f"{taken.pipeline} {taken.commit[:12]} {taken.made_at} {stores.name_of(taken.path)}")
+    if as_json or ctx.obj.get("json"):
+        _echo_json([
+            {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at, "store": stores.name_of(taken.path)}
+            for taken in reversed(found)
+        ])
+    else:
+        for taken in reversed(found):
+            click.echo(f"{taken.pipeline} {taken.commit[:12]} {taken.made_at} {stores.name_of(taken.path)}")
     for path, why in unreadable:
         click.echo(f"warning: {path}: {why}", err=True)
 

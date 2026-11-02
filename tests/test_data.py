@@ -262,6 +262,109 @@ def test_get_docs_returns_inline_content(catalog_project_inline_docs):
     assert "Inline documentation for dataframe 0" in docs
 
 
+# --- Every asset's write-up, and the README (assets.get_docs) ---
+
+
+@pytest.fixture
+def catalog_with_write_ups(tmp_path):
+    """A catalog of one pipeline with a write-up of every kind that has one: a chart, a model, a files asset, a note."""
+    from tests.fixtures import create_catalog_project, publish_catalog
+
+    root = create_catalog_project(tmp_path / "catalog_write_ups", pipeline_ids=["pipeline_w"])
+    folder = root / "pipelines" / "pipeline_w"
+    (folder / "_models").mkdir()
+    (folder / "_models" / "forecaster.bin").write_bytes(b"weights")
+    (folder / "_data" / "filings").mkdir(parents=True)
+    (folder / "_data" / "filings" / "10-K.htm").write_text("<html></html>\n", encoding="utf-8", newline="\n")
+    (folder / "docs_src" / "models").mkdir()
+    (folder / "docs_src" / "models" / "forecaster.md").write_text(
+        "# Forecaster\n\nDocumentation for the forecaster.\n", encoding="utf-8", newline="\n"
+    )
+    (folder / "docs_src" / "methodology.md").write_text("# Methodology\n\nHow it was done.\n", encoding="utf-8", newline="\n")
+    with open(folder / "chartbook.toml", "a", encoding="utf-8", newline="\n") as manifest:
+        manifest.write(
+            '\n[models.forecaster]\npath = "_models/forecaster.bin"\ndocs_path = "docs_src/models/forecaster.md"\n'
+            '\n[files.filings]\npath = "_data/filings"\ndocs = "One filing a year, as the SEC sends it."\n'
+            '\n[notes.methodology]\npath = "docs_src/methodology.md"\n'
+        )
+    return publish_catalog(root)
+
+
+@pytest.mark.parametrize(
+    ("asset", "expected"),
+    [
+        (None, "This is a test pipeline."),
+        ("dataframe_0", "Documentation for dataframe 0."),
+        ("chart/chart_0_0", "Documentation for chart 0-0."),
+        ("model/forecaster", "Documentation for the forecaster."),
+        ("file/filings", "One filing a year, as the SEC sends it."),
+        ("note/methodology", "How it was done."),
+    ],
+)
+def test_get_docs_reads_every_kind_of_write_up(catalog_with_write_ups, asset, expected):
+    """A chart's, model's and files asset's write-up, a note's text and, with no asset, the README: what each page shows."""
+    from chartbook import assets
+
+    assert expected in assets.get_docs("pipeline_w", asset, catalog_path=catalog_with_write_ups)
+
+
+def test_get_docs_path_is_where_the_store_keeps_it(catalog_with_write_ups):
+    """A write-up in a file is read from the snapshot, not from the pipeline's folder; inline docs name the manifest."""
+    from chartbook import assets
+
+    folder = catalog_with_write_ups / "pipelines" / "pipeline_w"
+    chart = assets.get_docs_path("pipeline_w", "chart/chart_0_0", catalog_path=catalog_with_write_ups)
+    assert chart.name == "chart_0_0.md" and chart.is_file()
+    assert not chart.is_relative_to(folder)
+    inline = assets.get_docs_path("pipeline_w", "file/filings", catalog_path=catalog_with_write_ups)
+    assert inline.name == "chartbook.toml"
+
+
+def test_get_docs_says_what_has_no_write_up(catalog_with_write_ups):
+    """A notebook has none of its own; an asset not declared is a KeyError; a reference to another pipeline is refused."""
+    from chartbook import assets
+
+    with pytest.raises(ValueError, match="notebook"):
+        assets.get_docs("pipeline_w", "notebook/analysis", catalog_path=catalog_with_write_ups)
+    with pytest.raises(KeyError, match="chart 'missing'"):
+        assets.get_docs("pipeline_w", "chart/missing", catalog_path=catalog_with_write_ups)
+    with pytest.raises(ValueError, match="kind/name"):
+        assets.get_docs("pipeline_w", "other:chart/chart_0_0", catalog_path=catalog_with_write_ups)
+
+
+def test_cli_get_docs_takes_an_id_or_keywords(catalog_with_write_ups):
+    """`chartbook get-docs` reads an asset by the ID `chartbook ls` prints, or by --pipeline and its kind; a bare name is the README."""
+    from click.testing import CliRunner
+
+    from chartbook.cli import main
+
+    catalog = ["--catalog", str(catalog_with_write_ups)]
+    for arguments in (["pipeline_w:chart/chart_0_0"], ["--pipeline", "pipeline_w", "--chart", "chart_0_0"]):
+        chart = CliRunner().invoke(main, ["get-docs", *arguments, *catalog])
+        assert chart.exit_code == 0, chart.output
+        assert "Documentation for chart 0-0." in chart.output
+    for arguments in (["pipeline_w"], ["--pipeline", "pipeline_w"]):
+        readme = CliRunner().invoke(main, ["get-docs", *arguments, *catalog])
+        assert readme.exit_code == 0, readme.output
+        assert "This is a test pipeline." in readme.output
+    frame = CliRunner().invoke(main, ["get-docs", "pipeline_w:dataframe_0", *catalog])
+    assert "Documentation for dataframe 0." in frame.output
+    path = CliRunner().invoke(main, ["get-docs", "pipeline_w:model/forecaster", "--path", *catalog])
+    assert path.exit_code == 0, path.output
+    assert path.output.strip().endswith("forecaster.md")
+    # Said once, and one asset at a time
+    for arguments, said in (
+        (["--pipeline", "pipeline_w", "--chart", "chart_0_0", "--model", "forecaster"], "Name one asset, not 2"),
+        (["pipeline_w:chart/chart_0_0", "--pipeline", "pipeline_w"], "Give the pipeline once"),
+        (["pipeline_w:chart/chart_0_0", "--model", "forecaster"], "names its asset already"),
+        ([], "Name a pipeline"),
+    ):
+        refused = CliRunner().invoke(main, ["get-docs", *arguments, *catalog])
+        assert refused.exit_code == 2 and said in refused.output, refused.output
+    notebook = CliRunner().invoke(main, ["get-docs", "pipeline_w:notebook/analysis", *catalog])
+    assert notebook.exit_code == 1 and "no write-up of its own" in notebook.output
+
+
 # --- Glob pattern / hive-partitioned support ---
 
 
