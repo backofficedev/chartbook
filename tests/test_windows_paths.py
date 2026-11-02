@@ -207,6 +207,45 @@ def test_only_what_0_4_gathered_in_a_buckets_cache_goes(tmp_path, monkeypatch):
     assert (pipeline / "part.parquet").is_file() and (prefix / "part.parquet").is_file()
 
 
+def _former_cache_with_views():
+    """~/.chartbook/cache as 0.4 left it before [cache] path moved the cache: a gathered asset, and a version's site."""
+    former = config.get_global_config_dir() / "cache"
+    gathered = former / "views" / ("a" * 64)
+    gathered.mkdir(parents=True)
+    (gathered / "part.parquet").write_bytes(b"x")
+    (former / "versions" / "kept").mkdir(parents=True)
+    return former
+
+
+def test_views_gathered_before_the_settings_moved_the_cache_go(tmp_path, monkeypatch):
+    """0.5 removed views/ from the cache the settings name, and left 2.4 GB in ~/.chartbook/cache, where 0.4 gathered before (found on a real machine)."""
+    former = _former_cache_with_views()
+    moved = tmp_path / "moved"
+    moved.mkdir()
+    config.get_global_settings_path().write_text(tomli_w.dumps({"cache": {"path": str(moved)}}), encoding="utf-8")
+    monkeypatch.delenv("CHARTBOOK_CACHE")
+    said = CliRunner().invoke(main, ["store", "info"])
+    assert f"Removed {former / 'views'}" in said.output
+    assert not (former / "views").exists() and (former / "versions" / "kept").is_dir()
+    assert (former / store_module.OLD_VIEWS_REMOVED).is_file() and (moved / store_module.OLD_VIEWS_REMOVED).is_file()
+
+
+def test_the_default_cache_is_left_to_itself_when_it_is_not_0_4s_alone(tmp_path, monkeypatch):
+    """A cache CHARTBOOK_CACHE moves for one process (a test, CI) leaves the default one alone, and so does a views/ holding more than 0.4 gathered."""
+    former = _former_cache_with_views()
+    monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "for-now"))
+    (tmp_path / "for-now").mkdir()
+    CliRunner().invoke(main, ["store", "info"])
+    assert (former / "views" / ("a" * 64) / "part.parquet").is_file()
+    monkeypatch.delenv("CHARTBOOK_CACHE")
+    moved = tmp_path / "moved"
+    moved.mkdir()
+    config.get_global_settings_path().write_text(tomli_w.dumps({"cache": {"path": str(moved)}}), encoding="utf-8")
+    (former / "views" / "notes.txt").write_text("mine", encoding="utf-8")
+    said = CliRunner().invoke(main, ["store", "info"])
+    assert "Removed" not in said.output and (former / "views" / "notes.txt").is_file()
+
+
 def test_the_default_site_url_is_a_file_uri(tmp_path):
     """`file://C:/x` names a host "C:"; a space is %20."""
     from chartbook.manifest import load_manifest

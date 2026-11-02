@@ -838,12 +838,14 @@ class TestCommands:
         # A catalog build is incremental without being asked
         first = runner.invoke(main, ["catalog", "build", "-f"])
         assert first.exit_code == 0, first.output
-        assert "regenerated 0 of 0 pipeline(s)" in first.output
+        # A catalog has no working pipeline to count, and says nothing of one
+        assert "pipeline(s)" not in first.output
+        assert "source file(s) changed" in first.output
         assert (catalog_project / "_docs" / STATE_FILE).is_file()
 
         second = runner.invoke(main, ["catalog", "build", "-f"])
         assert second.exit_code == 0, second.output
-        assert "Incremental build: regenerated 0 of 0 pipeline(s)" in second.output
+        assert "Incremental build: 0 source file(s) changed" in second.output
         assert "nothing to render" in second.output
         assert "Catalog site generated" in second.output
 
@@ -851,9 +853,9 @@ class TestCommands:
         cleaned = runner.invoke(main, ["catalog", "build", "-f", "--clean"])
         assert cleaned.exit_code == 0, cleaned.output
         assert "Full build (no previous incremental build)" in cleaned.output
-        assert "regenerated 0 of 0 pipeline(s)" in cleaned.output
+        assert "pipeline(s)" not in cleaned.output
         after_clean = runner.invoke(main, ["catalog", "build"])
-        assert "Incremental build: regenerated 0 of 0 pipeline(s)" in after_clean.output
+        assert "Incremental build: 0 source file(s) changed" in after_clean.output
 
     def test_catalog_build_clean_leaves_unrelated_directories_alone(
         self, catalog_project, tmp_path, monkeypatch

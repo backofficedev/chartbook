@@ -788,6 +788,44 @@ class TestAPipelineFromTheStoreAlone:
         single = CliRunner().invoke(main, ["ls", "--catalog", str(root / "pipelines" / "pipeline_a")]).output
         assert "  [dataframe] pipeline_a:dataframe_0: Dataframe 0" in single
 
+    def test_ls_json_is_a_record_per_pipeline_and_asset(self, catalog, tmp_path, monkeypatch):
+        """`chartbook ls --json`, for a script or an agent: a pipeline known from the store alone is described by its snapshot's index."""
+        root, first, second = catalog
+        self._elsewhere(tmp_path)
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        listed = CliRunner().invoke(main, ["ls", "--catalog", str(root), "--json"])
+        assert listed.exit_code == 0, listed.output
+        records = json.loads(listed.output)
+        by_id = {record["id"]: record for record in records}
+        assert by_id["pipeline_c"]["kind"] == "pipeline"
+        assert by_id["pipeline_c:chart/chart_0_0"] == {
+            "kind": "chart", "id": "pipeline_c:chart/chart_0_0", "pipeline": "pipeline_c",
+            "name": "Chart 0-0", "description": "Description for chart 0-0",
+        }
+        assert by_id["pipeline_c:dataframe_0"]["kind"] == "dataframe"
+        # A listing takes the flag too, before or after its name
+        charts = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "charts", "--json"]).output)
+        assert charts and {record["kind"] for record in charts} == {"chart"}
+        assert "pipeline_c:chart/chart_0_0" in {record["id"] for record in charts}
+        pipelines = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "--json", "pipelines"]).output)
+        assert {record["kind"] for record in pipelines} == {"pipeline"}
+        versions = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "versions", "--json"]).output)
+        assert versions and set(versions[0]) == {"pipeline", "commit", "made_at", "store"}
+        stores = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(root), "stores", "--json"]).output)
+        assert stores and set(stores[0]) == {"name", "url", "read_only", "reachable"}
+
+    def test_ls_json_of_a_folder_lists_every_kind(self, catalog):
+        """A pipeline's own folder: models, files and notes are listed too, which the text tree leaves out."""
+        root, first, second = catalog
+        folder = root / "pipelines" / "pipeline_a"
+        with open(folder / "chartbook.toml", "a", encoding="utf-8", newline="\n") as manifest:
+            manifest.write('\n[models.forecaster]\nname = "Forecaster"\npath = "_models/forecaster.bin"\ndocs = "A model."\n')
+        records = json.loads(CliRunner().invoke(main, ["ls", "--catalog", str(folder), "--json"]).output)
+        assert records[0] == {"kind": "pipeline", "id": "pipeline_a", "name": "Pipeline PIPELINE_A", "description": "Description for Pipeline PIPELINE_A"}
+        assert {"kind": "model", "id": "pipeline_a:model/forecaster", "pipeline": "pipeline_a", "name": "Forecaster", "description": ""} in records
+        assert "pipeline_a:dataframe_0" in {record["id"] for record in records}
+
 
 def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snapshot":
     """A pipeline `pipeline_c` snapshotted elsewhere with these `[project]` fields (and this name for

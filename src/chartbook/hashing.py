@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional, Union
 
+from chartbook.replacing import replace_when_let
 from chartbook.utils import is_glob_pattern
 
 #: The algorithm every content hash uses, and the prefix it is written with.
@@ -164,7 +165,7 @@ class HashCache:
                 sort_keys=True,
             )
             f.write("\n")
-        os.replace(temporary, self.path)
+        replace_when_let(temporary, self.path)
 
 
 @dataclass(frozen=True)

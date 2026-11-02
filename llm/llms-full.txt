@@ -283,6 +283,7 @@ chartbook ls [OPTIONS] [COMMAND]
 
 **Options:**
 - `--catalog PATH`: Path to catalog chartbook.toml (overrides default)
+- `--json`: Print the listing as JSON: one record per pipeline and per asset of every kind (models, files, notes, notebooks too), each with `kind`, `id`, `name`, `description` and an asset's `pipeline`. Every listing takes it
 
 **Examples:**
 ```bash
@@ -304,6 +305,23 @@ acme/sales:transactions: Sales Transactions
 acme/marketing:campaigns: Campaign Data
 
 $ chartbook ls --catalog /path/to/other/catalog
+```
+
+### chartbook get-docs
+
+Print the write-up of a cataloged pipeline's asset (a dataframe's, chart's, model's or files asset's `docs` or `docs_path`, or a note's text), or with no asset the pipeline's README. Read from the pipeline's newest snapshot. A notebook has no write-up apart from itself.
+
+```bash
+chartbook get-docs ID [--path] [--catalog PATH]   # ID as `chartbook ls` prints it: pipeline or pipeline:kind/name
+chartbook get-docs --pipeline <id> [--dataframe <name> | --chart <name> | --model <name> | --file <name> | --note <name>] [--path] [--catalog PATH]
+```
+
+**Examples:**
+```bash
+$ chartbook get-docs acme/sales                          # the README
+$ chartbook get-docs acme/sales:chart/monthly_revenue    # a chart's write-up
+$ chartbook get-docs --pipeline acme/sales --chart monthly_revenue
+$ chartbook get-docs acme/sales:transactions --path      # where the write-up's file is
 ```
 
 ### chartbook data
@@ -879,6 +897,11 @@ docs = data.get_docs(pipeline="markets", dataframe="market_data")
 
 # Get path to documentation source file
 docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
+
+# Any asset's write-up, by kind/name; with none, the pipeline's README
+from chartbook import assets
+chart_docs = assets.get_docs("markets", "chart/volume")
+readme = assets.get_docs("markets")
 ```
 
 Direct loading:

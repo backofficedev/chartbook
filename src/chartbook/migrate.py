@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from chartbook import hashing
+from chartbook.replacing import rename_when_let, replace_when_let
 from chartbook.store import (
     holds_v1,
     _files_in,
@@ -378,7 +379,7 @@ class _Moving(_FolderPending):
             self.journal.move(Path(source), target)
             # Placed before it is moved: a migrate cut short now never takes this folder back
             self.placed = True
-            os.rename(source, target)
+            rename_when_let(source, target)
             try:
                 os.chmod(target, 0o444)
             except OSError:
@@ -427,7 +428,7 @@ def run(root, echo: Callable[[str], None] = lambda line: None) -> MigrationPlan:
             _check_length(target / ("x" * 12))
             target.parent.mkdir(parents=True, exist_ok=True)
             journal.move(folder, target)
-            os.rename(folder, target)
+            rename_when_let(folder, target)
     _move_origins(root, store)
     _switch(root)
     return found
@@ -642,7 +643,7 @@ def _switch(root: Path) -> None:
     _Journal(root)._note({"switched": True})
     temporary = root / f"{MARKER_FILE}.migrate.tmp"
     temporary.write_text(json.dumps({"schema": SCHEMA}) + "\n", encoding="utf-8", newline="\n")
-    os.replace(temporary, root / MARKER_FILE)
+    replace_when_let(temporary, root / MARKER_FILE)
     for name in (OBJECTS_DIR, SNAPSHOTS_DIR, "builds"):
         if (root / name).exists():
             _remove_tree(root / name)
