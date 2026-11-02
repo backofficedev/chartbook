@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `chartbook init` makes a dataframe and a chart for each data source chosen
+
+A project scaffolded with a data source declared no dataframe and no chart unless it had both FRED and the OFR API, so its first site showed a notebook and nothing that the catalog, provenance or a dependency could use. Each source now brings a dataframe of what it pulls and a chart of it, declared in `chartbook.toml` and made by a short script in `src/` that reads the dataframe by name (`data.load("fred")`) and saves the chart with `chartbook.plotting`: FRED's policy rates, the Fed's zero-coupon Treasury yields, the OFR's repo reference rates, Bloomberg's S&P 500, CRSP's value-weighted index and the Fama-French factors. One source or several, the first `chartbook run` builds a page for each.
+
+### Fixed — the template's pulls
+
+- **The Fed's yield curve is pulled.** Choosing it brought `load_fed_yield_curve.py` and no task that ran it.
+- **CRSP-Compustat is pulled once, not on every build.** Its task's target was `CRSP_Compustat.parquet`, a file the script does not write, so doit took the task as never done and pulled from WRDS again each time. Its targets are the four files it writes; CRSP's stock pull lists the index file it writes too.
+
 ## [0.5.0] - 2026-11-01
 
 ### Read this first: upgrading from 0.4.0
