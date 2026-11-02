@@ -103,7 +103,7 @@ Decided by the maintainer, 2026-10-12.
 - **Data reads** ({doc}`plan-data-reads`, proposed 2026-10-31): the store hands out files, not
   folders, so the `views/` cache goes; the catalog reads no data; `data.path` gives one path or
   says what to call instead; snapshots are standalone or shared, in words a person reads; a `gc`
-  reminder. *Decided 2026-10-31: ships as 0.5.0.*
+  reminder. *Decided 2026-10-31: ships as 0.5.0. Built and released 2026-11-01.*
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 
@@ -123,7 +123,7 @@ Decided by the maintainer, 2026-10-12.
 | 10 | {doc}`trust` | What a build of a folder on this machine may do before you have trusted the pipeline, and how you say so | Built 2026-10-18: `chartbook trust`, `~/.chartbook/trust.toml`, the gates in `docs`, `build`, `run` and `catalog build` |
 | 11 | {doc}`plan-0.3.0` | What 0.3.0 is for: the store laid out by pipeline, each file stored once, sharing one pipeline's folder, and the issues after 0.2.0 | Proposed 2026-10-28; built by 2026-10-29 |
 | 12 | {doc}`plan-0.4.0` | What 0.4.0 is for: a catalog is its stores and a machine may have several; the catalog's pages as hubs over versions; a link file for two pipelines at once; `run`, `docs build`, `catalog build` | Proposed and built 2026-10-30 |
-| 13 | {doc}`plan-data-reads` | The store hands out files, never a gathered folder; the catalog reads no data; `data.path`, `data.files`, `data.load`; standalone and shared snapshots; the guide rewritten around use cases | Proposed 2026-10-31; ships as 0.5.0 |
+| 13 | {doc}`plan-data-reads` | The store hands out files, never a gathered folder; the catalog reads no data; `data.path`, `data.files`, `data.load`; standalone and shared snapshots; the guide rewritten around use cases | Proposed 2026-10-31; built and released as 0.5.0, 2026-11-01 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.

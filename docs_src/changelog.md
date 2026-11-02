@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-01
+
 ### Read this first: upgrading from 0.4.0
 
 Nothing in the store, the lockfile or `chartbook.toml` changes. Two things in code do. `data.path()`, `assets.path()`, `models.path()`, `data.get_data_path()`, `chartbook path` and `chartbook data get-path` no longer hand out a folder for another pipeline's dataset of several files (a Hive folder or a glob) or for a model or files asset that is a folder: they raise `NoSinglePathError`, which names the calls to use. Read a dataframe with `data.load()` or `data.sql()`, list the files with `data.files()`, `assets.files()` or `chartbook path REF --files`, and lay a model's files out in a temporary folder for a loader that needs one with `assets.gathered()`. A store plugin implements `Store.files()`, which returns each file of an asset by its path inside the asset and where the store keeps it, in place of `Store.get()`, which returned a folder. The first command run after upgrading removes `~/.chartbook/cache/views`, where 0.4 gathered copies of data, and says so.
@@ -60,6 +62,7 @@ A version's name is its commit and the time the snapshot was made, to the second
 - **A stored index whose `location` is not a table no longer stops a version's site**, and a `modified_at` not of the shape ChartBook writes is passed over, on a version's pages and the catalog's: anyone on a team can write a shared store.
 - **`chartbook store ls` says when the store's folder is not there**: not made yet, or a synced folder that is not mounted, where it said only "No snapshots."
 - **A version's name and kept site follow the snapshot, not its folder.** A copy of a snapshot in a second store, whose folder there may be named a second earlier or later, linked to a page that was not there, and two snapshots of one commit in the same second in two stores shared one kept site, so a catalog showed one version's pages for the other.
+- **A table or a query from a 0.4 snapshot says its first rows were not recorded**, where its version's page said "Error reading file: … is not there" (found on a second machine; #158).
 - `assets.gathered` is in `chartbook.assets.__all__`; the Claude skill and `llms.txt` describe `[project] scratch`, `data.files`, `NoSinglePathError` and the new guide page; the docs' own version comes from the package.
 
 ### Fixed — `chartbook store export` finds the store that holds the pipeline

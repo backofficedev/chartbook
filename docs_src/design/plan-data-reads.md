@@ -6,7 +6,7 @@ maintainer that day. It says what is wrong with how ChartBook reads data today, 
 and what the end user sees. What the maintainer decided on 2026-10-31 is marked *decided*. The
 version is **0.5.0** (*decided 2026-10-31*): `data.path` on another pipeline's folder dataset
 and the Store plugin contract both change, so it is more than a patch. Status: **built** (#150–#153, merged 2026-10-31, then tried on a real store);
-what lands goes under "Unreleased" in the changelog until it is published.
+released as 0.5.0 on 2026-11-01.
 ```
 
 ## The problem, in plain terms
