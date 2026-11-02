@@ -2235,9 +2235,21 @@ def require_single_path(location: Location, what: str, ref: str, kind: str) -> P
         from chartbook.errors import NoSinglePathError
 
         inside = location.inside
-        places = {Path(where).parents[len(relative.split("/")) - 1] for relative, where in inside.items()}
-        raise NoSinglePathError(ref, kind, len(inside), len(places))
+        raise NoSinglePathError(ref, kind, len(inside), len({_kept_under(relative, where) for relative, where in inside.items()}))
     return path
+
+
+def _kept_under(relative: str, where) -> Path:
+    """The folder a file of an asset is kept under: its path inside the asset taken off where it is kept.
+
+    A copy kept by its hash (an S3 store's) ends in no such path, and is
+    kept in its own folder.
+    """
+    where = Path(where)
+    depth = len(relative.split("/"))
+    if depth <= len(where.parents) and where.as_posix().lower().endswith("/" + relative.lower()):
+        return where.parents[depth - 1]
+    return where.parent
 
 
 def require_file(location: Location, what: str) -> Path:

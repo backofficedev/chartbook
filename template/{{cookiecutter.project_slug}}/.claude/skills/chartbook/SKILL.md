@@ -180,8 +180,10 @@ path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
 
 # Inside a pipeline: the path its own chartbook.toml declares for a dataframe.
 # No catalog needed; the file need not exist yet, so use it for dodo.py targets
-# and for writing outputs.
+# and for writing outputs. Its folder is made for you. A dataset declared as a
+# folder is written with partition_by.
 df.to_parquet(data.path("my_data"))
+pl_df.write_parquet(data.path("articles"), partition_by="year")  # path = "./_data/articles"
 
 # The same for any other asset: put its kind in front of the name
 # (chart/, notebook/, note/). data.path(x) is assets.path(x, kind="dataframe").
@@ -261,8 +263,8 @@ data.connect("local")      # the raw connection to [sources.local]: read-only du
 # `chartbook run` stops before remaking it (`--remake` to go on). For doit, give the costly
 # task `targets` and `uptodate: [True]` and NO file_dep: it then runs only when its file is missing.
 
-# A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
-# not an asset, git-ignored, safe to delete
+# A throwaway directory for intermediates (<pipeline>/_data/_scratch/, or
+# [project] scratch = "./_tmp"): not an asset, git-ignored, safe to delete
 tmp = data.scratch() / "raw_download.csv"
 
 # Get documentation content as a string

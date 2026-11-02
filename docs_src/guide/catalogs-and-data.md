@@ -99,7 +99,7 @@ after the build. Nothing is removed unless you ask.
 ```console
 $ chartbook catalog build
 ...
-`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than a week, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
+`chartbook store gc` would clear 6 snapshot(s), freeing 2.1 GB: older than 7 days, and neither pinned nor the newest of their pipeline. Nothing is removed unless you ask (`--no-gc-reminder` silences this line).
 ```
 
 To give someone one complete copy of a version, `chartbook store export acme/news_headlines --latest

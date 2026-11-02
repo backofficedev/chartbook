@@ -149,7 +149,12 @@ def _remove_old_views() -> None:
         return  # nothing of 0.4's here, or seen to once already: a 0.4 install beside this one keeps its own
     leftovers = [cache / OLD_VIEWS_DIR]
     for depth in ("*", "*/*", "*/*/*", "*/*/*/*"):
-        leftovers.extend(cache.glob(f"s3/{depth}/{OLD_VIEWS_DIR}"))  # a bucket's cache, laid out as a folder store
+        # A bucket's cache, laid out as a folder store: its views/ beside pipelines/, and holding only
+        # what 0.4 gathered, never a pipeline or an asset of that name, or a bucket's prefix
+        leftovers.extend(
+            folder for folder in cache.glob(f"s3/{depth}/{OLD_VIEWS_DIR}")
+            if "pipelines" not in folder.relative_to(cache).parts and _only_gathered(folder)
+        )
     stayed = False
     for folder in leftovers:
         if not folder.is_dir() or folder.is_symlink():
@@ -191,6 +196,16 @@ def _remove_old_views() -> None:
         marker.write_text("ChartBook 0.5 removed what 0.4 gathered under views/ here, once.\n", encoding="utf-8", newline="\n")
     except OSError:
         pass
+
+
+def _only_gathered(folder) -> bool:
+    """Whether a folder holds nothing but what 0.4 gathered: one folder per asset, named by its hash, or one being made."""
+    import re
+
+    try:
+        return all(re.fullmatch(r"\.?[0-9a-f]{64}(\.[0-9a-f]{12}\.tmp)?", entry.name) for entry in folder.iterdir())
+    except OSError:
+        return False
 
 
 def _stderr_is_a_terminal() -> bool:
@@ -3076,7 +3091,12 @@ def _stores_to_list(store_name):
     entries = getattr(the_store, "entries", None)
     if entries is not None:  # several stores read as one: each listed by its name
         return [(entry.name, entry.store, entry.reachable) for entry in entries]
-    return [("", the_store, True)]
+    # A folder the settings name that is not there (a Drive not mounted) is unreachable; this
+    # user's own store, under ~/.chartbook, is not there until the first snapshot, and holds none
+    root = getattr(the_store, "root", None)
+    own = getattr(the_store, "is_users_own", None)
+    reachable = root is None or root.is_dir() or (callable(own) and own())
+    return [("", the_store, reachable)]
 
 
 def _remind_of_gc(silenced: bool) -> None:
@@ -3233,7 +3253,8 @@ def _what_gc_would_clear(the_store) -> "str | None":
         plan = lock.plan_gc(the_store)
     except Exception:  # noqa: BLE001 - a store that cannot be planned for says nothing here; gc itself says why
         return None
-    cleared = len(plan.snapshots_delete) + len(plan.pinned_delete)
+    # A record a pin made goes with gc too, but holds nothing of its own: gc says nothing of it, and neither does this
+    cleared = len(plan.snapshots_delete)
     if not cleared and not plan.delete:
         return None
     if cleared:

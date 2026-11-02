@@ -43,7 +43,7 @@ def enrich(records, stores, notes=None):
             for i, (taken, listed) in enumerate(indexes):
                 entry = {"commit": taken.commit, "made_at": taken.made_at, "present": False}
                 from chartbook.versions import name_of
-                entry["name"] = name_of(taken)
+                entry["name"] = name_of(taken, found)
                 entry["store"] = stores.name_of(taken.path)
                 own = next((r for r in listed if isinstance(r, dict) and r.get("id") == asset_id), None)
                 entry["present"] = own is not None

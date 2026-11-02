@@ -1275,7 +1275,7 @@ Remove a store definition, leaving its files untouched. `--catalog PATH` selects
 chartbook store move PIPELINE --to NAME [OPTIONS]
 ```
 
-Copy every snapshot to `--to NAME`, checking hashes and copying retention and origin notes before removing source snapshots. `--dry-run` reports the count and bytes. `--keep` keeps the source copies; `--no-route` leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.
+Copy every snapshot to `--to NAME`, checking hashes and copying retention and origin notes before removing source snapshots. Once the copies are verified, the moved pipeline's files are removed from each source, as `store gc` would, and no other pipeline's folder is looked in; a source that refuses a removal is reported after routing, saying the snapshots moved and which files stayed. Two names for one store (a folder in another letter case, or reached through a link) are refused before anything is touched. `--dry-run` reports the count and bytes. `--keep` keeps the source copies; `--no-route` leaves catalog routing unchanged. Otherwise future snapshots are routed to the destination. Previously resolved paths may disappear; resolve them again.
 
 ## chartbook config
 

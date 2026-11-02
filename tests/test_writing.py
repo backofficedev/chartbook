@@ -158,6 +158,48 @@ class TestScratch:
         folder = _pipeline(tmp_path.resolve(), {"scratch": "./_data/_tmp"})
         assert data.scratch(project_dir=folder) == folder / "_data" / "_tmp"
 
+    @pytest.mark.parametrize("declared", ["./_data/parts/_tmp", "./_data/parts/year=2024/_tmp", "./_data/parts"])
+    def test_one_where_a_glob_reaches_is_refused(self, tmp_path, declared):
+        """``**`` matches it, so its files would be part of the dataset (found reviewing 0.5.0)."""
+        folder = _pipeline(tmp_path.resolve(), {"scratch": declared})
+        with pytest.raises(ValueError, match=r"is where \[dataframes.parts\] path = '\./_data/parts/\*\*/\*\.parquet' reaches"):
+            data.scratch(project_dir=folder)
+
+    def test_a_globs_files_beside_it_are_not_its_concern(self, tmp_path):
+        folder = tmp_path.resolve() / "flat"
+        folder.mkdir()
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "flat"}, "dataframes": {"x": {"path": "./_data/*.parquet", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        assert data.scratch(project_dir=folder) == folder / "_data" / "_scratch"
+
+    def test_the_default_where_a_glob_reaches_is_refused(self, tmp_path):
+        folder = tmp_path.resolve() / "deep"
+        folder.mkdir()
+        (folder / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "deep"}, "dataframes": {"x": {"path": "./_data/**/*.parquet", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        with pytest.raises(ValueError, match=r"_data/_scratch by default, is where \[dataframes.x\]"):
+            data.scratch(project_dir=folder)
+        assert not (folder / "_data").exists()
+
+    @pytest.mark.parametrize("declared, asset", [
+        ("./_data", "dataframes.merged"),
+        ("./_models", "models.ar1"),
+    ])
+    def test_one_holding_a_declared_asset_is_refused(self, tmp_path, declared, asset):
+        """Deleting the scratch folder, which is throwaway, would delete the asset (found reviewing 0.5.0)."""
+        from chartbook.manifest import load_manifest
+
+        folder = _pipeline(tmp_path.resolve(), {"scratch": declared})
+        with pytest.raises(ValueError, match=rf"holds \[{asset}\] path"):
+            data.scratch(project_dir=folder)
+        with pytest.raises(ValueError, match=rf"holds \[{asset}\] path"):
+            load_manifest(folder)
+        assert not (folder / "_data" / ".gitignore").exists()
+
     def test_the_default_inside_a_folder_asset_is_refused_when_it_would_be_made(self, tmp_path):
         """A pipeline that never calls data.scratch() loads as before; the call says to name one outside."""
         from chartbook.manifest import load_manifest

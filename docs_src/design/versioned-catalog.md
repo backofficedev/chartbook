@@ -153,7 +153,9 @@ model with where its page is, so that a command-line agent finds its way without
    `versions/<pipeline>/<commit>-<made_at>/`. (*0.5.0:* the time the store names the snapshot's
    folder by, to the second, unique for a pipeline as the folder is, and the kept site at `versions/<12 hex digits of a hash>/`, with
    ChartBook's version in its marker of done: the old names put a site's deepest files past
-   Windows' 260 characters under the default cache.) A version that cannot be built gets a page that says
+   Windows' 260 characters under the default cache. *2026-11-01, before the release:* the name
+   is the snapshot's own time to the second, the same in every store, the later of two in one second
+   keeping its fraction; the kept site's hash is of the pipeline, commit and time.) A version that cannot be built gets a page that says
    why, and a `warning:` line, so a link to it never leads nowhere. A laid-out folder's Pipeline
    record says `from_snapshot`, and its front page says which snapshot it is. Built otherwise
    than item 4 of the section above: the version list is one catalog page, `cb/versions.md`, every

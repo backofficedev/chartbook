@@ -76,6 +76,7 @@ __all__ = [
     "AssetRef",
     "KindMismatchError",
     "files",
+    "gathered",
     "index",
     "parse",
     "path",

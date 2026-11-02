@@ -167,6 +167,19 @@ def _laid_out_index(work: Path, taken, store, edit=None) -> Path:
 
 
 class TestWhatTheReviewFound:
+    @pytest.mark.parametrize("location", ["a string", ["x"], 5, {"modified_at": "<b>soon</b>"}])
+    def test_a_stored_location_of_another_shape_is_passed_over(self, described, store, work, location):
+        """Anyone can write a store: a version is built from what of it has the shape the writers read (found reviewing 0.5.0)."""
+        _, taken = described
+
+        def spoil(stored):
+            for record in stored["records"]:
+                if record["id"] == "rates:rates":
+                    record["location"] = location
+
+        laid = _laid_out_index(work, taken, store, spoil)
+        assert "soon" not in json.dumps(_records(laid)["rates:rates"])
+
     def test_a_table_in_a_source_is_shown_from_the_index_too(self, work, store):
         """A table has a definition hash, not a content hash; its parquet is not laid out either."""
         import duckdb
