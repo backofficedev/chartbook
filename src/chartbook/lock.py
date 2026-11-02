@@ -2859,8 +2859,13 @@ class _PutLater:
                 pending.discard()
                 return stored
             records = []
+            # A pin kept as it was, whose bytes were put back from the clone,
+            # holds its own hash in the lockfile, not the stand-in it was put by
+            by_hash = {put.content_hash: put for put in stored.values() if put.stored}
             for record in after.assets.values():
                 put = stored.get(record.get("content_hash"))
+                if put is None and record.get("pipeline") == key:
+                    put = by_hash.get(record.get("content_hash"))
                 if put is None or not put.stored:
                     continue
                 kept = snapshot.renamed(record, pipeline)
