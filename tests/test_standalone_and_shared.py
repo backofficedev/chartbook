@@ -94,11 +94,12 @@ class TestStoreLs:
         result = CliRunner().invoke(main, ["store", "ls"])
         assert result.exit_code == 0 and "No snapshots." in result.output
 
-    def test_a_store_folder_that_is_not_there_is_unreachable(self, work, monkeypatch):
-        """A Drive not mounted lists nothing, which is not "no snapshots" (found reviewing 0.5.0)."""
+    def test_a_store_folder_that_is_not_there_is_said(self, work, monkeypatch):
+        """A Drive not mounted lists nothing, as a store not made yet does: both are said (found reviewing 0.5.0)."""
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "not-mounted"))
         result = CliRunner().invoke(main, ["store", "ls"])
-        assert "unreachable" in result.output and "No snapshots." not in result.output
+        assert result.exit_code == 0 and "No snapshots." in result.output
+        assert "not-mounted is not there: not made yet, or a synced folder that is not mounted" in result.output
 
 
 class TestTheGcReminder:

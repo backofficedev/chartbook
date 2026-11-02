@@ -203,7 +203,7 @@ def _only_gathered(folder) -> bool:
     import re
 
     try:
-        return all(re.fullmatch(r"\.?[0-9a-f]{64}(\.[0-9a-f]{12}\.tmp)?", entry.name) for entry in folder.iterdir())
+        return all(re.fullmatch(r"\.?[0-9a-f]{64}(\.[0-9a-f]{12}\.(tmp|old))?", entry.name) for entry in folder.iterdir())
     except OSError:
         return False
 
@@ -3062,6 +3062,12 @@ def store_ls(pipeline, store_name):
     if not shown:
         said = "No snapshots" if pipeline is None else f"No snapshot of {pipeline}"
         click.echo(f"{said} in the stores that could be read." if unreachable else f"{said}.")
+        for name, the_store, reachable in stores:
+            root = getattr(the_store, "root", None)
+            own = getattr(the_store, "is_users_own", None)
+            if reachable and root is not None and not root.is_dir() and not (callable(own) and own()):
+                # A store is made by its first snapshot; a synced folder not mounted lists nothing either
+                click.echo(f"The store's folder {root} is not there: not made yet, or a synced folder that is not mounted.")
         if unreachable and unreachable == len(stores):
             raise SystemExit(1)
         return
@@ -3091,12 +3097,7 @@ def _stores_to_list(store_name):
     entries = getattr(the_store, "entries", None)
     if entries is not None:  # several stores read as one: each listed by its name
         return [(entry.name, entry.store, entry.reachable) for entry in entries]
-    # A folder the settings name that is not there (a Drive not mounted) is unreachable; this
-    # user's own store, under ~/.chartbook, is not there until the first snapshot, and holds none
-    root = getattr(the_store, "root", None)
-    own = getattr(the_store, "is_users_own", None)
-    reachable = root is None or root.is_dir() or (callable(own) and own())
-    return [("", the_store, reachable)]
+    return [("", the_store, True)]
 
 
 def _remind_of_gc(silenced: bool) -> None:

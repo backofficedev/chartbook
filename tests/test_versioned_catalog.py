@@ -285,6 +285,9 @@ class TestWhatTheReviewFound:
         # Another pipeline's snapshot of that second is not in the way
         other = taken("2026-10-31T14:54:10.001Z", "x", pipeline="acme/y")
         assert versions.name_of(first, [first, other]) == "b6ea3aa-20261031T145410Z"
+        # By time, not by text: a record with no fraction is the earlier ("…10Z" sorts after "…10.5Z")
+        whole, half = taken("2026-10-31T14:54:10Z", "a"), taken("2026-10-31T14:54:10.5Z", "b")
+        assert [versions.name_of(t, [whole, half]) for t in (whole, half)] == ["b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145410.5Z"]
 
     def test_what_0_4_kept_of_a_version_goes_once_this_one_builds_it(self, catalog):
         root, first, second = catalog

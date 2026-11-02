@@ -63,8 +63,10 @@ def enrich(records, stores, notes=None):
                 if any(isinstance(r, dict) and r.get("kind") == "Chart" and isinstance(r.get("inputs"), list) and asset_id in r["inputs"] for r in current_records):
                     present.add("linked_charts")
                 hub["metadata_present"] = sorted(present)
-            modified = (latest.get("location") or {}).get("modified_at")
-            if isinstance(modified, str):
+            from chartbook.index import stored_modified_at
+
+            modified = stored_modified_at(latest)
+            if modified:
                 hub["location"]["modified_at"] = modified
             for key in ("license", "source", "tags", "columns", "row_count", "content_hash", "size_bytes",
                         "inputs", "pinned_inputs", "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "date_range",

@@ -200,6 +200,7 @@ def test_only_what_0_4_gathered_in_a_buckets_cache_goes(tmp_path, monkeypatch):
         folder.mkdir(parents=True)
         (folder / "part.parquet").write_bytes(b"x")
     (cache / "s3" / "bucket" / "views" / f".{'b' * 64}.{'c' * 12}.tmp").mkdir()
+    (cache / "s3" / "bucket" / "views" / f".{'d' * 64}.{'c' * 12}.old").mkdir()  # left by a 0.4 gather that stopped
     monkeypatch.setenv("CHARTBOOK_CACHE", str(cache))
     said = CliRunner().invoke(main, ["store", "info"])
     assert "Removed" in said.output and not (cache / "s3" / "bucket" / "views").exists()

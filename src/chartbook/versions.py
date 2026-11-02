@@ -101,13 +101,20 @@ def name_of(taken, siblings: Iterable = ()) -> str:
     name = version_name(taken.commit, taken.made_at)
     if any(
         other.pipeline == taken.pipeline and other.commit[:7] == taken.commit[:7]
-        and other.made_at[:19] == taken.made_at[:19] and other.made_at < taken.made_at
+        and isinstance(other.made_at, str) and other.made_at[:19] == taken.made_at[:19]
+        and _fraction(other.made_at) < _fraction(taken.made_at)
         for other in siblings
     ):
         name = f"{taken.commit[:7]}-{taken.made_at.replace('-', '').replace(':', '')}"
         if not _NAME.match(name):
             raise ValueError(f"{name!r} is not a version's name")
     return name
+
+
+def _fraction(made_at: str) -> int:
+    """The fraction of its second a snapshot was made at, in nanoseconds: ``…05Z`` is 0, ``…05.5Z`` 500000000."""
+    digits = made_at[20:-1] if made_at[19:20] == "." else ""
+    return int(digits.ljust(9, "0")) if digits.isdigit() else 0
 
 
 def slug(pipeline_id: str) -> str:
@@ -397,7 +404,7 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
             except ValueError:
                 continue
             if rendered.built:
-                name = name_of(taken, found)
+                name = name_of(taken, found) if not _NAME.match(str(entry.get("name"))) else entry["name"]
                 targets = [Path(os.path.abspath(folder)) / site_path(record["id"], name) for folder in into]
                 why = _too_deep(rendered, targets)
                 if why:
@@ -448,10 +455,13 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by
             taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
             if taken is None:
                 continue
-            try:
-                name = name_of(taken, by_moment.values())
-            except ValueError:
-                continue
+            # Where the index links it: named once, from every snapshot the store holds (name_of)
+            name = entry.get("name")
+            if not isinstance(name, str) or not _NAME.match(name):
+                try:
+                    name = name_of(taken, by_moment.values())
+                except ValueError:
+                    continue
             rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
             # What render_listed built has been said there: only what is built here now is said here
             said = rendered is not None and rendered.folder.is_dir()

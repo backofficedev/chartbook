@@ -1457,7 +1457,8 @@ def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path, scratch: Optiona
                 fixed = list(itertools.takewhile(lambda part: not is_glob_pattern(part), parts[:-1]))
             else:
                 fixed = parts
-            if _reaches(parts[:-1], folder) if glob else folder[: len(fixed)] == fixed:
+            folders = parts if parts[-1] == "**" else parts[:-1]  # `./_data/**` is every file below `_data`
+            if _reaches(folders, folder) if glob else folder[: len(fixed)] == fixed:
                 where = f"where [{table}.{name}] path = {path!r} reaches" if glob else (
                     f"inside [{table}.{name}] path = {path!r}"
                 )

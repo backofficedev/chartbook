@@ -174,14 +174,15 @@ class TestScratch:
         )
         assert data.scratch(project_dir=folder) == folder / "_data" / "_scratch"
 
-    def test_the_default_where_a_glob_reaches_is_refused(self, tmp_path):
+    @pytest.mark.parametrize("table, glob", [("dataframes", "./_data/**/*.parquet"), ("files", "./_data/**"), ("files", "./**")])
+    def test_the_default_where_a_glob_reaches_is_refused(self, tmp_path, table, glob):
         folder = tmp_path.resolve() / "deep"
         folder.mkdir()
         (folder / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "deep"}, "dataframes": {"x": {"path": "./_data/**/*.parquet", "docs": "d"}}}),
+            tomli_w.dumps({"project": {"id": "deep"}, table: {"x": {"path": glob, "docs": "d"}}}),
             encoding="utf-8", newline="\n",
         )
-        with pytest.raises(ValueError, match=r"_data/_scratch by default, is where \[dataframes.x\]"):
+        with pytest.raises(ValueError, match=rf"_data/_scratch by default, is where \[{table}.x\]"):
             data.scratch(project_dir=folder)
         assert not (folder / "_data").exists()
 

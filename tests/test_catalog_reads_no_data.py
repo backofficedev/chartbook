@@ -167,7 +167,12 @@ def _laid_out_index(work: Path, taken, store, edit=None) -> Path:
 
 
 class TestWhatTheReviewFound:
-    @pytest.mark.parametrize("location", ["a string", ["x"], 5, {"modified_at": "<b>soon</b>"}])
+    @pytest.mark.parametrize("location", [
+        "a string", ["x"], 5, {"modified_at": "<b>soon</b>"},
+        # Times the page's reader does not take: only ChartBook's own shape is
+        {"modified_at": "2026-10-13"}, {"modified_at": "2026-10-13 18:22:05"}, {"modified_at": "2026-10-13T18:22:05.123Z"},
+        {"modified_at": "2026-10-13T99:::Z"},
+    ])
     def test_a_stored_location_of_another_shape_is_passed_over(self, described, store, work, location):
         """Anyone can write a store: a version is built from what of it has the shape the writers read (found reviewing 0.5.0)."""
         _, taken = described
@@ -178,7 +183,10 @@ class TestWhatTheReviewFound:
                     record["location"] = location
 
         laid = _laid_out_index(work, taken, store, spoil)
-        assert "soon" not in json.dumps(_records(laid)["rates:rates"])
+        shown = _records(laid)["rates:rates"]
+        spoiled = location.get("modified_at") if isinstance(location, dict) else None
+        assert spoiled is None or shown.get("location", {}).get("modified_at") != spoiled
+        assert index.stored_modified_at({"location": {"modified_at": "2026-10-13T18:22:05Z"}}) == "2026-10-13T18:22:05Z"
 
     def test_a_table_in_a_source_is_shown_from_the_index_too(self, work, store):
         """A table has a definition hash, not a content hash; its parquet is not laid out either."""
