@@ -365,6 +365,39 @@ def test_cli_get_docs_takes_an_id_or_keywords(catalog_with_write_ups):
     assert notebook.exit_code == 1 and "no write-up of its own" in notebook.output
 
 
+
+def test_cli_get_docs_takes_a_scoped_id_and_a_repository_url(tmp_path):
+    """The last colon divides pipeline and asset, as in any reference, so a repository URL's own colon is not taken for it."""
+    import json
+
+    from click.testing import CliRunner
+
+    from chartbook.cli import _split_docs_id, main
+    from tests.fixtures import create_catalog_project, publish_catalog
+
+    root = create_catalog_project(tmp_path / "catalog_scoped", pipeline_ids=["pipeline_s"])
+    manifest = root / "pipelines" / "pipeline_s" / "chartbook.toml"
+    text = manifest.read_text(encoding="utf-8")
+    assert text.count('id = "pipeline_s"') == 1
+    manifest.write_text(text.replace('id = "pipeline_s"', 'id = "acme/pipeline_s"'), encoding="utf-8", newline="\n")
+    catalog = ["--catalog", str(publish_catalog(root))]
+    listed = CliRunner().invoke(main, ["ls", "--json", *catalog])
+    assert listed.exit_code == 0, listed.output
+    (pipeline_id,) = [r["id"] for r in json.loads(listed.output) if r["kind"] == "pipeline"]
+    assert pipeline_id == "acme/pipeline_s"
+    for id_given in (f"{pipeline_id}:chart/chart_0_0", f"https://github.com/{pipeline_id}:chart/chart_0_0"):
+        chart = CliRunner().invoke(main, ["get-docs", id_given, *catalog])
+        assert chart.exit_code == 0, chart.output
+        assert "Documentation for chart 0-0." in chart.output
+    readme = CliRunner().invoke(main, ["get-docs", f"https://github.com/{pipeline_id}", *catalog])
+    assert readme.exit_code == 0, readme.output
+    assert "This is a test pipeline." in readme.output
+    # A URL alone, with a port or in git's form, is a pipeline
+    assert _split_docs_id("git@github.com:acme/rates.git") == ("git@github.com:acme/rates.git", None)
+    assert _split_docs_id("https://host:8443/acme/rates") == ("https://host:8443/acme/rates", None)
+    assert _split_docs_id("git@github.com:acme/rates.git:model/m") == ("git@github.com:acme/rates.git", "model/m")
+
+
 # --- Glob pattern / hive-partitioned support ---
 
 

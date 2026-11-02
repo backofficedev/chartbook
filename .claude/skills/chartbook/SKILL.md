@@ -90,6 +90,10 @@ chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
 chartbook ls dataframes     # List dataframes only
 chartbook ls charts         # List charts only
+chartbook ls --json         # Every pipeline and asset of every kind, as JSON: kind, id, name, description, pipeline
+chartbook get-docs <pipeline>                # A pipeline's README
+chartbook get-docs <pipeline>:chart/<name>   # Any asset's write-up, by the id `chartbook ls` prints
+chartbook get-docs --pipeline <id> --model <name>  # ...or with keywords (--dataframe, --chart, --model, --file, --note)
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
@@ -272,6 +276,11 @@ docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 
 # Get path to documentation source file
 docs_path = data.get_docs_path(pipeline="crsp_treasury", dataframe="my_data")
+
+# Any asset's write-up, by kind/name, or the pipeline's README with none
+from chartbook import assets
+chart_docs = assets.get_docs("crsp_treasury", "chart/my_chart")
+readme = assets.get_docs("crsp_treasury")
 ```
 
 The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix and a registry prefix (`registry.example/scope/name`) are reserved but not yet supported.

@@ -1466,9 +1466,9 @@ def _load_catalog_for_cli(catalog_path=None):
     :rtype: tuple
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
     from chartbook.errors import CatalogNotConfiguredError
     from chartbook.manifest import load_manifest
+    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
     try:
         resolved = _resolve_catalog_path(catalog_path)
@@ -1674,7 +1674,7 @@ def ls(ctx, catalog, as_json):
     description, and an asset's pipeline. The id is what `chartbook
     get-docs` and `data.load` take.
 
-    
+    \b
     Examples:
         chartbook ls
         chartbook ls pipelines
@@ -1938,8 +1938,8 @@ def _resolve_catalog_toml_path(catalog_path):
     :rtype: Path
     :raises SystemExit: If no catalog is configured.
     """
-    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
     from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 
     try:
         return _resolve_catalog_path(catalog_path)
@@ -2248,6 +2248,7 @@ def data_get_docs(pipeline, dataframe, catalog):
 
     `chartbook get-docs` does this for any asset, and a pipeline's README.
 
+    \b
     Examples:
         chartbook data get-docs --pipeline yield_curve --dataframe repo_public
     """
@@ -2319,6 +2320,28 @@ def _kind_options(command):
     return command
 
 
+def _split_docs_id(text):
+    """A `get-docs` ID as its pipeline and its asset; the asset None when the ID is a pipeline alone.
+
+    An asset never holds a colon, so the last one divides the two, as in any
+    reference (:func:`chartbook.refs.parse_asset_ref`): ``acme/yield_curve:chart/x``,
+    ``https://github.com/acme/yield_curve:repo_public``. What follows the
+    last colon is the asset only when it reads as one, so a repository URL
+    alone (``https://github.com/acme/yield_curve``, ``git@github.com:acme/yield_curve.git``,
+    a host with a port) is a pipeline.
+    """
+    from chartbook.refs import parse_asset_ref
+
+    head, colon, tail = text.rpartition(":")
+    if not colon or not head:
+        return text, None
+    try:
+        parse_asset_ref(tail)
+    except ValueError:
+        return text, None
+    return head, tail
+
+
 @main.command("get-docs")
 @click.argument("asset_id", metavar="[ID]", required=False)
 @click.option("--pipeline", help="The pipeline: a bare name, a scoped ID or a repository URL")
@@ -2350,10 +2373,11 @@ def get_docs_command(asset_id, pipeline, dataframe, chart, model, file, note, as
     keyword = _named_by_options({"dataframe": dataframe, "chart": chart, "model": model, "file": file, "note": note})
     if asset_id and pipeline:
         raise click.UsageError("Give the pipeline once: in the ID (yield_curve:chart/repo_rates) or with --pipeline.")
-    if asset_id and ":" in asset_id:
+    pipeline_in_id, asset_in_id = _split_docs_id(asset_id) if asset_id else (None, None)
+    if asset_in_id is not None:
         if keyword is not None:
             raise click.UsageError(f"{asset_id} names its asset already: leave out the asset option.")
-        pipeline, asset = asset_id.split(":", 1)
+        pipeline, asset = pipeline_in_id, asset_in_id
     else:
         pipeline, asset = asset_id or pipeline, keyword
     if not pipeline:
