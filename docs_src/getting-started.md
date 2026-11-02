@@ -3,18 +3,11 @@
 In five minutes you will build a pipeline that makes a dataset and a chart, and a website that
 shows both, with a record of exactly what each one was made from.
 
-```{image} _static/screenshots/quickstart-chart-light.png
-:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
-:class: only-light cb-screenshot
-:width: 560px
-:align: center
-```
-
-```{image} _static/screenshots/quickstart-chart-dark.png
-:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
-:class: only-dark cb-screenshot
-:width: 560px
-:align: center
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the Quickstart's manifest, the script that writes the data and the chart, chartbook docs build asking whether the folder is yours, and the index's record of each asset with its hash and what it was made from">
+<source src="_static/tapes/quickstart.webm" type="video/webm">
+<source src="_static/tapes/quickstart.mp4" type="video/mp4">
+</video>
 ```
 
 You need Python 3.10 or newer, and git.
@@ -145,6 +138,20 @@ Click **Two Random Walks** under Pipeline Charts, then the dataframe it names.
   the hash it had.
 - **The dataframe got a page of its own**: its columns and first rows, its date range, and which
   charts use it.
+
+```{image} _static/screenshots/quickstart-chart-light.png
+:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
+:class: only-light cb-screenshot
+:width: 560px
+:align: center
+```
+
+```{image} _static/screenshots/quickstart-chart-dark.png
+:alt: The chart's page this Quickstart builds: the chart, its write-up, and what it was made from
+:class: only-dark cb-screenshot
+:width: 560px
+:align: center
+```
 
 ```{image} _static/screenshots/quickstart-dataframe-light.png
 :alt: The dataframe's page: a glimpse of its columns and rows, and a Provenance table with its hash, size, rows and the chart that uses it

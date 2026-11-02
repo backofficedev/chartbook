@@ -19,6 +19,13 @@ pip install chartbook
 <a class="sd-btn sd-btn-outline-primary cb-hero-button" href="tutorials/explore-a-catalog.html">Explore a catalog</a>
 </div>
 
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the Quickstart's manifest, the script that writes the data and the chart, chartbook docs build asking whether the folder is yours, and the index's record of each asset with its hash and what it was made from">
+<source src="_static/tapes/quickstart.webm" type="video/webm">
+<source src="_static/tapes/quickstart.mp4" type="video/mp4">
+</video>
+```
+
 ```{image} _static/screenshots/quickstart-chart-light.png
 :alt: A chart's page in a ChartBook site: the chart, its write-up, and a Provenance table that names the dataframe it was made from and that dataframe's content hash
 :class: only-light cb-screenshot

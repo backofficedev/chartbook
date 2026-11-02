@@ -12,6 +12,13 @@ one matters, the data last.
 | **Use it** | `data.load("pipeline:name")`, `chartbook add` | The data, pinned to the exact snapshot it read |
 | **Can it be trusted?** | `chartbook lineage --json` | Every snapshot upstream, by commit and hash, checked |
 
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls --json listing every asset, chartbook get-docs printing a model's write-up, chartbook add pinning the yield curve, and chartbook lineage checking it">
+<source src="../_static/tapes/agent.webm" type="video/webm">
+<source src="../_static/tapes/agent.mp4" type="video/mp4">
+</video>
+```
+
 The examples below use the {doc}`tutorial catalog <../tutorials/explore-a-catalog>`.
 
 ## Teach your agent ChartBook

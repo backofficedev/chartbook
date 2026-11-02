@@ -89,6 +89,13 @@ chartbook catalog open
 
 (Already have a catalog? Skip `catalog init`: the import put the three pipelines in its store.)
 
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: the tutorial store unzipped and imported, a catalog made and built, and chartbook ls listing its three pipelines and their assets">
+<source src="../_static/tapes/tutorial.webm" type="video/webm">
+<source src="../_static/tapes/tutorial.mp4" type="video/mp4">
+</video>
+```
+
 Every pipeline, dataframe, chart and model has a page. Open **Pipelines**, then **Rate
 Outlook**: it says what it is, what it holds, and the exact snapshot of each pipeline it depends
 on.
@@ -182,6 +189,13 @@ $ chartbook get-docs rate_outlook:model/spread_ar1
 `spread[t+1] = intercept + slope * spread[t]`, fitted with NumPy on the first 80% of months and
 scored on the rest. An example of the mechanics, not a forecast to act on: the point is that its page
 says exactly which bytes of the yield curve it was trained on.
+```
+
+```{raw} html
+<video class="cb-terminal" autoplay loop muted playsinline aria-label="A terminal: chartbook ls --json listing every asset, chartbook get-docs printing a model's write-up, chartbook add pinning the yield curve, and chartbook lineage checking it">
+<source src="../_static/tapes/agent.webm" type="video/webm">
+<source src="../_static/tapes/agent.mp4" type="video/mp4">
+</video>
 ```
 
 and answers from them. It reads only what it needs: a line per asset first, a write-up when one
