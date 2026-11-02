@@ -166,6 +166,29 @@ def copy_llms_file(origin_path, destination_path):
     return _copy
 
 
+#: What under docs_src/ is not a page: the design notes, and what the pages include or build from
+NOT_PAGES = {"design", "apidocs", "_examples", "_tapes", "_screenshots", "_diagrams", "_static", "_build"}
+
+
+def copy_page_sources(source_dir, site_dir):
+    """Create a Python action that puts each page's Markdown beside its HTML in the site.
+
+    `guide/agents.html` is also `guide/agents.md`, as llms.txt says: an agent
+    reads a page as the text it was written in, without its HTML.
+    """
+
+    def _copy():
+        for page in Path(source_dir).rglob("*.md"):
+            relative = page.relative_to(source_dir)
+            if relative.parts[0] in NOT_PAGES:
+                continue
+            dest = Path(site_dir) / relative
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(page, dest)
+
+    return _copy
+
+
 def mv(from_path, to_path):
     """Move a file to a folder"""
     from_path = Path(from_path)
@@ -234,6 +257,7 @@ def task_sphinx():
             f"sphinx-build -b html {DOCS_SRC} {DOCS_OUTPUT}",
             copy_llms_file(llms_files[0], DOCS_OUTPUT / "llms.txt"),
             copy_llms_file(llms_files[1], DOCS_OUTPUT / "llms-full.txt"),
+            copy_page_sources(DOCS_SRC, DOCS_OUTPUT),
         ],
         # Not everything under docs_src/: the build writes apidocs/ there,
         # and Python its __pycache__/, which git ignores
