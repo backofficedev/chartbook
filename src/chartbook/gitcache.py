@@ -67,6 +67,7 @@ from typing import Optional, Union
 
 from chartbook.config import get_git_cache_path
 from chartbook.identity import strip_url_credentials
+from chartbook.replacing import rename_when_let
 
 #: Where bare clones are, under the cache's root.
 REPOS_DIR = "repos"
@@ -190,25 +191,6 @@ def _staging_name() -> str:
     in it is past Windows' limit when the same file in place would not be.
     """
     return f".{uuid.uuid4().hex[:8]}.tmp"
-
-
-def _rename_when_let(source: Path, target: Path) -> None:
-    """Rename a folder git has just made, waiting a moment if Windows refuses.
-
-    A virus scanner or the search indexer may hold a file of a folder just
-    made, and Windows then refuses to rename it ("Access is denied") for
-    the moment it takes. Tried for two seconds before that is said.
-    """
-    import time
-
-    for attempt in range(40):
-        try:
-            os.rename(source, target)
-            return
-        except PermissionError:
-            if sys.platform != "win32" or attempt == 39 or os.path.exists(target):
-                raise
-            time.sleep(0.05)
 
 
 def _remove_staging(folder: Path) -> None:
@@ -368,7 +350,7 @@ class GitCache:
                     if not os.path.islink(file):
                         os.chmod(file, os.stat(file).st_mode | stat.S_IWUSR)
             try:
-                _rename_when_let(staging, final)
+                rename_when_let(staging, final)
             except OSError:
                 if not final.is_dir():
                     raise
@@ -425,7 +407,7 @@ class GitCache:
             staging = repo.with_name(_staging_name())
             self._git("init", "--quiet", "--bare", str(staging))
             try:
-                _rename_when_let(staging, repo)
+                rename_when_let(staging, repo)
             except OSError:
                 _remove_staging(staging)
                 if not (repo / "HEAD").is_file():
@@ -509,7 +491,7 @@ class GitCache:
                         mode = os.stat(file).st_mode
                         os.chmod(file, _READ_ONLY | (mode & 0o111))
             try:
-                _rename_when_let(staging, final)
+                rename_when_let(staging, final)
             except OSError:
                 if not final.is_dir():
                     raise
