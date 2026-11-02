@@ -75,7 +75,7 @@ version of every pipeline this way: each snapshot's site is built from its docum
 index, with no data laid out or read, under `versions/`, and the catalog's Versions page lists
 them. The catalog's own index describes the
 working versions, each pipeline's record listing its snapshots, with the comparisons only a site
-can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/versioned-catalog`.
+can make ({doc}`catalogs-and-data`). The reasoning is in {design}`versioned-catalog`.
 
 ## The rest of the words
 

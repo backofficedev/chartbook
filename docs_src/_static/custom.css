@@ -69,3 +69,102 @@ img[src*="/diagrams/"] {
     height: auto;
     margin: 1.5rem auto;
 } 
+/* --- The home page ------------------------------------------------------- */
+
+/* Its title names the page for the browser and the search; the hero says it */
+section#chartbook > h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.cb-hero {
+    margin: 2.5rem 0 1.25rem;
+}
+
+.cb-eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--pst-color-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cb-hero-title {
+    margin: 0 0 1rem;
+    color: var(--pst-color-text-base);
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.cb-hero-sub {
+    max-width: 40rem;
+    color: var(--pst-color-text-muted);
+    font-size: 1.2rem;
+    line-height: 1.55;
+}
+
+div.cb-hero-install {
+    display: inline-block;
+    min-width: 20rem;
+    margin: 0.5rem 0 0;
+}
+
+.cb-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0 0.5rem;
+}
+
+.cb-hero-button {
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+/* Screenshots of a ChartBook site, framed as a window */
+img.cb-screenshot {
+    margin: 1.5rem auto 0.5rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="dark"] img.cb-screenshot {
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.cb-caption {
+    margin-bottom: 2.5rem;
+    color: var(--pst-color-text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* --- Width ---------------------------------------------------------------- */
+
+/* The theme caps the page and the article narrowly; ChartBook's own sites lift both caps
+   (src/chartbook/docs_src_pipeline/_static/custom.css). These pages are mostly prose, so the
+   article keeps a cap, wide enough for a table or a screenshot, narrow enough to read. */
+:root {
+    --pst-body-max-width: none !important;
+}
+
+.bd-page-width,
+.bd-container,
+.bd-main .bd-content {
+    max-width: none !important;
+}
+
+.bd-main .bd-content .bd-article-container {
+    max-width: 80rem !important;
+    width: 100% !important;
+}

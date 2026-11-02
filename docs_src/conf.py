@@ -29,7 +29,14 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx.ext.extlinks",
 ]
+
+# The design notes live in the repository, not on the site: {design}`trust` links
+# docs_src/design/trust.md on GitHub
+extlinks = {
+    "design": ("https://github.com/backofficedev/chartbook/blob/main/docs_src/design/%s.md", "%s"),
+}
 
 # autodoc2 configuration
 autodoc2_packages = [
@@ -83,6 +90,12 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
+    # In the repository, linked with {design}`name`
+    "design",
+    # Files the pages include and the scripts build, not pages
+    "_examples",
+    "_screenshots",
+    "_diagrams",
     "apidocs/index.rst",
     "apidocs/chartbook/chartbook.md",
     "apidocs/chartbook/chartbook.__about__.md",
@@ -107,7 +120,7 @@ html_static_path = ["_static"]
 html_theme_options = {
     "home_page_in_toc": True,
     "navigation_with_keys": True,
-    "show_navbar_depth": 2,
+    "show_navbar_depth": 1,
     "show_toc_level": 3,
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "icon_links": [
