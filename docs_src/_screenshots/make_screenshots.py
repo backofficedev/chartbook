@@ -6,6 +6,10 @@ temporary folder, renders its site, and photographs pages of it with a headless 
 The PNGs under ``docs_src/_static/screenshots/`` are what the pages show (``only-light`` /
 ``only-dark``); this script is how they are changed. Nothing imports it.
 
+With ``--catalog DOCS``, it photographs the tutorial's catalog too: the site ``chartbook catalog
+build`` wrote after importing the tutorial's store (``examples/tutorial/make_store.py``), as the
+tutorial does; ``DOCS`` is that site's folder, ``~/.chartbook/docs`` for the default catalog.
+
 It needs the ChartBook of this checkout (``uv run python ...``) and Chrome or Edge installed;
 ``CHROME`` names the browser's executable where it is somewhere else. Nothing under ``~/.chartbook``
 is read or written: the store, the cache and trust are pointed at the temporary folder.
@@ -29,6 +33,14 @@ SHOTS = [
     # The chart, its write-up and what it was made from, down to the hash it was made from
     ("quickstart-chart", "cb/charts/my_pipeline.random_walks.html", (900, 1255), 44),
     ("quickstart-dataframe", "cb/dataframes/my_pipeline/walks.html", (900, 1000), 44),
+]
+
+#: The tutorial catalog's pages, as SHOTS; the cut is the theme's search bar and header
+CATALOG_SHOTS = [
+    ("tutorial-catalog-home", "index.html", (1440, 760), 64),
+    ("tutorial-pipeline", "cb/pipelines/tutorial--rate_outlook.html", (1440, 900), 64),
+    ("tutorial-model", "cb/models/tutorial--rate_outlook/spread_ar1.html", (1440, 760), 64),
+    ("tutorial-versions", "cb/versions.html", (1440, 900), 64),
 ]
 
 BROWSERS = [
@@ -68,9 +80,9 @@ def build(root: Path) -> Path:
     return project / "docs"
 
 
-def photograph(chrome: str, site: Path, scratch: Path) -> None:
+def photograph(chrome: str, site: Path, scratch: Path, shots=SHOTS) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, page, (width, height), cut in SHOTS:
+    for name, page, (width, height), cut in shots:
         for mode in ("light", "dark"):
             raw = scratch / f"{name}-{mode}.png"
             command = [
@@ -86,11 +98,18 @@ def photograph(chrome: str, site: Path, scratch: Path) -> None:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--catalog", type=Path, help="The tutorial catalog's built site, to photograph too")
+    arguments = parser.parse_args()
     chrome = browser()
     # A short folder: a site's deepest page is far below it, and Windows may keep paths to 260
     with tempfile.TemporaryDirectory(prefix="cbshots-") as scratch:
         root = Path(scratch)
         photograph(chrome, build(root), root)
+        if arguments.catalog:
+            photograph(chrome, arguments.catalog.resolve(), root, CATALOG_SHOTS)
 
 
 if __name__ == "__main__":
