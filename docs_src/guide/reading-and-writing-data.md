@@ -112,8 +112,11 @@ one folder. Read it with data.load('news_headlines:articles'), or hand
 data.files('news_headlines:articles') to your own reader.
 ```
 
-`data.files` lists every file, sorted by its path inside the dataset, wherever each is kept.
-Polars and DuckDB take the list, Hive keys included, and so does a build tool:
+`data.files` lists every file, sorted by its path inside the dataset, wherever each is kept. A build
+tool takes the list, and so do polars and DuckDB for the rows. Not for the Hive keys: where a file is
+kept need not say them (two partitions of the same bytes are kept once, at one partition's path, and
+an S3 store names its copies by their hashes), so read a partitioned dataset with `data.load` or
+`data.sql`, which take each file's keys from its path inside the dataset.
 
 ```python
 # dodo.py

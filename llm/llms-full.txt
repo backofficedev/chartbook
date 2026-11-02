@@ -842,10 +842,14 @@ from chartbook import data
 mine = data.load("market_data")                       # this pipeline's own, as it is now
 theirs = data.load("markets:market_data")             # another pipeline's, as pinned
 df = data.load("markets:market_data", format="pandas")
-path = data.path("markets:market_data")               # just the path, read-only
+path = data.path("markets:market_data")               # a dataset of one file: its path, read-only
+files = data.files("markets:market_data")             # every file, wherever the store keeps it
+out = data.path("merged")                             # your own output: the folder is made for you
 ```
 
-Outside any pipeline (a notebook, a script), load through a catalog with a pipeline and a dataframe. This reads its newest snapshot in the store, and its own folder only when it has none, with a warning:
+The store keeps each file once, so another pipeline's dataset of several files (a Hive folder or a glob) may have its files in several snapshot folders: `data.path` of it raises `NoSinglePathError`, by declaration, and so does `chartbook path` (use `--files`). Read it with `data.load` or `data.sql`, which take each file's Hive keys from its path inside the dataset; `data.files` lists the files (for a build tool's `file_dep`; where a file is kept need not say its keys); `assets.gathered("x:model/m")` lays a folder model out in a temporary folder for a loader that takes a directory. A folder dataset of your own is written with `df.write_parquet(data.path("x"), partition_by="year")`. `data.scratch()` is a git-ignored folder for throwaway files, `_data/_scratch` unless `[project] scratch` names another; it may not be inside, hold, or be reached by the glob of a declared asset.
+
+Outside any pipeline (a notebook, a script), load through a catalog with a pipeline and a dataframe. This reads its newest snapshot in the store; a pipeline with no snapshot is not read:
 
 From a catalog (requires a configured catalog via `chartbook config` or an explicit path):
 ```python

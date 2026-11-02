@@ -8,6 +8,7 @@ take the list of files (``docs_src/design/plan-data-reads.md``).
 
 import os
 import stat
+import sys
 from pathlib import Path
 
 import polars as pl
@@ -242,3 +243,41 @@ class TestTheOldViewsFolderGoes:
         (view / "part-0.parquet").write_bytes(b"gathered again")
         result = CliRunner().invoke(main, ["path", "x", "--project-dir", str(folder)])
         assert "Removed" not in result.output and (view / "part-0.parquet").is_file()
+
+
+class TestWhatTheFinalReviewFound:
+    """Found reviewing 0.5.0 before its release."""
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="Windows takes no `*` in a folder's name")
+    def test_sql_of_a_spread_dataset_with_a_star_in_a_key(self, work, store, cache):
+        """Polars takes `tag=a*` for no key; the check of it read each file's place in the store, which leads elsewhere."""
+        news = work / "news"
+        news.mkdir()
+        (news / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "news"}, "dataframes": {"tagged": {"path": "./_data/tagged", "docs": "d"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        for tag, n in (("a*", 1), ("b", 2)):
+            part = news / "_data" / "tagged" / f"tag={tag}"
+            part.mkdir(parents=True)
+            pl.DataFrame({"n": [n]}).write_parquet(part / "part-0.parquet")
+            if tag == "a*":
+                commit_pipeline(news)
+            snapshot.make(news, store=store)
+        reader = work / "reader"
+        reader.mkdir()
+        (reader / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "reader"}, "dependencies": {"acme/news": {"path": "../news"}}}),
+            encoding="utf-8", newline="\n",
+        )
+        assert lock.pin(reader, store).problems == []
+        own = data.sql("select n from {tagged} order by n", project_dir=news).collect()
+        theirs = data.sql("select n from {news:tagged} order by n", project_dir=reader).collect()
+        assert own["n"].to_list() == theirs["n"].to_list() == [1, 2]
+
+    def test_places_of_copies_kept_by_their_hashes(self):
+        """An S3 store's copies sit at checked/ab/<hash>, shallower than a deep Hive path: an IndexError, not the error."""
+        from chartbook.resolve import _kept_under
+
+        assert _kept_under("year=2024/m=1/part-0.parquet", "/s/pipelines/n/snap/articles/year=2024/m=1/part-0.parquet") == Path("/s/pipelines/n/snap/articles")
+        assert _kept_under("a/b/c/d/e/f/g/part-0.parquet", "/c/ab/abcdef") == Path("/c/ab")

@@ -756,6 +756,23 @@ def _from_the_stored_index(stored: Optional[Mapping[str, dict]], asset_id: str, 
     return was
 
 
+#: When a file was written, as an index records it.
+_MODIFIED_AT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def stored_modified_at(was: object) -> Optional[str]:
+    """When a stored index says an asset's file was written; None when it says nothing of the shape ChartBook writes, as anyone can write a store."""
+    location = was.get("location") if isinstance(was, dict) else None
+    modified = location.get("modified_at") if isinstance(location, dict) else None
+    if not isinstance(modified, str) or len(modified) != 20:
+        return None
+    try:
+        datetime.strptime(modified, _MODIFIED_AT)
+    except ValueError:
+        return None
+    return modified
+
+
 #: How the last dates a page shows are written: a date and time, or N/A.
 _LAST_DATE = re.compile(r"^(\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}:\d{2}(\.\d+)?)?|N/A( \(large file\))?)$")
 
@@ -893,8 +910,8 @@ def _asset_records(
         record.update(_recorded_facts(was))
         if isinstance(was.get("content_hash"), str):
             facts["content_hash"] = was["content_hash"]  # a table or query has a definition_hash instead
-        modified = (was.get("location") or {}).get("modified_at")
-        if isinstance(modified, str) and "location" in record:
+        modified = stored_modified_at(was)
+        if modified and "location" in record:
             record["location"]["modified_at"] = modified
     series: list[dict] = []
     skip: tuple = ()
@@ -1195,7 +1212,7 @@ def _add_snapshots(records: list[dict], store=None, notes=None) -> None:
         from chartbook.hubs import selected_snapshots
         own = selected_snapshots(found, record["id"], (notes or {}).get(record["id"], {}).get("repository")) if notes is not None else by_pipeline.get(record["id"], [])
         for taken in sorted(own, key=lambda t: t.made_at, reverse=True):
-            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": name_of(taken)}
+            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": name_of(taken, found)}
             if hasattr(store, "name_of"):
                 entry["store"] = store.name_of(taken.path)
             if taken.built_by_run:
@@ -1461,9 +1478,9 @@ def build_index(
         # file was written, which this folder's copies do not have
         by_id = stored_index_records(Path(manifest["base_dir"]))
         for record in records:
-            was = by_id.get(record["id"], {})
-            if isinstance((was.get("location") or {}).get("modified_at"), str):
-                record.setdefault("location", {})["modified_at"] = was["location"]["modified_at"]
+            modified = stored_modified_at(by_id.get(record["id"]))
+            if modified:
+                record.setdefault("location", {})["modified_at"] = modified
         from chartbook.links import provenance
         linked = provenance(manifest["base_dir"])
         if linked:

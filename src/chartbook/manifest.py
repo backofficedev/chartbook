@@ -13,6 +13,8 @@ supported; loading one raises an error pointing at the migration script.
 """
 
 import difflib
+import fnmatch
+import itertools
 import json
 import importlib.resources
 import os
@@ -1414,12 +1416,13 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
 
 
 def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path, scratch: Optional[str] = None) -> None:
-    """Refuse a scratch folder at or inside a declared dataset, files asset or model.
+    """Refuse a scratch folder that shares files with a declared dataset, files asset or model.
 
-    Its throwaway files would join the asset: hashed with it and copied to
-    the store with every snapshot. A glob's matches are its own to choose,
-    as ``data.scratch()`` says; a path is a file or a folder, and the
-    scratch folder is not to be in it.
+    Inside an asset, or where a glob's folders reach (``./_data/**/*.parquet``
+    reaches ``_data/_scratch``), its throwaway files would join the asset:
+    hashed with it and copied to the store with every snapshot. Holding an
+    asset, it would be deleted with the scratch folder, which is
+    throwaway too.
 
     :param scratch: The folder ``data.scratch()`` is about to use, the
         default included; else the one ``[project] scratch`` declares, and
@@ -1435,22 +1438,52 @@ def _refuse_scratch_in_an_asset(manifest: dict, base_dir: Path, scratch: Optiona
     plain = safe_relative(used) if isinstance(used, str) and used else None
     if not plain:
         return
-    inside = plain.lower().split("/")  # a disk that tells no letter case apart, as most do
+    folder = plain.lower().split("/")  # a disk that tells no letter case apart, as most do
+    said = (
+        f"[project] scratch = {declared!r}" if isinstance(declared, str) and declared
+        else f"data.scratch()'s folder, {plain} by default,"
+    )
     for table in ("dataframes", "files", "models"):
         entries = manifest.get(table)
         for name, entry in (entries.items() if isinstance(entries, dict) else ()):
             path = entry.get("path") if isinstance(entry, dict) else None
-            asset = safe_relative(path) if isinstance(path, str) and path and not is_glob_pattern(path) else None
-            if asset and inside[: len(asset.split("/"))] == asset.lower().split("/"):
-                said = (
-                    f"[project] scratch = {declared!r}" if isinstance(declared, str) and declared
-                    else f"data.scratch()'s folder, {plain} by default,"
+            asset = safe_relative(path) if isinstance(path, str) and path else None
+            if not asset:
+                continue
+            parts = asset.lower().split("/")
+            glob = is_glob_pattern(path)
+            if glob:
+                # The folders before the first wildcard hold every match
+                fixed = list(itertools.takewhile(lambda part: not is_glob_pattern(part), parts[:-1]))
+            else:
+                fixed = parts
+            folders = parts if parts[-1] == "**" else parts[:-1]  # `./_data/**` is every file below `_data`
+            if _reaches(folders, folder) if glob else folder[: len(fixed)] == fixed:
+                where = f"where [{table}.{name}] path = {path!r} reaches" if glob else (
+                    f"inside [{table}.{name}] path = {path!r}"
                 )
                 raise ValueError(
-                    f"{base_dir / 'chartbook.toml'}: {said} is inside [{table}.{name}] path = {path!r}, so its "
-                    f"throwaway files would be part of {name} and go to the store with it. Name a folder outside "
-                    f'every asset in [project], e.g. scratch = "./_scratch".'
+                    f"{base_dir / 'chartbook.toml'}: {said} is {where}, so its throwaway files would be part of "
+                    f"{name} and go to the store with it. Name a folder outside every asset in [project], "
+                    f'e.g. scratch = "./_scratch".'
                 )
+            if fixed[: len(folder)] == folder:
+                raise ValueError(
+                    f"{base_dir / 'chartbook.toml'}: {said} holds [{table}.{name}] path = {path!r}, and the "
+                    f"scratch folder is throwaway: deleting it would delete {name}. Name a folder that holds "
+                    f'no asset in [project], e.g. scratch = "./_scratch".'
+                )
+
+
+def _reaches(folders: list, scratch: list) -> bool:
+    """Whether a glob's folder parts match the scratch folder or a folder inside it, ``**`` any number of them."""
+    if not scratch:
+        return True  # the parts left can match folders inside it
+    if not folders:
+        return False  # the glob's files are in a folder above it
+    if folders[0] == "**":
+        return _reaches(folders[1:], scratch) or _reaches(folders, scratch[1:])
+    return fnmatch.fnmatchcase(scratch[0], folders[0]) and _reaches(folders[1:], scratch[1:])
 
 
 #: Each entity table and what one of its entries is.

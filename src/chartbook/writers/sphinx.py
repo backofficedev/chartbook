@@ -1430,7 +1430,7 @@ class SphinxWriter:
         if entry is None:
             return None
         try:
-            return site_path(owner, entry.get("name")), entry  # named by the snapshot's folder (versions.name_of)
+            return site_path(owner, entry.get("name")), entry  # named as versions.name_of names it
         except (ValueError, TypeError):
             return None
 

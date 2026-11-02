@@ -1048,8 +1048,9 @@ class Store(abc.ABC):
     def files(self, content_hash: str, pipeline: Optional[str] = None, name: Optional[str] = None) -> "KeptFiles":
         """The files of the asset with this hash, each by its path inside the asset and where the store keeps it.
 
-        A reader reads the files where they are: a list of files to polars
-        or DuckDB, Hive keys included. Nothing is copied or gathered.
+        A reader reads the files where they are, each with the Hive keys of
+        its path inside the asset, which where it is kept need not say.
+        Nothing is copied or gathered.
 
         :param pipeline: The pipeline it is of, whose snapshots are looked in first.
         :param name: For an asset that is one file, the name it is read by:

@@ -1218,7 +1218,7 @@ def _folder_sql(tables: list[str], folder: Path, by_file: Optional[dict] = None)
         hive = {}
         if named and set.intersection(*named):
             # Polars takes `tag=a*` for no key, and has no column of it
-            if not _valued_with(tables, folder, "*"):
+            if not _valued_with(tables, folder, "*", by_file):
                 try:
                     hive = pl.scan_parquet(tables, hive_partitioning=True, glob=False).collect_schema()
                 except READ_ERRORS:

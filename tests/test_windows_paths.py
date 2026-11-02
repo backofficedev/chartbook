@@ -190,6 +190,23 @@ def test_views_in_use_stay_and_are_tried_again(tmp_path, monkeypatch):
     assert (cache / store_module.OLD_VIEWS_REMOVED).is_file()
 
 
+def test_only_what_0_4_gathered_in_a_buckets_cache_goes(tmp_path, monkeypatch):
+    """A pipeline, an asset or a bucket's prefix named views is not 0.4's views/ (found reviewing 0.5.0)."""
+    cache = tmp_path / "cache"
+    gathered = cache / "s3" / "bucket" / "views" / ("a" * 64)
+    pipeline = cache / "s3" / "bucket" / "pipelines" / "views" / "snap"
+    prefix = cache / "s3" / "bucket2" / "views" / "files" / "ab"
+    for folder in (gathered, pipeline, prefix):
+        folder.mkdir(parents=True)
+        (folder / "part.parquet").write_bytes(b"x")
+    (cache / "s3" / "bucket" / "views" / f".{'b' * 64}.{'c' * 12}.tmp").mkdir()
+    (cache / "s3" / "bucket" / "views" / f".{'d' * 64}.{'c' * 12}.old").mkdir()  # left by a 0.4 gather that stopped
+    monkeypatch.setenv("CHARTBOOK_CACHE", str(cache))
+    said = CliRunner().invoke(main, ["store", "info"])
+    assert "Removed" in said.output and not (cache / "s3" / "bucket" / "views").exists()
+    assert (pipeline / "part.parquet").is_file() and (prefix / "part.parquet").is_file()
+
+
 def test_the_default_site_url_is_a_file_uri(tmp_path):
     """`file://C:/x` names a host "C:"; a space is %20."""
     from chartbook.manifest import load_manifest
@@ -227,7 +244,7 @@ def test_a_version_site_too_deep_for_windows_says_why_and_is_tried_again(tmp_pat
     taken = snapshot.make(folder, the_store).snapshot
     monkeypatch.setattr(store_module, "_ON_WINDOWS", True)
     monkeypatch.setattr(store_module, "long_paths_enabled", lambda: False)
-    monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", len(str(versions._kept(taken.pipeline, "x"))) + 40)
+    monkeypatch.setattr(store_module, "WINDOWS_PATH_LIMIT", len(str(versions._kept(taken))) + 40)
     rendered = versions.render(taken, the_store)
     assert not rendered.built and "LongPathsEnabled" in rendered.why and "[cache] path" in rendered.why
     assert (rendered.folder / "index.html").is_file()

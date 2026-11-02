@@ -98,7 +98,7 @@ class TestTheSite:
         _build(root, monkeypatch)
         kept = get_cache_path() / "versions"
         stamps = {p: p.stat().st_mtime_ns for p in kept.rglob(".chartbook-version-site")}
-        assert {versions._kept("pipeline_a", versions.version_name(t.commit, t.made_at)) for t in (first, second)} <= {p.parent for p in stamps}
+        assert {versions._kept(t) for t in (first, second)} <= {p.parent for p in stamps}
         calls = []
         real = versions.subprocess.run
 
@@ -266,16 +266,28 @@ class TestWhatTheReviewFound:
     def test_two_snapshots_of_a_commit_in_one_second_have_two_names(self):
         from types import SimpleNamespace
 
-        commit, made_at = "b6ea3aa" + "0" * 33, "2026-10-31T14:54:10.668357Z"
-        folders = Path("store") / "pipelines" / "acme+x"
+        commit = "b6ea3aa" + "0" * 33
 
-        def taken(folder):
-            return SimpleNamespace(commit=commit, made_at=made_at, path=folders / folder / "_chartbook" / "snapshot.json")
+        def taken(made_at, folder, pipeline="acme/x"):
+            path = Path("store") / "pipelines" / "acme+x" / folder / "_chartbook" / "snapshot.json"
+            return SimpleNamespace(pipeline=pipeline, commit=commit, made_at=made_at, path=path)
 
-        # The store names the second a second later, and the version is named as its folder is
-        first, second = taken("2026-10-31T145410Z_b6ea3aa00000"), taken("2026-10-31T145411Z_b6ea3aa00000")
-        assert (versions.name_of(first), versions.name_of(second)) == ("b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145411Z")
-        assert versions.name_of(SimpleNamespace(commit=commit, made_at=made_at, path=None)) == "b6ea3aa-20261031T145410Z"
+        first = taken("2026-10-31T14:54:10.168357Z", "2026-10-31T145410Z_b6ea3aa00000")
+        second = taken("2026-10-31T14:54:10.668357Z", "2026-10-31T145411Z_b6ea3aa00000")
+        both = [first, second]
+        assert [versions.name_of(t, both) for t in both] == ["b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145410.668357Z"]
+        assert versions.site_path("acme/x", versions.name_of(second, both))
+        assert versions._kept(first) != versions._kept(second)
+        # The second's copy in another store, where its folder is named by its own second: one name, one site
+        copy = taken(second.made_at, "2026-10-31T145410Z_b6ea3aa00000")
+        assert versions.name_of(copy, [first, second, copy]) == versions.name_of(second, both)
+        assert versions._kept(copy) == versions._kept(second)
+        # Another pipeline's snapshot of that second is not in the way
+        other = taken("2026-10-31T14:54:10.001Z", "x", pipeline="acme/y")
+        assert versions.name_of(first, [first, other]) == "b6ea3aa-20261031T145410Z"
+        # By time, not by text: a record with no fraction is the earlier ("…10Z" sorts after "…10.5Z")
+        whole, half = taken("2026-10-31T14:54:10Z", "a"), taken("2026-10-31T14:54:10.5Z", "b")
+        assert [versions.name_of(t, [whole, half]) for t in (whole, half)] == ["b6ea3aa-20261031T145410Z", "b6ea3aa-20261031T145410.5Z"]
 
     def test_what_0_4_kept_of_a_version_goes_once_this_one_builds_it(self, catalog):
         root, first, second = catalog
@@ -461,7 +473,7 @@ class TestGcClearsTheKeptSites:
         _build(root, monkeypatch)
         kept = get_cache_path() / "versions"
         names = {p.name for p in kept.iterdir()}
-        assert versions._kept("pipeline_a", versions.version_name(first.commit, first.made_at)).name in names
+        assert versions._kept(first).name in names
         store = default_store()
         # Nothing pins the first any more: pipeline_b's lockfile is forgotten
         store.remove_root(root / "pipelines" / "pipeline_b" / "chartbook.lock")
@@ -471,8 +483,8 @@ class TestGcClearsTheKeptSites:
         lock.run_gc(plan, store)
         left = {p.name for p in kept.iterdir()}
         for taken in doomed:
-            assert versions._kept("pipeline_a", versions.version_name(taken.commit, taken.made_at)).name not in left
-        assert versions._kept("pipeline_a", versions.version_name(second.commit, second.made_at)).name in left  # what gc kept, its site too
+            assert versions._kept(taken).name not in left
+        assert versions._kept(second).name in left  # what gc kept, its site too
 
 
 def _links(page: Path) -> list[str]:

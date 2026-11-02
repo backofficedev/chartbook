@@ -94,6 +94,13 @@ class TestStoreLs:
         result = CliRunner().invoke(main, ["store", "ls"])
         assert result.exit_code == 0 and "No snapshots." in result.output
 
+    def test_a_store_folder_that_is_not_there_is_said(self, work, monkeypatch):
+        """A Drive not mounted lists nothing, as a store not made yet does: both are said (found reviewing 0.5.0)."""
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "not-mounted"))
+        result = CliRunner().invoke(main, ["store", "ls"])
+        assert result.exit_code == 0 and "No snapshots." in result.output
+        assert "not-mounted is not there: not made yet, or a synced folder that is not mounted" in result.output
+
 
 class TestTheGcReminder:
     def test_after_a_snapshot_when_gc_would_clear_one(self, news, store, monkeypatch):
@@ -116,6 +123,16 @@ class TestTheGcReminder:
         _write_year(news, 2025, [4])
         result = CliRunner().invoke(main, ["snapshot", "--project-dir", str(news), "--no-gc-reminder"])
         assert result.exit_code == 0 and "store gc" not in result.output
+
+    def test_nothing_is_said_of_what_gc_removes_without_saying(self, monkeypatch):
+        """A record a pin made, whose files a kept snapshot holds: gc says "Nothing to remove." of it, and so must this."""
+        from chartbook import lock
+        from chartbook.cli import _what_gc_would_clear
+
+        plan = lock.GcPlan()
+        plan.pinned_delete.append((object(), "no lockfile pins what it alone holds"))
+        monkeypatch.setattr(lock, "plan_gc", lambda *args, **kwargs: plan)
+        assert _what_gc_would_clear(None) is None
 
     def test_store_info_says_it_too(self, news, store):
         snapshot.make(news, store=store, made_at="2026-01-01T00:00:00.000000Z")

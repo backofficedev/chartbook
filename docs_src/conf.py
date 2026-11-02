@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 project = "chartbook"
 copyright = "2026, Jeremiah Bejarano"
 author = "Jeremiah Bejarano"
-release = "0.4.0"
+from chartbook import __version__ as release  # noqa: E402
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

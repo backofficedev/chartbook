@@ -45,6 +45,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 #: The folder of a catalog's site that holds the versions' sites.
 VERSIONS_DIR = "versions"
@@ -56,7 +57,7 @@ BUILD_TIMEOUT = 600
 _ABANDONED = 3600
 #: The longest path in a version's site, past its folder: Sphinx's ``_static/mystnb.<sha256>.css``.
 _LONGEST_IN_A_SITE = "site/_static/mystnb." + "0" * 64 + ".css"
-_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}Z$")
+_NAME = re.compile(r"^[0-9a-f]{7}-[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z$")
 #: How long the name of a version's folder in the cache is: hex digits of a hash.
 _KEPT_NAME_LENGTH = 12
 _COMMIT = re.compile(r"^[0-9a-f]{40}$")
@@ -85,24 +86,35 @@ def version_name(commit: str, made_at: str) -> str:
     return name
 
 
-def name_of(taken) -> str:
-    """The name of a snapshot's version: its commit's start and the time its folder in the store is named by.
+def name_of(taken, siblings: Iterable = ()) -> str:
+    """The name of a snapshot's version: its commit's start and when it was made, to the second.
 
-    The store names a snapshot's folder by when it was made, to the second,
-    a second later for each other snapshot of the commit made in that
-    second (:func:`chartbook.store.snapshot_folder_name`); so no two
-    versions of a pipeline have one name. A snapshot with no such folder is
-    named by when it was made (:func:`version_name`).
+    By the snapshot's own record, so a copy of it in another store, whose
+    folder there may be named a second later, has the same name. Of two
+    snapshots of one commit made in the same second, the later carries the
+    fraction of its second too: ``4f2a91c-20261013T182205.918204Z``.
 
+    :param siblings: The other snapshots the name must differ from: every
+        snapshot the catalog reads, of any pipeline.
     :raises ValueError: As :func:`version_name`.
     """
-    from chartbook.store import is_snapshot_folder
-
     name = version_name(taken.commit, taken.made_at)
-    folder = Path(str(taken.path)).parent.parent.name if taken.path else ""
-    if is_snapshot_folder(folder) and taken.commit.startswith(folder.partition("_")[2]):
-        name = f"{taken.commit[:7]}-{folder.partition('_')[0].replace('-', '')}"
+    if any(
+        other.pipeline == taken.pipeline and other.commit[:7] == taken.commit[:7]
+        and isinstance(other.made_at, str) and other.made_at[:19] == taken.made_at[:19]
+        and _fraction(other.made_at) < _fraction(taken.made_at)
+        for other in siblings
+    ):
+        name = f"{taken.commit[:7]}-{taken.made_at.replace('-', '').replace(':', '')}"
+        if not _NAME.match(name):
+            raise ValueError(f"{name!r} is not a version's name")
     return name
+
+
+def _fraction(made_at: str) -> int:
+    """The fraction of its second a snapshot was made at, in nanoseconds: ``…05Z`` is 0, ``…05.5Z`` 500000000."""
+    digits = made_at[20:-1] if made_at[19:20] == "." else ""
+    return int(digits.ljust(9, "0")) if digits.isdigit() else 0
 
 
 def slug(pipeline_id: str) -> str:
@@ -165,11 +177,15 @@ def fingerprint() -> str:
     return f"{__about__.__version__}-{digest.hexdigest()[:12]}"
 
 
-def _kept(pipeline_id: str, name: str) -> Path:
-    """Where a version's site is kept on this machine: ``versions/<hash>`` in the cache."""
+def _kept(taken) -> Path:
+    """Where a version's site is kept on this machine: ``versions/<hash>`` in the cache, of the pipeline, commit and time made.
+
+    :raises ValueError: As :func:`version_name`.
+    """
     from chartbook.config import get_cache_path
 
-    digest = hashlib.sha256(f"{slug(pipeline_id)}/{name}".encode()).hexdigest()
+    version_name(taken.commit, taken.made_at)  # a record written to mislead names no folder
+    digest = hashlib.sha256(f"{slug(taken.pipeline)}/{taken.commit}/{taken.made_at}".encode()).hexdigest()
     return get_cache_path() / VERSIONS_DIR / digest[:_KEPT_NAME_LENGTH]
 
 
@@ -200,8 +216,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
     from chartbook import snapshot as snapshots
     from chartbook.config import UNTRUSTED_ENV_VAR
 
-    name = name_of(taken)
-    kept = _kept(taken.pipeline, name)
+    kept = _kept(taken)
     why = _why_done(kept)
     if why is not None:
         return Rendered(kept / "site", built=not why, why=why)
@@ -289,7 +304,7 @@ def forget(taken) -> bool:
     no site of a version no catalog will show again.
     """
     try:
-        folder = _kept(taken.pipeline, name_of(taken))
+        folder = _kept(taken)
     except ValueError:
         return False
     old = _forget_04s(taken)
@@ -389,7 +404,7 @@ def render_listed(index: dict, store=None, echo=print, into=()) -> dict:
             except ValueError:
                 continue
             if rendered.built:
-                name = name_of(taken)
+                name = name_of(taken, found) if not _NAME.match(str(entry.get("name"))) else entry["name"]
                 targets = [Path(os.path.abspath(folder)) / site_path(record["id"], name) for folder in into]
                 why = _too_deep(rendered, targets)
                 if why:
@@ -440,10 +455,13 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by
             taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
             if taken is None:
                 continue
-            try:
-                name = name_of(taken)
-            except ValueError:
-                continue
+            # Where the index links it: named once, from every snapshot the store holds (name_of)
+            name = entry.get("name")
+            if not isinstance(name, str) or not _NAME.match(name):
+                try:
+                    name = name_of(taken, by_moment.values())
+                except ValueError:
+                    continue
             rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
             # What render_listed built has been said there: only what is built here now is said here
             said = rendered is not None and rendered.folder.is_dir()

@@ -60,6 +60,7 @@ All keys are optional:
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
+| `scratch` | string (path inside the pipeline): where `data.scratch()` puts throwaway files; refused inside, holding, or where a glob reaches, a declared asset | `"./_data/_scratch"` |
 
 ### Scripts
 

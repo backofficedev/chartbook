@@ -41,7 +41,7 @@ committed and has no timestamp on purpose: a `git diff` of it means "a pin moved
 
 ## Declare it
 
-Name the other pipeline by its ID; `chartbook add ftsfr/fed_yield_curve` writes the line. Its
+Name the other pipeline by its ID; `chartbook add ftsfr/fed_yield_curve` writes the line and pins it. Its
 snapshots are found in the store by that ID, so nothing of the other repository has to be on your
 disk. When the two pipelines are in one repository, name the other by its folder instead:
 
