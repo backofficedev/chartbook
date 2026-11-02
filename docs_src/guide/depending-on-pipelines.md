@@ -39,6 +39,22 @@ what one pipeline *made*: every asset it built at one commit, with its content h
 dependency you read, and the **lockfile**, `chartbook.lock`, records the pins. The lockfile is
 committed and has no timestamp on purpose: a `git diff` of it means "a pin moved" and nothing else.
 
+On the catalog's page of what you built, the pin is named: what it was made from, *as pinned*, the
+snapshot and the hash of the bytes it read. Here, the tutorial's model, trained on another
+pipeline's yield curve ({doc}`../tutorials/explore-a-catalog` downloads it):
+
+```{image} ../_static/screenshots/tutorial-model-light.png
+:alt: A model's page: trained on another pipeline's dataframe as pinned, the snapshot at 59a435b, and the hash of the input it read
+:class: only-light cb-screenshot
+:align: center
+```
+
+```{image} ../_static/screenshots/tutorial-model-dark.png
+:alt: A model's page: trained on another pipeline's dataframe as pinned, the snapshot at 59a435b, and the hash of the input it read
+:class: only-dark cb-screenshot
+:align: center
+```
+
 ## Declare it
 
 Name the other pipeline by its ID; `chartbook add ftsfr/fed_yield_curve` writes the line and pins it. Its

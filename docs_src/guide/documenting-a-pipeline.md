@@ -32,6 +32,38 @@ $ chartbook docs build     # the site, in ./docs
 $ chartbook docs open
 ```
 
+Each declaration becomes a page. A chart's page shows the chart, its write-up, and what it was
+made from, down to the hash of the data; a dataframe's shows its columns and first rows, its date
+range, and which charts use it:
+
+```{image} ../_static/screenshots/quickstart-chart-light.png
+:alt: A chart's page: the chart, its write-up, and a Provenance table naming the dataframe it was made from at its hash
+:class: only-light cb-screenshot
+:width: 560px
+:align: center
+```
+
+```{image} ../_static/screenshots/quickstart-chart-dark.png
+:alt: A chart's page: the chart, its write-up, and a Provenance table naming the dataframe it was made from at its hash
+:class: only-dark cb-screenshot
+:width: 560px
+:align: center
+```
+
+```{image} ../_static/screenshots/quickstart-dataframe-light.png
+:alt: A dataframe's page: a glimpse of its columns and rows, and its hash, size, row count and the chart that uses it
+:class: only-light cb-screenshot
+:width: 560px
+:align: center
+```
+
+```{image} ../_static/screenshots/quickstart-dataframe-dark.png
+:alt: A dataframe's page: a glimpse of its columns and rows, and its hash, size, row count and the chart that uses it
+:class: only-dark cb-screenshot
+:width: 560px
+:align: center
+```
+
 The field-by-field reference is {doc}`../reference/configuration`. This page is the shape.
 
 ## Layout
