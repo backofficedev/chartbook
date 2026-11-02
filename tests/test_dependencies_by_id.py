@@ -318,6 +318,29 @@ class TestAddByABareName:
         assert "also has 'rates'" in result.output and "Delete its line" in result.output
         assert result.exit_code == 1  # the entry left is still one that cannot be pinned
 
+    def test_a_bare_name_with_as_is_resolved_though_it_is_a_key_already(self, elsewhere, monkeypatch):
+        """`--as` adds a second entry: its bare name is the stores' ID, whatever the first entry is."""
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"rates": {"id": "acme/rates"}})
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "rates", "--as", "r2"])
+        assert result.exit_code == 0, result.output
+        assert load_manifest(forecast)["dependencies"]["r2"]["id"] == "acme/rates"
+
+    def test_a_store_that_cannot_be_read_leaves_a_bare_name_unresolved(self):
+        """The one match among the stores read may not be the one: another store, unread, may hold another."""
+        from chartbook.cli import _bare_name_in_stores
+
+        class Stored:
+            where, ids, unreachable = "personal, team", ["other/rates"], ["team"]
+
+        with pytest.raises(ValueError, match="team cannot be read"):
+            _bare_name_in_stores("rates", Stored(), None)
+
     def test_the_pipeline_itself_is_never_the_one(self, elsewhere, monkeypatch):
         from click.testing import CliRunner
 

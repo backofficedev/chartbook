@@ -2771,6 +2771,11 @@ class _StoredIds:
         return str(self._stores())
 
     @property
+    def unreachable(self) -> list:
+        """The names of the stores that cannot be read now, whose pipelines are not among :attr:`ids`."""
+        return [entry.name for entry in getattr(self._stores(), "entries", None) or [] if not entry.reachable]
+
+    @property
     def ids(self) -> list:
         if self._ids is None:
             from chartbook.snapshot import readable_snapshots
@@ -2788,6 +2793,13 @@ def _bare_name_in_stores(name, stored, itself):
     """
     from chartbook.identity import in_another_case, match_pipeline_ref
 
+    if stored.unreachable:
+        # The one it names among those read may not be the only one
+        raise ValueError(
+            f"Which pipeline {name} names cannot be told while {', '.join(stored.unreachable)} cannot be "
+            f"read: add it by its ID (`chartbook add SCOPE/{name}`), or once every store can be read. "
+            f"Nothing was written."
+        )
     others = [i for i in stored.ids if i != itself]  # never itself, when another has the name too
     try:
         found = match_pipeline_ref(others, name, where=f"the store at {stored.where}")
@@ -2889,7 +2901,7 @@ def add_command(pipeline, key, commit, project_dir):
         declared = declared if isinstance(declared, dict) else {}
         stored = _StoredIds(project_dir)
         if not repository and "/" not in pipeline:
-            if pipeline in declared:
+            if pipeline in declared and not key:
                 stale = _unpinnable_bare_name(declared, pipeline, stored)
                 if stale:
                     raise ValueError(
