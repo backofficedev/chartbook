@@ -177,7 +177,7 @@ def task_pull():
     }
 {%- endif %}
 {%- endif %}
-{%- if cookiecutter.include_fred or cookiecutter.include_fed_yield_curve or cookiecutter.include_ofr_api or cookiecutter.include_bloomberg or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
+{%- if cookiecutter.include_chartbook and (cookiecutter.include_fred or cookiecutter.include_fed_yield_curve or cookiecutter.include_ofr_api or cookiecutter.include_bloomberg or cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat) %}
 
 
 def task_charts():

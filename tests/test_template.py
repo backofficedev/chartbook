@@ -494,6 +494,21 @@ def test_each_source_gives_a_dataframe_and_a_chart(template_dir, temp_dir, sourc
     assert f'DATA_DIR / "{data_file}"' in dodo.split("def task_charts")[0], "no pull lists the chart's file as its target"
 
 
+
+def test_a_source_without_a_chartbook_site_brings_no_chart(template_dir, temp_dir):
+    """A chart's script reads its data by name from chartbook.toml, which a project with no ChartBook site
+    has not, nor chartbook among its requirements: its build would stop at the chart."""
+    context = {**MINIMAL_CONTEXT, "include_chartbook": False, **{source: True for source in SOURCES}}
+    project_dir = Path(generate_project(template_dir, temp_dir, context))
+    assert not (project_dir / "chartbook.toml").exists()
+    assert [script for *_, script, _, _ in SOURCES.values() if (project_dir / "src" / script).exists()] == []
+    tasks = subprocess.run(
+        [sys.executable, "-m", "doit", "list", "--all"], cwd=project_dir, capture_output=True, text=True, check=True,
+    ).stdout
+    names = {line.split()[0].split(":")[0] for line in tasks.splitlines() if line.strip()}
+    assert "charts" not in names and "pull" in names
+
+
 def test_every_pull_lists_the_files_its_script_writes(template_dir, temp_dir):
     """A pull whose targets name a file its script never writes runs again on every build: for
     CRSP and Compustat, a pull from WRDS each time."""

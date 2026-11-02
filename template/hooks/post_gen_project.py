@@ -190,7 +190,8 @@ if not include_crsp_stock:
 if not include_crsp_compustat:
     remove_file("src/pull_CRSP_Compustat.py")
 
-# Each source's chart, which chartbook.toml declares with the source's dataframe
+# Each source's chart, which chartbook.toml declares with the source's dataframe:
+# without a ChartBook site there is no chartbook.toml for its script to read by name
 for chosen, script in (
     (include_fred, "chart_fred.py"),
     (include_fed_yield_curve, "chart_fed_yield_curve.py"),
@@ -199,7 +200,7 @@ for chosen, script in (
     (include_crsp_stock, "chart_crsp_stock.py"),
     (include_crsp_compustat, "chart_crsp_compustat.py"),
 ):
-    if not chosen:
+    if not chosen or not include_chartbook:
         remove_file(f"src/{script}")
 
 print("Project configuration complete!")
